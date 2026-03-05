@@ -746,6 +746,13 @@ class _InteractivePageState extends State<InteractivePage> {
 
                           const SizedBox(height: 40),
 
+                          // GlassBadge Section
+                          const _SectionTitle(title: 'GlassBadge'),
+                          const SizedBox(height: 16),
+                          _BadgeDemosCard(),
+
+                          const SizedBox(height: 40),
+
                           // GlassSwitch Section
                           const _SectionTitle(title: 'GlassSwitch'),
                           const SizedBox(height: 16),
@@ -1619,6 +1626,206 @@ class _PullDownButtonDemosCard extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'Tap to reveal fluid menu',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// Badge Demos Widget
+// =============================================================================
+
+class _BadgeDemosCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Notification Badges',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 24,
+                runSpacing: 24,
+                children: [
+                  // Count badges
+                  GlassBadge(
+                    count: 5,
+                    child: GlassButton(
+                      icon: CupertinoIcons.bell,
+                      onTap: () {},
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
+                  GlassBadge(
+                    count: 12,
+                    child: GlassButton(
+                      icon: CupertinoIcons.envelope,
+                      onTap: () {},
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
+                  GlassBadge(
+                    count: 99,
+                    child: GlassButton(
+                      icon: CupertinoIcons.chat_bubble,
+                      onTap: () {},
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
+                  GlassBadge(
+                    count: 150,
+                    child: GlassButton(
+                      icon: CupertinoIcons.bag,
+                      onTap: () {},
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Count badges auto-size and show "99+" for large numbers',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Status Indicators',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  // Dot badges
+                  Column(
+                    children: [
+                      GlassBadge.dot(
+                        dotColor: Colors.green,
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.3),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.person,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Online',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      GlassBadge.dot(
+                        dotColor: Colors.orange,
+                        position: BadgePosition.topLeft,
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withValues(alpha: 0.3),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.person,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Away',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      GlassBadge.dot(
+                        dotColor: Colors.red,
+                        position: BadgePosition.bottomRight,
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withValues(alpha: 0.3),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.person,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Busy',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Dot badges support four positions: topRight, topLeft, bottomRight, bottomLeft',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.white.withValues(alpha: 0.6),

@@ -1,6 +1,6 @@
 # Liquid Glass Widgets
 
-A comprehensive Flutter package implementing Apple's Liquid Glass design system with 28 beautiful, composable glass-morphic widgets.
+A comprehensive Flutter package implementing Apple's Liquid Glass design system with 32 beautiful, composable glass-morphic widgets.
 
 [![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg)](https://pub.dev/packages/liquid_glass_widgets)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 
 ## Features
 
-- **28 Widgets** organized into six categories
+- **32 Widgets** organized into six categories
 - **Two Quality Modes** for performance optimization
 - **Flexible Layer System** for efficient rendering
 - **Highly Customizable** appearance with extensive glass settings
@@ -36,6 +36,7 @@ User interaction components:
 - `GlassSegmentedControl` - Multi-option selector
 - `GlassPullDownButton` - Menu trigger button with dropdown
 - `GlassButtonGroup` - Container for grouping related buttons
+- `GlassBadge` - Notification count and status dot indicators
 
 ### Input
 Text input components:
@@ -49,11 +50,13 @@ Text input components:
 ### Feedback
 Status and loading indicators:
 - `GlassProgressIndicator` - Circular and linear progress indicators
+- `GlassToast` / `GlassSnackBar` - Toast notifications with auto-dismiss and actions
 
 ### Overlays
 Modal and floating UI:
 - `GlassDialog` - Modal dialog
 - `GlassSheet` - Bottom sheet / modal sheet
+- `GlassActionSheet` - iOS-style bottom action picker
 - `GlassMenu` - iOS 26 morphing context menu
 - `GlassMenuItem` - Individual menu action item
 
@@ -73,7 +76,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.4.0-dev.1
+  liquid_glass_widgets: ^0.4.0-dev.2
 ```
 
 Then run:

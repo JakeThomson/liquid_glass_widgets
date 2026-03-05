@@ -1,3 +1,41 @@
+# 0.4.0-dev.2
+
+### New Components
+
+#### **GlassToast / GlassSnackBar** - iOS 26 Toast Notifications
+- Toast notifications with liquid glass backdrop effect
+- 5 types: success, error, info, warning, neutral with theme-aware colors
+- 3 positions: top, center, bottom (respects safe areas)
+- Auto-dismiss with configurable duration
+- Swipe-to-dismiss gesture support
+- Optional action buttons with callbacks
+- Spring-based slide animations (iOS 26 curves)
+- Accessibility support with live regions
+
+#### **GlassBadge** - Notification & Status Indicators
+- Count badges (auto-sizing: 1-2 digits small, 3+ wider, shows "99+" for large numbers)
+- Dot badges for status indicators (online, away, busy, etc.)
+- 4 positions: topRight, topLeft, bottomRight, bottomLeft
+- Auto-hide when count is 0
+- Theme-aware colors (uses danger color for notifications)
+- Custom colors for status dots
+
+#### **GlassActionSheet** - iOS Action Picker
+- Bottom-anchored action list with iOS-style modal dismissal
+- 3 action styles: default, destructive (red), cancel (bold)
+- Optional icons for each action
+- Title and message support
+- Cancel button separated at bottom
+- Safe area handling with scrolling for many actions
+- Tap outside to dismiss
+
+### Example App Updates
+- Added toast demos to Feedback page (types, positions, actions)
+- Added badge demos to Interactive page (count badges, status dots)
+- Added action sheet demos to Overlays page (basic, destructive, multiple actions)
+
+---
+
 # 0.4.0-dev.1
 
 ### New Components

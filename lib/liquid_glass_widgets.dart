@@ -36,6 +36,7 @@ export 'widgets/input/glass_search_bar.dart';
 export 'widgets/input/glass_text_area.dart';
 export 'widgets/input/glass_text_field.dart';
 // Widgets - Interactive
+export 'widgets/interactive/glass_badge.dart';
 export 'widgets/interactive/glass_button.dart';
 export 'widgets/interactive/glass_chip.dart';
 export 'widgets/interactive/glass_icon_button.dart';
@@ -49,10 +50,12 @@ export 'types/glass_button_style.dart';
 // Widgets - Feedback
 export 'widgets/feedback/glass_progress_indicator.dart';
 // Widgets - Overlays
+export 'widgets/overlays/glass_action_sheet.dart';
 export 'widgets/overlays/glass_dialog.dart';
 export 'widgets/overlays/glass_menu.dart';
 export 'widgets/overlays/glass_menu_item.dart';
 export 'widgets/overlays/glass_sheet.dart';
+export 'widgets/overlays/glass_toast.dart';
 // Widgets - Surfaces
 export 'widgets/surfaces/glass_app_bar.dart';
 export 'widgets/surfaces/glass_bottom_bar.dart';

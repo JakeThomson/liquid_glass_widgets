@@ -14,6 +14,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
   String _lastSheetResult = 'None';
   String _lastMenuSelection = 'None';
   String _lastDialogResult = 'None';
+  String _lastActionSheetResult = 'None';
 
   void _showBasicSheet() {
     GlassSheet.show(
@@ -487,6 +488,85 @@ class _OverlaysPageState extends State<OverlaysPage> {
         });
       }
     });
+  }
+
+  void _showBasicActionSheet() {
+    showGlassActionSheet(
+      context: context,
+      title: 'Choose Action',
+      actions: [
+        GlassActionSheetAction(
+          label: 'Save',
+          icon: CupertinoIcons.floppy_disk,
+          onPressed: () {
+            setState(() => _lastActionSheetResult = 'Save');
+          },
+        ),
+        GlassActionSheetAction(
+          label: 'Share',
+          icon: CupertinoIcons.share,
+          onPressed: () {
+            setState(() => _lastActionSheetResult = 'Share');
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showDestructiveActionSheet() {
+    showGlassActionSheet(
+      context: context,
+      title: 'Delete Photo?',
+      message: 'This action cannot be undone',
+      actions: [
+        GlassActionSheetAction(
+          label: 'Delete',
+          icon: CupertinoIcons.delete,
+          style: GlassActionSheetStyle.destructive,
+          onPressed: () {
+            setState(() => _lastActionSheetResult = 'Delete');
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showMultiActionSheet() {
+    showGlassActionSheet(
+      context: context,
+      title: 'Photo Options',
+      actions: [
+        GlassActionSheetAction(
+          label: 'Save to Photos',
+          icon: CupertinoIcons.photo,
+          onPressed: () {
+            setState(() => _lastActionSheetResult = 'Save to Photos');
+          },
+        ),
+        GlassActionSheetAction(
+          label: 'Share',
+          icon: CupertinoIcons.share,
+          onPressed: () {
+            setState(() => _lastActionSheetResult = 'Share');
+          },
+        ),
+        GlassActionSheetAction(
+          label: 'Copy',
+          icon: CupertinoIcons.doc_on_doc,
+          onPressed: () {
+            setState(() => _lastActionSheetResult = 'Copy');
+          },
+        ),
+        GlassActionSheetAction(
+          label: 'Delete',
+          icon: CupertinoIcons.trash,
+          style: GlassActionSheetStyle.destructive,
+          onPressed: () {
+            setState(() => _lastActionSheetResult = 'Delete');
+          },
+        ),
+      ],
+    );
   }
 
   Widget _buildFeatureList() {
@@ -1215,6 +1295,174 @@ class _OverlaysPageState extends State<OverlaysPage> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 40),
+
+                    // GlassActionSheet Section
+                    const _SectionTitle(title: 'GlassActionSheet'),
+                    const SizedBox(height: 16),
+                    GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Basic Action Sheet',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'iOS-style bottom action sheet with icons.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          GlassButton.custom(
+                            onTap: _showBasicActionSheet,
+                            width: double.infinity,
+                            height: 48,
+                            shape: const LiquidRoundedSuperellipse(
+                              borderRadius: 12,
+                            ),
+                            glowColor: Colors.blue.withValues(alpha: 0.3),
+                            child: const Text(
+                              'Show Action Sheet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Destructive Action',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Action sheet with destructive (red) action.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          GlassButton.custom(
+                            onTap: _showDestructiveActionSheet,
+                            width: double.infinity,
+                            height: 48,
+                            shape: const LiquidRoundedSuperellipse(
+                              borderRadius: 12,
+                            ),
+                            glowColor: Colors.red.withValues(alpha: 0.3),
+                            child: const Text(
+                              'Show Destructive Action',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Multiple Actions',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Action sheet with multiple options and destructive action.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          GlassButton.custom(
+                            onTap: _showMultiActionSheet,
+                            width: double.infinity,
+                            height: 48,
+                            shape: const LiquidRoundedSuperellipse(
+                              borderRadius: 12,
+                            ),
+                            glowColor: Colors.purple.withValues(alpha: 0.3),
+                            child: const Text(
+                              'Show Photo Options',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    GlassCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            CupertinoIcons.square_list_fill,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Last Action Sheet Result',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _lastActionSheetResult,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                     const SizedBox(height: 100),
                   ],
                 ),
