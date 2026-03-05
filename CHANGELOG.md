@@ -1,3 +1,37 @@
+# 0.3.0-dev.2
+
+### New Features
+
+- **Comprehensive Theme System**
+  - `GlassTheme` and `GlassThemeData` for global styling control
+  - Automatic light/dark mode support via `MediaQuery`
+  - Theme-aware glow colors for interactive widgets
+  - All 27 widgets inherit theme settings automatically
+
+```dart
+// Wrap your app with GlassTheme
+GlassTheme(
+  data: GlassThemeData(
+    light: GlassThemeVariant(
+      settings: LiquidGlassSettings(thickness: 30),
+      quality: GlassQuality.standard,
+      glowColors: GlassGlowColors(primary: Colors.blue),
+    ),
+    dark: GlassThemeVariant(
+      settings: LiquidGlassSettings(thickness: 50),
+      quality: GlassQuality.premium,
+      glowColors: GlassGlowColors(primary: Colors.cyan),
+    ),
+  ),
+  child: MyApp(),
+)
+
+// Widgets inherit theme automatically
+GlassButton(onPressed: () {}, child: Text('Themed'))
+```
+
+---
+
 # 0.3.0-dev.1
 
 ### Breaking Changes

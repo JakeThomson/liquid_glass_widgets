@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoColors;
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
+import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
 import '../../types/glass_button_style.dart';
 import '../shared/adaptive_glass.dart';
@@ -110,7 +111,7 @@ class GlassButton extends StatefulWidget {
     this.resistance = 0.08,
     this.stretchHitTestBehavior = HitTestBehavior.opaque,
     // GlassGlow properties
-    this.glowColor = Colors.white24,
+    this.glowColor,
     this.glowRadius = 1.0,
     this.glowHitTestBehavior = HitTestBehavior.opaque,
     this.enabled = true,
@@ -155,7 +156,7 @@ class GlassButton extends StatefulWidget {
     this.resistance = 0.08,
     this.stretchHitTestBehavior = HitTestBehavior.opaque,
     // GlassGlow properties
-    this.glowColor = Colors.white24,
+    this.glowColor,
     this.glowRadius = 1.0,
     this.glowHitTestBehavior = HitTestBehavior.opaque,
     this.enabled = true,
@@ -332,13 +333,15 @@ class GlassButton extends StatefulWidget {
   /// The glow will have this color's opacity at the center and fade to fully
   /// transparent at the edge. Use semi-transparent colors for best results.
   ///
+  /// If null, uses the primary glow color from [GlassTheme].
+  ///
   /// Common values:
-  /// - [Colors.white24]: Subtle white glow (default)
+  /// - [Colors.white24]: Subtle white glow
   /// - [Colors.blue.withOpacity(0.3)]: Blue glow
   /// - [Colors.transparent]: Disables glow effect
   ///
-  /// Defaults to [Colors.white24].
-  final Color glowColor;
+  /// Defaults to null (uses theme).
+  final Color? glowColor;
 
   /// The radius of the glow effect relative to the layer's shortest side.
   ///
@@ -406,6 +409,12 @@ class _GlassButtonState extends State<GlassButton>
 
   @override
   Widget build(BuildContext context) {
+    // Resolve glow color from theme if not explicitly provided
+    final themeData = GlassThemeData.of(context);
+    final effectiveGlowColor = widget.glowColor ??
+        themeData.glowColorsFor(context).primary ??
+        Colors.white24;
+
     // Build the content widget (either icon or custom child)
     final contentWidget = SizedBox(
       height: widget.height,
@@ -423,7 +432,7 @@ class _GlassButtonState extends State<GlassButton>
     // 2. Build the inner content (Glow + Icon/Child)
     // This part is static relative to the glass saturation pulse
     final glowContent = GlassGlow(
-      glowColor: widget.glowColor,
+      glowColor: effectiveGlowColor,
       glowRadius: widget.glowRadius,
       hitTestBehavior: widget.glowHitTestBehavior,
       child: contentWidget,

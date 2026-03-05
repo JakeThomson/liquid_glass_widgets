@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
+import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
 import 'inherited_liquid_glass.dart';
 
@@ -25,6 +26,7 @@ import 'inherited_liquid_glass.dart';
 ///
 /// **Usage:**
 /// ```dart
+/// // With explicit settings:
 /// AdaptiveLiquidGlassLayer(
 ///   settings: LiquidGlassSettings(...),
 ///   quality: GlassQuality.premium,
@@ -32,13 +34,18 @@ import 'inherited_liquid_glass.dart';
 ///   blendAmount: 10.0, // Impeller-only
 ///   child: YourContent(),
 /// )
+///
+/// // Or use theme (recommended):
+/// AdaptiveLiquidGlassLayer(
+///   child: YourContent(), // Uses GlassTheme settings automatically
+/// )
 /// ```
 class AdaptiveLiquidGlassLayer extends StatelessWidget {
   const AdaptiveLiquidGlassLayer({
     required this.child,
     this.shape = const LiquidRoundedSuperellipse(borderRadius: 0),
-    this.settings = const LiquidGlassSettings(),
-    this.quality = GlassQuality.standard,
+    this.settings,
+    this.quality,
     this.clipBehavior = Clip.antiAlias,
     this.blendAmount = 10.0,
     super.key,
@@ -51,10 +58,14 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
   final LiquidShape shape;
 
   /// Glass effect settings for the background.
-  final LiquidGlassSettings settings;
+  ///
+  /// If null, uses settings from [GlassTheme] based on current brightness.
+  final LiquidGlassSettings? settings;
 
   /// Rendering quality for the glass effect.
-  final GlassQuality quality;
+  ///
+  /// If null, uses quality from [GlassTheme].
+  final GlassQuality? quality;
 
   /// Clip behavior for the glass shape.
   final Clip clipBehavior;
@@ -72,9 +83,17 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Resolve settings and quality from theme if not explicitly provided
+    final themeData = GlassThemeData.of(context);
+    final effectiveSettings = settings ??
+        themeData.settingsFor(context) ??
+        const LiquidGlassSettings();
+    final effectiveQuality =
+        quality ?? themeData.qualityFor(context) ?? GlassQuality.standard;
+
     // Detect if we should use the full Impeller-native rendering pipeline
     final bool useFullRenderer =
-        _canUseImpeller && quality == GlassQuality.premium;
+        _canUseImpeller && effectiveQuality == GlassQuality.premium;
 
     // On Skia/Web, we want to provide a single BackdropFilter for the whole layer
     // to avoid each child doing its own expensive blur.
@@ -82,11 +101,11 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
 
     // Root Provider: Always exists to satisfy assertions for grouped widgets.
     return LiquidGlassLayer(
-      settings: settings,
+      settings: effectiveSettings,
       fake: !useFullRenderer,
       child: InheritedLiquidGlass(
-        settings: settings,
-        quality: quality,
+        settings: effectiveSettings,
+        quality: effectiveQuality,
         isBlurProvidedByAncestor:
             false, // Root never provides the blur; containers do.
         child: useFullRenderer

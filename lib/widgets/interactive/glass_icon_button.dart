@@ -107,8 +107,6 @@ class GlassIconButton extends StatelessWidget {
       Color(0xFFFFFFFF); // white.withValues(alpha: 1.0)
   static const _defaultIconColorDisabled =
       Color(0x4DFFFFFF); // white.withValues(alpha: 0.3)
-  static const _defaultGlowColor =
-      Color(0x4DFFFFFF); // white.withValues(alpha: 0.3)
 
   // ===========================================================================
   // Content Properties
@@ -221,7 +219,7 @@ class GlassIconButton extends StatelessWidget {
       useOwnLayer: useOwnLayer,
       quality: quality ?? GlassQuality.standard,
       interactionScale: interactionScale,
-      glowColor: glowColor ?? _defaultGlowColor,
+      glowColor: glowColor, // Let GlassButton use theme if null
       glowRadius: glowRadius,
       child: iconWidget,
     );

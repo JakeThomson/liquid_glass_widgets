@@ -69,7 +69,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.3.0-dev.1
+  liquid_glass_widgets: ^0.3.0-dev.2
 ```
 
 Then run:
@@ -210,6 +210,74 @@ GlassAppBar(
 - Higher visual quality on capable platforms
 - **Use only for**: Static, non-scrollable layouts (app bars, bottom bars, hero sections)
 - **Warning**: May not render correctly in scrollable contexts on Impeller
+
+## Theming
+
+All widgets support automatic theming with light/dark mode switching via `GlassTheme`:
+
+```dart
+GlassTheme(
+  data: GlassThemeData(
+    light: GlassThemeVariant(
+      settings: LiquidGlassSettings(
+        thickness: 30,
+        blur: 12,
+        lightIntensity: 2.0,
+      ),
+      quality: GlassQuality.standard,
+      glowColors: GlassGlowColors(
+        primary: Colors.blue.withOpacity(0.3),
+        secondary: Colors.purple.withOpacity(0.3),
+        success: Colors.green.withOpacity(0.3),
+        warning: Colors.orange.withOpacity(0.3),
+        danger: Colors.red.withOpacity(0.3),
+      ),
+    ),
+    dark: GlassThemeVariant(
+      settings: LiquidGlassSettings(
+        thickness: 50,
+        blur: 18,
+        lightIntensity: 3.0,
+      ),
+      quality: GlassQuality.premium,
+      glowColors: GlassGlowColors(
+        primary: Colors.cyan.withOpacity(0.4),
+        secondary: Colors.purple.withOpacity(0.4),
+        success: Colors.teal.withOpacity(0.4),
+        warning: Colors.amber.withOpacity(0.4),
+        danger: Colors.deepOrange.withOpacity(0.4),
+      ),
+    ),
+  ),
+  child: MaterialApp(
+    home: MyHomePage(),
+  ),
+)
+```
+
+Widgets automatically inherit theme settings:
+
+```dart
+// Uses theme settings and glow colors automatically
+GlassButton(
+  onPressed: () {},
+  child: Text('Themed Button'),
+)
+
+// Override theme for specific widget
+GlassButton(
+  onPressed: () {},
+  glowColor: Colors.pink,  // Explicit override
+  child: Text('Custom Glow'),
+)
+```
+
+Access theme programmatically:
+
+```dart
+final themeData = GlassThemeData.of(context);
+final variant = themeData.variantFor(context);  // Gets light/dark based on MediaQuery
+```
 
 ## Customization
 

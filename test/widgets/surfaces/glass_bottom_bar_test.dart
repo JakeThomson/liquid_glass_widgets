@@ -1,4 +1,3 @@
-import 'package:liquid_glass_widgets/types/glass_quality.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/glass_bottom_bar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
