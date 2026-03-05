@@ -1,3 +1,58 @@
+# 0.4.0-dev.1
+
+### New Components
+
+#### **GlassProgressIndicator** - iOS 26 Progress & Loading Feedback
+
+Complete implementation of iOS 26 Liquid Glass progress indicators:
+
+**Features:**
+- ✅ **Circular Progress** (Indeterminate & Determinate)
+  - Indeterminate: Rotating spinner for loading states
+  - Determinate: Progress ring showing 0-100% completion
+  - iOS 26 specs: 20pt diameter, 2.5pt stroke, 1.0s rotation
+  - Sizes: Small (14pt), Medium (20pt), Large (28pt)
+
+- ✅ **Linear Progress** (Indeterminate & Determinate)
+  - Indeterminate: Moving bar animation for loading
+  - Determinate: Fill-from-left progress bar
+  - iOS 26 specs: 4pt height, rounded caps
+  - Configurable heights: Thin (2pt), Standard (4pt), Thick (8pt)
+
+- ✅ **Liquid Glass Effects**
+  - Translucent glass background (15% white opacity)
+  - Color glow with 4pt blur radius
+  - Smooth spring-based animations
+  - Theme-aware colors (uses primary glow color)
+
+- ✅ **Full Theme Integration**
+  - Automatically inherits `GlassThemeData.glowColors.primary`
+  - Supports color overrides per instance
+  - Light/dark mode adaptive
+
+**Example Usage:**
+```dart
+// Circular spinner
+GlassProgressIndicator.circular()
+
+// Circular with progress
+GlassProgressIndicator.circular(value: 0.7) // 70%
+
+// Linear loading bar
+GlassProgressIndicator.linear()
+
+// Linear with progress
+GlassProgressIndicator.linear(value: 0.5) // 50%
+```
+
+**Example App:**
+- New "Feedback" page with 10+ interactive demos
+- Circular spinners (3 sizes, 5 progress states, 4 colors)
+- Linear progress bars (3 heights, 5 progress states, 4 colors)
+- Real-world file upload simulation with animations
+
+---
+
 # 0.3.0-dev.2
 
 ### New Features

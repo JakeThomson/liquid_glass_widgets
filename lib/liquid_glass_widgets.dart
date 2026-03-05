@@ -46,6 +46,8 @@ export 'widgets/interactive/glass_switch.dart';
 export 'widgets/interactive/glass_pull_down_button.dart';
 export 'widgets/interactive/glass_button_group.dart';
 export 'types/glass_button_style.dart';
+// Widgets - Feedback
+export 'widgets/feedback/glass_progress_indicator.dart';
 // Widgets - Overlays
 export 'widgets/overlays/glass_dialog.dart';
 export 'widgets/overlays/glass_menu.dart';

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets_example/constants/glass_settings.dart';
 import 'package:liquid_glass_widgets_example/pages/containers_page.dart';
+import 'package:liquid_glass_widgets_example/pages/feedback_page.dart';
 import 'package:liquid_glass_widgets_example/pages/input_page.dart';
 import 'package:liquid_glass_widgets_example/pages/interactive_page.dart';
 import 'package:liquid_glass_widgets_example/pages/overlays_page.dart';
@@ -53,6 +54,7 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
     HomePage(),
     ContainersPage(),
     InteractivePage(),
+    FeedbackPage(),
     OverlaysPage(),
     SurfacesPage(),
     InputPage(),
@@ -95,6 +97,11 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
                 label: 'Interactive',
                 icon: CupertinoIcons.hand_point_right,
                 selectedIcon: CupertinoIcons.hand_point_right_fill,
+              ),
+              GlassBottomBarTab(
+                label: 'Feedback',
+                icon: CupertinoIcons.hourglass,
+                selectedIcon: CupertinoIcons.hourglass,
               ),
               GlassBottomBarTab(
                 label: 'Overlays',
@@ -243,6 +250,14 @@ class HomePage extends StatelessWidget {
                       description:
                           'GlassButton, GlassSwitch, and GlassSegmentedControl',
                       color: Colors.green,
+                    ),
+                    const SizedBox(height: 12),
+                    _CategoryCard(
+                      icon: CupertinoIcons.hourglass,
+                      title: 'Feedback',
+                      description:
+                          'GlassProgressIndicator for loading and progress',
+                      color: Colors.blue,
                     ),
                     const SizedBox(height: 12),
                     _CategoryCard(

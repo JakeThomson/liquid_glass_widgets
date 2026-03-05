@@ -1,6 +1,6 @@
 # Liquid Glass Widgets
 
-A comprehensive Flutter package implementing Apple's Liquid Glass design system with 26 beautiful, composable glass-morphic widgets.
+A comprehensive Flutter package implementing Apple's Liquid Glass design system with 28 beautiful, composable glass-morphic widgets.
 
 [![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg)](https://pub.dev/packages/liquid_glass_widgets)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 
 ## Features
 
-- **26 Widgets** organized into five categories
+- **28 Widgets** organized into six categories
 - **Two Quality Modes** for performance optimization
 - **Flexible Layer System** for efficient rendering
 - **Highly Customizable** appearance with extensive glass settings
@@ -46,6 +46,10 @@ Text input components:
 - `GlassPicker` - Scrollable item selector
 - `GlassFormField` - Form field wrapper for validation
 
+### Feedback
+Status and loading indicators:
+- `GlassProgressIndicator` - Circular and linear progress indicators
+
 ### Overlays
 Modal and floating UI:
 - `GlassDialog` - Modal dialog
@@ -69,7 +73,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.3.0-dev.2
+  liquid_glass_widgets: ^0.4.0-dev.1
 ```
 
 Then run:
@@ -278,6 +282,119 @@ Access theme programmatically:
 final themeData = GlassThemeData.of(context);
 final variant = themeData.variantFor(context);  // Gets light/dark based on MediaQuery
 ```
+
+## Progress Indicators
+
+`GlassProgressIndicator` provides iOS 26-compliant loading and progress feedback with Liquid Glass effects. Available in both circular and linear variants, with indeterminate (loading) and determinate (progress tracking) modes.
+
+### Circular Progress Indicators
+
+**Indeterminate Spinner** (Loading):
+```dart
+// Default medium size (20pt)
+GlassProgressIndicator.circular()
+
+// Different sizes
+GlassProgressIndicator.circular(
+  size: 14.0,       // Small
+  strokeWidth: 2.0,
+)
+
+GlassProgressIndicator.circular(
+  size: 28.0,       // Large
+  strokeWidth: 3.0,
+)
+```
+
+**Determinate Ring** (Progress 0-100%):
+```dart
+double progress = 0.7; // 70% complete
+
+GlassProgressIndicator.circular(
+  value: progress,
+  color: Colors.green,
+)
+```
+
+### Linear Progress Indicators
+
+**Indeterminate Bar** (Loading):
+```dart
+GlassProgressIndicator.linear()
+
+// Custom height
+GlassProgressIndicator.linear(
+  height: 6.0,
+  color: Colors.blue,
+)
+```
+
+**Determinate Bar** (Progress 0-100%):
+```dart
+double uploadProgress = 0.5; // 50% complete
+
+GlassProgressIndicator.linear(
+  value: uploadProgress,
+  color: uploadProgress == 1.0 ? Colors.green : Colors.blue,
+)
+```
+
+### Real-World Example: File Upload
+
+```dart
+class UploadDemo extends StatefulWidget {
+  @override
+  State<UploadDemo> createState() => _UploadDemoState();
+}
+
+class _UploadDemoState extends State<UploadDemo> {
+  double _uploadProgress = 0.0;
+  bool _isUploading = false;
+
+  void _startUpload() {
+    setState(() => _isUploading = true);
+
+    // Simulate upload with timer
+    Timer.periodic(Duration(milliseconds: 50), (timer) {
+      setState(() {
+        _uploadProgress += 0.01;
+        if (_uploadProgress >= 1.0) {
+          _uploadProgress = 1.0;
+          _isUploading = false;
+          timer.cancel();
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        GlassProgressIndicator.linear(
+          value: _uploadProgress,
+          color: _uploadProgress == 1.0 ? Colors.green : Colors.blue,
+        ),
+        SizedBox(height: 16),
+        GlassButton(
+          onPressed: _isUploading ? null : _startUpload,
+          child: Text(_isUploading ? 'Uploading...' : 'Start Upload'),
+        ),
+      ],
+    );
+  }
+}
+```
+
+### iOS 26 Specifications
+
+`GlassProgressIndicator` implements exact iOS 26 Liquid Glass specifications:
+
+- **Circular**: 20pt diameter (default), 2.5pt stroke width, 1.0s rotation
+- **Linear**: Full width, 4pt height (default)
+- **Glass Effects**: Translucent background (15% white), color glow with 4pt blur
+- **Theme Integration**: Automatically uses theme's primary glow color
+- **Sizes**: Small (14pt), Medium (20pt/default), Large (28pt)
 
 ## Customization
 
