@@ -528,21 +528,8 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
   }
 
   Widget _buildSelectedTabs(double intensity, Alignment alignment) {
-    // Bounce effect:
-    // When intensity is near 0 (settling), add a small bounce.
-    // We use a sine wave damped by intensity to create a bounce.
-    // intensity goes 1.0 -> 0.0
-
-    double bounce = 0.0;
-    if (intensity < 0.2 && intensity > 0.0) {
-      // Create a small pop when settling
-      bounce = math.sin(intensity * math.pi * 5) * 0.1;
-    }
-
     // Lerp magnification: 1.0 -> widget.magnification
-    // Add bounce to the scale
-    final scale =
-        (ui.lerpDouble(1.0, widget.magnification, intensity) ?? 1.0) + bounce;
+    final scale = ui.lerpDouble(1.0, widget.magnification, intensity) ?? 1.0;
 
     // Lerp blur: 0.0 -> widget.innerBlur
     final blur = ui.lerpDouble(0.0, widget.innerBlur, intensity) ?? 0.0;
@@ -763,15 +750,11 @@ class _BottomBarTab extends StatelessWidget {
                       ),
 
                     // Icon with optional thickness effect
-                    AnimatedScale(
-                      scale: 1,
-                      duration: const Duration(milliseconds: 150),
-                      child: Icon(
-                        selected ? (tab.selectedIcon ?? tab.icon) : tab.icon,
-                        color: iconColor,
-                        size: iconSize,
-                        shadows: _buildIconShadows(),
-                      ),
+                    Icon(
+                      selected ? (tab.selectedIcon ?? tab.icon) : tab.icon,
+                      color: iconColor,
+                      size: iconSize,
+                      shadows: _buildIconShadows(),
                     ),
                   ],
                 ),

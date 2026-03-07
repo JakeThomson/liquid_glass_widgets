@@ -1,3 +1,14 @@
+# 0.4.0-dev.3
+
+### Bug Fixes
+
+- **FIX**: Removed selection bounce effect from `GlassBottomBar` for iOS 26 authenticity
+  - Removed sine-wave bounce animation on tab selection
+  - Removed unused `AnimatedScale` wrapper
+  - Tab transitions now match iOS 26 liquid glass design (smooth without scale jumps)
+
+---
+
 # 0.4.0-dev.2
 
 ### New Components
