@@ -1,3 +1,18 @@
+# 0.4.0-dev.4
+
+### Performance Improvements
+
+- **PERF**: Impeller pipeline warm-up at app initialization
+  - Pre-compiles Metal/Vulkan shaders during startup to eliminate first-frame jank
+  - Only runs on Impeller (iOS/Android/macOS), gracefully skipped on Skia/Web
+
+- **PERF**: Const settings caching for `GlassTabBar` and `GlassSideBar`
+  - Reduces memory allocations during widget rebuilds
+
+- **PERF**: RepaintBoundary hints for tile-based rendering
+  - Helps Impeller skip rasterizing unchanged tiles in static surfaces
+---
+
 # 0.4.0-dev.3
 
 ### Bug Fixes

@@ -238,6 +238,15 @@ class _GlassTabBarState extends State<GlassTabBar> {
     }
   }
 
+  // Cache default glass settings to avoid allocations on every build
+  static const _defaultGlassSettings = LiquidGlassSettings(
+    thickness: 30,
+    blur: 3,
+    chromaticAberration: 0.5,
+    lightIntensity: 2,
+    refractiveIndex: 1.15,
+  );
+
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer if not explicitly set
@@ -246,14 +255,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
     final effectiveQuality =
         widget.quality ?? inherited?.quality ?? GlassQuality.standard;
 
-    final glassSettings = widget.settings ??
-        const LiquidGlassSettings(
-          thickness: 30,
-          blur: 3,
-          chromaticAberration: 0.5,
-          lightIntensity: 2,
-          refractiveIndex: 1.15,
-        );
+    final glassSettings = widget.settings ?? _defaultGlassSettings;
 
     final backgroundColor = widget.backgroundColor == Colors.transparent
         ? _defaultBackgroundColor

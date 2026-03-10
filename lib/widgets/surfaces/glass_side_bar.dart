@@ -114,6 +114,17 @@ class GlassSideBar extends StatelessWidget {
   /// Defaults to a subtle right-side border.
   final BoxBorder? border;
 
+  // Cache default glass settings to avoid allocations on every build
+  static const _defaultGlassSettings = LiquidGlassSettings(
+    thickness: 30,
+    blur: 25,
+    chromaticAberration: 0.15,
+    lightIntensity: 0.3,
+    refractiveIndex: 1.45,
+    saturation: 1.1,
+    glassColor: Colors.white10,
+  );
+
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer if not explicitly set
@@ -123,16 +134,7 @@ class GlassSideBar extends StatelessWidget {
         quality ?? inherited?.quality ?? GlassQuality.premium;
 
     // Standard sidebar glass settings (often slightly more opaque/different blur than toolbars)
-    final effectiveSettings = glassSettings ??
-        const LiquidGlassSettings(
-          thickness: 30,
-          blur: 25,
-          chromaticAberration: 0.15,
-          lightIntensity: 0.3,
-          refractiveIndex: 1.45,
-          saturation: 1.1,
-          glassColor: Colors.white10,
-        );
+    final effectiveSettings = glassSettings ?? _defaultGlassSettings;
 
     final effectiveBackgroundColor =
         backgroundColor ?? Colors.grey.withAlpha(15);

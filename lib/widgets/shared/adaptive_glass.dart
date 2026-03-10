@@ -151,12 +151,17 @@ class AdaptiveGlass extends StatelessWidget {
 
     // Impeller + Premium Path: Use the renderer's native path
     if (useOwnLayer) {
-      return LiquidGlass.withOwnLayer(
-        shape: shape,
-        settings: settings,
-        fake: false,
-        clipBehavior: clipBehavior,
-        child: child,
+      // Wrap in RepaintBoundary to give Impeller hints for tile-based rendering.
+      // This allows Impeller to skip rasterizing unchanged tiles, improving
+      // performance for static surfaces (app bars, bottom bars, etc.)
+      return RepaintBoundary(
+        child: LiquidGlass.withOwnLayer(
+          shape: shape,
+          settings: settings,
+          fake: false,
+          clipBehavior: clipBehavior,
+          child: child,
+        ),
       );
     } else {
       return LiquidGlass.grouped(
