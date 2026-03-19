@@ -426,13 +426,19 @@ class _TabBarContentState extends State<_TabBarContent> {
     if (box == null || !box.hasSize) return _xAlign;
 
     final local = box.globalToLocal(globalPosition);
-    final relativeX = (local.dx / box.size.width).clamp(0.0, 1.0);
+
+    // Calculate the effective draggable range accounting for indicator size
     final indicatorWidth = 1.0 / widget.tabs.length;
     final draggableRange = 1.0 - indicatorWidth;
+    final padding = indicatorWidth / 2; // Center the indicator on cursor
 
-    if (draggableRange <= 0) return 0.0;
-    final alignment = (relativeX / draggableRange - 0.5) * 2;
-    return alignment.clamp(-1.0, 1.0);
+    // Map drag position to 0-1 range with proper centering
+    final rawRelativeX = (local.dx / box.size.width).clamp(0.0, 1.0);
+    final normalizedX = (rawRelativeX - padding) / draggableRange;
+    final clampedX = normalizedX.clamp(0.0, 1.0);
+
+    // Convert to -1 to 1 alignment range
+    return (clampedX * 2) - 1;
   }
 
   int _computeTargetTab({

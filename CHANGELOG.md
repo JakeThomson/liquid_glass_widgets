@@ -1,3 +1,20 @@
+# 0.4.0-dev.5
+
+### Bug Fixes
+
+- **FIX**: Improve menu alignment logic and address visual flicker issues
+  - Refined menu alignment for both horizontal and vertical axes to prevent overflow and ensure proper positioning
+  - Fixed grey rectangle flickering in `GlassBottomBar` by making shader fallback transparent in `GlassEffect`
+  - Resolved shader initialization timing issues to eliminate flicker and improve stability during first-frame rendering
+  - Fixed `GlassTabBar` indicator alignment to center precisely under cursor during drag gestures
+
+### Testing
+
+- **TEST**: Add `resetForTesting()` to `LightweightLiquidGlass` (#9) - Thanks @friebetill!
+  - Exposes static method to reset shader state between tests for consistent fallback rendering
+
+---
+
 # 0.4.0-dev.4
 
 ### Performance Improvements
@@ -11,6 +28,7 @@
 
 - **PERF**: RepaintBoundary hints for tile-based rendering
   - Helps Impeller skip rasterizing unchanged tiles in static surfaces
+
 ---
 
 # 0.4.0-dev.3

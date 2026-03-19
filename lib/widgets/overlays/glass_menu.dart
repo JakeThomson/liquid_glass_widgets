@@ -198,18 +198,35 @@ class _GlassMenuState extends State<GlassMenu>
     _triggerSize = renderBox.size;
     _triggerBorderRadius = _triggerSize!.height / 2;
 
-    // Determine alignment based on horizontal screen position
+    // Determine alignment based on screen position
     // This ensures menu doesn't overflow screen edges
     final position = renderBox.localToGlobal(Offset.zero);
-    final screenWidth =
-        MediaQuery.maybeOf(context)?.size.width ?? double.infinity;
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final screenWidth = mediaQuery?.size.width ?? double.infinity;
+    final screenHeight = mediaQuery?.size.height ?? double.infinity;
 
-    // If button is on the right half of the screen, align menu to top-right
-    // Otherwise align to top-left (default)
-    if (screenWidth.isFinite && position.dx > screenWidth / 2) {
-      _morphAlignment = Alignment.topRight;
+    // Calculate menu height for vertical boundary check
+    final menuHeight = _calculateMenuHeight();
+
+    // Horizontal alignment: left vs right half
+    final isRightHalf = screenWidth.isFinite && position.dx > screenWidth / 2;
+
+    // Vertical alignment: check if menu would overflow bottom
+    final spaceBelow = screenHeight.isFinite
+        ? screenHeight - (position.dy + _triggerSize!.height)
+        : double.infinity;
+    final spaceAbove = screenHeight.isFinite ? position.dy : double.infinity;
+
+    // Prefer downward opening unless insufficient space
+    final shouldFlipVertical =
+        spaceBelow < menuHeight && spaceAbove > menuHeight;
+
+    // Determine final alignment based on both axes
+    if (shouldFlipVertical) {
+      _morphAlignment =
+          isRightHalf ? Alignment.bottomRight : Alignment.bottomLeft;
     } else {
-      _morphAlignment = Alignment.topLeft;
+      _morphAlignment = isRightHalf ? Alignment.topRight : Alignment.topLeft;
     }
 
     _overlayController.show();

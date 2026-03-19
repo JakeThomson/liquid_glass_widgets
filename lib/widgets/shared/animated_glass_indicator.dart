@@ -134,7 +134,11 @@ class AnimatedGlassIndicator extends StatelessWidget {
       quality: quality,
       interactionIntensity: thickness,
       backgroundKey: backgroundKey,
-      child: const GlassGlow(child: SizedBox.expand()),
+      child: const GlassGlow(
+        glowColor: Colors
+            .transparent, //caused grey rectangle flicker if clicking multiple times
+        child: SizedBox.expand(),
+      ),
     );
 
     final interactiveIndicator = Opacity(

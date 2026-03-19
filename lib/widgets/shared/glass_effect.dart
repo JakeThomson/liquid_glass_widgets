@@ -129,7 +129,13 @@ class _GlassEffectState extends State<GlassEffect>
     _initShader();
 
     _ticker = createTicker(_handleTick);
-    _updateTicker();
+
+    // Defer ticker update until after first frame to ensure shader is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _updateTicker();
+      }
+    });
   }
 
   @override
@@ -253,11 +259,18 @@ class _GlassEffectState extends State<GlassEffect>
   }
 
   Future<void> _initShader() async {
+    // Check if shader is already available
     if (GlassEffect._cachedProgram == null) {
+      // Shader not ready, load it asynchronously
       await GlassEffect.preWarm();
+
+      // Force rebuild now that shader is ready
+      if (mounted) {
+        setState(() {});
+      }
     }
 
-    if (GlassEffect._cachedProgram != null) {
+    if (GlassEffect._cachedProgram != null && _localShader == null) {
       if (mounted) {
         setState(() {
           // Always create a local shader instance for state isolation
@@ -372,7 +385,7 @@ class _GlassEffectState extends State<GlassEffect>
     return ClipPath(
       clipper: ShapeBorderClipper(shape: widget.shape),
       child: Container(
-        color: widget.settings.effectiveGlassColor.withValues(alpha: 0.15),
+        color: Colors.transparent, // Invisible fallback to prevent flicker
         child: widget.child,
       ),
     );
