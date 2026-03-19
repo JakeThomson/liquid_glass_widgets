@@ -93,6 +93,15 @@ class LightweightLiquidGlass extends StatefulWidget {
   // On web: Each widget needs its own instance (CanvasKit requirement)
   static ui.FragmentShader? _sharedShader; // Native only
 
+  /// Resets static shader state for testing. Call between tests to ensure
+  /// each test gets the fallback rendering (no cached shader).
+  @visibleForTesting
+  static void resetForTesting() {
+    _cachedProgram = null;
+    _sharedShader = null;
+    _isPreparing = false;
+  }
+
   /// Global pre-warm method - loads and compiles the shader program.
   static Future<void> preWarm() async {
     if (_cachedProgram != null || _isPreparing) return;
