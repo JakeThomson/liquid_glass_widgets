@@ -1,3 +1,16 @@
+# 0.4.0-dev.6
+
+### Bug Fixes
+
+- **FIX**: Shader refactoring to resolve Impeller crashes on iOS Simulators
+  - Packed uniforms into `vec4` arrays to stay under the Metal 14-binding limit
+  - Resolved "Could not create render pipeline" errors on simulated devices
+- **FIX**: Shader asset resolution in unit tests
+  - Added fallback path mechanism to correctly load shaders in test environments
+  - Eliminates "Asset not found" exceptions during `flutter test`
+
+---
+
 # 0.4.0-dev.5
 
 ### Bug Fixes

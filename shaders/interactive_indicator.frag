@@ -26,37 +26,45 @@ precision highp float;
 // -----------------------------------------------------------------------------
 // UNIFORMS
 // -----------------------------------------------------------------------------
-uniform vec2 uSize;                 // Widget size in logical pixels
-uniform vec2 uOrigin;               // Origin offset (usually 0,0 due to layers)
-uniform vec4 uGlassColor;           // Tint color for the glass
-uniform float uThickness;           // Glass thickness (affects visual weight)
-uniform vec2 uLightDirection;      // Pre-calculated light vector [cos(angle), -sin(angle)]
-uniform float uLightIntensity;      // Brightness of rim highlights (0-2)
-uniform float uAmbientStrength;     // Base ambient brightness
-uniform float uSaturation;          // Color saturation
-uniform float uRefractiveIndex;     // Rim prominence
-uniform float uChromaticAberration; // RGB separation strength (0-1)
-uniform float uCornerRadius;        // Pill corner radius in logical pixels
-uniform vec2 uScale;                // Device scale (usually 1,1 in layer)
-uniform float uGlowIntensity;       // Interactive glow when pressed
-uniform float uDensityFactor;       // Visual density for nested glass
-uniform float uInteractionIntensity;// Press/drag intensity (0-1)
-uniform vec2 uBackgroundOrigin;     // Widget position in background (logical px)
-uniform vec2 uBackgroundSize;       // Background texture size (logical px)
-uniform float uHasBackground;       // 1.0 = use texture, 0.0 = use synthetic frost
-
-// Configurable appearance parameters
-uniform float uAmbientRim;          // Minimum rim brightness (default: 0.1)
-uniform float uBaseAlphaMultiplier; // Center transparency multiplier (default: 0.2)
-uniform float uEdgeAlphaMultiplier; // Edge opacity multiplier (default: 0.4)
-uniform float uRimThickness;       // Rim offset/thickness (default: 0.5)
-uniform float uRimSmoothing;       // Rim edge smoothing multiplier (default: 1.5)
+// We pack uniforms into vec4s to avoid Metal's 14 constant buffer limit on the iOS Simulator.
+uniform vec4 uData0; // 0..3 (size.x, size.y, origin.x, origin.y)
+uniform vec4 uData1; // 4..7 (glassColor)
+uniform vec4 uData2; // 8..11 (thickness, lightDir.x, lightDir.y, lightIntensity)
+uniform vec4 uData3; // 12..15 (ambientStrength, saturation, refractiveIndex, chromaticAberration)
+uniform vec4 uData4; // 16..19 (cornerRadius, scale.x, scale.y, glowIntensity)
+uniform vec4 uData5; // 20..23 (densityFactor, interactionIntensity, bgOrigin.x, bgOrigin.y)
+uniform vec4 uData6; // 24..27 (bgSize.width, bgSize.height, hasBackground, ambientRim)
+uniform vec4 uData7; // 28..31 (baseAlphaMultiplier, edgeAlphaMultiplier, rimThickness, rimSmoothing)
 
 uniform sampler2D uTexture;         // Captured background image
 
 out vec4 fragColor;
 
 void main() {
+  vec2 uSize = uData0.xy;
+  vec2 uOrigin = uData0.zw;
+  vec4 uGlassColor = uData1;
+  float uThickness = uData2.x;
+  vec2 uLightDirection = uData2.yz;
+  float uLightIntensity = uData2.w;
+  float uAmbientStrength = uData3.x;
+  float uSaturation = uData3.y;
+  float uRefractiveIndex = uData3.z;
+  float uChromaticAberration = uData3.w;
+  float uCornerRadius = uData4.x;
+  vec2 uScale = uData4.yz;
+  float uGlowIntensity = uData4.w;
+  float uDensityFactor = uData5.x;
+  float uInteractionIntensity = uData5.y;
+  vec2 uBackgroundOrigin = uData5.zw;
+  vec2 uBackgroundSize = uData6.xy;
+  float uHasBackground = uData6.z;
+  float uAmbientRim = uData6.w;
+  float uBaseAlphaMultiplier = uData7.x;
+  float uEdgeAlphaMultiplier = uData7.y;
+  float uRimThickness = uData7.z;
+  float uRimSmoothing = uData7.w;
+
   // ==========================================================================
   // COORDINATE SETUP
   // ==========================================================================

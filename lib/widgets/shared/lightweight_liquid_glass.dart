@@ -106,10 +106,17 @@ class LightweightLiquidGlass extends StatefulWidget {
   static Future<void> preWarm() async {
     if (_cachedProgram != null || _isPreparing) return;
     _isPreparing = true;
+    const path = 'packages/liquid_glass_widgets/shaders/lightweight_glass.frag';
+    const testPath = 'shaders/lightweight_glass.frag';
+
     try {
-      final program = await ui.FragmentProgram.fromAsset(
-        'packages/liquid_glass_widgets/shaders/lightweight_glass.frag',
-      );
+      ui.FragmentProgram program;
+      try {
+        program = await ui.FragmentProgram.fromAsset(path);
+      } catch (_) {
+        // Fallback for unit tests where package prefix may not be resolved
+        program = await ui.FragmentProgram.fromAsset(testPath);
+      }
       _cachedProgram = program;
 
       // On native platforms, create the shared shader instance

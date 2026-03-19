@@ -81,10 +81,18 @@ class GlassEffect extends StatefulWidget {
   static Future<void> preWarm() async {
     if (_cachedProgram != null || _isPreparing) return;
     _isPreparing = true;
+    const path =
+        'packages/liquid_glass_widgets/shaders/interactive_indicator.frag';
+    const testPath = 'shaders/interactive_indicator.frag';
+
     try {
-      final program = await ui.FragmentProgram.fromAsset(
-        'packages/liquid_glass_widgets/shaders/interactive_indicator.frag',
-      );
+      ui.FragmentProgram program;
+      try {
+        program = await ui.FragmentProgram.fromAsset(path);
+      } catch (_) {
+        // Fallback for unit tests where package prefix may not be resolved
+        program = await ui.FragmentProgram.fromAsset(testPath);
+      }
       _cachedProgram = program;
 
       if (!kIsWeb) {

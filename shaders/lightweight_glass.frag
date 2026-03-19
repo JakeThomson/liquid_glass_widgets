@@ -11,22 +11,12 @@ precision highp float;
 // -----------------------------------------------------------------------------
 // UNIFORMS
 // -----------------------------------------------------------------------------
-uniform vec2 uSize;                 // 0, 1 (Logical Size)
-uniform vec2 uOrigin;               // 2, 3 (Physical Screen Origin)
-uniform vec4 uGlassColor;           // 4, 5, 6, 7
-uniform float uThickness;           // 8
-uniform vec2 uLightDirection;      // 9, 10 [cos(angle), -sin(angle)]
-uniform float uLightIntensity;      // 11
-uniform float uAmbientStrength;     // 12
-uniform float uSaturation;          // 13 (Color saturation: <1.0=desaturated, 1.0=normal, >1.0=vivid)
-                                     //    Now matches Impeller's behavior!
-uniform float uRefractiveIndex;     // 14 (Rim prominence: 0.7=subtle, 1.0=normal, 2.0=pronounced)
-uniform float uChromaticAberration; // 15 (Impeller-only, ignored in lightweight shader)
-uniform float uCornerRadius;        // 16 (logical pixels)
-uniform vec2 uScale;                // 17, 18 (Physical scale including DPR)
-uniform float uGlowIntensity;       // 19 (Interactive glow: 0.0=off, 1.0=full, button press feedback)
-uniform float uDensityFactor;       // 20 (Elevation physics: 0.0=normal, 1.0=elevated, nested blur simulation) 
-uniform float uIndicatorWeight;     // 21 (0.0=normal, 1.0=thick/bright indicator style)
+uniform vec4 uData0; // 0..3 (size.x, size.y, origin.x, origin.y)
+uniform vec4 uData1; // 4..7 (glassColor)
+uniform vec4 uData2; // 8..11 (thickness, lightDir.x, lightDir.y, lightIntensity)
+uniform vec4 uData3; // 12..15 (ambientStrength, saturation, refractiveIndex, chromaticAberration)
+uniform vec4 uData4; // 16..19 (cornerRadius, scale.x, scale.y, glowIntensity)
+uniform vec4 uData5; // 20..23 (densityFactor, indicatorWeight, pad1, pad2)
 
 // -----------------------------------------------------------------------------
 // iOS 26 LIQUID GLASS: AESTHETIC PARAMETERS (ORIGINAL CALIBRATION)
@@ -63,6 +53,22 @@ const float kThicknessRimBoost    = 0.15;  // Rim opacity boost per unit thickne
 out vec4 fragColor;
 
 void main() {
+  vec2 uSize = uData0.xy;
+  vec2 uOrigin = uData0.zw;
+  vec4 uGlassColor = uData1;
+  float uThickness = uData2.x;
+  vec2 uLightDirection = uData2.yz;
+  float uLightIntensity = uData2.w;
+  float uAmbientStrength = uData3.x;
+  float uSaturation = uData3.y;
+  float uRefractiveIndex = uData3.z;
+  float uChromaticAberration = uData3.w;
+  float uCornerRadius = uData4.x;
+  vec2 uScale = uData4.yz;
+  float uGlowIntensity = uData4.w;
+  float uDensityFactor = uData5.x;
+  float uIndicatorWeight = uData5.y;
+
   // ---- STAGE 0: COORDINATE SYNC ----
   vec2 pixelCoord = FlutterFragCoord().xy;
   vec2 localLogical = (pixelCoord - uOrigin) / uScale;
