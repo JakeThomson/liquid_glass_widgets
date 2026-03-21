@@ -1,3 +1,21 @@
+# 0.4.0-dev.7
+
+### Bug Fixes
+
+- **FIX**: Corner radius extraction logic in `LightweightLiquidGlass` and `GlassEffect`
+  - Added support for `int` values (e.g., `16`) previously causing silent extraction failures
+  - Fixed heuristic issue where an explicit `0.0` radius was overridden by default `16.0` rounding
+  - Improved `BorderRadiusGeometry` resolution using `TextDirection.ltr`
+  - Ensures consistent "sharp corner" behavior across all rendering backends
+
+### Examples
+
+- **FEAT**: Added Shape and Radius debug example
+  - New `example/lib/repro_issue.dart` for verifying button shapes and radii in isolation
+  - Demonstrates `LiquidOval`, `LiquidRoundedRectangle`, and `LiquidRoundedSuperellipse` configurations
+
+---
+
 # 0.4.0-dev.6
 
 ### Bug Fixes

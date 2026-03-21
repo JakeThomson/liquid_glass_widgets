@@ -701,34 +701,39 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     _shader.setFloat(index++, _settings.refractiveIndex);
     _shader.setFloat(index++, (_settings.chromaticAberration).clamp(0.0, 1.0));
 
-    double cornerRadius = 0.0;
+    // 16: uCornerRadius (float) - Logical
+    double? cornerRadius;
     final dynamic dynShape = _shape;
     final shapeStr = _shape.runtimeType.toString().toLowerCase();
 
     // 1. Try dynamic property extraction (Highest Accuracy)
     try {
-      if (dynShape.borderRadius is double) {
-        cornerRadius = dynShape.borderRadius;
+      if (dynShape.borderRadius is num) {
+        cornerRadius = (dynShape.borderRadius as num).toDouble();
       } else if (dynShape.borderRadius is BorderRadius) {
-        cornerRadius = dynShape.borderRadius.topLeft.x;
+        cornerRadius = (dynShape.borderRadius as BorderRadius).topLeft.x;
       } else if (dynShape.borderRadius is BorderRadiusGeometry) {
-        final resolved = dynShape.borderRadius.resolve(TextDirection.ltr);
+        final resolved = (dynShape.borderRadius as BorderRadiusGeometry)
+            .resolve(TextDirection.ltr);
         cornerRadius = resolved.topLeft.x;
-      } else if (dynShape.radius is double) {
-        cornerRadius = dynShape.radius;
+      } else if (dynShape.radius is num) {
+        cornerRadius = (dynShape.radius as num).toDouble();
       } else if (dynShape.radius is Radius) {
-        cornerRadius = dynShape.radius.x;
+        cornerRadius = (dynShape.radius as Radius).x;
       }
     } catch (_) {}
 
     // 2. Class Name Heuristics (Robustness fallback)
-    if (cornerRadius == 0.0) {
+    // Only apply if the property extraction failed completely
+    if (cornerRadius == null) {
       if (shapeStr.contains('rounded') || shapeStr.contains('superellipse')) {
         cornerRadius = 16.0; // Standard pill/card radius
       } else if (shapeStr.contains('oval') ||
           shapeStr.contains('circle') ||
           shapeStr.contains('stadium')) {
         cornerRadius = math.min(size.width, size.height) / 2.0;
+      } else {
+        cornerRadius = 0.0;
       }
     }
     final maxRadius = math.min(size.width, size.height) / 2.0;
