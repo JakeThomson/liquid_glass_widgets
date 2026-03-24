@@ -12,7 +12,7 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: const GlassChip(
+            child: GlassChip(
               label: 'Test Chip',
             ),
           ),
@@ -30,7 +30,7 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: const GlassChip(
+            child: GlassChip(
               label: testLabel,
             ),
           ),
@@ -45,9 +45,9 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: const GlassChip(
+            child: GlassChip(
               label: 'Favorite',
-              icon: CupertinoIcons.heart_fill,
+              icon: Icon(CupertinoIcons.heart_fill),
             ),
           ),
         ),
@@ -121,7 +121,7 @@ void main() {
     testWidgets('works in standalone mode', (tester) async {
       await tester.pumpWidget(
         createTestApp(
-          child: const GlassChip(
+          child: GlassChip(
             label: 'Standalone',
             useOwnLayer: true,
           ),
@@ -132,7 +132,7 @@ void main() {
     });
 
     test('defaults are correct', () {
-      const chip = GlassChip(
+      final chip = GlassChip(
         label: 'Test',
       );
 

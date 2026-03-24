@@ -48,7 +48,7 @@ void main() {
             child: Scaffold(
               appBar: GlassAppBar(
                 leading: GlassButton(
-                  icon: Icons.menu,
+                  icon: Icon(Icons.menu),
                   onTap: () {},
                 ),
                 title: const Text('Title'),
@@ -70,8 +70,8 @@ void main() {
               appBar: GlassAppBar(
                 title: const Text('Title'),
                 actions: [
-                  GlassButton(icon: Icons.search, onTap: () {}),
-                  GlassButton(icon: Icons.more_horiz, onTap: () {}),
+                  GlassButton(icon: Icon(Icons.search), onTap: () {}),
+                  GlassButton(icon: Icon(Icons.more_horiz), onTap: () {}),
                 ],
               ),
             ),

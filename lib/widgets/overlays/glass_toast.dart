@@ -94,7 +94,7 @@ class GlassToastAction {
 ///   context,
 ///   message: 'New message received',
 ///   type: GlassToastType.info,
-///   icon: CupertinoIcons.envelope,
+///   icon: Icon(CupertinoIcons.envelope),
 ///   position: GlassToastPosition.top,
 /// );
 /// ```
@@ -161,8 +161,8 @@ class GlassToast extends StatefulWidget {
   /// The message text to display
   final String message;
 
-  /// Optional icon to display before the message
-  final IconData? icon;
+  /// Optional icon widget to display before the message
+  final Widget? icon;
 
   /// Visual style and semantic meaning of the toast
   final GlassToastType type;
@@ -198,7 +198,7 @@ class GlassToast extends StatefulWidget {
   static VoidCallback show(
     BuildContext context, {
     required String message,
-    IconData? icon,
+    Widget? icon,
     GlassToastType type = GlassToastType.success,
     GlassToastPosition position = GlassToastPosition.bottom,
     Duration duration = const Duration(seconds: 3),
@@ -247,8 +247,17 @@ class _GlassToastState extends State<GlassToast> {
     // Get semantic color based on toast type
     final Color semanticColor = _getSemanticColor(glowColors);
 
-    // Get default icon if none provided
-    final IconData displayIcon = widget.icon ?? _getDefaultIcon();
+    // Use user-provided icon or fall back to default for the toast type
+    final Widget displayIcon = widget.icon ??
+        Icon(widget.type == GlassToastType.success
+            ? CupertinoIcons.check_mark_circled_solid
+            : widget.type == GlassToastType.error
+                ? CupertinoIcons.xmark_circle_fill
+                : widget.type == GlassToastType.info
+                    ? CupertinoIcons.info_circle_fill
+                    : widget.type == GlassToastType.warning
+                        ? CupertinoIcons.exclamationmark_triangle_fill
+                        : CupertinoIcons.chat_bubble_fill);
 
     return Semantics(
       liveRegion: true,
@@ -258,7 +267,7 @@ class _GlassToastState extends State<GlassToast> {
   }
 
   Widget _buildToastContent(
-      BuildContext context, Color semanticColor, IconData displayIcon) {
+      BuildContext context, Color semanticColor, Widget displayIcon) {
     final hasAction = widget.action != null;
 
     return AdaptiveLiquidGlassLayer(
@@ -298,10 +307,9 @@ class _GlassToastState extends State<GlassToast> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Icon
-            Icon(
-              displayIcon,
-              color: semanticColor,
-              size: 20,
+            IconTheme(
+              data: IconThemeData(color: semanticColor, size: 20),
+              child: displayIcon,
             ),
             const SizedBox(width: 12),
 
@@ -360,21 +368,6 @@ class _GlassToastState extends State<GlassToast> {
         return Colors.white.withValues(alpha: 0.6);
     }
   }
-
-  IconData _getDefaultIcon() {
-    switch (widget.type) {
-      case GlassToastType.success:
-        return CupertinoIcons.check_mark_circled_solid;
-      case GlassToastType.error:
-        return CupertinoIcons.xmark_circle_fill;
-      case GlassToastType.info:
-        return CupertinoIcons.info_circle_fill;
-      case GlassToastType.warning:
-        return CupertinoIcons.exclamationmark_triangle_fill;
-      case GlassToastType.neutral:
-        return CupertinoIcons.chat_bubble_fill;
-    }
-  }
 }
 
 /// Overlay wrapper that handles animations and positioning for the toast.
@@ -393,7 +386,7 @@ class _GlassToastOverlay extends StatefulWidget {
   });
 
   final String message;
-  final IconData? icon;
+  final Widget? icon;
   final GlassToastType type;
   final GlassToastPosition position;
   final Duration duration;
@@ -584,7 +577,7 @@ class GlassSnackBar extends GlassToast {
   static VoidCallback show(
     BuildContext context, {
     required String message,
-    IconData? icon,
+    Widget? icon,
     GlassToastType type = GlassToastType.success,
     GlassToastPosition position = GlassToastPosition.bottom,
     Duration duration = const Duration(seconds: 3),

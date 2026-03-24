@@ -38,8 +38,8 @@ class GlassPicker extends StatelessWidget {
   /// Placeholder when value is null.
   final String placeholder;
 
-  /// Icon to display at the end (defaults to chevron down).
-  final IconData? icon;
+  /// Icon widget to display at the end (defaults to chevron down).
+  final Widget? icon;
 
   /// Called when tapped.
   final VoidCallback? onTap;
@@ -102,10 +102,9 @@ class GlassPicker extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Icon(
-            icon ?? CupertinoIcons.chevron_up_chevron_down,
-            size: 16,
-            color: Colors.white70,
+          IconTheme(
+            data: const IconThemeData(size: 16, color: Colors.white70),
+            child: icon ?? const Icon(CupertinoIcons.chevron_up_chevron_down),
           ),
         ],
       ),

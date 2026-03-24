@@ -178,7 +178,7 @@ class _DetailPageState extends State<DetailPage>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       GlassButton(
-                        icon: Icons.arrow_back_ios_new,
+                        icon: Icon(Icons.arrow_back_ios_new),
                         iconSize: 20,
                         width: 44,
                         height: 44,
@@ -187,7 +187,7 @@ class _DetailPageState extends State<DetailPage>
                       Row(
                         children: [
                           GlassButton(
-                            icon: Icons.share_outlined,
+                            icon: Icon(Icons.share_outlined),
                             iconSize: 22,
                             width: 44,
                             height: 44,
@@ -195,9 +195,9 @@ class _DetailPageState extends State<DetailPage>
                           ),
                           const SizedBox(width: 12),
                           GlassButton(
-                            icon: widget.isFavorite
+                            icon: Icon(widget.isFavorite
                                 ? Icons.favorite
-                                : Icons.favorite_outline,
+                                : Icons.favorite_outline),
                             iconColor:
                                 widget.isFavorite ? Colors.red : Colors.white,
                             iconSize: 22,
@@ -253,7 +253,7 @@ class _DetailPageState extends State<DetailPage>
                         ),
                         const Spacer(),
                         GlassButton(
-                          icon: Icons.calendar_month,
+                          icon: Icon(Icons.calendar_month),
                           label: 'Book Now',
                           iconSize: 20,
                           width: 44,
@@ -633,7 +633,7 @@ class _DetailPageState extends State<DetailPage>
             ),
           ),
           GlassButton(
-            icon: Icons.chat_bubble_outline,
+            icon: Icon(Icons.chat_bubble_outline),
             label: 'Contact',
             height: 40,
             width: 40,

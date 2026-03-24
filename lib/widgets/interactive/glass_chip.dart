@@ -33,7 +33,7 @@ import 'glass_button.dart';
 /// ```dart
 /// GlassChip(
 ///   label: 'Favorite',
-///   icon: CupertinoIcons.heart_fill,
+///   icon: Icon(CupertinoIcons.heart_fill),
 ///   onTap: () => toggleFavorite(),
 /// )
 /// ```
@@ -95,7 +95,7 @@ class GlassChip extends StatelessWidget {
     this.onDeleted,
     this.selected = false,
     this.selectedColor,
-    this.deleteIcon = CupertinoIcons.xmark_circle_fill,
+    Widget? deleteIcon,
     this.deleteIconSize = 16.0,
     this.iconSize = 16.0,
     this.iconColor,
@@ -109,7 +109,7 @@ class GlassChip extends StatelessWidget {
     this.interactionScale = 1.03,
     this.stretch = 0.3,
     this.glowRadius = 0.8,
-  });
+  }) : deleteIcon = deleteIcon ?? const Icon(CupertinoIcons.xmark_circle_fill);
 
   // Cache default colors to avoid allocations
   static const _defaultIconColor =
@@ -130,8 +130,8 @@ class GlassChip extends StatelessWidget {
   /// The label text displayed in the chip.
   final String label;
 
-  /// Optional leading icon.
-  final IconData? icon;
+  /// Optional leading icon widget.
+  final Widget? icon;
 
   /// Called when the chip is tapped.
   ///
@@ -158,10 +158,10 @@ class GlassChip extends StatelessWidget {
   /// If null and [selected] is true, defaults to white with 30% opacity.
   final Color? selectedColor;
 
-  /// Icon used for the delete button.
+  /// Widget used for the delete button.
   ///
-  /// Defaults to [CupertinoIcons.xmark_circle_fill].
-  final IconData deleteIcon;
+  /// Defaults to [Icon(CupertinoIcons.xmark_circle_fill)].
+  final Widget deleteIcon;
 
   /// Size of the delete icon.
   ///
@@ -258,10 +258,12 @@ class GlassChip extends StatelessWidget {
         children: [
           // Leading icon
           if (icon != null) ...[
-            Icon(
-              icon,
-              size: iconSize,
-              color: effectiveIconColor,
+            IconTheme(
+              data: IconThemeData(
+                color: effectiveIconColor,
+                size: iconSize,
+              ),
+              child: icon!,
             ),
             SizedBox(width: spacing),
           ],
@@ -277,10 +279,12 @@ class GlassChip extends StatelessWidget {
             SizedBox(width: spacing),
             GestureDetector(
               onTap: onDeleted,
-              child: Icon(
-                deleteIcon,
-                size: deleteIconSize,
-                color: effectiveIconColor,
+              child: IconTheme(
+                data: IconThemeData(
+                  color: effectiveIconColor,
+                  size: deleteIconSize,
+                ),
+                child: deleteIcon,
               ),
             ),
           ],

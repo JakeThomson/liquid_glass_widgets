@@ -389,7 +389,7 @@ void main() {
             data: themeData,
             child: AdaptiveLiquidGlassLayer(
               child: GlassButton(
-                icon: Icons.star,
+                icon: Icon(Icons.star),
                 onTap: () {},
               ),
             ),
@@ -415,7 +415,7 @@ void main() {
             data: themeData,
             child: AdaptiveLiquidGlassLayer(
               child: GlassButton(
-                icon: Icons.star,
+                icon: Icon(Icons.star),
                 glowColor: Colors.red,
                 onTap: () {},
               ),

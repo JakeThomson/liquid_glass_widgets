@@ -73,10 +73,10 @@ void main() {
                   settings: settingsWithoutLighting,
                   child: GlassTabBar(
                     tabs: const [
-                      GlassTab(icon: Icons.home),
-                      GlassTab(icon: Icons.search),
-                      GlassTab(icon: Icons.notifications),
-                      GlassTab(icon: Icons.settings),
+                      GlassTab(icon: Icon(Icons.home)),
+                      GlassTab(icon: Icon(Icons.search)),
+                      GlassTab(icon: Icon(Icons.notifications)),
+                      GlassTab(icon: Icon(Icons.settings)),
                     ],
                     selectedIndex: 0,
                     onTabSelected: (_) {},
@@ -105,9 +105,9 @@ void main() {
                   child: GlassTabBar(
                     height: 56,
                     tabs: const [
-                      GlassTab(icon: Icons.home, label: 'Home'),
-                      GlassTab(icon: Icons.search, label: 'Search'),
-                      GlassTab(icon: Icons.person, label: 'Profile'),
+                      GlassTab(icon: Icon(Icons.home), label: 'Home'),
+                      GlassTab(icon: Icon(Icons.search), label: 'Search'),
+                      GlassTab(icon: Icon(Icons.person), label: 'Profile'),
                     ],
                     selectedIndex: 0,
                     onTabSelected: (_) {},

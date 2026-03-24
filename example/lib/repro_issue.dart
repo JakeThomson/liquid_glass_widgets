@@ -7,7 +7,6 @@
 /// To run: flutter run -t lib/repro_issue.dart
 library;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:liquid_glass_widgets_example/constants/glass_settings.dart';
@@ -83,12 +82,13 @@ class ShapeDebugPage extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _IconButton(
-                          icon: Icons.arrow_back_ios_new,
+                          icon: Icon(Icons.arrow_back_ios_new),
                           label: 'Back',
                         ),
-                        _IconButton(icon: Icons.favorite, label: 'Favorite'),
-                        _IconButton(icon: Icons.share, label: 'Share'),
-                        _IconButton(icon: Icons.close, label: 'Close'),
+                        _IconButton(
+                            icon: Icon(Icons.favorite), label: 'Favorite'),
+                        _IconButton(icon: Icon(Icons.share), label: 'Share'),
+                        _IconButton(icon: Icon(Icons.close), label: 'Close'),
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -133,13 +133,13 @@ class ShapeDebugPage extends StatelessWidget {
                             left: 8,
                             top: 16,
                             child: _IconButton(
-                              icon: Icons.arrow_back_ios_new,
+                              icon: Icon(Icons.arrow_back_ios_new),
                             ),
                           ),
                           Positioned(
                             right: 8,
                             top: 16,
-                            child: _IconButton(icon: Icons.close),
+                            child: _IconButton(icon: Icon(Icons.close)),
                           ),
                         ],
                       ),
@@ -176,7 +176,7 @@ class ShapeDebugPage extends StatelessWidget {
 class _IconButton extends StatelessWidget {
   const _IconButton({required this.icon, this.label});
 
-  final IconData icon;
+  final Widget icon;
   final String? label;
 
   @override
@@ -239,7 +239,7 @@ class _ShapeRow extends StatelessWidget {
     return Row(
       children: [
         GlassButton(
-          icon: Icons.star,
+          icon: Icon(Icons.star),
           width: 40,
           height: 40,
           iconSize: 16,
@@ -270,7 +270,7 @@ class _SizedButton extends StatelessWidget {
     return Column(
       children: [
         GlassButton(
-          icon: Icons.add,
+          icon: Icon(Icons.add),
           width: size,
           height: size,
           iconSize: iconSize,

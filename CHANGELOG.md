@@ -1,4 +1,52 @@
+# 0.4.1-dev.1
+
+### Breaking Changes
+
+**Library-wide `IconData` → `Widget` API migration.** All icon parameters across the library now accept any `Widget` — enabling SVG, PNG, and custom assets alongside standard `Icon()`. Standard `Icon` widgets automatically inherit the correct color and size via `IconTheme` with no visual change.
+
+**Migration for all affected widgets:** wrap bare `IconData` values in `Icon()`:
+```dart
+// Before (all widgets)
+GlassButton(icon: CupertinoIcons.heart, onTap: () {})
+
+// After
+GlassButton(icon: Icon(CupertinoIcons.heart), onTap: () {})
+
+// Or use any custom widget (new capability)
+GlassButton(icon: SvgPicture.asset('assets/heart.svg'), onTap: () {})
+```
+
+Affected widgets and parameters:
+
+| Widget | Parameter(s) |
+|--------|-------------|
+| `GlassButton` | `icon: Widget?` (was `IconData?`) |
+| `GlassIconButton` | `icon: Widget` (was `IconData`) |
+| `GlassChip` | `icon: Widget?`, `deleteIcon: Widget?` (were `IconData?`) |
+| `GlassPullDownButton` | `icon: Widget?` (was `IconData?`) |
+| `GlassSideBarItem` | `icon: Widget` (was `IconData`) |
+| `GlassMenuItem` | `icon: Widget?` (was `IconData?`) |
+| `GlassActionSheetAction` | `icon: Widget?` (was `IconData?`) |
+| `GlassTab` | `icon: Widget?` (was `IconData?`) |
+| `GlassPicker` | `icon: Widget?` (was `IconData?`) |
+| `GlassToast` / `GlassSnackBar` | `icon: Widget?` (was `IconData?`) |
+| `GlassBottomBarTab` | `icon: Widget` (was `IconData`) |
+| `GlassBottomBarExtraButton` | `icon: Widget` (was `IconData`) |
+
+- **BREAKING**: `GlassBottomBarTab.selectedIcon` renamed to `activeIcon` (`Widget?`)
+  - Aligns with Flutter's `BottomNavigationBarItem.activeIcon` naming convention
+  - **Migration:** Replace `selectedIcon:` with `activeIcon:` at all call sites
+
+### New Features
+
+- **FEAT**: `GlassBottomBar.iconLabelSpacing` — configurable vertical gap between tab icon and label (contributed by @baneizalfe in PR #11 — thanks!)
+  - Previously hardcoded to 4px; now exposed as a parameter (default: `4.0`)
+  - Useful for aligning with iOS 26 tab bar design guidelines
+
+---
+
 # 0.4.0-dev.7
+
 
 ### Bug Fixes
 

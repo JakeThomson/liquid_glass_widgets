@@ -464,42 +464,42 @@ class _InputPageState extends State<InputPage> {
                           ),
                           SizedBox(height: 16),
                           _FeatureItem(
-                            icon: CupertinoIcons.checkmark_circle_fill,
+                            icon: Icon(CupertinoIcons.checkmark_circle_fill),
                             text: 'Glass morphism effect',
                           ),
                           SizedBox(height: 8),
                           _FeatureItem(
-                            icon: CupertinoIcons.checkmark_circle_fill,
+                            icon: Icon(CupertinoIcons.checkmark_circle_fill),
                             text: 'Prefix and suffix icon support',
                           ),
                           SizedBox(height: 8),
                           _FeatureItem(
-                            icon: CupertinoIcons.checkmark_circle_fill,
+                            icon: Icon(CupertinoIcons.checkmark_circle_fill),
                             text: 'Multiline text input',
                           ),
                           SizedBox(height: 8),
                           _FeatureItem(
-                            icon: CupertinoIcons.checkmark_circle_fill,
+                            icon: Icon(CupertinoIcons.checkmark_circle_fill),
                             text: 'Customizable shapes',
                           ),
                           SizedBox(height: 8),
                           _FeatureItem(
-                            icon: CupertinoIcons.checkmark_circle_fill,
+                            icon: Icon(CupertinoIcons.checkmark_circle_fill),
                             text: 'Enabled/disabled states',
                           ),
                           SizedBox(height: 8),
                           _FeatureItem(
-                            icon: CupertinoIcons.checkmark_circle_fill,
+                            icon: Icon(CupertinoIcons.checkmark_circle_fill),
                             text: 'Read-only mode',
                           ),
                           SizedBox(height: 8),
                           _FeatureItem(
-                            icon: CupertinoIcons.checkmark_circle_fill,
+                            icon: Icon(CupertinoIcons.checkmark_circle_fill),
                             text: 'Keyboard type configuration',
                           ),
                           SizedBox(height: 8),
                           _FeatureItem(
-                            icon: CupertinoIcons.checkmark_circle_fill,
+                            icon: Icon(CupertinoIcons.checkmark_circle_fill),
                             text: 'Input formatters support',
                           ),
                         ],
@@ -542,18 +542,14 @@ class _FeatureItem extends StatelessWidget {
     required this.text,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String text;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: Colors.green,
-          size: 18,
-        ),
+        icon,
         const SizedBox(width: 12),
         Expanded(
           child: Text(

@@ -81,9 +81,9 @@ void main() {
             settings: settingsWithoutLighting,
             child: GlassTabBar(
               tabs: const [
-                GlassTab(icon: Icons.home),
-                GlassTab(icon: Icons.search),
-                GlassTab(icon: Icons.settings),
+                GlassTab(icon: Icon(Icons.home)),
+                GlassTab(icon: Icon(Icons.search)),
+                GlassTab(icon: Icon(Icons.settings)),
               ],
               selectedIndex: 0,
               onTabSelected: (_) {},
@@ -105,8 +105,8 @@ void main() {
             child: GlassTabBar(
               height: 56, // Taller for icon + label
               tabs: const [
-                GlassTab(icon: Icons.home, label: 'Home'),
-                GlassTab(icon: Icons.search, label: 'Search'),
+                GlassTab(icon: Icon(Icons.home), label: 'Home'),
+                GlassTab(icon: Icon(Icons.search), label: 'Search'),
               ],
               selectedIndex: 0,
               onTabSelected: (_) {},
@@ -280,7 +280,7 @@ void main() {
 
     test('GlassTab requires either icon or label', () {
       expect(
-        () => const GlassTab(icon: Icons.home),
+        () => const GlassTab(icon: Icon(Icons.home)),
         returnsNormally,
       );
 
@@ -290,7 +290,7 @@ void main() {
       );
 
       expect(
-        () => const GlassTab(icon: Icons.home, label: 'Tab'),
+        () => const GlassTab(icon: Icon(Icons.home), label: 'Tab'),
         returnsNormally,
       );
     });

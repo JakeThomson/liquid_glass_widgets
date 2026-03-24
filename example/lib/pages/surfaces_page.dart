@@ -24,7 +24,7 @@ class SurfacesPage extends StatelessWidget {
                 ),
               ),
               leading: GlassButton(
-                icon: CupertinoIcons.sidebar_left,
+                icon: Icon(CupertinoIcons.sidebar_left),
                 onTap: () {},
                 width: 40,
                 height: 40,
@@ -32,14 +32,14 @@ class SurfacesPage extends StatelessWidget {
               ),
               actions: [
                 GlassButton(
-                  icon: CupertinoIcons.search,
+                  icon: Icon(CupertinoIcons.search),
                   onTap: () {},
                   width: 40,
                   height: 40,
                   iconSize: 20,
                 ),
                 GlassButton(
-                  icon: CupertinoIcons.ellipsis,
+                  icon: Icon(CupertinoIcons.ellipsis),
                   onTap: () {},
                   width: 40,
                   height: 40,
@@ -89,27 +89,32 @@ class SurfacesPage extends StatelessWidget {
                               ),
                               const SizedBox(height: 16),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Blurred glass background',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Leading widget support (sidebar button)',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Multiple action buttons',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Centered title',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Safe area handling',
                               ),
                             ],
@@ -174,32 +179,38 @@ class SurfacesPage extends StatelessWidget {
                               ),
                               const SizedBox(height: 16),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Draggable indicator with jelly physics',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Velocity-based snapping',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Rubber band resistance at edges',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Per-tab glow colors',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Optional extra button',
                               ),
                               const SizedBox(height: 8),
                               _FeatureItem(
-                                icon: CupertinoIcons.checkmark_circle_fill,
+                                icon:
+                                    Icon(CupertinoIcons.checkmark_circle_fill),
                                 text: 'Seamless glass blending',
                               ),
                             ],
@@ -291,35 +302,35 @@ class SurfacesPage extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 16),
                                       _FeatureItem(
-                                        icon: CupertinoIcons
-                                            .checkmark_circle_fill,
+                                        icon: Icon(CupertinoIcons
+                                            .checkmark_circle_fill),
                                         text:
                                             'Draggable indicator with jelly physics',
                                       ),
                                       const SizedBox(height: 8),
                                       _FeatureItem(
-                                        icon: CupertinoIcons
-                                            .checkmark_circle_fill,
+                                        icon: Icon(CupertinoIcons
+                                            .checkmark_circle_fill),
                                         text:
                                             'Swipe between tabs with velocity snapping',
                                       ),
                                       const SizedBox(height: 8),
                                       _FeatureItem(
-                                        icon: CupertinoIcons
-                                            .checkmark_circle_fill,
+                                        icon: Icon(CupertinoIcons
+                                            .checkmark_circle_fill),
                                         text:
                                             'Sharp text rendering above glass',
                                       ),
                                       const SizedBox(height: 8),
                                       _FeatureItem(
-                                        icon: CupertinoIcons
-                                            .checkmark_circle_fill,
+                                        icon: Icon(CupertinoIcons
+                                            .checkmark_circle_fill),
                                         text: 'Icons, labels, or both',
                                       ),
                                       const SizedBox(height: 8),
                                       _FeatureItem(
-                                        icon: CupertinoIcons
-                                            .checkmark_circle_fill,
+                                        icon: Icon(CupertinoIcons
+                                            .checkmark_circle_fill),
                                         text: 'Scrollable for many tabs',
                                       ),
                                     ],
@@ -489,7 +500,7 @@ class SurfacesPage extends StatelessWidget {
                                         height: 60,
                                         children: [
                                           GlassButton(
-                                            icon: CupertinoIcons.share,
+                                            icon: Icon(CupertinoIcons.share),
                                             onTap: () {},
                                             label: 'Share',
                                             width: 44,
@@ -497,7 +508,7 @@ class SurfacesPage extends StatelessWidget {
                                           ),
                                           const Spacer(),
                                           GlassButton(
-                                            icon: CupertinoIcons.add,
+                                            icon: Icon(CupertinoIcons.add),
                                             onTap: () {},
                                             label: 'Add',
                                             width: 44,
@@ -505,7 +516,7 @@ class SurfacesPage extends StatelessWidget {
                                           ),
                                           const Spacer(),
                                           GlassButton(
-                                            icon: CupertinoIcons.delete,
+                                            icon: Icon(CupertinoIcons.delete),
                                             onTap: () {},
                                             label: 'Delete',
                                             width: 44,
@@ -583,27 +594,29 @@ class SurfacesPage extends StatelessWidget {
                                                   ),
                                                 ),
                                                 footer: GlassButton(
-                                                  icon: CupertinoIcons
-                                                      .profile_circled,
+                                                  icon: Icon(CupertinoIcons
+                                                      .profile_circled),
                                                   label: 'User',
                                                   width: double.infinity,
                                                   onTap: () {},
                                                 ),
                                                 children: [
                                                   GlassSideBarItem(
-                                                    icon: CupertinoIcons.home,
+                                                    icon: Icon(
+                                                        CupertinoIcons.home),
                                                     label: 'Home',
                                                     isSelected: true,
                                                     onTap: () {},
                                                   ),
                                                   GlassSideBarItem(
-                                                    icon: CupertinoIcons.folder,
+                                                    icon: Icon(
+                                                        CupertinoIcons.folder),
                                                     label: 'Projects',
                                                     onTap: () {},
                                                   ),
                                                   GlassSideBarItem(
-                                                    icon:
-                                                        CupertinoIcons.settings,
+                                                    icon: Icon(CupertinoIcons
+                                                        .settings),
                                                     label: 'Settings',
                                                     onTap: () {},
                                                   ),
@@ -781,10 +794,10 @@ class _TabBarIconExampleState extends State<_TabBarIconExample> {
   Widget build(BuildContext context) {
     return GlassTabBar(
       tabs: const [
-        GlassTab(icon: Icons.home),
-        GlassTab(icon: Icons.search),
-        GlassTab(icon: Icons.notifications),
-        GlassTab(icon: Icons.settings),
+        GlassTab(icon: Icon(Icons.home)),
+        GlassTab(icon: Icon(Icons.search)),
+        GlassTab(icon: Icon(Icons.notifications)),
+        GlassTab(icon: Icon(Icons.settings)),
       ],
       selectedIndex: _selectedIndex,
       onTabSelected: (index) {
@@ -812,9 +825,9 @@ class _TabBarIconLabelExampleState extends State<_TabBarIconLabelExample> {
     return GlassTabBar(
       height: 56,
       tabs: const [
-        GlassTab(icon: Icons.home, label: 'Home'),
-        GlassTab(icon: Icons.search, label: 'Search'),
-        GlassTab(icon: Icons.person, label: 'Profile'),
+        GlassTab(icon: Icon(Icons.home), label: 'Home'),
+        GlassTab(icon: Icon(Icons.search), label: 'Search'),
+        GlassTab(icon: Icon(Icons.person), label: 'Profile'),
       ],
       selectedIndex: _selectedIndex,
       onTabSelected: (index) {
@@ -879,18 +892,14 @@ class _FeatureItem extends StatelessWidget {
     required this.text,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String text;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: Colors.green,
-          size: 18,
-        ),
+        icon,
         const SizedBox(width: 12),
         Expanded(
           child: Text(

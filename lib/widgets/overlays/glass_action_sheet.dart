@@ -33,8 +33,8 @@ class GlassActionSheetAction {
   /// Callback when the action is pressed
   final VoidCallback onPressed;
 
-  /// Optional icon to display before the label
-  final IconData? icon;
+  /// Optional icon widget to display before the label
+  final Widget? icon;
 
   /// Visual style of the action
   final GlassActionSheetStyle style;
@@ -80,17 +80,17 @@ class GlassActionSheetAction {
 ///   actions: [
 ///     GlassActionSheetAction(
 ///       label: 'Save to Photos',
-///       icon: CupertinoIcons.photo,
+///       icon: Icon(CupertinoIcons.photo),
 ///       onPressed: () => save(),
 ///     ),
 ///     GlassActionSheetAction(
 ///       label: 'Share',
-///       icon: CupertinoIcons.share,
+///       icon: Icon(CupertinoIcons.share),
 ///       onPressed: () => share(),
 ///     ),
 ///     GlassActionSheetAction(
 ///       label: 'Delete',
-///       icon: CupertinoIcons.delete,
+///       icon: Icon(CupertinoIcons.delete),
 ///       style: GlassActionSheetStyle.destructive,
 ///       onPressed: () => delete(),
 ///     ),
@@ -309,10 +309,9 @@ class _GlassActionSheetContent extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (action.icon != null) ...[
-                Icon(
-                  action.icon,
-                  color: textColor,
-                  size: 20,
+                IconTheme(
+                  data: IconThemeData(color: textColor, size: 20),
+                  child: action.icon!,
                 ),
                 const SizedBox(width: 12),
               ],

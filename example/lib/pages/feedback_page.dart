@@ -573,7 +573,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                                 context,
                                 message: 'Settings saved successfully!',
                                 type: GlassToastType.success,
-                                icon: CupertinoIcons.check_mark_circled_solid,
+                                icon: Icon(
+                                    CupertinoIcons.check_mark_circled_solid),
                                 position: GlassToastPosition.top,
                               );
                             },

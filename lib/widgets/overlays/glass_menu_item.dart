@@ -20,8 +20,8 @@ class GlassMenuItem extends StatefulWidget {
   /// The primary text of the item.
   final String title;
 
-  /// The icon displayed before the title.
-  final IconData? icon;
+  /// The icon widget displayed before the title.
+  final Widget? icon;
 
   /// Callback when the item is tapped.
   final VoidCallback onTap;
@@ -96,10 +96,9 @@ class _GlassMenuItemState extends State<GlassMenuItem> {
                 children: [
                   // Icon
                   if (widget.icon != null) ...[
-                    Icon(
-                      widget.icon,
-                      size: 20,
-                      color: iconColor,
+                    IconTheme(
+                      data: IconThemeData(color: iconColor, size: 20),
+                      child: widget.icon!,
                     ),
                     const SizedBox(width: 12),
                   ],

@@ -51,8 +51,8 @@ void main() {
                     style: TextStyle(color: Colors.white),
                   ),
                   actions: [
-                    GlassButton(icon: Icons.search, onTap: () {}),
-                    GlassButton(icon: Icons.more_horiz, onTap: () {}),
+                    GlassButton(icon: Icon(Icons.search), onTap: () {}),
+                    GlassButton(icon: Icon(Icons.more_horiz), onTap: () {}),
                   ],
                 ),
               ),
@@ -78,15 +78,15 @@ void main() {
               tabs: const [
                 GlassBottomBarTab(
                   label: 'Home',
-                  icon: CupertinoIcons.home,
+                  icon: Icon(CupertinoIcons.home),
                 ),
                 GlassBottomBarTab(
                   label: 'Search',
-                  icon: CupertinoIcons.search,
+                  icon: Icon(CupertinoIcons.search),
                 ),
                 GlassBottomBarTab(
                   label: 'Profile',
-                  icon: CupertinoIcons.person,
+                  icon: Icon(CupertinoIcons.person),
                 ),
               ],
               selectedIndex: 0,
@@ -101,17 +101,17 @@ void main() {
               tabs: const [
                 GlassBottomBarTab(
                   label: 'Home',
-                  icon: CupertinoIcons.home,
+                  icon: Icon(CupertinoIcons.home),
                 ),
                 GlassBottomBarTab(
                   label: 'Search',
-                  icon: CupertinoIcons.search,
+                  icon: Icon(CupertinoIcons.search),
                 ),
               ],
               selectedIndex: 0,
               onTabSelected: (_) {},
               extraButton: GlassBottomBarExtraButton(
-                icon: CupertinoIcons.add,
+                icon: Icon(CupertinoIcons.add),
                 label: 'Add',
                 onTap: () {},
               ),

@@ -68,7 +68,7 @@ class InputsPage extends StatelessWidget {
                       label: 'Role',
                       child: GlassPicker(
                         value: 'Administrator',
-                        icon: CupertinoIcons.briefcase,
+                        icon: Icon(CupertinoIcons.briefcase),
                         useOwnLayer: true, // Demo specific layer usage
                         quality: GlassQuality.premium,
                         onTap: () {},

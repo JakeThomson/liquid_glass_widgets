@@ -85,37 +85,37 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
             tabs: [
               GlassBottomBarTab(
                 label: 'Home',
-                icon: CupertinoIcons.home,
-                selectedIcon: CupertinoIcons.house_fill,
+                icon: const Icon(CupertinoIcons.home),
+                activeIcon: const Icon(CupertinoIcons.house_fill),
               ),
               GlassBottomBarTab(
                 label: 'Containers',
-                icon: CupertinoIcons.square_stack_3d_up,
-                selectedIcon: CupertinoIcons.square_stack_3d_up_fill,
+                icon: const Icon(CupertinoIcons.square_stack_3d_up),
+                activeIcon: const Icon(CupertinoIcons.square_stack_3d_up_fill),
               ),
               GlassBottomBarTab(
                 label: 'Interactive',
-                icon: CupertinoIcons.hand_point_right,
-                selectedIcon: CupertinoIcons.hand_point_right_fill,
+                icon: const Icon(CupertinoIcons.hand_point_right),
+                activeIcon: const Icon(CupertinoIcons.hand_point_right_fill),
               ),
               GlassBottomBarTab(
                 label: 'Feedback',
-                icon: CupertinoIcons.hourglass,
-                selectedIcon: CupertinoIcons.hourglass,
+                icon: const Icon(CupertinoIcons.hourglass),
+                activeIcon: const Icon(CupertinoIcons.hourglass),
               ),
               GlassBottomBarTab(
                 label: 'Overlays',
-                icon: CupertinoIcons.square_stack,
-                selectedIcon: CupertinoIcons.square_stack_fill,
+                icon: const Icon(CupertinoIcons.square_stack),
+                activeIcon: const Icon(CupertinoIcons.square_stack_fill),
               ),
               GlassBottomBarTab(
                 label: 'Surfaces',
-                icon: CupertinoIcons.rectangle_3_offgrid,
-                selectedIcon: CupertinoIcons.rectangle_3_offgrid_fill,
+                icon: const Icon(CupertinoIcons.rectangle_3_offgrid),
+                activeIcon: const Icon(CupertinoIcons.rectangle_3_offgrid_fill),
               ),
               GlassBottomBarTab(
                 label: 'Input',
-                icon: CupertinoIcons.keyboard,
+                icon: const Icon(CupertinoIcons.keyboard),
               ),
             ],
             selectedIndex: _selectedIndex,
@@ -125,7 +125,7 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
               });
             },
             // extraButton: GlassBottomBarExtraButton(
-            //   icon: CupertinoIcons.rectangle_3_offgrid_fill,
+            //   icon: Icon(CupertinoIcons.rectangle_3_offgrid_fill),
             //   iconColor: Colors.amber,
             //   onTap: () {
             //
@@ -237,7 +237,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     _CategoryCard(
-                      icon: CupertinoIcons.square_stack_3d_up_fill,
+                      icon: Icon(CupertinoIcons.square_stack_3d_up_fill),
                       title: 'Containers',
                       description:
                           'GlassCard, GlassPanel, and GlassContainer for content',
@@ -245,7 +245,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _CategoryCard(
-                      icon: CupertinoIcons.hand_point_right_fill,
+                      icon: Icon(CupertinoIcons.hand_point_right_fill),
                       title: 'Interactive',
                       description:
                           'GlassButton, GlassSwitch, and GlassSegmentedControl',
@@ -253,7 +253,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _CategoryCard(
-                      icon: CupertinoIcons.hourglass,
+                      icon: Icon(CupertinoIcons.hourglass),
                       title: 'Feedback',
                       description:
                           'GlassProgressIndicator for loading and progress',
@@ -261,7 +261,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _CategoryCard(
-                      icon: CupertinoIcons.square_stack_fill,
+                      icon: Icon(CupertinoIcons.square_stack_fill),
                       title: 'Overlays',
                       description:
                           'GlassSheet for modal dialogs and bottom sheets',
@@ -269,7 +269,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _CategoryCard(
-                      icon: CupertinoIcons.rectangle_3_offgrid_fill,
+                      icon: Icon(CupertinoIcons.rectangle_3_offgrid_fill),
                       title: 'Surfaces',
                       description:
                           'GlassAppBar and GlassBottomBar for navigation',
@@ -277,7 +277,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     const _CategoryCard(
-                      icon: CupertinoIcons.keyboard,
+                      icon: Icon(CupertinoIcons.keyboard),
                       title: 'Input',
                       description: 'GlassTextField for text input',
                       color: Colors.pink,
@@ -302,7 +302,7 @@ class _CategoryCard extends StatelessWidget {
     required this.color,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String title;
   final String description;
   final Color color;
@@ -320,11 +320,7 @@ class _CategoryCard extends StatelessWidget {
               color: color.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 28,
-            ),
+            child: icon,
           ),
           const SizedBox(width: 16),
           Expanded(

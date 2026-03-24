@@ -97,7 +97,7 @@ class _ConciergePageState extends State<ConciergePage> {
         child: Row(
           children: [
             GlassButton(
-              icon: Icons.arrow_back_ios_new,
+              icon: Icon(Icons.arrow_back_ios_new),
               iconSize: 20,
               width: 44,
               height: 44,
@@ -105,7 +105,7 @@ class _ConciergePageState extends State<ConciergePage> {
             ),
             const SizedBox(width: 8),
             GlassButton(
-              icon: Icons.settings_outlined,
+              icon: Icon(Icons.settings_outlined),
               iconSize: 20,
               width: 44,
               height: 44,
@@ -135,7 +135,7 @@ class _ConciergePageState extends State<ConciergePage> {
               ),
             ),
             GlassButton(
-              icon: Icons.more_horiz,
+              icon: Icon(Icons.more_horiz),
               iconSize: 22,
               width: 44,
               height: 44,
@@ -435,7 +435,7 @@ class _ConciergePageState extends State<ConciergePage> {
                 ),
                 const SizedBox(height: 24),
                 GlassButton(
-                  icon: Icons.check,
+                  icon: Icon(Icons.check),
                   label: 'Done',
                   height: 50,
                   width: 50,

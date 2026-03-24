@@ -47,9 +47,9 @@ import '../shared/inherited_liquid_glass.dart';
 /// GlassTabBar(
 ///   height: 56, // Taller for icon + label
 ///   tabs: [
-///     GlassTab(icon: Icons.home, label: 'Home'),
-///     GlassTab(icon: Icons.search, label: 'Search'),
-///     GlassTab(icon: Icons.person, label: 'Profile'),
+///     GlassTab(icon: Icon(Icons.home), label: 'Home'),
+///     GlassTab(icon: Icon(Icons.search), label: 'Search'),
+///     GlassTab(icon: Icon(Icons.person), label: 'Profile'),
 ///   ],
 ///   selectedIndex: _selectedIndex,
 ///   onTabSelected: (index) => setState(() => _selectedIndex = index),
@@ -606,10 +606,9 @@ class _TabItem extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget? iconWidget;
     if (tab.icon != null) {
-      iconWidget = Icon(
-        tab.icon,
-        size: iconSize,
-        color: iconColor,
+      iconWidget = IconTheme(
+        data: IconThemeData(color: iconColor, size: iconSize),
+        child: tab.icon!,
       );
     }
 
@@ -675,8 +674,8 @@ class GlassTab {
           'GlassTab must have either an icon or label',
         );
 
-  /// Icon to display in the tab.
-  final IconData? icon;
+  /// Icon widget to display in the tab.
+  final Widget? icon;
 
   /// Label text to display in the tab.
   final String? label;

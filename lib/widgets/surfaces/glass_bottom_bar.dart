@@ -57,19 +57,19 @@ import '../shared/inherited_liquid_glass.dart';
 ///       tabs: [
 ///         GlassBottomBarTab(
 ///           label: 'Home',
-///           icon: CupertinoIcons.home,
-///           selectedIcon: CupertinoIcons.home_fill,
+///           icon: Icon(CupertinoIcons.home),
+///           activeIcon: Icon(CupertinoIcons.home_fill),
 ///           glowColor: Colors.blue,
 ///         ),
 ///         GlassBottomBarTab(
 ///           label: 'Search',
-///           icon: CupertinoIcons.search,
+///           icon: Icon(CupertinoIcons.search),
 ///           glowColor: Colors.purple,
 ///         ),
 ///         GlassBottomBarTab(
 ///           label: 'Profile',
-///           icon: CupertinoIcons.person,
-///           selectedIcon: CupertinoIcons.person_fill,
+///           icon: Icon(CupertinoIcons.person),
+///           activeIcon: Icon(CupertinoIcons.person_fill),
 ///           glowColor: Colors.pink,
 ///         ),
 ///       ],
@@ -173,7 +173,7 @@ class GlassBottomBar extends StatefulWidget {
     this.barHeight = 64,
     this.barBorderRadius = _defaultBarBorderRadius,
     this.tabPadding = const EdgeInsets.symmetric(horizontal: 4),
-    this.tabSpacing = 4,
+    this.iconLabelSpacing = 4,
     this.blendAmount = 10,
     this.glassSettings,
     this.showIndicator = true,
@@ -308,7 +308,7 @@ class GlassBottomBar extends StatefulWidget {
   ///
   /// Controls spacing between the tab icon and the tab label.
   /// Defaults to 4px.
-  final double tabSpacing;
+  final double iconLabelSpacing;
 
   /// Blend amount for glass surfaces.
   ///
@@ -498,7 +498,7 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                             unselectedIconColor: widget.unselectedIconColor,
                             iconSize: widget.iconSize,
                             textStyle: widget.textStyle,
-                            tabSpacing: widget.tabSpacing,
+                            iconLabelSpacing: widget.iconLabelSpacing,
                             glowDuration: widget.glowDuration,
                             glowBlurRadius: widget.glowBlurRadius,
                             glowSpreadRadius: widget.glowSpreadRadius,
@@ -565,7 +565,7 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                         unselectedIconColor: widget.unselectedIconColor,
                         iconSize: widget.iconSize,
                         textStyle: widget.textStyle,
-                        tabSpacing: widget.tabSpacing,
+                        iconLabelSpacing: widget.iconLabelSpacing,
                         glowDuration: widget.glowDuration,
                         glowBlurRadius: widget.glowBlurRadius,
                         glowSpreadRadius: widget.glowSpreadRadius,
@@ -593,14 +593,36 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
 
 /// Configuration for a tab in [GlassBottomBar].
 ///
-/// Each tab displays an icon and label. Optionally provide a different icon
+/// Each tab displays an icon and label. Optionally provide a different widget
 /// for the selected state and a glow color for the selection animation.
+///
+/// ## Icon widgets
+///
+/// Pass any widget as [icon] and [activeIcon]. Standard [Icon] widgets will
+/// automatically inherit the correct color, size, and shadow halo from the
+/// bar's [IconTheme]. Custom widgets (SVG, PNG, etc.) are responsible for
+/// their own tinting.
+///
+/// ```dart
+/// // Standard Icon — inherits color/size automatically
+/// GlassBottomBarTab(
+///   label: 'Home',
+///   icon: Icon(CupertinoIcons.home),
+///   activeIcon: Icon(CupertinoIcons.home_fill),
+/// )
+///
+/// // Custom SVG — color handled by the caller
+/// GlassBottomBarTab(
+///   label: 'Settings',
+///   icon: SvgPicture.asset('assets/settings.svg', colorFilter: ...),
+/// )
+/// ```
 class GlassBottomBarTab {
   /// Creates a bottom bar tab configuration.
   const GlassBottomBarTab({
     this.label,
     required this.icon,
-    this.selectedIcon,
+    this.activeIcon,
     this.glowColor,
     this.thickness,
   });
@@ -608,15 +630,19 @@ class GlassBottomBarTab {
   /// Label text displayed below the icon.
   final String? label;
 
-  /// Icon displayed when the tab is not selected.
+  /// Widget displayed when the tab is not selected.
   ///
-  /// Also used when selected if [selectedIcon] is not provided.
-  final IconData icon;
+  /// Also used when selected if [activeIcon] is not provided.
+  /// Standard [Icon] widgets automatically pick up the correct color and size
+  /// from the parent [IconTheme].
+  final Widget icon;
 
-  /// Icon displayed when the tab is selected.
+  /// Widget displayed when the tab is selected.
   ///
-  /// If null, uses [icon] for both selected and unselected states.
-  final IconData? selectedIcon;
+  /// If null, [icon] is used for both selected and unselected states.
+  /// Standard [Icon] widgets automatically pick up the correct color and size
+  /// from the parent [IconTheme].
+  final Widget? activeIcon;
 
   /// Color of the animated glow effect when this tab is selected.
   ///
@@ -627,8 +653,11 @@ class GlassBottomBarTab {
   ///
   /// When provided, creates a shadow halo around the icon for emphasis.
   /// Only visible on unselected tabs, or selected tabs without a
-  /// [selectedIcon].
+  /// different [activeIcon].
   /// Typical values are between 0.5 and 2.0.
+  ///
+  /// This is applied via [IconTheme], so it only takes effect on
+  /// standard [Icon] widgets. Custom widgets must handle shadows themselves.
   final double? thickness;
 }
 
@@ -646,8 +675,8 @@ class GlassBottomBarExtraButton {
     this.size = 64,
   });
 
-  /// Icon displayed in the button.
-  final IconData icon;
+  /// Icon widget displayed in the button.
+  final Widget icon;
 
   /// Callback when the button is tapped.
   final VoidCallback onTap;
@@ -679,7 +708,7 @@ class _BottomBarTab extends StatelessWidget {
     required this.unselectedIconColor,
     required this.iconSize,
     required this.textStyle,
-    required this.tabSpacing,
+    required this.iconLabelSpacing,
     required this.glowDuration,
     required this.glowBlurRadius,
     required this.glowSpreadRadius,
@@ -693,7 +722,7 @@ class _BottomBarTab extends StatelessWidget {
   final Color unselectedIconColor;
   final double iconSize;
   final TextStyle? textStyle;
-  final double tabSpacing;
+  final double iconLabelSpacing;
   final Duration glowDuration;
   final double glowBlurRadius;
   final double glowSpreadRadius;
@@ -703,6 +732,7 @@ class _BottomBarTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconColor = selected ? selectedIconColor : unselectedIconColor;
+    final iconWidget = selected ? (tab.activeIcon ?? tab.icon) : tab.icon;
 
     return GestureDetector(
       onTap: onTap,
@@ -715,7 +745,7 @@ class _BottomBarTab extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
-            spacing: tabSpacing,
+            spacing: iconLabelSpacing,
             children: [
               // Icon with optional glow effect
               ExcludeSemantics(
@@ -761,12 +791,22 @@ class _BottomBarTab extends StatelessWidget {
                         ),
                       ),
 
-                    // Icon with optional thickness effect
-                    Icon(
-                      selected ? (tab.selectedIcon ?? tab.icon) : tab.icon,
-                      color: iconColor,
-                      size: iconSize,
-                      shadows: _buildIconShadows(),
+                    // Icon widget wrapped in IconTheme so that standard Icon
+                    // widgets inherit the correct color, size, and shadows
+                    // automatically. Custom widgets (SVG, PNG, etc.) are
+                    // unaffected by IconTheme and handle styling themselves.
+                    IconTheme(
+                      data: IconThemeData(
+                        color: iconColor,
+                        size: iconSize,
+                        shadows: _buildIconShadows(),
+                      ),
+                      child: DefaultTextStyle(
+                        style: DefaultTextStyle.of(context).style.copyWith(
+                              color: iconColor,
+                            ),
+                        child: iconWidget,
+                      ),
                     ),
                   ],
                 ),
@@ -794,15 +834,18 @@ class _BottomBarTab extends StatelessWidget {
     );
   }
 
-  /// Builds a circular shadow halo around the icon for emphasis.
+  /// Builds a circular shadow halo for the icon thickness effect.
   ///
-  /// Only applied when `[tab.thickness]` is provided and the tab is unselected
-  /// (or selected without a different selectedIcon).
+  /// These shadows are applied via [IconTheme], so they only take effect on
+  /// standard [Icon] widgets. Custom widgets must handle shadows themselves.
+  ///
+  /// Only applied when [GlassBottomBarTab.thickness] is provided and the tab
+  /// is unselected (or selected without a different [GlassBottomBarTab.activeIcon]).
   List<Shadow>? _buildIconShadows() {
     // Only show thickness effect when:
     // 1. thickness is provided
-    // 2. Tab is unselected OR selected without a different icon
-    if (tab.thickness == null || (selected && tab.selectedIcon != null)) {
+    // 2. Tab is unselected OR selected without a different active icon
+    if (tab.thickness == null || (selected && tab.activeIcon != null)) {
       return null;
     }
 

@@ -15,7 +15,7 @@ class GlassPullDownButton extends StatelessWidget {
   /// Creates a glass pull-down button.
   const GlassPullDownButton({
     required this.items,
-    this.icon = CupertinoIcons.ellipsis_circle,
+    Widget? icon,
     this.label,
     super.key,
     this.buttonWidth = 44,
@@ -23,10 +23,10 @@ class GlassPullDownButton extends StatelessWidget {
     this.menuWidth = 200,
     this.quality,
     this.onSelected,
-  });
+  }) : icon = icon ?? const Icon(CupertinoIcons.ellipsis_circle);
 
-  /// The icon to display on the button.
-  final IconData icon;
+  /// The icon widget to display on the button.
+  final Widget icon;
 
   /// Optional label to display next to the icon.
   final String? label;
@@ -74,7 +74,10 @@ class GlassPullDownButton extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 20, color: Colors.white),
+                IconTheme(
+                  data: const IconThemeData(size: 20, color: Colors.white),
+                  child: icon,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   label!,

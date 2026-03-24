@@ -269,19 +269,19 @@ class ContainersPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
                           _SettingsRow(
-                            icon: CupertinoIcons.bell_fill,
+                            icon: Icon(CupertinoIcons.bell_fill),
                             title: 'Notifications',
                             subtitle: 'Manage notification settings',
                           ),
                           const SizedBox(height: 16),
                           _SettingsRow(
-                            icon: CupertinoIcons.lock_fill,
+                            icon: Icon(CupertinoIcons.lock_fill),
                             title: 'Privacy',
                             subtitle: 'Control your privacy settings',
                           ),
                           const SizedBox(height: 16),
                           _SettingsRow(
-                            icon: CupertinoIcons.paintbrush_fill,
+                            icon: Icon(CupertinoIcons.paintbrush_fill),
                             title: 'Appearance',
                             subtitle: 'Customize the look and feel',
                           ),
@@ -335,7 +335,7 @@ class _SettingsRow extends StatelessWidget {
     required this.subtitle,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String title;
   final String subtitle;
 
@@ -350,11 +350,7 @@ class _SettingsRow extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 20,
-          ),
+          child: icon,
         ),
         const SizedBox(width: 16),
         Expanded(

@@ -105,26 +105,26 @@ class _InteractivePageState extends State<InteractivePage> {
                                   runSpacing: 12,
                                   children: [
                                     GlassButton(
-                                      icon: CupertinoIcons.heart,
+                                      icon: Icon(CupertinoIcons.heart),
                                       onTap: () {},
                                       label: 'Favorite',
                                     ),
                                     GlassButton(
-                                      icon: CupertinoIcons.star,
+                                      icon: Icon(CupertinoIcons.star),
                                       onTap: () {},
                                       label: 'Star',
                                       glowColor:
                                           Colors.amber.withValues(alpha: 0.3),
                                     ),
                                     GlassButton(
-                                      icon: CupertinoIcons.share,
+                                      icon: Icon(CupertinoIcons.share),
                                       onTap: () {},
                                       label: 'Share',
                                       glowColor:
                                           Colors.blue.withValues(alpha: 0.3),
                                     ),
                                     GlassButton(
-                                      icon: CupertinoIcons.bookmark,
+                                      icon: Icon(CupertinoIcons.bookmark),
                                       onTap: () {},
                                       label: 'Save',
                                       glowColor:
@@ -154,14 +154,14 @@ class _InteractivePageState extends State<InteractivePage> {
                                       MainAxisAlignment.spaceEvenly,
                                   children: [
                                     GlassButton(
-                                      icon: CupertinoIcons.play_fill,
+                                      icon: Icon(CupertinoIcons.play_fill),
                                       onTap: () {},
                                       shape: const LiquidOval(),
                                       glowColor:
                                           Colors.purple.withValues(alpha: 0.3),
                                     ),
                                     GlassButton(
-                                      icon: CupertinoIcons.pause_fill,
+                                      icon: Icon(CupertinoIcons.pause_fill),
                                       onTap: () {},
                                       shape: const LiquidRoundedRectangle(
                                         borderRadius: 16,
@@ -170,7 +170,7 @@ class _InteractivePageState extends State<InteractivePage> {
                                           Colors.blue.withValues(alpha: 0.3),
                                     ),
                                     GlassButton(
-                                      icon: CupertinoIcons.stop_fill,
+                                      icon: Icon(CupertinoIcons.stop_fill),
                                       onTap: () {},
                                       shape: const LiquidRoundedSuperellipse(
                                         borderRadius: 16,
@@ -202,21 +202,21 @@ class _InteractivePageState extends State<InteractivePage> {
                                       MainAxisAlignment.spaceEvenly,
                                   children: [
                                     GlassButton(
-                                      icon: CupertinoIcons.plus,
+                                      icon: Icon(CupertinoIcons.plus),
                                       onTap: () {},
                                       width: 40,
                                       height: 40,
                                       iconSize: 18,
                                     ),
                                     GlassButton(
-                                      icon: CupertinoIcons.plus,
+                                      icon: Icon(CupertinoIcons.plus),
                                       onTap: () {},
                                       width: 56,
                                       height: 56,
                                       iconSize: 24,
                                     ),
                                     GlassButton(
-                                      icon: CupertinoIcons.plus,
+                                      icon: Icon(CupertinoIcons.plus),
                                       onTap: () {},
                                       width: 72,
                                       height: 72,
@@ -292,7 +292,7 @@ class _InteractivePageState extends State<InteractivePage> {
                                     Column(
                                       children: [
                                         GlassButton(
-                                          icon: CupertinoIcons.checkmark,
+                                          icon: Icon(CupertinoIcons.checkmark),
                                           onTap: () {},
                                           enabled: true,
                                         ),
@@ -310,7 +310,7 @@ class _InteractivePageState extends State<InteractivePage> {
                                     Column(
                                       children: [
                                         GlassButton(
-                                          icon: CupertinoIcons.xmark,
+                                          icon: Icon(CupertinoIcons.xmark),
                                           onTap: () {},
                                           enabled: false,
                                         ),
@@ -354,31 +354,31 @@ class _InteractivePageState extends State<InteractivePage> {
                                   runSpacing: 12,
                                   children: [
                                     GlassIconButton(
-                                      icon: CupertinoIcons.heart,
+                                      icon: Icon(CupertinoIcons.heart),
                                       onPressed: () {},
                                       glowColor:
                                           Colors.red.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.star,
+                                      icon: Icon(CupertinoIcons.star),
                                       onPressed: () {},
                                       glowColor:
                                           Colors.yellow.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.bell,
+                                      icon: Icon(CupertinoIcons.bell),
                                       onPressed: () {},
                                       glowColor:
                                           Colors.blue.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.share,
+                                      icon: Icon(CupertinoIcons.share),
                                       onPressed: () {},
                                       glowColor:
                                           Colors.green.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.settings,
+                                      icon: Icon(CupertinoIcons.settings),
                                       onPressed: () {},
                                       glowColor:
                                           Colors.purple.withValues(alpha: 0.3),
@@ -407,28 +407,28 @@ class _InteractivePageState extends State<InteractivePage> {
                                   runSpacing: 12,
                                   children: [
                                     GlassIconButton(
-                                      icon: CupertinoIcons.add,
+                                      icon: Icon(CupertinoIcons.add),
                                       onPressed: () {},
                                       shape: GlassIconButtonShape.roundedSquare,
                                       glowColor:
                                           Colors.blue.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.minus,
+                                      icon: Icon(CupertinoIcons.minus),
                                       onPressed: () {},
                                       shape: GlassIconButtonShape.roundedSquare,
                                       glowColor:
                                           Colors.orange.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.search,
+                                      icon: Icon(CupertinoIcons.search),
                                       onPressed: () {},
                                       shape: GlassIconButtonShape.roundedSquare,
                                       glowColor:
                                           Colors.cyan.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.trash,
+                                      icon: Icon(CupertinoIcons.trash),
                                       onPressed: () {},
                                       shape: GlassIconButtonShape.roundedSquare,
                                       glowColor:
@@ -459,28 +459,28 @@ class _InteractivePageState extends State<InteractivePage> {
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     GlassIconButton(
-                                      icon: CupertinoIcons.heart_fill,
+                                      icon: Icon(CupertinoIcons.heart_fill),
                                       onPressed: () {},
                                       size: 32,
                                       glowColor:
                                           Colors.pink.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.heart_fill,
+                                      icon: Icon(CupertinoIcons.heart_fill),
                                       onPressed: () {},
                                       size: 40,
                                       glowColor:
                                           Colors.pink.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.heart_fill,
+                                      icon: Icon(CupertinoIcons.heart_fill),
                                       onPressed: () {},
                                       size: 48,
                                       glowColor:
                                           Colors.pink.withValues(alpha: 0.3),
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.heart_fill,
+                                      icon: Icon(CupertinoIcons.heart_fill),
                                       onPressed: () {},
                                       size: 56,
                                       glowColor:
@@ -518,18 +518,18 @@ class _InteractivePageState extends State<InteractivePage> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     GlassIconButton(
-                                      icon: CupertinoIcons.back,
+                                      icon: Icon(CupertinoIcons.back),
                                       onPressed: () {},
                                     ),
                                     Row(
                                       children: [
                                         GlassIconButton(
-                                          icon: CupertinoIcons.search,
+                                          icon: Icon(CupertinoIcons.search),
                                           onPressed: () {},
                                         ),
                                         const SizedBox(width: 8),
                                         GlassIconButton(
-                                          icon: CupertinoIcons.ellipsis,
+                                          icon: Icon(CupertinoIcons.ellipsis),
                                           onPressed: () {},
                                         ),
                                       ],
@@ -558,20 +558,20 @@ class _InteractivePageState extends State<InteractivePage> {
                                   runSpacing: 12,
                                   children: [
                                     GlassIconButton(
-                                      icon: CupertinoIcons.heart,
+                                      icon: Icon(CupertinoIcons.heart),
                                       onPressed: () {},
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.heart,
+                                      icon: Icon(CupertinoIcons.heart),
                                       onPressed: null, // Disabled
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.star,
+                                      icon: Icon(CupertinoIcons.star),
                                       onPressed: () {},
                                       shape: GlassIconButtonShape.roundedSquare,
                                     ),
                                     GlassIconButton(
-                                      icon: CupertinoIcons.star,
+                                      icon: Icon(CupertinoIcons.star),
                                       onPressed: null, // Disabled
                                       shape: GlassIconButtonShape.roundedSquare,
                                     ),
@@ -1354,18 +1354,18 @@ class _ChipDemosCardState extends State<_ChipDemosCard> {
                 children: [
                   GlassChip(
                     label: 'Favorite',
-                    icon: CupertinoIcons.heart_fill,
+                    icon: Icon(CupertinoIcons.heart_fill),
                     iconColor: Colors.pink,
                     onTap: () {},
                   ),
                   GlassChip(
                     label: 'Share',
-                    icon: CupertinoIcons.share,
+                    icon: Icon(CupertinoIcons.share),
                     onTap: () {},
                   ),
                   GlassChip(
                     label: 'Star',
-                    icon: CupertinoIcons.star_fill,
+                    icon: Icon(CupertinoIcons.star_fill),
                     iconColor: Colors.yellow,
                     onTap: () {},
                   ),
@@ -1492,17 +1492,17 @@ class _ButtonGroupDemosCard extends StatelessWidget {
                   useOwnLayer: true, // Needs own layer to draw background
                   children: [
                     GlassButton(
-                      icon: CupertinoIcons.bold,
+                      icon: Icon(CupertinoIcons.bold),
                       style: GlassButtonStyle.transparent,
                       onTap: () {},
                     ),
                     GlassButton(
-                      icon: CupertinoIcons.italic,
+                      icon: Icon(CupertinoIcons.italic),
                       style: GlassButtonStyle.transparent,
                       onTap: () {},
                     ),
                     GlassButton(
-                      icon: CupertinoIcons.underline,
+                      icon: Icon(CupertinoIcons.underline),
                       style: GlassButtonStyle.transparent,
                       onTap: () {},
                     ),
@@ -1532,13 +1532,13 @@ class _ButtonGroupDemosCard extends StatelessWidget {
                   borderRadius: 20,
                   children: [
                     GlassButton(
-                      icon: CupertinoIcons.back,
+                      icon: Icon(CupertinoIcons.back),
                       style: GlassButtonStyle.transparent,
                       width: 60,
                       onTap: () {},
                     ),
                     GlassButton(
-                      icon: CupertinoIcons.forward,
+                      icon: Icon(CupertinoIcons.forward),
                       style: GlassButtonStyle.transparent,
                       width: 60,
                       onTap: () {},
@@ -1580,21 +1580,21 @@ class _PullDownButtonDemosCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   GlassPullDownButton(
-                    icon: CupertinoIcons.ellipsis_circle,
+                    icon: Icon(CupertinoIcons.ellipsis_circle),
                     items: [
                       GlassMenuItem(
                         title: 'Copy',
-                        icon: CupertinoIcons.doc_on_doc,
+                        icon: Icon(CupertinoIcons.doc_on_doc),
                         onTap: () {},
                       ),
                       GlassMenuItem(
                         title: 'Share',
-                        icon: CupertinoIcons.share,
+                        icon: Icon(CupertinoIcons.share),
                         onTap: () {},
                       ),
                       GlassMenuItem(
                         title: 'Delete',
-                        icon: CupertinoIcons.trash,
+                        icon: Icon(CupertinoIcons.trash),
                         isDestructive: true,
                         onTap: () {},
                       ),
@@ -1602,7 +1602,7 @@ class _PullDownButtonDemosCard extends StatelessWidget {
                   ),
                   GlassPullDownButton(
                     label: 'Sort By',
-                    icon: CupertinoIcons.arrow_up_arrow_down,
+                    icon: Icon(CupertinoIcons.arrow_up_arrow_down),
                     buttonWidth: 120,
                     items: [
                       GlassMenuItem(
@@ -1670,7 +1670,7 @@ class _BadgeDemosCard extends StatelessWidget {
                   GlassBadge(
                     count: 5,
                     child: GlassButton(
-                      icon: CupertinoIcons.bell,
+                      icon: Icon(CupertinoIcons.bell),
                       onTap: () {},
                       width: 48,
                       height: 48,
@@ -1679,7 +1679,7 @@ class _BadgeDemosCard extends StatelessWidget {
                   GlassBadge(
                     count: 12,
                     child: GlassButton(
-                      icon: CupertinoIcons.envelope,
+                      icon: Icon(CupertinoIcons.envelope),
                       onTap: () {},
                       width: 48,
                       height: 48,
@@ -1688,7 +1688,7 @@ class _BadgeDemosCard extends StatelessWidget {
                   GlassBadge(
                     count: 99,
                     child: GlassButton(
-                      icon: CupertinoIcons.chat_bubble,
+                      icon: Icon(CupertinoIcons.chat_bubble),
                       onTap: () {},
                       width: 48,
                       height: 48,
@@ -1697,7 +1697,7 @@ class _BadgeDemosCard extends StatelessWidget {
                   GlassBadge(
                     count: 150,
                     child: GlassButton(
-                      icon: CupertinoIcons.bag,
+                      icon: Icon(CupertinoIcons.bag),
                       onTap: () {},
                       width: 48,
                       height: 48,

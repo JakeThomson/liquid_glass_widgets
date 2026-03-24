@@ -9,15 +9,15 @@ void main() {
     final testTabs = [
       const GlassBottomBarTab(
         label: 'Home',
-        icon: CupertinoIcons.home,
+        icon: Icon(CupertinoIcons.home),
       ),
       const GlassBottomBarTab(
         label: 'Search',
-        icon: CupertinoIcons.search,
+        icon: Icon(CupertinoIcons.search),
       ),
       const GlassBottomBarTab(
         label: 'Profile',
-        icon: CupertinoIcons.person,
+        icon: Icon(CupertinoIcons.person),
       ),
     ];
 
@@ -100,7 +100,7 @@ void main() {
             selectedIndex: 0,
             onTabSelected: (_) {},
             extraButton: GlassBottomBarExtraButton(
-              icon: CupertinoIcons.add,
+              icon: Icon(CupertinoIcons.add),
               label: 'Add',
               onTap: () {},
             ),
@@ -121,7 +121,7 @@ void main() {
             selectedIndex: 0,
             onTabSelected: (_) {},
             extraButton: GlassBottomBarExtraButton(
-              icon: CupertinoIcons.add,
+              icon: Icon(CupertinoIcons.add),
               label: 'Add',
               onTap: () => tapped = true,
             ),
@@ -179,23 +179,23 @@ void main() {
     test('can be instantiated', () {
       const tab = GlassBottomBarTab(
         label: 'Home',
-        icon: CupertinoIcons.home,
+        icon: Icon(CupertinoIcons.home),
       );
 
       expect(tab.label, equals('Home'));
-      expect(tab.icon, equals(CupertinoIcons.home));
+      expect(tab.icon, isA<Icon>());
     });
   });
 
   group('GlassBottomBarExtraButton', () {
     test('can be instantiated', () {
       final button = GlassBottomBarExtraButton(
-        icon: CupertinoIcons.add,
+        icon: Icon(CupertinoIcons.add),
         label: 'Add',
         onTap: () {},
       );
 
-      expect(button.icon, equals(CupertinoIcons.add));
+      expect(button.icon, isA<Icon>());
       expect(button.label, equals('Add'));
       expect(button.size, equals(64));
     });

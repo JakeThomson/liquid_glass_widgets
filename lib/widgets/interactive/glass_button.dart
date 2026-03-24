@@ -36,7 +36,7 @@ import '../shared/inherited_liquid_glass.dart';
 ///   child: Column(
 ///     children: [
 ///       GlassButton(
-///         icon: CupertinoIcons.heart,
+///         icon: Icon(CupertinoIcons.heart),
 ///         onTap: () => print('Favorite'),
 ///       ),
 ///     ],
@@ -48,7 +48,7 @@ import '../shared/inherited_liquid_glass.dart';
 /// Creates its own layer with [LiquidGlass.withOwnLayer]:
 /// ```dart
 /// GlassButton(
-///   icon: CupertinoIcons.play,
+///   icon: Icon(CupertinoIcons.play),
 ///   onTap: () => print('Play'),
 ///   useOwnLayer: true,
 ///   settings: LiquidGlassSettings(
@@ -63,7 +63,7 @@ import '../shared/inherited_liquid_glass.dart';
 /// ### Custom stretch behavior:
 /// ```dart
 /// GlassButton(
-///   icon: CupertinoIcons.star,
+///   icon: Icon(CupertinoIcons.star),
 ///   onTap: () {},
 ///   interactionScale: 1.1,  // Grow 10% when pressed
 ///   stretch: 0.8,           // More dramatic stretch
@@ -74,7 +74,7 @@ import '../shared/inherited_liquid_glass.dart';
 /// ### Custom glow effect:
 /// ```dart
 /// GlassButton(
-///   icon: CupertinoIcons.bolt,
+///   icon: Icon(CupertinoIcons.bolt),
 ///   onTap: () {},
 ///   glowColor: Colors.blue.withOpacity(0.4),
 ///   glowRadius: 1.5,  // Larger glow
@@ -169,11 +169,12 @@ class GlassButton extends StatefulWidget {
   // Content Properties
   // ===========================================================================
 
-  /// The icon to display in the button.
+  /// The widget to display in the button.
   ///
-  /// Mutually exclusive with [child]. Use the default constructor for icon
-  /// buttons, or [GlassButton.custom] for custom content.
-  final IconData? icon;
+  /// Mutually exclusive with [child]. Pass any widget — standard [Icon]
+  /// widgets will inherit color and size from [iconColor] and [iconSize]
+  /// via [IconTheme]. Custom widgets handle their own styling.
+  final Widget? icon;
 
   /// Custom widget to display in the button.
   ///
@@ -421,10 +422,12 @@ class _GlassButtonState extends State<GlassButton>
       width: widget.width,
       child: Center(
         child: widget.child ??
-            Icon(
-              widget.icon,
-              size: widget.iconSize,
-              color: widget.iconColor,
+            IconTheme(
+              data: IconThemeData(
+                color: widget.iconColor,
+                size: widget.iconSize,
+              ),
+              child: widget.icon ?? const SizedBox.shrink(),
             ),
       ),
     );

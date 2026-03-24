@@ -23,7 +23,7 @@ import 'glass_button.dart';
 /// ### Basic Icon Button
 /// ```dart
 /// GlassIconButton(
-///   icon: Icons.favorite,
+///   icon: Icon(Icons.favorite),
 ///   onPressed: () => print('Tapped'),
 /// )
 /// ```
@@ -31,7 +31,7 @@ import 'glass_button.dart';
 /// ### Custom Size and Shape
 /// ```dart
 /// GlassIconButton(
-///   icon: Icons.settings,
+///   icon: Icon(Icons.settings),
 ///   onPressed: () {},
 ///   size: 48,
 ///   shape: GlassIconButtonShape.roundedSquare,
@@ -42,7 +42,7 @@ import 'glass_button.dart';
 /// ### With Custom Glow
 /// ```dart
 /// GlassIconButton(
-///   icon: Icons.star,
+///   icon: Icon(Icons.star),
 ///   onPressed: () {},
 ///   glowColor: Colors.yellow,
 ///   glowRadius: 30,
@@ -52,7 +52,7 @@ import 'glass_button.dart';
 /// ### Standalone Mode
 /// ```dart
 /// GlassIconButton(
-///   icon: Icons.add,
+///   icon: Icon(Icons.add),
 ///   onPressed: () {},
 ///   useOwnLayer: true,
 ///   settings: LiquidGlassSettings(
@@ -68,10 +68,10 @@ import 'glass_button.dart';
 ///   settings: LiquidGlassSettings(...),
 ///   child: Row(
 ///     children: [
-///       GlassIconButton(icon: Icons.menu, onPressed: () {}),
+///       GlassIconButton(icon: Icon(Icons.menu), onPressed: () {}),
 ///       Spacer(),
-///       GlassIconButton(icon: Icons.search, onPressed: () {}),
-///       GlassIconButton(icon: Icons.more_vert, onPressed: () {}),
+///       GlassIconButton(icon: Icon(Icons.search), onPressed: () {}),
+///       GlassIconButton(icon: Icon(Icons.more_vert), onPressed: () {}),
 ///     ],
 ///   ),
 /// )
@@ -80,7 +80,7 @@ import 'glass_button.dart';
 /// ### Disabled State
 /// ```dart
 /// GlassIconButton(
-///   icon: Icons.delete,
+///   icon: Icon(Icons.delete),
 ///   onPressed: null,  // null = disabled
 /// )
 /// ```
@@ -112,10 +112,11 @@ class GlassIconButton extends StatelessWidget {
   // Content Properties
   // ===========================================================================
 
-  /// The icon to display.
+  /// The icon widget to display.
   ///
-  /// Typically an [IconData] from [Icons] or `[CupertinoIcons]`.
-  final IconData icon;
+  /// Pass any widget — standard [Icon] widgets will inherit color and size
+  /// from [IconTheme]. Custom widgets (SVG, PNG, etc.) handle their own styling.
+  final Widget icon;
 
   /// Size of the icon within the button.
   ///
@@ -200,11 +201,16 @@ class GlassIconButton extends StatelessWidget {
     final effectiveIconSize = iconSize ?? (size * 0.5);
     final isEnabled = onPressed != null;
 
-    // Build icon content
-    final iconWidget = Icon(
-      icon,
-      size: effectiveIconSize,
-      color: isEnabled ? _defaultIconColorEnabled : _defaultIconColorDisabled,
+    // Build icon content wrapped in IconTheme so standard Icon widgets
+    // inherit the correct size and color automatically.
+    final iconColor =
+        isEnabled ? _defaultIconColorEnabled : _defaultIconColorDisabled;
+    final iconWidget = IconTheme(
+      data: IconThemeData(
+        color: iconColor,
+        size: effectiveIconSize,
+      ),
+      child: icon,
     );
 
     final glassShape = _buildShape();

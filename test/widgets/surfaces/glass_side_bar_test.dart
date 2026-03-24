@@ -14,7 +14,7 @@ void main() {
               footer: const Text('Footer'),
               children: [
                 GlassSideBarItem(
-                  icon: Icons.home,
+                  icon: Icon(Icons.home),
                   label: 'Home',
                   onTap: () {},
                 ),
@@ -37,7 +37,7 @@ void main() {
             body: GlassSideBar(
               children: [
                 GlassSideBarItem(
-                  icon: Icons.settings,
+                  icon: Icon(Icons.settings),
                   label: 'Settings',
                   isSelected: true,
                   onTap: () {},
@@ -65,7 +65,7 @@ void main() {
             body: GlassSideBar(
               children: [
                 GlassSideBarItem(
-                  icon: Icons.person,
+                  icon: Icon(Icons.person),
                   label: 'Profile',
                   onTap: () => tapped = true,
                 ),

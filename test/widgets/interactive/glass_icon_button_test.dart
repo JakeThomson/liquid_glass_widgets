@@ -13,7 +13,7 @@ void main() {
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
             child: GlassIconButton(
-              icon: Icons.favorite,
+              icon: Icon(Icons.favorite),
               onPressed: () {},
             ),
           ),
@@ -32,7 +32,7 @@ void main() {
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
             child: GlassIconButton(
-              icon: Icons.add,
+              icon: Icon(Icons.add),
               onPressed: () => pressed = true,
             ),
           ),
@@ -51,7 +51,7 @@ void main() {
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
             child: GlassIconButton(
-              icon: Icons.add,
+              icon: Icon(Icons.add),
               onPressed: null,
             ),
           ),
@@ -71,7 +71,7 @@ void main() {
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
             child: GlassIconButton(
-              icon: Icons.star,
+              icon: Icon(Icons.star),
               onPressed: () {},
             ),
           ),
@@ -87,7 +87,7 @@ void main() {
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
             child: GlassIconButton(
-              icon: Icons.star,
+              icon: Icon(Icons.star),
               onPressed: () {},
               shape: GlassIconButtonShape.roundedSquare,
             ),
@@ -106,7 +106,7 @@ void main() {
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
             child: GlassIconButton(
-              icon: Icons.star,
+              icon: Icon(Icons.star),
               onPressed: () {},
               size: customSize,
             ),
@@ -133,7 +133,7 @@ void main() {
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
             child: GlassIconButton(
-              icon: Icons.add,
+              icon: Icon(Icons.add),
               onPressed: () {},
             ),
           ),
@@ -157,7 +157,7 @@ void main() {
       await tester.pumpWidget(
         createTestApp(
           child: GlassIconButton(
-            icon: Icons.star,
+            icon: Icon(Icons.star),
             onPressed: () {},
             useOwnLayer: true,
             settings: defaultTestGlassSettings,
@@ -170,7 +170,7 @@ void main() {
 
     test('defaults are correct', () {
       final button = GlassIconButton(
-        icon: Icons.star,
+        icon: Icon(Icons.star),
         onPressed: () {},
       );
 

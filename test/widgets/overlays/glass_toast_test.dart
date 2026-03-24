@@ -47,7 +47,7 @@ void main() {
           child: Builder(
             builder: (context) => GlassToast(
               message: 'Custom icon',
-              icon: CupertinoIcons.star,
+              icon: Icon(CupertinoIcons.star),
               onDismissed: () {},
             ),
           ),

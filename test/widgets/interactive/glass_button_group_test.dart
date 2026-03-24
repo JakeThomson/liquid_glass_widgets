@@ -16,12 +16,12 @@ void main() {
               child: GlassButtonGroup(
                 children: [
                   GlassButton(
-                    icon: CupertinoIcons.back,
+                    icon: Icon(CupertinoIcons.back),
                     style: GlassButtonStyle.transparent,
                     onTap: () => tappedIndex = 0,
                   ),
                   GlassButton(
-                    icon: CupertinoIcons.forward,
+                    icon: Icon(CupertinoIcons.forward),
                     style: GlassButtonStyle.transparent,
                     onTap: () => tappedIndex = 1,
                   ),
@@ -57,7 +57,7 @@ void main() {
         home: Scaffold(
           body: AdaptiveLiquidGlassLayer(
             child: GlassButton(
-              icon: CupertinoIcons.add,
+              icon: Icon(CupertinoIcons.add),
               style: GlassButtonStyle.transparent,
               onTap: () {},
             ),

@@ -497,14 +497,14 @@ class _OverlaysPageState extends State<OverlaysPage> {
       actions: [
         GlassActionSheetAction(
           label: 'Save',
-          icon: CupertinoIcons.floppy_disk,
+          icon: Icon(CupertinoIcons.floppy_disk),
           onPressed: () {
             setState(() => _lastActionSheetResult = 'Save');
           },
         ),
         GlassActionSheetAction(
           label: 'Share',
-          icon: CupertinoIcons.share,
+          icon: Icon(CupertinoIcons.share),
           onPressed: () {
             setState(() => _lastActionSheetResult = 'Share');
           },
@@ -521,7 +521,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
       actions: [
         GlassActionSheetAction(
           label: 'Delete',
-          icon: CupertinoIcons.delete,
+          icon: Icon(CupertinoIcons.delete),
           style: GlassActionSheetStyle.destructive,
           onPressed: () {
             setState(() => _lastActionSheetResult = 'Delete');
@@ -538,28 +538,28 @@ class _OverlaysPageState extends State<OverlaysPage> {
       actions: [
         GlassActionSheetAction(
           label: 'Save to Photos',
-          icon: CupertinoIcons.photo,
+          icon: Icon(CupertinoIcons.photo),
           onPressed: () {
             setState(() => _lastActionSheetResult = 'Save to Photos');
           },
         ),
         GlassActionSheetAction(
           label: 'Share',
-          icon: CupertinoIcons.share,
+          icon: Icon(CupertinoIcons.share),
           onPressed: () {
             setState(() => _lastActionSheetResult = 'Share');
           },
         ),
         GlassActionSheetAction(
           label: 'Copy',
-          icon: CupertinoIcons.doc_on_doc,
+          icon: Icon(CupertinoIcons.doc_on_doc),
           onPressed: () {
             setState(() => _lastActionSheetResult = 'Copy');
           },
         ),
         GlassActionSheetAction(
           label: 'Delete',
-          icon: CupertinoIcons.trash,
+          icon: Icon(CupertinoIcons.trash),
           style: GlassActionSheetStyle.destructive,
           onPressed: () {
             setState(() => _lastActionSheetResult = 'Delete');
@@ -1145,25 +1145,25 @@ class _OverlaysPageState extends State<OverlaysPage> {
                             alignment: AlignmentGeometry.centerRight,
                             child: GlassMenu(
                               triggerBuilder: (context, toggle) => GlassButton(
-                                icon: CupertinoIcons.ellipsis,
+                                icon: Icon(CupertinoIcons.ellipsis),
                                 onTap: toggle,
                                 label: 'Options',
                               ),
                               items: [
                                 GlassMenuItem(
-                                  icon: CupertinoIcons.share,
+                                  icon: Icon(CupertinoIcons.share),
                                   title: 'Share',
                                   onTap: () => setState(
                                       () => _lastMenuSelection = 'Share'),
                                 ),
                                 GlassMenuItem(
-                                  icon: CupertinoIcons.pen,
+                                  icon: Icon(CupertinoIcons.pen),
                                   title: 'Edit',
                                   onTap: () => setState(
                                       () => _lastMenuSelection = 'Edit'),
                                 ),
                                 GlassMenuItem(
-                                  icon: CupertinoIcons.trash,
+                                  icon: Icon(CupertinoIcons.trash),
                                   title: 'Delete',
                                   isDestructive: true,
                                   onTap: () => setState(
@@ -1224,13 +1224,13 @@ class _OverlaysPageState extends State<OverlaysPage> {
                               ),
                               items: [
                                 GlassMenuItem(
-                                  icon: CupertinoIcons.person_circle,
+                                  icon: Icon(CupertinoIcons.person_circle),
                                   title: 'Profile Settings',
                                   onTap: () => setState(
                                       () => _lastMenuSelection = 'Profile'),
                                 ),
                                 GlassMenuItem(
-                                  icon: CupertinoIcons.bell,
+                                  icon: Icon(CupertinoIcons.bell),
                                   title: 'Notifications',
                                   trailing: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -1247,7 +1247,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
                                       _lastMenuSelection = 'Notifications'),
                                 ),
                                 GlassMenuItem(
-                                  icon: CupertinoIcons.gear,
+                                  icon: Icon(CupertinoIcons.gear),
                                   title: 'Preferences',
                                   onTap: () => setState(
                                       () => _lastMenuSelection = 'Preferences'),

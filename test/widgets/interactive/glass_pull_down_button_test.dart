@@ -20,12 +20,12 @@ void main() {
                 items: [
                   GlassMenuItem(
                     title: 'Edit',
-                    icon: CupertinoIcons.pen,
+                    icon: Icon(CupertinoIcons.pen),
                     onTap: () {},
                   ),
                   GlassMenuItem(
                     title: 'Delete',
-                    icon: CupertinoIcons.trash,
+                    icon: Icon(CupertinoIcons.trash),
                     isDestructive: true,
                     onTap: () {},
                   ),
