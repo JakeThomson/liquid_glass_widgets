@@ -97,3 +97,7 @@ app.*.symbols
 *.tmp
 *.temp
 .DS_Store
+
+# Local working docs (AI planning notes, not for repo)
+docs/
+.agent/
