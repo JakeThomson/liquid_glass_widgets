@@ -102,6 +102,12 @@ app.*.symbols
 docs/
 .agent/
 
+# Test golden failure/diff images
+test/golden/**/failures/
+
+# Root-level planning docs
+RENDERER_IMPROVEMENT_PLAN.md
+
 # Example app — generated platform folders (not needed for a package example)
 example/ios/
 example/macos/
