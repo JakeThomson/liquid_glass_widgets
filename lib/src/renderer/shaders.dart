@@ -19,5 +19,4 @@ abstract class ShaderKeys {
 
   static final liquidGlassRender =
       '${_shadersRoot}shaders/liquid_glass_final_render.frag';
-
 }

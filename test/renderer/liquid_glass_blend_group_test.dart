@@ -57,7 +57,8 @@ void main() {
       );
     }
 
-    testWidgets('widget tree builds without error for all settings combinations',
+    testWidgets(
+        'widget tree builds without error for all settings combinations',
         (tester) async {
       // Smoke test: verifies no exception is thrown for any combination.
       // On Skia (test runner) the Impeller pipeline is skipped, so geometry is
