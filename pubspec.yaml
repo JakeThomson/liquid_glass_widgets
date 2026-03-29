@@ -1,6 +1,6 @@
 name: liquid_glass_widgets
 description: A Flutter UI kit implementing the iOS 26 Liquid Glass design language. Features shader-based glassmorphism, physics-driven jelly animations, and dynamic lighting.
-version: 0.4.1-dev.2
+version: 0.5.0-dev.1
 
 homepage: https://github.com/sdegenaar/liquid_glass_widgets
 repository: https://github.com/sdegenaar/liquid_glass_widgets
@@ -36,7 +36,7 @@ dependencies:
   motor: ^1.1.0
 
 dev_dependencies:
-  alchemist: ^0.13.0
+  alchemist: ^0.14.0
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0

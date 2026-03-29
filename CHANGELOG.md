@@ -1,3 +1,59 @@
+# 0.5.0-dev.1
+
+### Breaking Changes
+
+**`LiquidGlass` removed from the public API.**
+`LiquidGlass` is an Impeller-only primitive — it silently renders nothing on Skia/web. It was inadvertently exposed in previous versions. Use `AdaptiveGlass` (or any `Glass*` widget) instead: these automatically choose the correct rendering path for the current platform.
+
+```dart
+// Before (broken on Skia/web — renders nothing)
+LiquidGlass(settings: LiquidGlassSettings(...), child: ...)
+
+// After (works on all platforms)
+AdaptiveGlass(settings: LiquidGlassSettings(...), child: ...)
+```
+
+`LiquidGlassLayer`, `LiquidGlassBlendGroup`, `LiquidGlassSettings`, `LiquidShape`, `GlassGlow`, and `debugPaintLiquidGlassGeometry` remain public for advanced use.
+
+---
+
+### New Features
+
+- **FEAT**: `GlassBackdropScope` — halves GPU blur capture cost when multiple glass surfaces are on screen at once (e.g. `GlassAppBar` + `GlassBottomBar`).
+  - Wrap your `MaterialApp` or `Scaffold` with `GlassBackdropScope` to activate shared backdrop capture.
+  - Safe to add unconditionally: when no `GlassBackdropScope` ancestor is present, behaviour is identical to the previous default.
+
+```dart
+GlassBackdropScope(
+  child: MaterialApp(
+    home: Scaffold(
+      appBar: GlassAppBar(...),
+      bottomNavigationBar: GlassBottomBar(...),
+      body: ...,
+    ),
+  ),
+)
+```
+
+---
+
+### Renderer — Vendored (internal, no API change)
+
+The renderer source from `liquid_glass_renderer` (by whynotmake.it, MIT) is now vendored directly into `liquid_glass_widgets`. This gives us full control over the rendering pipeline and lets us ship fixes and improvements in lock-step with the widget layer. No user-facing API changes.
+
+Local patches applied during vendoring:
+
+| ID | Description |
+|----|-------------|
+| B1 | `LiquidGlassBlendGroup`: added `ImageFilter.isShaderFilterSupported` guard — prevented Skia/web "Invalid SkSL" crash |
+| B3 | `liquid_glass_geometry_blended.frag`: `mediump` → `highp` float precision — eliminated ~1.5px displacement banding on mobile |
+| B5 | `render.glsl`: removed dead `calculateDispersiveIndex` function (Cauchy dispersion, never called) |
+| B6 | `render.glsl`: removed dead `blurRadius` parameter from `calculateRefraction` |
+| A1 | `GeometryRenderLink.markRebuilt` → `notifyGeometryChanged` — corrected inverted method name (it sets `_dirty = true`, not clears it) |
+| V4 | `liquid_glass_final_render.frag`: replaced 8-line inline highlight block with `getHighlightColor()` — eliminates duplicate colour logic |
+
+---
+
 # 0.4.1-dev.2
 
 ### Bug Fixes

@@ -24,7 +24,8 @@ class AppleLiquidGlassShowcaseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GlassBackdropScope(
+      child: MaterialApp(
       title: 'Apple Liquid Glass Showcase',
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -36,6 +37,7 @@ class AppleLiquidGlassShowcaseApp extends StatelessWidget {
       ),
       home: const ShowcaseHomePage(),
       debugShowCheckedModeBanner: false,
+    ),
     );
   }
 }
