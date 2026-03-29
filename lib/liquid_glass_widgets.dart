@@ -1,8 +1,18 @@
 /// Liquid Glass Implementation according to Apple's Guidelines
 library;
 
-// Export vendored renderer primitives
-export 'src/renderer/liquid_glass_renderer.dart';
+// Renderer — explicit public surface only.
+// LiquidGlass is intentionally excluded: use AdaptiveGlass or Glass* widgets
+// instead. LiquidGlass is Impeller-only and silently renders nothing on Skia/web.
+// LiquidStretch/RawLiquidStretch and GlassGlowLayer are internal utilities.
+export 'src/renderer/liquid_glass_renderer.dart'
+    show
+        LiquidGlassSettings,
+        LiquidGlassLayer,
+        LiquidGlassBlendGroup,
+        GlassGlow,
+        debugPaintLiquidGlassGeometry;
+export 'src/renderer/liquid_shape.dart'; // all shapes are public
 
 // Setup and Configuration
 export 'liquid_glass_setup.dart';
