@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
@@ -100,9 +100,13 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
     Widget content = child;
 
     // Root Provider: Always exists to satisfy assertions for grouped widgets.
+    // useBackdropGroup: true is safe — when no BackdropGroup ancestor exists,
+    // BackdropGroup.of(context) returns null and the backdropKey is null,
+    // giving identical behaviour to false.  When a GlassBackdropScope is
+    // present in the tree, all layers under it share one GPU blur capture.
     return LiquidGlassLayer(
       settings: effectiveSettings,
-      fake: !useFullRenderer,
+      useBackdropGroup: true,
       child: InheritedLiquidGlass(
         settings: effectiveSettings,
         quality: effectiveQuality,

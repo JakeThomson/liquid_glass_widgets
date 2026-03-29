@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart'
-    hide FakeGlass;
+import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_glass.dart';

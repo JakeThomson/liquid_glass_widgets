@@ -1,0 +1,46 @@
+# Ignore build artifacts
+build/
+.dart_tool/
+.packages
+*.log
+coverage/
+
+# Ignore internal analysis/planning docs
+ARCHITECTURAL_AUDIT.md
+COMPONENT_ROADMAP.md
+FOUNDATION_COMPLETE.md
+FOUNDATION_SOLIDIFICATION.md
+GLASS_BOTTOM_BAR_PR_EVALUATION.md
+PERFORMANCE_ANALYSIS.md
+IMPELLER_OPTIMIZATIONS.md
+performance.md
+.agent/
+
+# Ignore test golden failures/inputs (keep test code, exclude artifacts)
+test/golden/failures/
+test/golden/inputs/
+test/golden/feedback/
+
+# Ignore example app platform-specific folders (keep lib/)
+example/ios/
+example/macos/
+example/web/
+example/android/
+example/windows/
+example/linux/
+example/ENHANCED_APP_SUMMARY.md
+example/EVALUATION_CHECKLIST.md
+
+# Ignore showcase app entirely (secondary example)
+example/showcase/
+
+# Keep only essential files for pub.dev:
+# - lib/ (required)
+# - README.md (required)
+# - CHANGELOG.md (required)
+# - LICENSE (required)
+# - pubspec.yaml (required)
+# - shaders/ (required)
+# - example/lib/ (recommended)
+# - example/pubspec.yaml (recommended)
+# - test/ (optional but good practice)
