@@ -76,7 +76,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.4.1-dev.2
+  liquid_glass_widgets: ^0.5.0-dev.1
 ```
 
 Then run:
@@ -155,6 +155,33 @@ AdaptiveLiquidGlassLayer(
   ),
 )
 ```
+
+### Reducing GPU Cost with GlassBackdropScope (Recommended)
+
+When multiple glass surfaces appear on screen simultaneously (e.g. `GlassAppBar` + `GlassBottomBar`), each surface captures the backdrop independently by default. Wrapping your app with `GlassBackdropScope` lets them share a single backdrop capture — roughly halving the GPU blur blit cost.
+
+```dart
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LiquidGlassWidgets.initialize();
+
+  runApp(
+    GlassBackdropScope(
+      child: MaterialApp(
+        home: Scaffold(
+          appBar: GlassAppBar(title: Text('My App')),
+          bottomNavigationBar: GlassBottomBar(...),
+          body: ...,
+        ),
+      ),
+    ),
+  );
+}
+```
+
+`GlassBackdropScope` is safe to add unconditionally — when only one glass surface is on screen, behaviour is identical to the previous default.
 
 ### Standalone Widget (For Single Glass Elements)
 

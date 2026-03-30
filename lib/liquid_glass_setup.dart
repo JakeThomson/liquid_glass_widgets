@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'src/renderer/liquid_glass_renderer.dart';
 import 'widgets/shared/lightweight_liquid_glass.dart';
 import 'widgets/shared/glass_effect.dart';
 
@@ -73,7 +73,6 @@ class LiquidGlassWidgets {
       // trigger Impeller's pipeline compilation and caching
       final _ = LiquidGlassLayer(
         settings: warmUpSettings,
-        fake: false,
         child: const SizedBox.shrink(),
       );
 

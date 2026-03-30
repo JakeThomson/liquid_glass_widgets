@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import '../../src/renderer/liquid_glass_renderer.dart';
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/scheduler.dart';
@@ -329,7 +329,6 @@ class _GlassEffectState extends State<GlassEffect>
       return LiquidGlass.withOwnLayer(
         shape: widget.shape,
         settings: widget.settings,
-        fake: false,
         child: widget.child,
       );
     }

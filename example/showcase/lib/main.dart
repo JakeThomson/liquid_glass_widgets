@@ -32,19 +32,21 @@ class WanderlustApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Wanderlust',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4A90E2),
+    return GlassBackdropScope(
+      child: MaterialApp(
+        title: 'Wanderlust',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
           brightness: Brightness.dark,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF4A90E2),
+            brightness: Brightness.dark,
+          ),
+          fontFamily: 'SF Pro Display', // Falls back to system font
         ),
-        fontFamily: 'SF Pro Display', // Falls back to system font
+        home: const HomePage(),
       ),
-      home: const HomePage(),
     );
   }
 }

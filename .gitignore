@@ -97,3 +97,26 @@ app.*.symbols
 *.tmp
 *.temp
 .DS_Store
+
+# Local working docs (AI planning notes, not for repo)
+docs/
+.agent/
+
+# Test golden failure/diff images
+test/golden/**/failures/
+
+# Root-level planning docs
+RENDERER_IMPROVEMENT_PLAN.md
+
+# Example app — generated platform folders (not needed for a package example)
+example/ios/
+example/macos/
+example/web/
+example/showcase/ios/
+
+# Example app — AI working docs
+example/ENHANCED_APP_SUMMARY.md
+example/EVALUATION_CHECKLIST.md
+example/showcase/IMAGE_GUIDE.md
+example/showcase/QUICKSTART.md
+example/showcase/SHOWCASE_SUMMARY.md

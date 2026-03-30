@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import '../../src/renderer/liquid_glass_renderer.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../types/glass_quality.dart';
@@ -165,7 +165,6 @@ class AdaptiveGlass extends StatelessWidget {
         child: LiquidGlass.withOwnLayer(
           shape: shape,
           settings: settings,
-          fake: false,
           clipBehavior: clipBehavior,
           child: child,
         ),

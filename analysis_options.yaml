@@ -10,6 +10,10 @@
 analyzer:
   errors:
     unintended_html_in_doc_comment: ignore
+    # invalid_internal_annotation fires on vendored renderer code where @internal
+    # is used correctly (public classes in lib/src/) but our analyzer version
+    # is stricter than the upstream package's.
+    invalid_internal_annotation: ignore
 include: package:flutter_lints/flutter.yaml
 
 linter:

@@ -1,0 +1,27 @@
+# Build artifacts
+build/
+.dart_tool/
+.packages
+*.log
+coverage/
+
+# Local working docs
+docs/
+.agent/
+
+# Test golden failure/diff images (artefacts, not source truth)
+test/golden/**/failures/
+
+# Example app platform folders
+example/ios/
+example/macos/
+example/web/
+example/android/
+example/windows/
+example/linux/
+
+# Showcase app (secondary example, not needed for pub.dev)
+example/showcase/
+
+# Tools (internal sync scripts)
+tools/
