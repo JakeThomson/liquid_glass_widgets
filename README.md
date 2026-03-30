@@ -76,7 +76,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.5.0-dev.1
+  liquid_glass_widgets: ^0.5.0
 ```
 
 Then run:
@@ -630,18 +630,10 @@ LiquidGlassScope(
 
 ## Dependencies
 
-This package builds on the excellent work of:
+### Rendering engine
+The glass rendering pipeline is built on the open-source work of [whynotmake-it](https://github.com/whynotmake-it). Their [`liquid_glass_renderer`](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) (MIT) has been **vendored directly into this package** (`lib/src/renderer/`) and extended with bug fixes, performance improvements, and shader optimisations.
 
-### liquid_glass_renderer
-Powers the **Impeller integration** for native scene graph rendering on iOS/Android/macOS with `GlassQuality.premium`. This sophisticated renderer provides texture capture and advanced chromatic aberration effects through Impeller's native pipeline.
-
-For **Skia and Web platforms**, this package uses custom fragment shaders (`lightweight_glass.frag`, `interactive_indicator.frag`) to deliver iOS 26-accurate glass effects universally.
-
-- **Package**: [`liquid_glass_renderer`](https://pub.dev/packages/liquid_glass_renderer)
-- **Repository**: [flutter_liquid_glass](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer)
-- **Author**: [whynotmake-it](https://github.com/whynotmake-it)
-
-A huge thank you to the whynotmake-it team for creating the Impeller integration that makes premium-quality glass rendering possible on native platforms.
+For **Skia and Web platforms**, this package uses additional custom fragment shaders (`lightweight_glass.frag`, `interactive_indicator.frag`) to deliver iOS 26-accurate glass effects universally.
 
 ### Other Dependencies
 - [`motor`](https://pub.dev/packages/motor) - Animation utilities
@@ -672,7 +664,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 This package implements Apple's Liquid Glass design guidelines as a high-level widget library.
 
 **Special Thanks:**
-- The [whynotmake-it](https://github.com/whynotmake-it) team for creating the [`liquid_glass_renderer`](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) package, which provides the sophisticated shader-based rendering engine that powers all the glass effects in this library. Their work on custom shaders, texture capture, and advanced glass rendering techniques made this widget library possible.
+- The [whynotmake-it](https://github.com/whynotmake-it) team for their open-source [`liquid_glass_renderer`](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) (MIT), whose shader pipeline, texture capture, and chromatic aberration work forms the foundation of the rendering engine in this library.
 
 ## Links
 
