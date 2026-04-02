@@ -44,25 +44,28 @@ float sdfEllipse(vec2 p, vec2 r) {
     return (k1 * (k1 - 1.0)) / max(k2, 1e-4);
 }
 
+// Branchless smooth-union — replaces the `if (k <= 0)` early-return that
+// caused warp divergence when blend=0 (every pixel took a different path).
+// When k=0: e=0, so e²/max(k,ε)=0, result = min(d1,d2). Mathematically
+// identical to the branching version but all threads execute the same path.
 float smoothUnion(float d1, float d2, float k) {
-    if (k <= 0.0) {
-        return min(d1, d2);
-    }
     float e = max(k - abs(d1 - d2), 0.0);
-    return min(d1, d2) - e * e * 0.25 / k;
+    return min(d1, d2) - e * e * 0.25 / max(k, 1e-5);
 }
 
+// Use else-if so the compiler can skip remaining checks once a branch is
+// taken — on predicated-execution GPUs this avoids evaluating all three
+// SDF functions for every pixel. Return 0.0 (inside shape) for unknown
+// types so a misconfigured shape fails visibly rather than silently.
 float getShapeSDF(float type, vec2 p, vec2 center, vec2 size, float r) {
-    if (type == 1.0) { // squircle
+    if (type == 1.0) {        // squircle / superellipse
         return sdfSquircle(p - center, size / 2.0, r);
-    }
-    if (type == 2.0) { // ellipse
+    } else if (type == 2.0) { // ellipse / circle
         return sdfEllipse(p - center, size / 2.0);
-    }
-    if (type == 3.0) { // rounded rectangle
+    } else if (type == 3.0) { // rounded rectangle
         return sdfRRect(p - center, size / 2.0, r);
     }
-    return 1e9; // none
+    return 0.0; // unknown type — treat as fully inside (visible failure mode)
 }
 
 float getShapeSDFFromArray(int index, vec2 p, float shapeData[MAX_SHAPES * 6]) {

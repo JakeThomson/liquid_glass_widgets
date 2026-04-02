@@ -1,8 +1,14 @@
 // Copyright 2025, Tim Lehmann for whynotmake.it
 //
-// Final rendering pass for liquid glass with pre-computed geometry
-// This shader reads displacement data from a pre-computed texture and applies
-// the liquid glass effect efficiently
+// Final rendering pass for liquid glass with pre-computed geometry.
+// Reads surface normal data from the geometry texture (V1 encoding) and applies
+// the liquid glass effect: refraction, chromatic aberration, tint, and edge lighting.
+//
+// Geometry texture layout (displacement_encoding.glsl):
+//   R: normal.x  [-1, 1] → [0, 1]
+//   G: normal.y  [-1, 1] → [0, 1]
+//   B: height    normalized to thickness
+//   A: foreground alpha (SDF AA)
 
 #version 460 core
 precision highp float; // mediump causes colour banding (10-bit mantissa on mobile)
@@ -30,12 +36,12 @@ uniform vec3 uOpticalProps;
 uniform vec3 uLightConfig;
 uniform vec2 uLightDirection;
 
-float uRefractiveIndex = uOpticalProps.x;
+float uRefractiveIndex    = uOpticalProps.x;
 float uChromaticAberration = uOpticalProps.y;
-float uThickness = uOpticalProps.z;
-float uLightIntensity = uLightConfig.x;
-float uAmbientStrength = uLightConfig.y;
-float uSaturation = uLightConfig.z;
+float uThickness          = uOpticalProps.z;
+float uLightIntensity     = uLightConfig.x;
+float uAmbientStrength    = uLightConfig.y;
+float uSaturation         = uLightConfig.z;
 
 uniform sampler2D uBackgroundTexture;
 uniform sampler2D uGeometryTexture;
@@ -66,7 +72,7 @@ void main() {
     // pill boundary entirely.  Without this early-out the sampler clamps to the
     // edge pixel (UV.x=0 → left boundary pixel, alpha ≈ 0.5 from SDF AA), which
     // renders a faint glass stripe in the _clipExpansion zone (20 px on each
-    // side).  That stripe is visible at the pill's vertical midpoint as a short
+    // side). That stripe is visible at the pill's vertical midpoint as a short
     // line protruding left and right from the pill edges.
     if (any(lessThan(geometryUV, vec2(0.0))) || any(greaterThan(geometryUV, vec2(1.0)))) {
         fragColor = vec4(0.0);
@@ -85,65 +91,130 @@ void main() {
         return;
     }
 
-    float maxDisplacement = uThickness * 10.0;
-    vec2 displacement = decodeDisplacement(geometryData, maxDisplacement);
+    // --- V1: Decode true surface normal from geometry texture ---
+    //
+    // The geometry pass stores the SDF-gradient-derived normal in RG.
+    // Before V1 this stored displacement XY, and the render pass called
+    // normalize(displacement) as a proxy for the normal — which diverges
+    // from the true normal in blend-group neck zones (smooth-union joins).
+    // The true normal is now decoded and used for both refraction and lighting.
+    vec2 normalXY = decodeNormalXY(geometryData);
+    float normalZSq = max(0.0, 1.0 - dot(normalXY, normalXY));
+    float normalZ   = sqrt(normalZSq);
+    vec3  normal    = vec3(normalXY, normalZ);   // unit-length surface normal
 
-    // Blur is applied by the BackdropFilterLayer (ImageFilter.blur) in the Dart
-    // layer BEFORE this shader runs.  The background texture already contains the
-    // frosted/blurred content — just sample it directly here for refraction.
+    // Recompute refraction displacement from the true normal.
+    // This is the same refract() call used in the geometry pass — exact, not
+    // approximated.  Height is still read from the B channel.
+    float height = decodeHeight(geometryData, uThickness);
+    float baseHeight = uThickness * 8.0;
+    vec3  incident   = vec3(0.0, 0.0, -1.0);
+    float invN       = 1.0 / max(uRefractiveIndex, 0.001);
+    vec3  baseRefract = refract(incident, normal, invN);
+    float refractLen  = (height + baseHeight) / max(0.001, abs(baseRefract.z));
+    vec2  displacement = baseRefract.xy * refractLen;
+
+    // Apply refraction — with optional chromatic aberration.
+    // PP1 optimisation: when the surface normal is flat (pointing straight up,
+    // i.e. normalXY ≈ 0), refract() always produces displacement = vec2(0) and
+    // the refracted UV is identical to screenUV.  Skip refract() entirely and
+    // take a single background sample.  This covers the majority of pixels on
+    // large surfaces (GlassAppBar, GlassPanel), where the edge zone is a small
+    // fraction of the total area.
+    //
+    // Threshold chosen conservatively: 1e-4 in squared magnitude corresponds to
+    // a normal tilted < 0.6° from vertical — visually indistinguishable from a
+    // zero-displacement sample at any display resolution.
     vec4 refractColor;
-    if (uChromaticAberration < 0.01) {
+    if (dot(normalXY, normalXY) < 1e-4) {
+        // Flat interior — surface is pointing straight at the camera.
+        // Displacement is mathematically zero; sample the background directly.
+        refractColor = texture(uBackgroundTexture, screenUV);
+    } else if (uChromaticAberration < 0.01) {
         vec2 refractedUV = screenUV + displacement * invTexSize;
         refractColor = texture(uBackgroundTexture, refractedUV);
     } else {
         float dispersionStrength = uChromaticAberration * 0.5;
-        vec2 redOffset = displacement * (1.0 + dispersionStrength);
+        vec2 redOffset  = displacement * (1.0 + dispersionStrength);
         vec2 blueOffset = displacement * (1.0 - dispersionStrength);
 
-        vec2 redUV = screenUV + redOffset * invTexSize;
+        vec2 redUV   = screenUV + redOffset   * invTexSize;
         vec2 greenUV = screenUV + displacement * invTexSize;
-        vec2 blueUV = screenUV + blueOffset * invTexSize;
+        vec2 blueUV  = screenUV + blueOffset  * invTexSize;
 
-        float red   = texture(uBackgroundTexture, redUV).r;
-        vec4 greenSample = texture(uBackgroundTexture, greenUV);
-        float blue  = texture(uBackgroundTexture, blueUV).b;
+        float red         = texture(uBackgroundTexture, redUV).r;
+        vec4  greenSample = texture(uBackgroundTexture, greenUV);
+        float blue        = texture(uBackgroundTexture, blueUV).b;
 
         refractColor = vec4(red, greenSample.g, blue, greenSample.a);
     }
 
     vec4 finalColor = applyGlassColor(refractColor, uGlassColor);
-    finalColor.rgb = applySaturation(finalColor.rgb, uSaturation);
+    finalColor.rgb  = applySaturation(finalColor.rgb, uSaturation);
 
-    // Compute edge lighting
+    // Edge lighting — uses the true normal.xy (V1; was normalize(displacement))
     float normalizedHeight = geometryData.b;
-
-    float thicknessScale = clamp(40.0 / max(uThickness, 1.0), 1.0, 4.0);
-    float edgeThreshold = mix(0.8, 0.5, 1.0 / thicknessScale);
-    float edgeFactor = 1.0 - smoothstep(0.0, edgeThreshold, normalizedHeight);
+    float thicknessScale   = clamp(40.0 / max(uThickness, 1.0), 1.0, 4.0);
+    float edgeThreshold    = mix(0.8, 0.5, 1.0 / thicknessScale);
+    float edgeFactor       = 1.0 - smoothstep(0.0, edgeThreshold, normalizedHeight);
 
     if (edgeFactor > 0.01) {
-        vec2 normalXY = normalize(displacement);
+        // VQ1: Anisotropic specular — shape the highlight into a horizontal oval
+        // (matching iOS 26) instead of a circular dot.
+        //
+        // How it works: the tangent of normalXY is perpendicular to it in screen
+        // space.  Stretching normalXY 20% along its tangent before the dot-product
+        // with the light direction elongates the specular lobe along the surface
+        // curvature — producing a smeared oval rather than a point highlight.
+        //
+        // Only the specular dot-product uses anisoN; edgeFactor and brightnessRaw
+        // still use the true normalXY so geometry is unchanged.
+        //
+        // Safe-length guard: at the edge-of-edge transition normalXY magnitude
+        // approaches zero; clamp to 0.01 to avoid divide-by-zero.  The aniso
+        // effect is negligible there anyway (edgeFactor already near 0.01).
+        float nLen    = max(length(normalXY), 0.01);
+        vec2  tangent = vec2(-normalXY.y, normalXY.x) / nLen; // unit perpendicular
+        vec2  anisoN  = normalize(normalXY + tangent * 0.20);  // 20% tangential stretch
 
-        float mainLight = max(0.0, dot(normalXY, uLightDirection));
-        float oppositeLight = max(0.0, dot(normalXY, -uLightDirection));
-
+        float mainLight     = max(0.0, dot(anisoN, uLightDirection));
+        float oppositeLight = max(0.0, dot(anisoN, -uLightDirection));
         float totalInfluence = mainLight + oppositeLight * 0.8;
 
         float directional = pow(totalInfluence, 1.5) * uLightIntensity * 3.0;
-        float ambient = uAmbientStrength * 0.5;
+        float ambient     = uAmbientStrength * 0.5;
 
         // Soft-clamp brightness with x/(1+x) to prevent mix() extrapolating
         // beyond highlightColor. The original * 3.0 drove the corner brightness
-        // to ~9.6 (corner normal perfectly aligns with the 135° light angle),
-        // causing a blinding "leading dot". The soft clamp maps all values to
-        // [0, 1) so corner and edges converge instead of both blowing out.
+        // to ~9.6, causing a blinding "leading dot". The soft clamp maps all
+        // values to [0, 1) so corners and edges converge gracefully.
         float brightnessRaw = (directional + ambient) * edgeFactor * thicknessScale * 0.8;
-        float brightness = brightnessRaw / (1.0 + brightnessRaw);
+        float brightness    = brightnessRaw / (1.0 + brightnessRaw);
 
         vec3 highlightColor = getHighlightColor(refractColor.rgb, 1.0);
         finalColor.rgb = mix(finalColor.rgb, highlightColor, brightness);
     }
 
-    float alpha = geometryData.a;
-    fragColor = vec4(finalColor.rgb * alpha, alpha);
+    // VQ2: Fresnel edge luminosity ramp.
+    //
+    // iOS 26 glass is subtly brighter at grazing angles (the rim) even when
+    // no directional specular highlight lands there.  This is the Fresnel term:
+    // at near-normal incidence (flat interior) reflected light is minimal;
+    // at grazing incidence (edges) it increases.
+    //
+    // normalZ → 0 at the rim (surface nearly perpendicular to view ray),
+    // normalZ → 1 at flat interior (surface facing the camera directly).
+    // So (1.0 - normalZ) gives a smooth 0→1 ramp from interior to rim.
+    //
+    // Gated by edgeFactor so the effect is naturally confined to the rim zone
+    // and doesn't accumulate on interior pixels where edgeFactor ≈ 0.
+    //
+    // Strength 0.10 produces a gentle brightening calibrated against Apple
+    // reference screenshots.  Fully branchless — no extra GPU divergence.
+    float fresnel = (1.0 - normalZ) * edgeFactor * 0.10;
+    finalColor.rgb = clamp(finalColor.rgb + vec3(fresnel), 0.0, 1.0);
+
+    float alpha  = geometryData.a;
+    fragColor    = vec4(finalColor.rgb * alpha, alpha);
 }
+

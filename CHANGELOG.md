@@ -1,3 +1,93 @@
+# 0.6.1
+
+### Visual Quality
+
+- **True surface normal storage in geometry texture (Renderer V1)** — The geometry
+  texture previously stored the refraction *displacement* vector (`dispX, dispY`) in
+  its RG channels. The final render shader then approximated the surface normal as
+  `normalize(displacement)`, which is correct for a single convex SDF shape but
+  **wrong in blend-group neck zones** (where a smooth-union joins two shapes): the
+  displacement vector diverges from the actual surface normal, producing misplaced
+  specular highlights at the join.
+
+  The geometry pass now stores the **true SDF-gradient-derived normal** (`normal.x`,
+  `normal.y`) in RG instead. The render shader decodes the normal, reconstructs
+  `normal.z = sqrt(1 − x² − y²)`, and recomputes the displacement exactly via the
+  same `refract()` call — no approximation. Edge lighting then uses the genuine
+  surface normal throughout.
+
+  **Result:** Specular highlights on blended glass shapes (e.g. two overlapping
+  pills) now correctly follow the true surface curvature rather than the refraction
+  direction. Single-shape surfaces are visually identical to 0.6.0.
+
+  **Files changed:** `shaders/displacement_encoding.glsl`,
+  `shaders/liquid_glass_geometry_blended.frag`,
+  `shaders/liquid_glass_final_render.frag`
+
+- **Anisotropic specular highlights (Impeller)** — The specular lobe is now
+  stretched 20% along the surface tangent before the dot-product with the light
+  direction, producing a horizontal oval highlight (matching iOS 26) rather than
+  a circular dot.  Only the dot-product uses the stretched vector; geometry and
+  `edgeFactor` are unchanged.
+
+  **Files changed:** `shaders/liquid_glass_final_render.frag`
+
+- **Fresnel edge luminosity ramp (Impeller)** — A subtle brightness ramp is
+  now applied at grazing angles (the glass rim) using the already-decoded
+  `normalZ` component. `(1 − normalZ) × edgeFactor × 0.10` adds a
+  gentle brightening that matches iOS 26's centre-to-edge luminosity gradient.
+  Fully branchless, zero extra texture accesses.
+
+  **Files changed:** `shaders/liquid_glass_final_render.frag`
+
+- **Luminosity-preserving glass tint in lightweight shader (Skia/Web)** — The
+  `lightweight_glass.frag` shader (surface widgets on all platforms in standard
+  quality, and on Skia/Web in premium quality) previously used a crude additive
+  tint: `finalColor + uGlassColor.rgb × 0.2`. This was replaced with the same
+  `applyGlassColor()` model used by the Impeller path since v0.5.0:
+  - **Achromatic glass** (white/grey/black): direct `mix()` so white glass lifts
+    toward white (a frost/brightness effect).
+  - **Chromatic glass** (blue/amber/green): luminance-preserving hue shift —
+    backdrop brightness is held, only chroma shifts toward the glass colour.
+
+  **Files changed:** `shaders/lightweight_glass.frag`
+
+### Performance
+
+- **Branchless `smoothUnion` in SDF shader (Impeller)** — Eliminated a
+  conditional branch (`if blend == 0.0`) that caused warp divergence when adjacent
+  glass shapes transition between merged and separate. Replaced with a
+  mathematically equivalent multiply: `m = m * step(0.0, blend)`.
+
+  **Files changed:** `shaders/sdf.glsl`
+
+- **`if/else if` dispatch in `getShapeSDF` (Impeller)** — Sequential `if`
+  statements evaluated all shape type comparisons for every fragment. Converted
+  to an `if/else if` chain so the GPU can short-circuit after the first match.
+  The default return changed from `1e9` (invisible bug) to `0.0` (clearly inside
+  shape — a visible failure mode that makes incorrect shapes obvious).
+
+  **Files changed:** `shaders/sdf.glsl`
+
+- **Single texture fetch when chromatic aberration is disabled (Skia/Web)** —
+  `interactive_indicator.frag` previously sampled the background texture three
+  times unconditionally (one per channel for chromatic aberration). An early-exit
+  branch for `uChromaticAberration < 0.01` (the default for every widget) reduces
+  this to a single fetch — 66% fewer texture reads in the common case.
+
+  **Files changed:** `shaders/interactive_indicator.frag`
+
+- **Flat-interior early-exit in final render shader (Impeller)** — For large
+  glass surfaces (GlassAppBar, GlassPanel), the vast majority of pixels are in the
+  flat interior where `normalXY ≈ 0`. Previously `refract()` plus 1–3 texture
+  samples ran on all pixels, producing a mathematically zero displacement.
+  A `dot(normalXY, normalXY) < 1e−4` guard now skips to a single background sample
+  for flat pixels — lossless (displacement is provably zero when normal is flat).
+
+  **Files changed:** `shaders/liquid_glass_final_render.frag`
+
+---
+
 # 0.6.0
 
 ### Breaking Changes

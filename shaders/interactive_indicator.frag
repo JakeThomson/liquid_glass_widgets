@@ -169,11 +169,17 @@ void main() {
   
   vec3 bg;
   if (uHasBackground > 0.5) {
-    // REAL REFRACTION: Sample from captured background
-    vec3 colR = texture(uTexture, (localRefracted + chromaticShift) / uBackgroundSize).rgb;
-    vec3 colG = texture(uTexture, localRefracted / uBackgroundSize).rgb;
-    vec3 colB = texture(uTexture, (localRefracted - chromaticShift) / uBackgroundSize).rgb;
-    bg = vec3(colR.r, colG.g, colB.b);
+    if (uChromaticAberration < 0.001) {
+      // No chromatic aberration — single texture fetch (2/3 fewer samples vs
+      // the 3-channel path). This is the common default configuration.
+      bg = texture(uTexture, localRefracted / uBackgroundSize).rgb;
+    } else {
+      // REAL REFRACTION with chromatic aberration: separate RGB channels
+      vec3 colR = texture(uTexture, (localRefracted + chromaticShift) / uBackgroundSize).rgb;
+      vec3 colG = texture(uTexture, localRefracted / uBackgroundSize).rgb;
+      vec3 colB = texture(uTexture, (localRefracted - chromaticShift) / uBackgroundSize).rgb;
+      bg = vec3(colR.r, colG.g, colB.b);
+    }
   } else {
     // SYNTHETIC LIQUID: Bright clear base with subtle tint
     // We use a high base color (0.9) to ensure it looks like pure glass

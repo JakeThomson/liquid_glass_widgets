@@ -50,6 +50,46 @@ const float kBodyIntensityScale   = 0.15;  // Body sensitivity to light intensit
 const float kThicknessReference   = 10.0;  // Neutral thickness value (no visual modulation)
 const float kThicknessRimBoost    = 0.15;  // Rim opacity boost per unit thickness deviation  
 
+
+// -----------------------------------------------------------------------------
+// iOS 26 GLASS TINT MODEL (inlined from render.glsl::applyGlassColor)
+// -----------------------------------------------------------------------------
+// Luminosity-preserving glass tint — matches the Impeller final-render path.
+//
+// Chromatic glass (blue, amber, green): preserves backdrop luminance while
+// shifting hue toward the glass colour.  Prevents the "muddy" darkening that
+// a straight alpha-composite produces on saturated colours.
+//
+// Achromatic glass (white, grey, black): uses a direct alpha-composite so
+// white glass actually lifts toward white (a brightness/frost effect).
+// Without this, white glass collapses to a luminance-matched grey.
+//
+// The chroma factor blends smoothly between the two paths — fully branchless.
+// glassColor.a = 0 → returns liquidColor unchanged via mix() in both paths.
+//
+// NOTE: In this shader "liquidColor" = the synthesised glass body (finalColor),
+// not a background-texture sample.  The luminance-shift still applies correctly.
+const vec3 LUMA_WEIGHTS = vec3(0.299, 0.587, 0.114);
+
+vec3 applyGlassColorLW(vec3 liquidColor, vec4 glassColor) {
+    float backdropLuminance = dot(liquidColor, LUMA_WEIGHTS);
+    float glassLuminance    = dot(glassColor.rgb, LUMA_WEIGHTS);
+
+    // Luminosity-preserving tint: shift chroma toward glass, keep body brightness.
+    vec3 tinted = clamp(glassColor.rgb + (backdropLuminance - glassLuminance), 0.0, 1.0);
+
+    // Chroma of the glass colour: 0 = achromatic, 1 = fully saturated.
+    // Sharp ramp so anything with meaningful colour uses the luminosity path.
+    float chroma = max(max(glassColor.r, glassColor.g), glassColor.b)
+                 - min(min(glassColor.r, glassColor.g), glassColor.b);
+    float chromaWeight = clamp(chroma * 8.0, 0.0, 1.0);
+
+    vec3 directMix     = mix(liquidColor, glassColor.rgb, glassColor.a); // achromatic: lift toward glass
+    vec3 luminosityMix = mix(liquidColor, tinted,         glassColor.a); // chromatic:  hue-shift, brightness held
+
+    return mix(directMix, luminosityMix, chromaWeight);
+}
+
 out vec4 fragColor;
 
 void main() {
@@ -167,11 +207,18 @@ void main() {
   finalColor = clamp(finalColor + glowContribution, 0.0, 1.0);
   finalAlpha = max(finalAlpha, uGlowIntensity * 0.3 * glowMask);
 
-  // STAGE 7.6: COLOR SATURATION (Like Impeller!)
+  // STAGE 7.6: iOS 26 GLASS TINT (luminosity-preserving — matches Impeller path)
+  // Applied BEFORE saturation so the tint is saturation-neutral, matching the
+  // order in liquid_glass_final_render.frag: applyGlassColor → applySaturation.
+  //
+  // Previously this was an additive tint:
+  //   mix(finalColor, finalColor + uGlassColor.rgb * 0.2, uGlassColor.a)
+  // That was wrong: additive blending blows out bright surfaces and doesn't
+  // preserve luminance, so white glass on a white surface → overexposed white.
+  finalColor = applyGlassColorLW(finalColor, uGlassColor);
+
+  // STAGE 7.7: COLOR SATURATION
   // Apply HSL-style saturation adjustment to final color.
-  // This is the ORIGINAL purpose of the saturation parameter.
-  // Constants match Impeller's implementation in render.glsl
-  const vec3 LUMA_WEIGHTS = vec3(0.299, 0.587, 0.114);
   float luminance = dot(finalColor, LUMA_WEIGHTS);
   finalColor = mix(vec3(luminance), finalColor, uSaturation);
   finalColor = clamp(finalColor, 0.0, 1.0);

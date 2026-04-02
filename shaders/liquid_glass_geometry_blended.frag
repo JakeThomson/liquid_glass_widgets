@@ -1,8 +1,14 @@
 // Copyright 2025, Tim Lehmann for whynotmake.it
 //
 // Geometry precomputation shader for blended liquid glass shapes
-// This shader pre-computes the refraction displacement and encodes it into a texture
-// Only needs to be re-run when shape geometry or layout changes
+// This shader pre-computes the surface normal and encodes it into a texture.
+// Only needs to be re-run when shape geometry or layout changes.
+//
+// Texture layout (slots → displacement_encoding.glsl):
+//   R: normal.x  [-1, 1] → [0, 1]
+//   G: normal.y  [-1, 1] → [0, 1]
+//   B: height    normalized to thickness
+//   A: foreground alpha (SDF anti-aliasing)
 
 #version 460 core
 precision highp float; // mediump caused ~1.5px displacement banding on mobile (10-bit mantissa)
@@ -24,47 +30,40 @@ layout(location = 0) out vec4 fragColor;
 
 void main() {
     vec2 fragCoord = FlutterFragCoord().xy;
-    
-    #ifdef IMPELLER_TARGET_OPENGLES
-        vec2 screenUV = vec2(fragCoord.x / uSize.x, 1.0 - (fragCoord.y / uSize.y));
-    #else
-        vec2 screenUV = vec2(fragCoord.x / uSize.x, fragCoord.y / uSize.y);
-    #endif
-    
+
     float sd = sceneSDF(fragCoord, int(uNumShapes), uShapeData, uBlend);
-    
+
     float foregroundAlpha = 1.0 - smoothstep(-2.0, 0.0, sd);
     if (foregroundAlpha < 0.01) {
         fragColor = vec4(0.0);
         return;
     }
-    
+
+    // Compute the SDF gradient (true surface normal XY).
+    // dFdx/dFdy give the rate of change of the SDF across neighbouring pixels,
+    // which is the outward surface normal direction in screen space.
     float dx = dFdx(sd);
     float dy = dFdy(sd);
-    
+
     float n_cos = max(uThickness + sd, 0.0) / uThickness;
     float n_sin = sqrt(max(0.0, 1.0 - n_cos * n_cos));
-    
+
+    // True surface normal from the SDF gradient — this is what we store.
+    // In blend-group neck zones the displacement vector diverges from this
+    // normal, which is why storing the normal (not displacement) fixes lighting.
     vec3 normal = normalize(vec3(dx * n_cos, dy * n_cos, n_sin));
-    
+
     if (sd >= 0.0 || uThickness <= 0.0) {
         fragColor = vec4(0.0);
         return;
     }
-    
+
     float x = uThickness + sd;
     float sqrtTerm = sqrt(max(0.0, uThickness * uThickness - x * x));
     float height = mix(sqrtTerm, uThickness, float(sd < -uThickness));
-    
-    float baseHeight = uThickness * 8.0;
-    vec3 incident = vec3(0.0, 0.0, -1.0);
-    
-    float invRefractiveIndex = 1.0 / uRefractiveIndex;
-    vec3 baseRefract = refract(incident, normal, invRefractiveIndex);
-    float baseRefractLength = (height + baseHeight) / max(0.001, abs(baseRefract.z));
-    vec2 displacement = baseRefract.xy * baseRefractLength;
-    
-    float maxDisplacement = uThickness * 10.0;
-    
-    fragColor = encodeDisplacementData(displacement, maxDisplacement, height, uThickness, foregroundAlpha);
+
+    // Encode normal.xy + height + alpha.
+    // The render pass recomputes displacement = refract(incident, normal, 1/n)
+    // so there is no information loss compared to storing displacement directly.
+    fragColor = encodeGeometryData(normal.xy, height, uThickness, foregroundAlpha);
 }
