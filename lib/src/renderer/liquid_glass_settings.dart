@@ -21,9 +21,20 @@ class LiquidGlassSettings with EquatableMixin {
     this.saturation = 1.5,
   });
 
-  /// Creates a new [LiquidGlassSettings] with the given settings where each
-  /// setting works like it does in Figma, where it is a percentage from
-  /// 0 to 100.
+  /// Creates [LiquidGlassSettings] using Figma-inspired parameter names.
+  ///
+  /// **Important — units are not Figma percentages:**
+  ///
+  /// | Parameter | Range | Maps to |
+  /// |-----------|-------|---------|
+  /// | [refraction] | 0–100 % | [refractiveIndex] via `1 + (v/100) × 0.2` |
+  /// | [depth] | logical pixels | [thickness] **directly** (not a Figma %) |
+  /// | [dispersion] | 0–100 % | [chromaticAberration] via `4 × (v/100)` |
+  /// | [frost] | logical pixels | [blur] **directly** (not a Figma %) |
+  ///
+  /// Figma's internal `depth` and `frost` use proprietary units with no public
+  /// pixel-equivalent formula. Pass [depth] and [frost] as the logical-pixel
+  /// values you want — typical ranges: depth 10–40, frost 2–8.
   LiquidGlassSettings.figma({
     required double refraction,
     required double depth,

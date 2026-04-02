@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -585,17 +586,26 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBottomBar() {
+    const _defaultGlassColor = Color(0x3DFFFFFF); // Colors.white24
+    const _defaultLightAngle =
+        0.75 * math.pi; // 135° — Apple standard, upper-left
     return Padding(
       padding: const EdgeInsets.only(bottom: 0),
       child: GlassBottomBar(
         verticalPadding: 0,
         horizontalPadding: 8,
-        indicatorColor: Colors.black26,
-        // glassSettings: LiquidGlassSettings(blur: 8,
-        //   ambientStrength: 0.5,
-        //   lightAngle: 0.25 * math.pi,
-        //   glassColor: Colors.white24,
-        //   thickness: 30,),
+        indicatorColor: Colors.black38,
+        glassSettings: LiquidGlassSettings(
+          thickness: 30,
+          blur: 3,
+          chromaticAberration: 0.3,
+          lightIntensity: 0.6,
+          refractiveIndex: 1.59,
+          saturation: 0.7,
+          ambientStrength: 1,
+          lightAngle: _defaultLightAngle,
+          glassColor: _defaultGlassColor,
+        ),
         extraButton: GlassBottomBarExtraButton(
           icon: Icon(Icons.support_agent),
           onTap: () {

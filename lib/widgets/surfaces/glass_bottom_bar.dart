@@ -13,7 +13,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
-import 'package:motor/motor.dart';
+import '../../utils/glass_spring.dart';
 
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
@@ -332,7 +332,7 @@ class GlassBottomBar extends StatefulWidget {
   /// - refractiveIndex: 1.59
   /// - saturation: 0.7
   /// - ambientStrength: 1
-  /// - lightAngle: 0.25 * π
+  /// - lightAngle: 0.75 * π (135°, Apple standard — upper-left)
   /// - glassColor: Colors.white24
   final LiquidGlassSettings? glassSettings;
 
@@ -433,7 +433,8 @@ class GlassBottomBar extends StatefulWidget {
 class _GlassBottomBarState extends State<GlassBottomBar> {
   // Cache default glass color and settings to avoid allocations on every build
   static const _defaultGlassColor = Color(0x3DFFFFFF); // Colors.white24
-  static const _defaultLightAngle = 0.7853981633974483; // 0.25 * pi
+  static const _defaultLightAngle =
+      0.75 * math.pi; // 135° — Apple standard, upper-left
   static const _defaultGlassSettings = LiquidGlassSettings(
     thickness: 30,
     blur: 3,
@@ -1080,20 +1081,17 @@ class _TabIndicatorState extends State<_TabIndicator> {
         _isDown = false;
         _xAlign = _computeXAlignmentForTab(widget.tabIndex);
       }),
-      child: VelocityMotionBuilder(
-        converter: const SingleMotionConverter(),
+      child: VelocitySpringBuilder(
         value: _xAlign,
-        // Use different spring physics based on drag state
-        motion: _isDragging
-            ? const Motion.interactiveSpring(snapToEnd: true)
-            : const Motion.bouncySpring(snapToEnd: true),
+        springWhenActive: GlassSpring.interactive(),
+        springWhenReleased: GlassSpring.bouncy(),
+        active: _isDragging,
         builder: (context, value, velocity, child) {
           final alignment = Alignment(value, 0);
 
-          return SingleMotionBuilder(
-            motion: const Motion.snappySpring(
-              snapToEnd: true,
-              duration: Duration(milliseconds: 300),
+          return SpringBuilder(
+            spring: GlassSpring.snappy(
+              duration: const Duration(milliseconds: 300),
             ),
             // Show glass indicator when dragging or far from target
             value: widget.visible &&

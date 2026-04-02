@@ -22,7 +22,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     required this.renderShader,
     required LiquidGlassSettings settings,
     required double devicePixelRatio,
-    required BackdropKey? backdropKey,
+    BackdropKey? backdropKey,
   })  : _settings = settings,
         _devicePixelRatio = devicePixelRatio,
         _backdropKey = backdropKey,
@@ -56,30 +56,45 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     markNeedsPaint();
   }
 
-  BackdropKey? _backdropKey;
-  BackdropKey? get backdropKey => _backdropKey;
-  set backdropKey(BackdropKey? value) {
-    if (_backdropKey == value) return;
-    _backdropKey = value;
-  }
-
   double _devicePixelRatio;
   double get devicePixelRatio => _devicePixelRatio;
   set devicePixelRatio(double value) {
     if (_devicePixelRatio == value) return;
     _devicePixelRatio = value;
+    _updateShaderSettings();
+    markNeedsPaint();
+  }
+
+  /// The [BackdropKey] for blur-sharing via a [BackdropGroup] ancestor.
+  /// Set to [BackdropGroup.of(context)?.backdropKey] when a [GlassBackdropScope]
+  /// (or [BackdropGroup]) exists in the tree; null otherwise (no-op).
+  BackdropKey? _backdropKey;
+  BackdropKey? get backdropKey => _backdropKey;
+  set backdropKey(BackdropKey? value) {
+    if (_backdropKey == value) return;
+    _backdropKey = value;
     markNeedsPaint();
   }
 
   @override
   bool get alwaysNeedsCompositing => _geometryImage != null;
 
-  /// Pre-rendered geometry texture in screen space
+  /// Pre-rendered geometry texture in the render object's LOCAL coordinate space.
+  /// Because the geometry is recorded without `matteTransform`, its screen-space
+  /// position is always derived synchronously at paint time — zero async lag.
   ui.Image? _geometryImage;
 
-  /// The bounding box of the geometry matte in the coordinate space of the
-  /// shader
-  Rect _geometryMatteBounds = Rect.zero;
+  /// Bounding box of [_geometryImage] in the render object's LOCAL logical-pixel
+  /// coordinate space (snapped to physical pixels).
+  /// Apply `matteTransform` at paint time to get the current screen-space bounds.
+  Rect _geometryLocalBounds = Rect.zero;
+
+  /// Sequence number incremented on every geometry rebuild request.
+  /// Used to discard async results that were superseded by a newer rebuild.
+  int _geometryBuildSeq = 0;
+
+  /// Whether an async geometry build is currently in flight.
+  bool _geometryBuildPending = false;
 
   @override
   @mustCallSuper
@@ -114,7 +129,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         ..setOffset(
           Offset(
             cos(settings.lightAngle),
-            sin(settings.lightAngle),
+            -sin(settings
+                .lightAngle), // Negative: Flutter screen Y points down, angle is CCW from +X
           ),
         );
     });
@@ -130,8 +146,12 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   @override
   @nonVirtual
   void paint(PaintingContext context, Offset offset) {
-    logger.finest('$hashCode Painting liquid glass with '
-        '${link._shapeGeometries.length} shapes.');
+    if (LgrLogs.isLogActive(logger)) {
+      logger.finest(
+        '$hashCode Painting liquid glass with '
+        '${link._shapeGeometries.length} shapes.',
+      );
+    }
 
     final shapesWithGeometry =
         <(RenderLiquidGlassGeometry, GeometryCache, Matrix4)>[];
@@ -184,18 +204,18 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
 
     if (needsGeometryUpdate || _geometryImage == null || link._dirty) {
       link.updateAllGeometries();
-      _clearGeometryImage();
       link._dirty = false;
-
       needsGeometryUpdate = false;
 
-      final (image, matteBounds) = _buildGeometryImage(
-        shapesWithGeometry,
-        boundingBox,
-      );
+      if (!_geometryBuildPending) {
+        // Kick off an async rasterization. Canvas recording is synchronous
+        // (cheap CPU work); only the toImage() GPU upload is deferred.
+        _startAsyncGeometryBuild(shapesWithGeometry, boundingBox);
+      }
 
-      _geometryImage = image;
-      _geometryMatteBounds = matteBounds;
+      // If we have a previous image, keep showing it this frame (one-frame
+      // latency). On the very first frame there is no previous image — fall
+      // through to the early-return below via the null check on _geometryImage.
     }
 
     if (debugPaintLiquidGlassGeometry) {
@@ -214,11 +234,32 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       );
     } else {
       if (_geometryImage case final geometryImage?) {
+        // Use _paintBounds (the current frame's bounding box, set at line 177)
+        // instead of _geometryLocalBounds (from the last completed build).
+        //
+        // During expansion, layout() fires every frame and _geometryLocalBounds
+        // lags 1-2 frames behind. Using stale small bounds means the shader
+        // only covers the old smaller area → transparent gap at the new edges
+        // → the "line protruding from both sides" during press-and-hold.
+        //
+        // _paintBounds is always the current frame's exact local bounding box.
+        // Any SDF size mismatch (texture built at old size vs. current size)
+        // is at most ~1px during the async build frames — sub-pixel, not visible.
+        final activeBounds = MatrixUtils.transformRect(
+          matteTransform,
+          _paintBounds,
+        ).snapToPixels(devicePixelRatio);
         renderShader
+          // Slot 0-1: uSize — physical-pixel size of the backdrop layer.
+          // Must be set before painting so the shader can derive correct screen UVs.
+          ..setFloatUniforms(initialIndex: 0, (value) {
+            value.setSize(desiredMatteSize * devicePixelRatio);
+          })
+          // Slots 2-5: uGeometryOffset + uGeometrySize in physical pixels.
           ..setFloatUniforms(initialIndex: 2, (value) {
             value
-              ..setOffset(_geometryMatteBounds.topLeft * devicePixelRatio)
-              ..setSize(_geometryMatteBounds.size * devicePixelRatio);
+              ..setOffset(activeBounds.topLeft * devicePixelRatio)
+              ..setSize(activeBounds.size * devicePixelRatio);
           })
           ..setImageSampler(1, geometryImage);
         paintLiquidGlass(
@@ -266,25 +307,59 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
 
   void _debugPaintGeometry(PaintingContext context, Offset offset) {
     if (_geometryImage case final geometryImage?) {
-      final backToThis = Matrix4.inverted(matteTransform).storage;
-      final bounds = MatrixUtils.transformRect(
-        matteTransform,
-        paintBounds,
-      ).snapToPixels(devicePixelRatio);
+      // The geometry image is in local space. Draw it at the local bounds
+      // position so it overlays the glass content at the correct on-screen
+      // location (the rendering canvas already applies the correct transform).
       context.canvas
         ..save()
-        ..transform(backToThis)
-        ..translate(
-          bounds.left,
-          bounds.top,
-        )
+        ..translate(_geometryLocalBounds.left, _geometryLocalBounds.top)
         ..scale(1 / devicePixelRatio)
         ..drawImage(
           geometryImage,
-          offset * devicePixelRatio,
+          Offset.zero,
           Paint()..blendMode = BlendMode.src,
         )
         ..restore();
+    }
+  }
+
+  /// Kicks off an async geometry build. Canvas recording runs synchronously;
+  /// only the GPU rasterization (toImage) is deferred to a microtask.
+  /// Stale completions are discarded via [_geometryBuildSeq].
+  Future<void> _startAsyncGeometryBuild(
+    List<(RenderLiquidGlassGeometry, GeometryCache, Matrix4)> geometries,
+    Rect bounds,
+  ) async {
+    final seq = ++_geometryBuildSeq;
+    _geometryBuildPending = true;
+
+    // Record canvas commands synchronously — this is pure CPU and fast.
+    // Geometry is recorded in local space (no matteTransform applied).
+    final (picture, localBounds, imageSize) =
+        _recordGeometryPicture(geometries, bounds);
+
+    try {
+      // GPU rasterization — runs off the render thread, does not stall paint.
+      // Clamp to ≥1 — the jelly squash transform can push geometry to near-zero
+      // size, and toImage(0, n) throws "Invalid image dimensions".
+      final image = await picture.toImage(
+        max(1, imageSize.width.ceil()),
+        max(1, imageSize.height.ceil()),
+      );
+
+      if (!attached || seq != _geometryBuildSeq) {
+        // A newer rebuild was requested while we were waiting; discard.
+        image.dispose();
+        return;
+      }
+
+      _clearGeometryImage();
+      _geometryImage = image;
+      _geometryLocalBounds = localBounds;
+      markNeedsPaint();
+    } finally {
+      picture.dispose();
+      if (seq == _geometryBuildSeq) _geometryBuildPending = false;
     }
   }
 
@@ -300,33 +375,50 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   @protected
   bool needsGeometryUpdate = true;
 
-  (ui.Image, Rect) _buildGeometryImage(
+  /// Records all geometry drawing commands into a [ui.Picture] synchronously.
+  /// Returns the picture, the LOCAL-SPACE bounding rect, and the physical
+  /// pixel size needed for rasterization. The caller is responsible for
+  /// disposing the picture after rasterization.
+  ///
+  /// ## Local-space rasterization (A3)
+  ///
+  /// The geometry is recorded WITHOUT applying [matteTransform] (position,
+  /// jelly scale, global screen offset). This means:
+  ///
+  /// - The image represents the pill SDF purely in the render object's own
+  ///   coordinate space, at its current LOCAL size.
+  /// - [matteTransform] is applied SYNCHRONOUSLY at paint time to derive the
+  ///   screen-space [uGeometryOffset] / [uGeometrySize] uniforms — no 1-2
+  ///   frame async lag, no correction needed.
+  /// - Geometry rebuilds are only needed when the LOCAL shape changes
+  ///   (layout/style), not for every position or jelly-scale animation frame.
+  (ui.Picture, Rect, Size) _recordGeometryPicture(
     List<(RenderLiquidGlassGeometry, GeometryCache, Matrix4)> geometries,
     Rect bounds,
   ) {
-    final boundsInMatteSpace = MatrixUtils.transformRect(
-      matteTransform,
-      bounds,
-    ).snapToPixels(devicePixelRatio);
+    // Work in local coordinate space — no matteTransform applied.
+    final localBounds = bounds.snapToPixels(devicePixelRatio);
+    final size = localBounds.size * devicePixelRatio;
 
-    final size = boundsInMatteSpace.size * devicePixelRatio;
-
-    final buffer = StringBuffer('$hashCode Built geometry image with '
-        '${geometries.length} shapes at size ${size.width}x${size.height}:\n');
+    final logging = LgrLogs.isLogActive(logger);
+    final buffer = logging
+        ? StringBuffer(
+            '$hashCode Recording geometry picture (local space) with '
+            '${geometries.length} shapes at size '
+            '${size.width}x${size.height}:\n',
+          )
+        : null;
 
     final recorder = ui.PictureRecorder();
-
     final canvas = Canvas(recorder);
 
     for (final (_, geometry, transform) in geometries) {
       canvas
         ..save()
         ..scale(devicePixelRatio)
-        ..translate(
-          -boundsInMatteSpace.left,
-          -boundsInMatteSpace.top,
-        )
-        ..transform(matteTransform.storage)
+        // Shift so localBounds.topLeft is the texture origin.
+        ..translate(-localBounds.left, -localBounds.top)
+        // Apply geometry-local → glass-local transform only (no matteTransform).
         ..transform(transform.storage)
         ..scale(1 / devicePixelRatio)
         ..translate(
@@ -336,29 +428,18 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
 
       switch (geometry) {
         case UnrenderedGeometryCache(matte: final picture):
-          buffer.writeln(
-            '\t- Unrendered @ ${geometry.bounds}',
-          );
+          buffer?.writeln('\t- Unrendered @ ${geometry.bounds}');
           canvas.drawPicture(picture);
         case RenderedGeometryCache(matte: final image):
-          buffer.writeln(
-            '\t- Rendered @ ${geometry.bounds}',
-          );
+          buffer?.writeln('\t- Rendered @ ${geometry.bounds}');
           canvas.drawImage(image, Offset.zero, Paint());
       }
 
       canvas.restore();
     }
 
-    final picture = recorder.endRecording();
-    final image = picture.toImageSync(
-      size.width.ceil(),
-      size.height.ceil(),
-    );
-
-    logger.fine(buffer.toString());
-    picture.dispose();
-    return (image, boundsInMatteSpace);
+    if (buffer != null) logger.fine(buffer.toString());
+    return (recorder.endRecording(), localBounds, size);
   }
 }
 

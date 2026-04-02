@@ -58,66 +58,46 @@ float getHeight(float sd, float thickness) {
 
 // Calculate lighting effects based on displacement data
 vec3 calculateLighting(
-    vec2 uv, 
-    vec3 normal, 
-    float sd, 
-    float thickness, 
+    vec2 uv,
+    vec3 normal,
+    float sd,
+    float thickness,
     float height,
-    vec2 lightDirection, 
-    float lightIntensity, 
-    float ambientStrength, 
+    vec2 lightDirection,
+    float lightIntensity,
+    float ambientStrength,
     vec3 backgroundColor
 ) {
     float normalizedHeight = thickness > 0.0 ? height / thickness : 0.0;
     float shape = clamp((1.0 - normalizedHeight) * 1.111, 0.0, 1.0);
-
-    // If we're outside the shape, no lighting.
-    if (shape < 0.01) {
-        return vec3(0.0);
-    }
-
-    // Smoothly fade in the entire lighting effect based on thickness
     float thicknessFactor = clamp((thickness - 5.0) * 0.5, 0.0, 1.0);
-    if (thicknessFactor < 0.01) {
-        return vec3(0.0);
-    }
 
-    // --- Rim lighting ---
-    // Fast rational approximation: 1/(1+k*x^2)
+    // Rim lighting — fast rational approximation: 1/(1+k*x^2)
     float rimWidth = 1.5;
     float k = 0.89;
     float x = sd / rimWidth;
     float rimFactor = 1.0 / (1.0 + k * x * x);
 
-    // Early reject for minimal lighting effects to save expensive highlight calculations
-    if (rimFactor < 0.01 || lightIntensity < 0.01) {
-        return vec3(0.0);
-    }
+    // Single branchless enable multiplier — replaces three early-return branches
+    // that caused warp divergence on pixels at the glass boundary (threads within
+    // a warp took different paths, serialising execution).
+    float enable = step(0.01, shape)
+                 * step(0.01, thicknessFactor)
+                 * step(0.01, rimFactor)
+                 * step(0.01, lightIntensity);
 
-    // Use pre-computed light direction
     vec2 normalXY = normal.xy;
     float mainLightInfluence = max(0.0, dot(normalXY, lightDirection));
-
-    // Add a secondary, weaker light from the opposite direction.
     float oppositeLightInfluence = max(0.0, dot(normalXY, -lightDirection));
-
-    // Increase strength of opposite light
     float totalInfluence = mainLightInfluence + oppositeLightInfluence * 0.8;
 
-    // Compute highlight color once at max brightness, then scale for different uses
     vec3 highlightColor = getHighlightColor(backgroundColor, 1.0);
 
-    // Directional component with 0.7 brightness factor
     vec3 directionalRim = (highlightColor * 0.7) * (totalInfluence * totalInfluence) * lightIntensity * 2.0;
-
-    // Ambient component with 0.4 brightness factor
     vec3 ambientRim = (highlightColor * 0.4) * ambientStrength;
-
-    // Combine directional and ambient rim light, and apply rim falloff
     vec3 totalRimLight = (directionalRim + ambientRim) * rimFactor;
 
-    // Apply shape mask like the original version
-    return totalRimLight * thicknessFactor * shape;
+    return totalRimLight * thicknessFactor * shape * enable;
 }
 
 // Calculate refraction with physically-based chromatic aberration
@@ -169,28 +149,35 @@ vec3 applySaturation(vec3 color, float saturation) {
     return clamp(saturatedColor, 0.0, 1.0);
 }
 
-// Apply glass color tinting to the liquid color
+// Apply glass color tinting to the liquid color.
+// iOS 26 model: chromatic glass (blue, amber) preserves backdrop luminance while
+// shifting hue — unlike Overlay which produced unintuitive darkening/brightening.
+// Achromatic glass (white, grey, black) uses a direct alpha-composite mix so
+// that white glass actually lifts toward white (brightness effect). Without this,
+// whites collapse to a luminance-matched grey and can never frost the surface.
+// The chroma factor blends smoothly between the two paths — fully branchless.
+// glassColor.a = 0 naturally returns liquidColor via mix() in both paths.
 vec4 applyGlassColor(vec4 liquidColor, vec4 glassColor) {
-    vec4 finalColor = liquidColor;
-    
-    if (glassColor.a > 0.0) {
-        float glassLuminance = dot(glassColor.rgb, LUMA_WEIGHTS);
-        
-        if (glassLuminance < 0.5) {
-            vec3 darkened = liquidColor.rgb * (glassColor.rgb * 2.0);
-            finalColor.rgb = mix(liquidColor.rgb, darkened, glassColor.a);
-        } else {
-            vec3 invLiquid = vec3(1.0) - liquidColor.rgb;
-            vec3 invGlass = vec3(1.0) - glassColor.rgb;
-            vec3 screened = vec3(1.0) - (invLiquid * invGlass);
-            finalColor.rgb = mix(liquidColor.rgb, screened, glassColor.a);
-        }
-        
-        finalColor.a = liquidColor.a;
-    }
-    
-    return finalColor;
+    float backdropLuminance = dot(liquidColor.rgb, LUMA_WEIGHTS);
+    float glassLuminance    = dot(glassColor.rgb, LUMA_WEIGHTS);
+
+    // Luminosity-preserving tint: shift chroma toward glass, keep backdrop brightness.
+    vec3 tinted = clamp(glassColor.rgb + (backdropLuminance - glassLuminance), 0.0, 1.0);
+
+    // Chroma of the glass colour: 0 = achromatic (white/grey/black), 1 = fully saturated.
+    // Use a sharp ramp so anything with meaningful colour uses the luminosity path.
+    float chroma = max(max(glassColor.r, glassColor.g), glassColor.b)
+                 - min(min(glassColor.r, glassColor.g), glassColor.b);
+    float chromaWeight = clamp(chroma * 8.0, 0.0, 1.0);
+
+    // achromatic path: direct mix toward the glass colour (white lifts to white)
+    vec3 directMix     = mix(liquidColor.rgb, glassColor.rgb, glassColor.a);
+    // chromatic path:  mix toward luminosity-shifted tint (hue shift, brightness held)
+    vec3 luminosityMix = mix(liquidColor.rgb, tinted, glassColor.a);
+
+    return vec4(mix(directMix, luminosityMix, chromaWeight), liquidColor.a);
 }
+
 
 // Complete liquid glass rendering pipeline
 vec4 renderLiquidGlass(vec2 screenUV, vec2 p, vec2 uSize, float sd, float thickness, float refractiveIndex, float chromaticAberration, vec4 glassColor, vec2 lightDirection, float lightIntensity, float ambientStrength, sampler2D backgroundTexture, vec3 normal, float foregroundAlpha, float gaussianBlur, float saturation) {
@@ -206,14 +193,15 @@ vec4 renderLiquidGlass(vec2 screenUV, vec2 p, vec2 uSize, float sd, float thickn
     // Calculate lighting effects using background color
     vec3 lighting = calculateLighting(screenUV, normal, sd, thickness, height, lightDirection, lightIntensity, ambientStrength, backgroundColor);
     
-    // Apply realistic glass color influence
+    // Apply glass color tint
     vec4 finalColor = applyGlassColor(refractColor, glassColor);
-    
-    // Add lighting effects to final color
-    finalColor.rgb += lighting;
-    
-    // Apply saturation adjustment to the final color after tinting
+
+    // Saturation before lighting — specular highlights should remain white/neutral,
+    // not be pushed towards the desaturated midpoint. Matches liquid_glass_final_render.frag.
     finalColor.rgb = applySaturation(finalColor.rgb, saturation);
+
+    // Add lighting after saturation
+    finalColor.rgb += lighting;
     
     // Use alpha for smooth transition at boundaries
     // Only sample background texture when we need to blend

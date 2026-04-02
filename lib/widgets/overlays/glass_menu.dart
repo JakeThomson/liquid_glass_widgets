@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart'; // Required for SpringSimulation
 import '../../src/renderer/liquid_glass_renderer.dart';
 
+import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
 import '../containers/glass_container.dart';
 import '../shared/inherited_liquid_glass.dart';
@@ -362,7 +363,7 @@ class _GlassMenuState extends State<GlassMenu>
           blur: 10,
           thickness: 10,
           glassColor: Color.fromRGBO(255, 255, 255, 0.12),
-          lightAngle: 135,
+          lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
           lightIntensity: 0.7,
           ambientStrength: 0.4,
           saturation: 1.2,

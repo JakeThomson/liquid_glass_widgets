@@ -37,6 +37,7 @@ class LiquidGlass extends StatelessWidget {
     super.key,
   })  : grouped = false,
         blendGroupLink = null,
+        clipExpansion = EdgeInsets.zero,
         ownLayerConfig = null;
 
   /// Creates a new [LiquidGlass] that is part of a [LiquidGlassBlendGroup].
@@ -52,6 +53,7 @@ class LiquidGlass extends StatelessWidget {
     this.clipBehavior = Clip.hardEdge,
     this.blendGroupLink,
   })  : ownLayerConfig = null,
+        clipExpansion = EdgeInsets.zero,
         grouped = true;
 
   /// Creates a new [LiquidGlass] that creates its own [LiquidGlassLayer].
@@ -69,6 +71,7 @@ class LiquidGlass extends StatelessWidget {
     this.glassContainsChild = false,
     this.clipBehavior = Clip.hardEdge,
     this.blendGroupLink,
+    this.clipExpansion = EdgeInsets.zero,
   })  : ownLayerConfig = settings,
         grouped = false;
 
@@ -107,12 +110,19 @@ class LiquidGlass extends StatelessWidget {
   /// The settings for this glass if it is supposed to create its own layer.
   final LiquidGlassSettings? ownLayerConfig;
 
+  /// Extra clip expansion forwarded to [LiquidGlassLayer.clipExpansion].
+  ///
+  /// Only meaningful when using [LiquidGlass.withOwnLayer]. Has no effect on
+  /// the grouped or default constructors.
+  final EdgeInsets clipExpansion;
+
   @override
   Widget build(BuildContext context) {
     // If we have our own layer config, we create our own layer.
     if (ownLayerConfig case final settings?) {
       return LiquidGlassLayer(
         settings: settings,
+        clipExpansion: clipExpansion,
         child: LiquidGlassBlendGroup(
           blend: 0,
           child: Builder(

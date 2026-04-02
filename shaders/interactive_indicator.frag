@@ -185,7 +185,9 @@ void main() {
   
   // Key light: bright highlight on edges facing the light
   // TWEAK: pow exponent (8.0) controls sharpness - higher = tighter highlight
-  float keyHighlight = pow(max(edgeLightCatch, 0.0), 8.0) * uLightIntensity * 2.0;
+  // NOTE: Using * 0.5 (same scale as kickHighlight) to avoid an over-bright "dot"
+  // at the pill corner where the light direction perfectly aligns with the corner normal.
+  float keyHighlight = pow(max(edgeLightCatch, 0.0), 8.0) * uLightIntensity * 0.5;
   
   // Kick light: subtle highlight on opposite edge (back-reflection)
   // TWEAK: pow exponent (12.0) is higher for tighter back-reflection

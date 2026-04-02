@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
+import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
 import '../shared/glass_effect.dart';
 import '../shared/inherited_liquid_glass.dart';
@@ -382,7 +383,7 @@ class _GlassSwitchState extends State<GlassSwitch>
                 thickness: 20,
                 lightIntensity: 2.0,
                 blur: 0,
-                lightAngle: 135,
+                lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
               )
             : const LiquidGlassSettings(
                 glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
@@ -390,7 +391,7 @@ class _GlassSwitchState extends State<GlassSwitch>
                 thickness: 10,
                 lightIntensity: 2, // Bold specular highlight
                 blur: 0,
-                lightAngle: 120, // Synchronized with movement
+                lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
               ),
         quality: _effectiveQuality ?? GlassQuality.standard,
         interactionIntensity: transition,

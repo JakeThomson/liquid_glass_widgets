@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'internal/glass_drag_builder.dart';
 import 'package:meta/meta.dart';
-import 'package:motor/motor.dart';
+import '../../utils/glass_spring.dart';
 
 /// A widget that provides a squash and stretch effect to its child based on
 /// user interaction.
@@ -71,22 +71,19 @@ class LiquidStretch extends StatelessWidget {
       behavior: hitTestBehavior,
       builder: (context, value, child) {
         final scale = value == null ? 1.0 : interactionScale;
-        return SingleMotionBuilder(
+        return SpringBuilder(
           value: scale,
-          motion: const Motion.smoothSpring(
-            duration: Duration(milliseconds: 300),
-            snapToEnd: true,
-          ),
+          spring:
+              GlassSpring.smooth(duration: const Duration(milliseconds: 300)),
           builder: (context, value, child) => Transform.scale(
             scale: value,
             child: child,
           ),
-          child: MotionBuilder(
+          child: OffsetSpringBuilder(
             value: value?.withResistance(resistance) ?? Offset.zero,
-            motion: value == null
-                ? const Motion.bouncySpring(snapToEnd: true)
-                : const Motion.interactiveSpring(snapToEnd: true),
-            converter: const OffsetMotionConverter(),
+            spring: value == null
+                ? GlassSpring.bouncy()
+                : GlassSpring.interactive(),
             builder: (context, value, child) => RawLiquidStretch(
               stretchPixels: value * stretch,
               child: child,

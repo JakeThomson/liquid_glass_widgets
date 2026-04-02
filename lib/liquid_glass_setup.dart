@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'src/renderer/liquid_glass_renderer.dart';
 import 'widgets/shared/lightweight_liquid_glass.dart';
 import 'widgets/shared/glass_effect.dart';
+import 'widgets/shared/glass_backdrop_scope.dart';
 
 /// Entry point and configuration for the Liquid Glass Widgets library.
 ///
@@ -19,7 +20,7 @@ class LiquidGlassWidgets {
   /// void main() async {
   ///   WidgetsFlutterBinding.ensureInitialized();
   ///   await LiquidGlassWidgets.initialize();
-  ///   runApp(const MyApp());
+  ///   runApp(LiquidGlassWidgets.wrap(const MyApp()));
   /// }
   /// ```
   ///
@@ -40,6 +41,24 @@ class LiquidGlassWidgets {
 
     debugPrint('[LiquidGlass] Initialization complete.');
   }
+
+  /// Wraps [child] in a [GlassBackdropScope] so all glass surfaces inside
+  /// automatically share a single GPU backdrop capture when multiple surfaces
+  /// are visible simultaneously (e.g. a [GlassAppBar] + [GlassBottomBar]).
+  ///
+  /// Without this wrapper each glass surface captures its own backdrop
+  /// independently — correct, but wastes one GPU blit per extra surface.
+  /// With it, Impeller shares one capture across all surfaces on screen,
+  /// roughly halving GPU blit cost whenever two or more glass widgets coexist.
+  ///
+  /// **Usage** — one word change in your `main.dart`:
+  /// ```dart
+  /// runApp(LiquidGlassWidgets.wrap(const MyApp()));
+  /// ```
+  ///
+  /// On Skia / Web the lightweight shader path is used instead, so this has
+  /// no effect on those backends.
+  static Widget wrap(Widget child) => GlassBackdropScope(child: child);
 
   /// Warms up the Impeller rendering pipeline for glass effects.
   ///

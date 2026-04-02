@@ -14,14 +14,19 @@ float sdfRect(vec2 p, vec2 b) {
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
+// sdfSquircle uses a correct Euclidean rounded-rectangle SDF (same math as
+// sdfRRect). The algebraic n=4 superellipse approach was tried but reverted
+// because it degenerates catastrophically for pill shapes where
+// r ≈ min(b.x, b.y): the inner half-size collapses to (large, ~0), causing
+// the y-axis division to explode. Every interior pixel evaluated as sd >= 0,
+// making the geometry matte all-zero and the glass effect completely invisible.
+// A correct Euclidean superellipse SDF requires Newton-Raphson root finding —
+// too expensive for a real-time mobile shader hot path.
 float sdfSquircle(vec2 p, vec2 b, float r) {
     float shortest = min(b.x, b.y);
     r = min(r, shortest);
-
     vec2 q = abs(p) - b + r;
-    
-    vec2 maxQ = max(q, 0.0);
-    return min(max(q.x, q.y), 0.0) + sqrt(maxQ.x * maxQ.x + maxQ.y * maxQ.y) - r;
+    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
 }
 
 float sdfEllipse(vec2 p, vec2 r) {

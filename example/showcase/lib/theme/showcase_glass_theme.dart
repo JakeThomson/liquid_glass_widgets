@@ -17,11 +17,11 @@ class ShowcaseGlassTheme {
   // SHARED CONSTANTS
   // ===========================================================================
 
-  /// Standard light angle used across most UI elements (45 degrees)
-  static const double standardLightAngle = 0.25 * math.pi;
+  /// Standard light angle used across all UI elements (135° = 0.75π — Apple iOS 26 standard)
+  static const double standardLightAngle = 0.75 * math.pi;
 
-  /// Light angle for bottom sheets and modals (130 degrees)
-  static const double modalLightAngle = 130.0;
+  /// Light angle for bottom sheets and modals (same as standard — Apple uses consistent lighting)
+  static const double modalLightAngle = 0.75 * math.pi;
 
   // ===========================================================================
   // HEADER & NAVIGATION
@@ -85,7 +85,7 @@ class ShowcaseGlassTheme {
         thickness: 5,
         ambientStrength: 0.5,
         lightIntensity: 0.5,
-        lightAngle: 120,
+        lightAngle: standardLightAngle,
         glassColor: Colors.black.withValues(alpha: 0.4),
       );
 
@@ -115,7 +115,7 @@ class ShowcaseGlassTheme {
         thickness: 5,
         ambientStrength: 0.5,
         lightIntensity: 0.8,
-        lightAngle: 120,
+        lightAngle: standardLightAngle,
         glassColor: Colors.blue.withValues(alpha: 0.1),
       );
 
@@ -124,7 +124,7 @@ class ShowcaseGlassTheme {
         thickness: 5,
         ambientStrength: 0.5,
         lightIntensity: 0.8,
-        lightAngle: 120,
+        lightAngle: standardLightAngle,
         glassColor: Colors.blue.withValues(alpha: 0.1),
       );
 
@@ -133,7 +133,7 @@ class ShowcaseGlassTheme {
         thickness: 5,
         ambientStrength: 0.5,
         lightIntensity: 0.8,
-        lightAngle: 120,
+        lightAngle: standardLightAngle,
         glassColor: Colors.blue.withValues(alpha: 0.1),
       );
 

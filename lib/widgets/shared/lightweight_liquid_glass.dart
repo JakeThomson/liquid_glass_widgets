@@ -422,9 +422,9 @@ class _RenderLightweightGlass extends RenderProxyBox {
     _shader.setFloat(index++, _settings.effectiveThickness);
 
     // 9, 10: uLightDirection (vec2) - [cos(angle), -sin(angle)]
-    final radians = _settings.lightAngle * 3.14159265359 / 180.0;
-    _shader.setFloat(index++, math.cos(radians));
-    _shader.setFloat(index++, -math.sin(radians));
+    // lightAngle is in radians (per LiquidGlassSettings API). Pass directly.
+    _shader.setFloat(index++, math.cos(_settings.lightAngle));
+    _shader.setFloat(index++, -math.sin(_settings.lightAngle));
 
     // 11: uLightIntensity (float)
     _shader.setFloat(index++, _settings.effectiveLightIntensity);

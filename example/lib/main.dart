@@ -16,7 +16,11 @@ void main() async {
   // Initializes the Liquid Glass library.
   await LiquidGlassWidgets.initialize();
 
-  runApp(const AppleLiquidGlassShowcaseApp());
+  // wrap() puts a GlassBackdropScope at the root so every glass surface in the
+  // app (GlassBottomBar, GlassAppBar, GlassCard, etc.) shares a single GPU
+  // backdrop capture on Impeller — halving blit cost when multiple surfaces
+  // are visible at once. On Skia/Web it is a no-op.
+  runApp(LiquidGlassWidgets.wrap(const AppleLiquidGlassShowcaseApp()));
 }
 
 class AppleLiquidGlassShowcaseApp extends StatelessWidget {
@@ -24,20 +28,18 @@ class AppleLiquidGlassShowcaseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassBackdropScope(
-      child: MaterialApp(
-        title: 'Apple Liquid Glass Showcase',
-        theme: ThemeData(
-          brightness: Brightness.dark,
-          useMaterial3: true,
-          colorScheme: ColorScheme.dark(
-            primary: Colors.blue,
-            surface: Colors.black,
-          ),
+    return MaterialApp(
+      title: 'Apple Liquid Glass Showcase',
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        useMaterial3: true,
+        colorScheme: ColorScheme.dark(
+          primary: Colors.blue,
+          surface: Colors.black,
         ),
-        home: const ShowcaseHomePage(),
-        debugShowCheckedModeBanner: false,
       ),
+      home: const ShowcaseHomePage(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

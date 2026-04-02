@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
-import 'package:motor/motor.dart';
+import '../../utils/glass_spring.dart';
 
 import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
@@ -488,19 +488,17 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent> {
         _isDragging = false;
         _isDown = false;
       }),
-      child: VelocityMotionBuilder(
-        converter: const SingleMotionConverter(),
+      child: VelocitySpringBuilder(
         value: _xAlign,
-        motion: _isDragging
-            ? const Motion.interactiveSpring(snapToEnd: true)
-            : const Motion.bouncySpring(snapToEnd: true),
+        springWhenActive: GlassSpring.interactive(),
+        springWhenReleased: GlassSpring.bouncy(),
+        active: _isDragging,
         builder: (context, value, velocity, child) {
           final alignment = Alignment(value, 0);
 
-          return SingleMotionBuilder(
-            motion: const Motion.snappySpring(
-              snapToEnd: true,
-              duration: Duration(milliseconds: 300),
+          return SpringBuilder(
+            spring: GlassSpring.snappy(
+              duration: const Duration(milliseconds: 300),
             ),
             // Show glass indicator when dragging or far from target
             value: _isDown || (alignment.x - targetAlignment).abs() > 0.15

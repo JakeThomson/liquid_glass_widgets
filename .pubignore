@@ -9,8 +9,12 @@ coverage/
 docs/
 .agent/
 
-# Test golden failure/diff images (artefacts, not source truth)
-test/golden/**/failures/
+# Test golden images (baselines + failure diffs — not needed by consumers)
+test/golden/
+test/renderer/goldens/
+
+# Example app planning/AI docs
+example/**/*.md
 
 # Example app platform folders
 example/ios/

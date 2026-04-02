@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
+import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
 import '../shared/glass_effect.dart';
@@ -605,7 +606,7 @@ class _GlassSliderState extends State<GlassSlider>
                 thickness: 20,
                 lightIntensity: 2.0,
                 blur: 0,
-                lightAngle: 135,
+                lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
               )
             : const LiquidGlassSettings(
                 glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
@@ -613,7 +614,7 @@ class _GlassSliderState extends State<GlassSlider>
                 thickness: 10,
                 lightIntensity: 2,
                 blur: 0,
-                lightAngle: 120,
+                lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
               );
 
     // CRITICAL: Outer SizedBox with dynamic size ensures proper premium rendering

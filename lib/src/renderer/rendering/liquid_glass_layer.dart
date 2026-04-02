@@ -72,7 +72,7 @@ class LiquidGlassLayer extends StatefulWidget {
   const LiquidGlassLayer({
     required this.child,
     this.settings = const LiquidGlassSettings(),
-    this.useBackdropGroup = false,
+    this.clipExpansion = EdgeInsets.zero,
     super.key,
   });
 
@@ -85,15 +85,17 @@ class LiquidGlassLayer extends StatefulWidget {
   /// The settings for the liquid glass effect for all shapes in this layer.
   final LiquidGlassSettings settings;
 
-  /// Whether to look up the tree for a [BackdropGroup] to use for this layer's
-  /// blur.
+  /// Extra space to add around the geometry bounding box before clipping the
+  /// [BackdropFilterLayer] that runs the glass shader.
   ///
-  /// If you have multiple [LiquidGlassLayer]s in a subtree that use the same
-  /// background blur, setting this to true can improve performance by sharing
-  /// the same backdrop.
+  /// The clip rect is normally tight to the glass shape's geometry.  Any
+  /// ancestor [Transform] (e.g. jelly squash-and-stretch on an indicator)
+  /// can push painted pixels outside that tight rect, producing a hard edge
+  /// cutoff.  Set [clipExpansion] to a safe margin that covers the maximum
+  /// expected deformation so the shader is applied over the full animated area.
   ///
-  /// Defaults to false.
-  final bool useBackdropGroup;
+  /// Defaults to [EdgeInsets.zero] — zero extra GPU cost for static glass.
+  final EdgeInsets clipExpansion;
 
   @override
   State<LiquidGlassLayer> createState() => _LiquidGlassLayerState();
@@ -135,11 +137,14 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
             assetKey: ShaderKeys.liquidGlassRender,
             (context, shader, child) => _RawShapes(
               renderShader: shader,
-              backdropKey: widget.useBackdropGroup
-                  ? BackdropGroup.of(context)?.backdropKey
-                  : null,
+              // Always look for an ancestor BackdropGroup — if the user has
+              // wrapped their app with LiquidGlassWidgets.wrap() (or placed a
+              // GlassBackdropScope anywhere above), all glass surfaces share one
+              // backdrop capture automatically with zero extra configuration.
+              backdropKey: BackdropGroup.of(context)?.backdropKey,
               settings: widget.settings,
               link: _link,
+              clipExpansion: widget.clipExpansion,
               child: child!,
             ),
             child: widget.child,
@@ -157,12 +162,14 @@ class _RawShapes extends SingleChildRenderObjectWidget {
     required this.settings,
     required Widget super.child,
     required this.link,
+    this.clipExpansion = EdgeInsets.zero,
   });
 
   final FragmentShader renderShader;
   final BackdropKey? backdropKey;
   final LiquidGlassSettings settings;
   final GeometryRenderLink link;
+  final EdgeInsets clipExpansion;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -172,6 +179,7 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       backdropKey: backdropKey,
       settings: settings,
       link: link,
+      clipExpansion: clipExpansion,
     );
   }
 
@@ -184,7 +192,8 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       ..link = link
       ..devicePixelRatio = MediaQuery.devicePixelRatioOf(context)
       ..settings = settings
-      ..backdropKey = backdropKey;
+      ..backdropKey = backdropKey
+      ..clipExpansion = clipExpansion;
   }
 }
 
@@ -193,16 +202,24 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     with TransformTrackingRenderObjectMixin {
   RenderLiquidGlassLayer({
     required super.renderShader,
-    required super.backdropKey,
     required super.devicePixelRatio,
     required super.settings,
     required super.link,
-  });
+    super.backdropKey,
+    EdgeInsets clipExpansion = EdgeInsets.zero,
+  }) : _clipExpansion = clipExpansion;
 
   final _shaderHandle = LayerHandle<BackdropFilterLayer>();
   final _blurLayerHandle = LayerHandle<BackdropFilterLayer>();
-  final _clipPathLayerHandle = LayerHandle<ClipPathLayer>();
   final _clipRectLayerHandle = LayerHandle<ClipRectLayer>();
+  final _clipPathLayerHandle = LayerHandle<ClipPathLayer>();
+
+  EdgeInsets _clipExpansion;
+  set clipExpansion(EdgeInsets value) {
+    if (_clipExpansion == value) return;
+    _clipExpansion = value;
+    markNeedsPaint();
+  }
 
   @override
   Size get desiredMatteSize => switch (owner?.rootNode) {
@@ -216,7 +233,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
 
   @override
   void onTransformChanged() {
-    needsGeometryUpdate = true;
+    // Transform changes (position, jelly scale, scroll) no longer require a
+    // geometry rebuild. The geometry image is in LOCAL space; matteTransform is
+    // applied synchronously at paint time so the screen position is always
+    // exact with zero async lag.  Only layout() still sets needsGeometryUpdate.
     markNeedsPaint();
   }
 
@@ -228,65 +248,76 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     Rect boundingBox,
   ) {
     if (!attached) return;
-    final blurLayer = (_blurLayerHandle.layer ??= BackdropFilterLayer())
-      ..backdropKey = backdropKey
-      ..filter = ImageFilter.blur(
-        tileMode: TileMode.mirror,
-        sigmaX: settings.effectiveBlur,
-        sigmaY: settings.effectiveBlur,
+
+    // ── Pass 1: Blur ─────────────────────────────────────────────────────────
+    // Use Flutter's native ImageFilter.blur for smooth, multi-pass Gaussian
+    // quality (the inline 9-tap shader approximation was pixelated with text).
+    // Clip tightly to the actual pill shape path — no expansion needed here.
+    if (settings.effectiveBlur > 0) {
+      final blurLayer = (_blurLayerHandle.layer ??= BackdropFilterLayer())
+        ..backdropKey =
+            backdropKey // participates in GlassBackdropScope sharing
+        ..filter = ImageFilter.blur(
+          tileMode: TileMode.mirror,
+          sigmaX: settings.effectiveBlur,
+          sigmaY: settings.effectiveBlur,
+        );
+
+      final clipPath = Path();
+      for (final geometry in shapes) {
+        if (!geometry.$1.attached) continue;
+        clipPath.addPath(
+          geometry.$2.path,
+          Offset.zero,
+          matrix4: geometry.$3.storage,
+        );
+      }
+      _clipPathLayerHandle.layer = context.pushClipPath(
+        needsCompositing,
+        offset,
+        boundingBox,
+        clipPath,
+        (context, offset) {
+          context.pushLayer(
+            blurLayer,
+            (context, offset) {
+              paintShapeContents(context, offset, shapes, insideGlass: true);
+            },
+            offset,
+          );
+        },
+        oldLayer: _clipPathLayerHandle.layer,
       );
+    } else {
+      _blurLayerHandle.layer = null;
+      _clipPathLayerHandle.layer = null;
+    }
+
+    // ── Pass 2: Glass refraction + lighting shader ────────────────────────────
+    // Inflate the clip rect by _clipExpansion so jelly squash-and-stretch can
+    // push deformed pixels beyond the tight bounding box without a hard clip
+    // edge. For static glass _clipExpansion == EdgeInsets.zero (no-op).
+    final clipRect = _clipExpansion == EdgeInsets.zero
+        ? boundingBox
+        : Rect.fromLTRB(
+            boundingBox.left - _clipExpansion.left,
+            boundingBox.top - _clipExpansion.top,
+            boundingBox.right + _clipExpansion.right,
+            boundingBox.bottom + _clipExpansion.bottom,
+          );
 
     final shaderLayer = (_shaderHandle.layer ??= BackdropFilterLayer())
       ..filter = ImageFilter.shader(renderShader);
 
-    final clipPath = Path();
-    for (final geometry in shapes) {
-      if (!geometry.$1.attached) continue;
-
-      clipPath.addPath(
-        geometry.$2.path,
-        Offset.zero,
-        matrix4: geometry.$3.storage,
-      );
-    }
-    _clipPathLayerHandle.layer = context
-        // First we push the clipped blur layer
-        .pushClipPath(
-      needsCompositing,
-      offset,
-      boundingBox,
-      clipPath,
-      (context, offset) {
-        context.pushLayer(
-          blurLayer,
-          (context, offset) {
-            // If glass contains child we paint it above blur but below shader
-            paintShapeContents(
-              context,
-              offset,
-              shapes,
-              insideGlass: true,
-            );
-          },
-          offset,
-        );
-      },
-      oldLayer: _clipPathLayerHandle.layer,
-    );
     _clipRectLayerHandle.layer = context.pushClipRect(
       needsCompositing,
       offset,
-      boundingBox,
+      clipRect,
       (context, offset) {
         context.pushLayer(
           shaderLayer,
           (context, offset) {
-            paintShapeContents(
-              context,
-              offset,
-              shapes,
-              insideGlass: false,
-            );
+            paintShapeContents(context, offset, shapes, insideGlass: false);
           },
           offset,
         );
@@ -297,10 +328,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
 
   @override
   void dispose() {
-    _blurLayerHandle.layer = null;
     _shaderHandle.layer = null;
-    _clipPathLayerHandle.layer = null;
+    _blurLayerHandle.layer = null;
     _clipRectLayerHandle.layer = null;
+    _clipPathLayerHandle.layer = null;
     super.dispose();
   }
 }

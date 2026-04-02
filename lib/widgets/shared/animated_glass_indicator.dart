@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
-import 'package:motor/motor.dart';
 
 import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
@@ -86,6 +85,22 @@ class AnimatedGlassIndicator extends StatelessWidget {
     blur: 0,
   );
 
+  /// Clip budget for the Impeller BackdropFilterLayer.
+  ///
+  /// A constant margin is used rather than a velocity-proportional one:
+  /// the proportional approach changes [clipExpansion] every frame, which
+  /// triggers [markNeedsPaint] every frame via the setter's change detection,
+  /// causing constant geometry rebuilds and showing stale geometry during fast
+  /// drags.  A constant value lets the setter's equality check short-circuit
+  /// with no repaint.
+  ///
+  ///  - Horizontal 20 px: covers glass shader antialiased edge rendering.
+  ///  - Vertical 12 px: covers max jelly scaleY (≈1.24 × 48 px ≈ 5.8 px)
+  ///    plus a generous margin for Impeller subpixel rounding.
+  static const _jellyClipExpansion = EdgeInsets.symmetric(
+    horizontal: 20.0,
+  );
+
   @override
   Widget build(BuildContext context) {
     // Calculate expansion rectangle based on thickness
@@ -134,6 +149,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
       quality: quality,
       interactionIntensity: thickness,
       backgroundKey: backgroundKey,
+      clipExpansion: _jellyClipExpansion,
       child: const GlassGlow(
         glowColor: Colors
             .transparent, //caused grey rectangle flicker if clicking multiple times
@@ -143,9 +159,9 @@ class AnimatedGlassIndicator extends StatelessWidget {
 
     final interactiveIndicator = Opacity(
       opacity: glassOpacity,
-      // Only mount the glass widget when we need it
-      // Added cross-fade buffer to ensure smooth transition
-      child: thickness > 0.05
+      // Mount early (0.01) so geometry is built before the indicator is opaque,
+      // preventing the 1-frame flicker at the edges on fast drags.
+      child: thickness > 0.01
           ? RepaintBoundary(child: glassWidget)
           : const SizedBox.expand(),
     );
@@ -174,23 +190,14 @@ class AnimatedGlassIndicator extends StatelessWidget {
                     Positioned.fromRelativeRect(
                       rect: rect!,
                       child: RepaintBoundary(
-                        child: SingleMotionBuilder(
-                          motion: const Motion.bouncySpring(
-                            duration: Duration(milliseconds: 600),
+                        child: Transform(
+                          alignment: Alignment.center,
+                          transform:
+                              DraggableIndicatorPhysics.buildJellyTransform(
+                            velocity: Offset(velocity, 0),
+                            maxDistortion: 0.8,
+                            velocityScale: 10,
                           ),
-                          value: velocity,
-                          builder: (context, velocity, child) {
-                            return Transform(
-                              alignment: Alignment.center,
-                              transform:
-                                  DraggableIndicatorPhysics.buildJellyTransform(
-                                velocity: Offset(velocity, 0),
-                                maxDistortion: 0.8,
-                                velocityScale: 10,
-                              ),
-                              child: child,
-                            );
-                          },
                           child: indicatorChild,
                         ),
                       ),

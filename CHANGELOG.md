@@ -1,3 +1,83 @@
+# 0.6.0
+
+### Breaking Changes
+
+- **`LiquidGlassLayer.useBackdropGroup` removed.** Glass layers now automatically
+  detect a `BackdropGroup` ancestor in the tree and opt into blit-sharing with no
+  opt-in parameter required. Remove `useBackdropGroup: true` from any
+  `LiquidGlassLayer(...)` calls — the behaviour is now unconditionally correct.
+
+### New Features
+
+- **`LiquidGlassWidgets.wrap()`** — convenience shorthand that wraps your app in a
+  `GlassBackdropScope` with a single change in `main.dart`:
+  ```dart
+  runApp(LiquidGlassWidgets.wrap(const MyApp()));
+  ```
+  All glass surfaces inside automatically share a single GPU backdrop capture on
+  Impeller, halving blur blit cost whenever two or more glass widgets are visible
+  simultaneously (e.g. `GlassAppBar` + `GlassBottomBar`). On Skia/Web the
+  lightweight shader path is used, so this has no effect there.
+
+- **`GlassMotionScope`** — drives the glass specular highlight angle from any
+  `Stream<double>` (e.g. device gyroscope via `sensors_plus`). Wraps its subtree in
+  an updated `GlassTheme` that overrides `lightAngle` on each stream event. No new
+  dependencies required.
+
+### Performance
+
+- **`GlassBackdropScope` auto-activation** — glass layers now automatically call
+  `BackdropGroup.of(context)` on every build. If a `GlassBackdropScope` (or any
+  `BackdropGroup`) ancestor is present, the blur `BackdropFilterLayer` opts into
+  shared backdrop capture — zero per-widget configuration. Without an ancestor the
+  behaviour is identical to the previous default.
+
+- **Local-space geometry rasterization** — the geometry texture is now rasterized in
+  the layer's own coordinate space rather than screen space. The GPU image is cached
+  until the pill's intrinsic size or shape changes, eliminating per-frame geometry
+  rebuilds during animation (tab slides, jelly physics). A transform correction matrix
+  is used in the shader to map from screen `fragCoord` back to the cached local
+  geometry without re-rasterizing.
+
+- **Shader UV bounds check** — the final render shader now discards fragments where
+  the geometry UV falls outside `[0, 1]`. This prevents the sampler's edge-clamping
+  from producing a thin "protruding line" artifact at the pill's left and right
+  extremes during jelly-physics expansion (the `clipExpansion` region).
+
+### Visual
+
+- **Refraction UV fix** — the final render shader uses the explicit `uSize` uniform
+  (physical-pixel size of the backdrop) for UV derivation. `textureSize()` was tried
+  but returns `(0,0)` on the first frame in Impeller's `BackdropFilterLayer` context,
+  causing invisible first-frame renders. The `uSize` path is always valid.
+- **`precision highp float`** in final render shader — was `mediump`, risking colour
+  banding (10-bit mantissa on mobile). Matches the geometry shader which was already
+  fixed in 0.5.0.
+- **iOS 26 glass tint model** — `applyGlassColor` now preserves backdrop luminance
+  while shifting chroma toward the glass color. Previously used Photoshop Overlay mode.
+- **`sdfSquircle` correctness fix** — reverted to the Euclidean rounded-rectangle SDF.
+  The earlier n=4 superellipse approximation degenerated for pill shapes where
+  `borderRadius ≈ min(width, height) / 2`, making glass invisible.
+- **Saturation before lighting** — specular highlights remain white/neutral.
+- **Unified lighting angle** — centralized across all components.
+
+### Fixes
+
+- **Web & WASM support** — removed `dart:io` imports from shader resolution logic.
+- **Leading-dot rim artifact** — removed bright corner artifact on the pill indicator
+  during drag by soft-clamping (`x / (1 + x)`) highlight intensity.
+- **Impeller indicator clipping** — jelly physics animations no longer clip at the
+  static bounding box. `clipExpansion` parameter added to `GlassEffect` and
+  `RenderLiquidGlassLayer`.
+
+### Performance / Dependencies
+
+- **Removed `motor` dependency** — replaced with self-contained `glass_spring.dart`.
+  Zero third-party runtime dependencies beyond the Flutter SDK.
+
+---
+
+
 # 0.5.0
 
 ### Breaking Changes

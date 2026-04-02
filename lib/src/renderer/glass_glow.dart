@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:meta/meta.dart';
-import 'package:motor/motor.dart';
+import '../../utils/glass_spring.dart';
 
 /// {@template glass_glow}
 /// If placed as a descendant of a [GlassGlowLayer], this widget will
@@ -98,24 +98,23 @@ class GlassGlowLayer extends StatefulWidget {
 @internal
 class GlassGlowLayerState extends State<GlassGlowLayer>
     with TickerProviderStateMixin {
-  late final _offsetController = MotionController<Offset>(
+  late final _offsetController = OffsetSpringController(
     vsync: this,
-    converter: const OffsetMotionConverter(),
+    spring: GlassSpring.smooth(duration: const Duration(seconds: 1)),
     initialValue: Offset.zero,
-    motion: const Motion.smoothSpring(
-      duration: Duration(seconds: 1),
-      snapToEnd: true,
-    ),
   );
 
-  late final _alphaController = BoundedSingleMotionController(
+  late final _alphaController = SingleSpringController(
     vsync: this,
-    motion: const Motion.smoothSpring(snapToEnd: true),
+    spring: GlassSpring.smooth(),
+    initialValue: 0,
+    lowerBound: 0,
+    upperBound: 1,
   );
 
-  late final _radiusController = SingleMotionController(
+  late final _radiusController = SingleSpringController(
     vsync: this,
-    motion: const Motion.smoothSpring(snapToEnd: true),
+    spring: GlassSpring.smooth(),
     initialValue: 10,
   );
 
@@ -143,19 +142,19 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
 
     if (!_dragging) {
       _dragging = true;
-      _radiusController.motion = _alphaController.motion =
-          const Motion.interactiveSpring(snapToEnd: true);
-      _radiusController.animateTo(1, from: 0);
-      _alphaController.animateTo(1, from: 0);
+      _alphaController.spring = GlassSpring.interactive();
+      _radiusController.spring = GlassSpring.interactive();
+      _alphaController.animateTo(1, fromVelocity: 0);
+      _radiusController.animateTo(1, fromVelocity: 0);
     }
 
-    _offsetController.value = offset;
+    _offsetController.animateTo(offset);
   }
 
   void removeTouch() {
     if (!_dragging) return;
-    _radiusController.motion =
-        _alphaController.motion = const Motion.smoothSpring(snapToEnd: true);
+    _alphaController.spring = GlassSpring.smooth();
+    _radiusController.spring = GlassSpring.smooth();
     _dragging = false;
     _offsetController.animateTo(Offset.zero);
     _radiusController.animateTo(10);

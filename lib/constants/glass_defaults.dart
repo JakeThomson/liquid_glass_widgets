@@ -30,8 +30,8 @@ class GlassDefaults {
   /// Default refractive index for glass (1.15)
   static const double refractiveIndex = 1.15;
 
-  /// Default light angle in degrees (120°)
-  static const double lightAngle = 120.0;
+  /// Default light angle in radians (135° = 0.75 * π — Apple iOS 26 standard, upper-left light)
+  static const double lightAngle = 0.75 * 3.14159265358979; // 0.75 * pi
 
   // ============================================================================
   // Border Radius

@@ -99,14 +99,8 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
     // to avoid each child doing its own expensive blur.
     Widget content = child;
 
-    // Root Provider: Always exists to satisfy assertions for grouped widgets.
-    // useBackdropGroup: true is safe — when no BackdropGroup ancestor exists,
-    // BackdropGroup.of(context) returns null and the backdropKey is null,
-    // giving identical behaviour to false.  When a GlassBackdropScope is
-    // present in the tree, all layers under it share one GPU blur capture.
     return LiquidGlassLayer(
       settings: effectiveSettings,
-      useBackdropGroup: true,
       child: InheritedLiquidGlass(
         settings: effectiveSettings,
         quality: effectiveQuality,

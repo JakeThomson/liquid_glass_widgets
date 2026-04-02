@@ -36,6 +36,7 @@ class GlassEffect extends StatefulWidget {
     this.edgeAlphaMultiplier = 0.4,
     this.rimThickness = 0.5,
     this.rimSmoothing = 1.5,
+    this.clipExpansion = EdgeInsets.zero,
     super.key,
   });
 
@@ -69,6 +70,14 @@ class GlassEffect extends StatefulWidget {
 
   /// Rim edge smoothing multiplier (default: 1.5)
   final double rimSmoothing;
+
+  /// Extra clip budget forwarded to [LiquidGlass.withOwnLayer] on the Impeller
+  /// premium path.  Use this to prevent the glass BackdropFilterLayer from
+  /// hard-clipping pixels that an ancestor Transform (e.g. jelly physics) has
+  /// pushed outside the tight geometry bounds.
+  ///
+  /// Defaults to [EdgeInsets.zero] — no extra cost for static glass.
+  final EdgeInsets clipExpansion;
 
   static ui.FragmentProgram? _cachedProgram;
   static bool _isPreparing = false;
@@ -329,6 +338,7 @@ class _GlassEffectState extends State<GlassEffect>
       return LiquidGlass.withOwnLayer(
         shape: widget.shape,
         settings: widget.settings,
+        clipExpansion: widget.clipExpansion,
         child: widget.child,
       );
     }
@@ -690,9 +700,10 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     _shader.setFloat(index++, _settings.effectiveThickness);
 
     // Pass light direction as [cos(angle), -sin(angle)]
-    final radians = _settings.lightAngle * 3.14159265359 / 180.0;
-    _shader.setFloat(index++, math.cos(radians));
-    _shader.setFloat(index++, -math.sin(radians));
+    // lightAngle is in radians (per LiquidGlassSettings API docs and default = 0.5*pi).
+    // Pass directly to cos/sin — no conversion needed.
+    _shader.setFloat(index++, math.cos(_settings.lightAngle));
+    _shader.setFloat(index++, -math.sin(_settings.lightAngle));
 
     _shader.setFloat(index++, _settings.effectiveLightIntensity);
     _shader.setFloat(index++, _settings.effectiveAmbientStrength);
