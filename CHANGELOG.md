@@ -1,4 +1,47 @@
+# 0.7.0
+
+### New Components
+
+- **`GlassDivider`** — iOS 26-style hairline separator, horizontal and vertical variants. Theme-adaptive opacity (dark: 20% white / light: 10% black). Decorative — hidden from screen readers.
+- **`GlassListTile`** — iOS 26 Settings-style row with leading icon, title, subtitle, trailing widget, and automatic grouped dividers. Use inside a zero-padding `GlassCard` for grouped lists.
+- Convenience constants: `GlassListTile.chevron` and `GlassListTile.infoButton`.
+- **`GlassStepper`** — True iOS 26 `UIStepper` equivalent. Compact `−`/`+` glass pill with auto-repeat on hold, `min`/`max` clamping, `wraps` cycling, fractional `step`, and `HapticFeedback`.
+- **`GlassWizard` + `GlassWizardStep`** — Glass multi-step flow with numbered indicators, checkmarks, and expandable step content. Replaces the incorrectly named `GlassStepper` wizard from the preview build.
+
+### Accessibility
+
+`GlassAccessibilityScope` — new widget that reads platform accessibility preferences and propagates them to all glass widgets in its subtree:
+
+- **Reduce Motion** — spring animations (`GlassSegmentedControl`, `GlassTabBar`, `GlassBottomBar`, `GlassSwitch`, `GlassSlider`) snap instantly instead of animating when the system preference is active. Implemented centrally in `SpringBuilder`/`VelocitySpringBuilder`.
+- **Reduce Transparency** — replaces the full glass shader pipeline with a plain `BackdropFilter(blur)` + frosted container when high-contrast mode is active. Zero GPU cost, shape clipping preserved.
+- Opt-in — existing apps are unaffected until they add `GlassAccessibilityScope`.
+
+Semantics updated across all remaining widgets to match iOS `UIAccessibility`:
+- `GlassStepper` — VoiceOver value + swipe-up/down increment/decrement.
+- `GlassBadge` — announces count ("N notifications") or status ("Active"). Badge visual is decorative.
+- `GlassDivider` — `ExcludeSemantics` (decorative, invisible to VoiceOver/TalkBack).
+- `GlassListTile` — `Semantics(button: true)` on tappable rows.
+- `GlassProgressIndicator` — determinate announces percentage; indeterminate uses `liveRegion: true`.
+- `GlassBottomBar` — tab items expose `selected: true/false` for active-tab announcement.
+- `GlassSheet` drag handle — labeled "Drag handle" with hint "Swipe down to dismiss".
+
+### Performance
+
+- **Zero-transcendental specular (`GlassSpecularSharpness` enum)** — Replaced `pow(lightCatch, exponent)` in `lightweight_glass.frag` (compiles to two transcendentals on Metal/Mali/Adreno) with a `GlassSpecularSharpness` enum (`.soft`, `.medium`, `.sharp`) encoded as an integer uniform. GPU compiler fully unrolls each level into a pure squaring chain — zero transcendentals. Default is `.medium`.
+- **`pow(x, 1.5)` → `x·√x` in Impeller edge lighting** — Replaces the last `pow()` call in the final render shader. `sqrt()` is a single hardware SFU instruction on Metal/Vulkan/OpenGLES.
+- **Anisotropic specular in lightweight shader** — The 20% tangent-stretch oval specular (previously Impeller-only) is now applied in `lightweight_glass.frag`. Skia/Web now shows the same horizontal oval highlight as Impeller.
+- **Fresnel rim brightening in lightweight shader** — Grazing-angle rim luminosity ported from `liquid_glass_final_render.frag` to `lightweight_glass.frag`. Closes the largest remaining visual gap between rendering paths.
+- **Content-adaptive glass strength** — Glass intensity auto-adjusts based on backdrop luminance (Impeller) or `MediaQuery.platformBrightness` (lightweight/Skia/Web), matching iOS 26's adaptive material behaviour.
+
+### Developer Experience
+
+- **`GlassRefractionSource`** — renamed from `LiquidGlassBackground` to better reflect its role as the shader capture surface. `LiquidGlassBackground` remains as a deprecated `typedef` alias (removed in 1.0.0).
+- **Synchronous background capture** — The Skia/Web refraction capture pipeline for interactive indicators (`GlassSegmentedControl`, `GlassTabBar`, `GlassBottomBar`) was rebuilt using `boundary.toImageSync()` on native (synchronous, GPU-resident, zero CPU←GPU readback) and async `toImage()` on web (9× smaller than the previous path).
+
+---
+
 # 0.6.1
+
 
 ### Visual Quality
 

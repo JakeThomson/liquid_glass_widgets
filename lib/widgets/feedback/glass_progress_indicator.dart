@@ -266,16 +266,29 @@ class _GlassProgressIndicatorState extends State<GlassProgressIndicator>
         ? _buildCircular(effectiveColor, effectiveBackgroundColor)
         : _buildLinear(effectiveColor, effectiveBackgroundColor);
 
+    // Semantics: determinate → percentage value; indeterminate → "Loading"
+    // Matches iOS ProgressView VoiceOver behaviour.
+    final valueStr = widget.value != null
+        ? '${(widget.value!.clamp(0.0, 1.0) * 100).round()}%'
+        : null;
+    final semanticWidget = Semantics(
+      label: 'Progress',
+      value: valueStr,
+      // liveRegion so dynamic changes are announced without needing focus
+      liveRegion: widget.value != null,
+      child: indicator,
+    );
+
     // Wrap in glass layer if standalone
     if (widget.useOwnLayer) {
       return AdaptiveLiquidGlassLayer(
         settings: widget.settings ?? const LiquidGlassSettings(),
         quality: widget.quality,
-        child: indicator,
+        child: semanticWidget,
       );
     }
 
-    return indicator;
+    return semanticWidget;
   }
 
   Widget _buildCircular(Color color, Color backgroundColor) {

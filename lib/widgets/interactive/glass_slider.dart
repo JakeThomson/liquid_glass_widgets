@@ -250,9 +250,10 @@ class _GlassSliderState extends State<GlassSlider>
       ),
     );
 
-    // Thickness controller for glass overlay visibility (iOS 26 liquid glass)
+    // Simple 0→1 hold: fades the white pill out on press-down and
+    // keeps it clear for the entire drag. Reverses back on release.
     _thicknessController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
@@ -288,6 +289,7 @@ class _GlassSliderState extends State<GlassSlider>
       _velocity = Offset.zero;
     });
     unawaited(_scaleController.forward());
+    // Fade the white pill out; stays clear for the whole drag
     unawaited(_thicknessController.forward());
   }
 
@@ -354,7 +356,7 @@ class _GlassSliderState extends State<GlassSlider>
     // Scale down thumb when ending drag
     unawaited(_scaleController.reverse());
 
-    // Hide glass overlay
+    // Fade the white pill back in on release
     unawaited(_thicknessController.reverse());
   }
 

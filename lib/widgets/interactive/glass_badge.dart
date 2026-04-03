@@ -184,18 +184,35 @@ class GlassBadge extends StatelessWidget {
       return child;
     }
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        child,
-        Positioned(
-          top: _getTopPosition(),
-          right: _getRightPosition(),
-          bottom: _getBottomPosition(),
-          left: _getLeftPosition(),
-          child: isDot ? _buildDotBadge(context) : _buildCountBadge(context),
-        ),
-      ],
+    // Build the semantic label for the badge overlay.
+    // - Count badges: "5 notifications" (matches iOS badge VoiceOver)
+    // - Dot badges: "Active" (status indicator)
+    final String badgeLabel = isDot
+        ? 'Active'
+        : (count > maxCount
+            ? '$maxCount+ notifications'
+            : '$count notifications');
+
+    return Semantics(
+      label: badgeLabel,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          child,
+          Positioned(
+            top: _getTopPosition(),
+            right: _getRightPosition(),
+            bottom: _getBottomPosition(),
+            left: _getLeftPosition(),
+            // Badge visual is decorative — the parent Semantics node above
+            // carries the label, so exclude the badge widget itself.
+            child: ExcludeSemantics(
+              child:
+                  isDot ? _buildDotBadge(context) : _buildCountBadge(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -17,6 +17,7 @@ import '../../utils/glass_spring.dart';
 
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
+import '../../utils/glass_indicator_tap_mixin.dart';
 import '../interactive/glass_button.dart';
 import '../shared/adaptive_glass.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
@@ -740,6 +741,7 @@ class _BottomBarTab extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Semantics(
         button: true,
+        selected: selected,
         label: tab.label ?? 'Tab',
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
@@ -945,7 +947,8 @@ class _TabIndicator extends StatefulWidget {
   State<_TabIndicator> createState() => _TabIndicatorState();
 }
 
-class _TabIndicatorState extends State<_TabIndicator> {
+class _TabIndicatorState extends State<_TabIndicator>
+    with GlassIndicatorTapMixin<_TabIndicator> {
   // Cache fallback indicator color to avoid allocations
   static const _fallbackIndicatorColor =
       Color(0x1AFFFFFF); // white.withValues(alpha: 0.1)
@@ -997,10 +1000,44 @@ class _TabIndicatorState extends State<_TabIndicator> {
   }
 
   void _onDragDown(DragDownDetails details) {
+    cancelIndicatorTapTimer(); // DX1
     setState(() {
       _isDown = true;
       _xAlign = _getAlignmentFromGlobalPosition(details.globalPosition);
     });
+  }
+
+  /// DX1: Fires on any tap-down (no drag) anywhere on the bar.
+  ///
+  /// On macOS/desktop a click arrives as tapDown+tapUp in the same frame,
+  /// so the previous approach of snapping `_xAlign` immediately collapsed the
+  /// spring travel distance to zero — no velocity, no jelly.
+  ///
+  /// Fix: Do NOT snap `_xAlign`. Instead:
+  ///   1. Fire `onTabChanged` so the parent updates `selectedIndex`.
+  ///   2. Set `_isDown = true` to activate thickness.
+  ///   3. Keep `_isDown` true for the spring travel duration (~350 ms) so
+  ///      the jelly deformation is visible throughout the animation.
+  ///
+  /// `didUpdateWidget` will update `_xAlign` when the parent rebuilds with
+  /// the new `tabIndex`, and `VelocitySpringBuilder` will spring from the
+  /// old alignment to the new one — generating real velocity + jelly.
+  void _onBarTapDown(TapDownDetails details) {
+    final alignment = _getAlignmentFromGlobalPosition(details.globalPosition);
+    final relativeX = (alignment + 1) / 2;
+    final index =
+        (relativeX * widget.tabCount).floor().clamp(0, widget.tabCount - 1);
+
+    // Fire parent callback immediately so selectedIndex updates in the
+    // same frame, triggering didUpdateWidget → spring animation.
+    if (index != widget.tabIndex) {
+      widget.onTabChanged(index);
+    }
+
+    // DX1: _isDown is set by Listener.onPointerDown (raw, fires before any
+    // gesture recognizer). No timer needed — Listener.onPointerUp clears it
+    // when the pointer is released. Spring separation keeps the indicator
+    // visible during animation even when tapUp arrives in the same frame.
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
@@ -1072,90 +1109,140 @@ class _TabIndicatorState extends State<_TabIndicator> {
     final glassRadius =
         widget.barBorderRadius; // 32 → becomes 64 after internal *2
 
-    return GestureDetector(
-      onHorizontalDragDown: _onDragDown,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
-      onHorizontalDragCancel: () => setState(() {
-        _isDragging = false;
-        _isDown = false;
-        _xAlign = _computeXAlignmentForTab(widget.tabIndex);
-      }),
-      child: VelocitySpringBuilder(
-        value: _xAlign,
-        springWhenActive: GlassSpring.interactive(),
-        springWhenReleased: GlassSpring.bouncy(),
-        active: _isDragging,
-        builder: (context, value, velocity, child) {
-          final alignment = Alignment(value, 0);
-
-          return SpringBuilder(
-            spring: GlassSpring.snappy(
-              duration: const Duration(milliseconds: 300),
-            ),
-            // Show glass indicator when dragging or far from target
-            value: widget.visible &&
-                    (_isDown || (alignment.x - targetAlignment).abs() > 0.30)
-                ? 1.0
-                : 0.0,
-            builder: (context, thickness, child) {
-              // Lazy evaluation optimization: skip expensive calculations when hidden
-              if (thickness < 0.01 &&
-                  !widget.visible &&
-                  widget.maskingQuality == MaskingQuality.high) {
-                // Fast path: indicator is hidden, render simple layout
-                return Container(
-                  height: widget.barHeight,
-                  decoration: ShapeDecoration(
-                    shape: _barShape,
-                  ),
-                  child: AdaptiveGlass.grouped(
-                    quality: widget.quality,
-                    shape: _barShape,
-                    child: Container(
-                      padding: widget.tabPadding,
-                      child: widget.childUnselected,
-                    ),
-                  ),
-                );
-              }
-
-              // Calculate jelly transform for the clipper (only when needed)
-              final jellyTransform =
-                  DraggableIndicatorPhysics.buildJellyTransform(
-                velocity: Offset(velocity, 0),
-                maxDistortion: 0.8,
-                velocityScale: 10,
-              );
-
-              // Switch rendering mode based on masking quality
-              switch (widget.maskingQuality) {
-                case MaskingQuality.off:
-                  return _buildSimpleMode(
-                    alignment: alignment,
-                    thickness: thickness,
-                    velocity: velocity,
-                    backgroundRadius: backgroundRadius,
-                    glassRadius: glassRadius,
-                    indicatorColor: indicatorColor,
-                  );
-
-                case MaskingQuality.high:
-                  return _buildHighQualityMode(
-                    alignment: alignment,
-                    thickness: thickness,
-                    velocity: velocity,
-                    jellyTransform: jellyTransform,
-                    backgroundRadius: backgroundRadius,
-                    glassRadius: glassRadius,
-                    indicatorColor: indicatorColor,
-                  );
-              }
-            },
-          );
+    return Listener(
+      // Raw pointer events fire BEFORE gesture recognizers and never compete
+      // in the gesture arena, so _isDown is always set on the very first event.
+      onPointerDown: (_) {
+        cancelIndicatorTapTimer();
+        setState(() => _isDown = true);
+      },
+      // On finger/button lift, clear _isDown if not mid-drag.
+      // Listener fires regardless of which gesture recognizer won the arena.
+      onPointerUp: (_) {
+        if (!_isDragging) {
+          cancelIndicatorTapTimer();
+          setState(() => _isDown = false);
+        }
+      },
+      onPointerCancel: (_) {
+        if (!_isDragging) {
+          cancelIndicatorTapTimer();
+          setState(() => _isDown = false);
+        }
+      },
+      child: GestureDetector(
+        onHorizontalDragDown: _onDragDown,
+        onHorizontalDragUpdate: _onDragUpdate,
+        onHorizontalDragEnd: _onDragEnd,
+        // On cancel (e.g. parent scroll steals the gesture or pointer goes
+        // off-screen), _isDown is cleared by the Listener when pointer lifts.
+        // Only snap _xAlign — never set _isDown from here.
+        onHorizontalDragCancel: () {
+          if (_isDragging) {
+            // Mid-drag cancel: snap to nearest tab from current position.
+            final currentRelativeX = (_xAlign + 1) / 2;
+            final tabWidth = 1.0 / widget.tabCount;
+            final targetTabIndex = _computeTargetTab(
+              currentRelativeX: currentRelativeX,
+              velocityX: 0,
+              tabWidth: tabWidth,
+            );
+            setState(() {
+              _isDragging = false;
+              _isDown = false;
+              _xAlign = _computeXAlignmentForTab(targetTabIndex);
+            });
+            if (targetTabIndex != widget.tabIndex) {
+              widget.onTabChanged(targetTabIndex);
+            }
+          } else {
+            // Not dragging (e.g. same-tab click): reset _xAlign to tab center
+            // so the indicator sits exactly on the tab, not at the raw click
+            // position that _onDragDown snapped to.
+            setState(() => _xAlign = _computeXAlignmentForTab(widget.tabIndex));
+            // _isDown intentionally NOT cleared — Listener.onPointerUp owns that.
+          }
         },
-      ),
-    );
+        onTapDown: _onBarTapDown, // DX1: makes jelly visible on desktop taps
+        child: VelocitySpringBuilder(
+          value: _xAlign,
+          springWhenActive: GlassSpring.interactive(),
+          springWhenReleased: GlassSpring.bouncy(),
+          active: _isDragging,
+          builder: (context, value, velocity, child) {
+            final alignment = Alignment(value, 0);
+
+            return SpringBuilder(
+              spring: GlassSpring.snappy(
+                duration: const Duration(milliseconds: 300),
+              ),
+              // Keep thickness active while:
+              //  - _isDown (tap pressed, 420 ms window for spring travel), OR
+              //  - the spring still has meaningful separation from target.
+              // Threshold 0.05 (was 0.10) catches the full deceleration tail.
+              value: widget.visible &&
+                      (_isDown || (alignment.x - targetAlignment).abs() > 0.05)
+                  ? 1.0
+                  : 0.0,
+              builder: (context, thickness, child) {
+                // Lazy evaluation optimization: skip expensive calculations when hidden
+                if (thickness < 0.01 &&
+                    !widget.visible &&
+                    widget.maskingQuality == MaskingQuality.high) {
+                  // Fast path: indicator is hidden, render simple layout
+                  return Container(
+                    height: widget.barHeight,
+                    decoration: ShapeDecoration(
+                      shape: _barShape,
+                    ),
+                    child: AdaptiveGlass.grouped(
+                      quality: widget.quality,
+                      shape: _barShape,
+                      child: Container(
+                        padding: widget.tabPadding,
+                        child: widget.childUnselected,
+                      ),
+                    ),
+                  );
+                }
+
+                // Calculate jelly transform for the clipper (only when needed)
+                final jellyTransform =
+                    DraggableIndicatorPhysics.buildJellyTransform(
+                  velocity: Offset(velocity, 0),
+                  maxDistortion: 0.8,
+                  velocityScale: 10,
+                );
+
+                // Switch rendering mode based on masking quality
+                switch (widget.maskingQuality) {
+                  case MaskingQuality.off:
+                    return _buildSimpleMode(
+                      alignment: alignment,
+                      thickness: thickness,
+                      velocity: velocity,
+                      backgroundRadius: backgroundRadius,
+                      glassRadius: glassRadius,
+                      indicatorColor: indicatorColor,
+                    );
+
+                  case MaskingQuality.high:
+                    return _buildHighQualityMode(
+                      alignment: alignment,
+                      thickness: thickness,
+                      velocity: velocity,
+                      jellyTransform: jellyTransform,
+                      backgroundRadius: backgroundRadius,
+                      glassRadius: glassRadius,
+                      indicatorColor: indicatorColor,
+                    );
+                }
+              },
+            ); // SpringBuilder
+          }, // VelocitySpringBuilder builder
+        ), // VelocitySpringBuilder
+      ), // GestureDetector
+    ); // Listener
   }
 
   /// Builds simple rendering mode without masking (MaskingQuality.off).

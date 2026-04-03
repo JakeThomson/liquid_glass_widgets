@@ -297,13 +297,37 @@ class _GlassTextFieldState extends State<GlassTextField> {
     final effectiveQuality =
         widget.quality ?? inherited?.quality ?? GlassQuality.standard;
 
+    // iOS 26 frosted well: the input sits as a darker recessed surface inside
+    // the surrounding glass card, matching the "input tray" seen in Messages
+    // and Settings search on iOS 26. We achieve this with a slightly darker,
+    // more opaque fill + a subtle top-edge inner shadow (depth cue).
+    final wellBorderRadius = _shapeRadius(widget.shape);
+    final frostedWell = DecoratedBox(
+      decoration: BoxDecoration(
+        // Slightly darker than pure glass — creates the "inset tray" feel.
+        color: Colors.black.withValues(alpha: 0.12),
+        borderRadius: wellBorderRadius,
+        // Inner shadow simulation: a thin gradient darkish at top fading out.
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.center,
+          stops: const [0.0, 1.0],
+          colors: [
+            Colors.black.withValues(alpha: 0.08),
+            Colors.transparent,
+          ],
+        ),
+      ),
+      child: textFieldContent,
+    );
+
     // Apply glass effect
     final glassWidget = AdaptiveGlass(
       shape: widget.shape,
       settings: widget.settings ?? InheritedLiquidGlass.ofOrDefault(context),
       quality: effectiveQuality,
       useOwnLayer: widget.useOwnLayer,
-      child: textFieldContent,
+      child: frostedWell,
     );
 
     return Opacity(
@@ -311,4 +335,15 @@ class _GlassTextFieldState extends State<GlassTextField> {
       child: glassWidget,
     );
   }
+}
+
+/// Resolves a [LiquidShape] to a [BorderRadius] for use in plain decorations.
+BorderRadius _shapeRadius(LiquidShape shape) {
+  if (shape is LiquidRoundedSuperellipse) {
+    return BorderRadius.circular(shape.borderRadius);
+  }
+  if (shape is LiquidRoundedRectangle) {
+    return BorderRadius.circular(shape.borderRadius);
+  }
+  return BorderRadius.circular(10);
 }

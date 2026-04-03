@@ -5,6 +5,7 @@ import '../../utils/glass_spring.dart';
 import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
+import '../../utils/glass_indicator_tap_mixin.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/animated_glass_indicator.dart';
 import '../shared/inherited_liquid_glass.dart';
@@ -346,7 +347,8 @@ class _SegmentedControlContent extends StatefulWidget {
       _SegmentedControlContentState();
 }
 
-class _SegmentedControlContentState extends State<_SegmentedControlContent> {
+class _SegmentedControlContentState extends State<_SegmentedControlContent>
+    with GlassIndicatorTapMixin<_SegmentedControlContent> {
   // Cache default colors to avoid allocations
   static const _defaultIndicatorColor =
       Color(0x33FFFFFF); // white.withValues(alpha: 0.2)
@@ -390,6 +392,7 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent> {
   }
 
   void _onDragDown(DragDownDetails details) {
+    cancelIndicatorTapTimer(); // DX1: cancel pending tap-clear if a drag starts
     setState(() {
       _isDown = true;
       _xAlign = _getAlignmentFromGlobalPosition(details.globalPosition);
@@ -500,8 +503,11 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent> {
             spring: GlassSpring.snappy(
               duration: const Duration(milliseconds: 300),
             ),
-            // Show glass indicator when dragging or far from target
-            value: _isDown || (alignment.x - targetAlignment).abs() > 0.15
+            // Show glass indicator when: down, dragging, OR close to target.
+            // DX1: threshold lowered 0.15 → 0.05 so the indicator stays visible
+            // through more of the settling spring, making the animation legible
+            // even on desktop where drag velocity is zero.
+            value: _isDown || (alignment.x - targetAlignment).abs() > 0.05
                 ? 1.0
                 : 0.0,
             builder: (context, thickness, child) {
@@ -542,6 +548,17 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent> {
                     child: RepaintBoundary(
                       child: GestureDetector(
                         onTap: () => _onSegmentTap(i),
+                        onTapDown: (_) => handleIndicatorTapDown(
+                          setIsDown: (v) => _isDown = v,
+                          snapAlign: () =>
+                              _xAlign = _computeXAlignmentForSegment(i),
+                        ),
+                        onLongPress: () => keepIndicatorDown(
+                          setIsDown: (v) => _isDown = v,
+                        ),
+                        onLongPressEnd: (_) => releaseIndicatorDown(
+                          setIsDown: (v) => setState(() => _isDown = v),
+                        ),
                         behavior: HitTestBehavior.opaque,
                         child: Semantics(
                           button: true,

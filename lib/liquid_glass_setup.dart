@@ -1,10 +1,12 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
+import 'utils/accessibility_config.dart' as glass_config;
 import 'src/renderer/liquid_glass_renderer.dart';
-import 'widgets/shared/lightweight_liquid_glass.dart';
-import 'widgets/shared/glass_effect.dart';
 import 'widgets/shared/glass_backdrop_scope.dart';
+import 'widgets/shared/glass_effect.dart';
+import 'widgets/shared/glass_accessibility_scope.dart';
+import 'widgets/shared/lightweight_liquid_glass.dart';
 
 /// Entry point and configuration for the Liquid Glass Widgets library.
 ///
@@ -12,6 +14,18 @@ import 'widgets/shared/glass_backdrop_scope.dart';
 /// to prevent visual glitches during first-time rendering.
 class LiquidGlassWidgets {
   LiquidGlassWidgets._();
+
+  /// Whether glass widgets should automatically respect system accessibility
+  /// settings (Reduce Motion, Reduce Transparency / High Contrast).
+  ///
+  /// Set via [initialize]. Defaults to `true`. When `false`, system flags are
+  /// ignored globally — useful for games or experiences where motion and full
+  /// glass are core to the design. An explicit [GlassAccessibilityScope] in
+  /// the widget tree always overrides this flag.
+  static bool get respectSystemAccessibility =>
+      glass_config.respectSystemAccessibility;
+  static set respectSystemAccessibility(bool value) =>
+      glass_config.respectSystemAccessibility = value;
 
   /// Initializes the Liquid Glass library.
   ///
@@ -24,11 +38,27 @@ class LiquidGlassWidgets {
   /// }
   /// ```
   ///
+  /// ### Accessibility
+  ///
+  /// By default, system Reduce Motion and Reduce Transparency are respected
+  /// automatically — no extra setup needed. To opt out globally (e.g. for a
+  /// game where full glass fidelity is intentional):
+  ///
+  /// ```dart
+  /// await LiquidGlassWidgets.initialize(respectSystemAccessibility: false);
+  /// ```
+  ///
+  /// A [GlassAccessibilityScope] placed in the widget tree always takes
+  /// precedence over this flag, allowing per-subtree overrides.
+  ///
   /// Tasks performed:
   /// 1. Pre-warms/precaches the lightweight fragment shader.
   /// 2. Pre-warms the interactive indicator shader (for custom refraction).
   /// 3. Pre-warms Impeller rendering pipeline (iOS/Android/macOS).
-  static Future<void> initialize() async {
+  static Future<void> initialize({
+    bool respectSystemAccessibility = true,
+  }) async {
+    LiquidGlassWidgets.respectSystemAccessibility = respectSystemAccessibility;
     debugPrint('[LiquidGlass] Initializing library...');
 
     // 1. Pre-warm shaders

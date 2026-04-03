@@ -115,3 +115,13 @@ name implied the object was clean; the method actually sets `_dirty = true`.
 **File:** `shaders/liquid_glass_final_render.frag`
 Replaced 8-line inline highlight colour block with a call to `getHighlightColor()`
 from `render.glsl`, which is already `#include`d by the same shader.
+
+### PP2 — `GlassSpecularSharpness` import in `liquid_glass_settings.dart`
+**File:** `liquid_glass_settings.dart`
+`GlassSpecularSharpness` is our own enum (not vendored). It lives in
+`lib/types/glass_specular_sharpness.dart`. The import in `liquid_glass_settings.dart`
+was updated from the local `'glass_specular_sharpness.dart'` to
+`'../../types/glass_specular_sharpness.dart'` and marked `// [LOCAL PATCH]`.
+
+**Sync note:** If upstream ever adds a `GlassSpecularSharpness`-equivalent, prefer
+ours and keep the `lib/types/` location. Do **not** restore the old import.

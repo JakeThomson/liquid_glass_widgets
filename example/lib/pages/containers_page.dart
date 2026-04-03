@@ -298,6 +298,159 @@ class ContainersPage extends StatelessWidget {
                       ),
                     ),
 
+                    const SizedBox(height: 40),
+
+                    // GlassDivider Section
+                    const _SectionTitle(title: 'GlassDivider'),
+                    const SizedBox(height: 16),
+                    GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Section A',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const GlassDivider(),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Section B',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const GlassDivider(indent: 16, endIndent: 16),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Section C — custom indent',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GlassCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: SizedBox(
+                        height: 60,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Text('Left',
+                                style: TextStyle(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.8))),
+                            const GlassDivider.vertical(),
+                            Text('Center',
+                                style: TextStyle(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.8))),
+                            const GlassDivider.vertical(),
+                            Text('Right',
+                                style: TextStyle(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.8))),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // GlassListTile Section
+                    const _SectionTitle(title: 'GlassListTile'),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Grouped settings list — zero-padding GlassCard',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GlassCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          GlassListTile(
+                            leading: const Icon(CupertinoIcons.person_fill,
+                                color: Colors.blue),
+                            title: const Text('Account'),
+                            trailing: GlassListTile.chevron,
+                            onTap: () {},
+                          ),
+                          GlassListTile(
+                            leading: const Icon(CupertinoIcons.bell_fill,
+                                color: Colors.orange),
+                            title: const Text('Notifications'),
+                            subtitle: const Text('Banners, sounds, badges'),
+                            trailing: GlassListTile.chevron,
+                            onTap: () {},
+                          ),
+                          GlassListTile(
+                            leading: const Icon(CupertinoIcons.lock_fill,
+                                color: Colors.green),
+                            title: const Text('Privacy & Security'),
+                            trailing: GlassListTile.chevron,
+                            onTap: () {},
+                          ),
+                          GlassListTile(
+                            leading: const Icon(CupertinoIcons.paintbrush_fill,
+                                color: Colors.purple),
+                            title: const Text('Appearance'),
+                            subtitle: const Text('Dark mode, accent colour'),
+                            trailing: GlassListTile.chevron,
+                            isLast: true,
+                            onTap: () {},
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // GlassStepper Section — iOS 26 UIStepper equivalent
+                    const _SectionTitle(title: 'GlassStepper'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'iOS 26 UIStepper — tap or hold for auto-repeat',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const _StepperDemo(),
+
+                    const SizedBox(height: 40),
+
+                    // GlassWizard Section — multi-step flow
+                    const _SectionTitle(title: 'GlassWizard'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Multi-step flow — tap headers or buttons to advance',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const _WizardDemo(),
+
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -379,6 +532,181 @@ class _SettingsRow extends StatelessWidget {
           CupertinoIcons.chevron_right,
           color: Colors.white.withValues(alpha: 0.4),
           size: 20,
+        ),
+      ],
+    );
+  }
+}
+
+// iOS 26-style +/- stepper demo
+class _StepperDemo extends StatefulWidget {
+  const _StepperDemo();
+
+  @override
+  State<_StepperDemo> createState() => _StepperDemoState();
+}
+
+class _StepperDemoState extends State<_StepperDemo> {
+  double _quantity = 1;
+  double _temperature = 20;
+  double _rating = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Quantity row
+        GlassCard(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Quantity',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              Row(
+                children: [
+                  Text(
+                    _quantity.toInt().toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  GlassStepper(
+                    value: _quantity,
+                    min: 1,
+                    max: 99,
+                    step: 1,
+                    onChanged: (v) => setState(() => _quantity = v),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Temperature row with larger step
+        GlassCard(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Temperature',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              Row(
+                children: [
+                  Text(
+                    '${_temperature.toInt()}°C',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  GlassStepper(
+                    value: _temperature,
+                    min: -10,
+                    max: 40,
+                    step: 0.5,
+                    onChanged: (v) => setState(() => _temperature = v),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Wrapping rating
+        GlassCard(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Rating (wraps)',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              Row(
+                children: [
+                  Row(
+                    children: List.generate(5, (i) {
+                      return Icon(
+                        i < _rating ? Icons.star : Icons.star_border,
+                        color: i < _rating ? Colors.amber : Colors.white38,
+                        size: 18,
+                      );
+                    }),
+                  ),
+                  const SizedBox(width: 12),
+                  GlassStepper(
+                    value: _rating,
+                    min: 1,
+                    max: 5,
+                    step: 1,
+                    wraps: true,
+                    onChanged: (v) => setState(() => _rating = v),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Multi-step wizard demo
+class _WizardDemo extends StatefulWidget {
+  const _WizardDemo();
+
+  @override
+  State<_WizardDemo> createState() => _WizardDemoState();
+}
+
+class _WizardDemoState extends State<_WizardDemo> {
+  int _currentStep = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassWizard(
+      currentStep: _currentStep,
+      onStepTapped: (i) => setState(() => _currentStep = i),
+      steps: [
+        GlassWizardStep(
+          title: const Text('Account'),
+          subtitle: const Text('Enter your credentials'),
+          content: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.arrow_right),
+              label: 'Continue',
+              onTap: () => setState(() => _currentStep = 1),
+            ),
+          ),
+        ),
+        GlassWizardStep(
+          title: const Text('Profile'),
+          subtitle: const Text('Tell us about yourself'),
+          content: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.arrow_right),
+              label: 'Continue',
+              onTap: () => setState(() => _currentStep = 2),
+            ),
+          ),
+        ),
+        const GlassWizardStep(
+          title: Text('All done'),
+          subtitle: Text('Your account is ready'),
+          isCompleted: true,
         ),
       ],
     );

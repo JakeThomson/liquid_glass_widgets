@@ -12,13 +12,13 @@ void main() {
     glassColor: Colors.white.withValues(alpha: .6),
   );
 
-  print('Blur: ${settings.blur}');
-  print('Thickness: ${settings.thickness}');
-  print('Refractive Index: ${settings.refractiveIndex}');
-  print('Chromatic Aberration: ${settings.chromaticAberration}');
-  print('Light Intensity: ${settings.lightIntensity}');
-  print('Ambient Strength: ${settings.ambientStrength}');
-  print('Saturation: ${settings.saturation}');
-  print('Light Angle: ${settings.lightAngle}');
-  print('Glass Color: ${settings.glassColor}');
+  debugPrint('Blur: ${settings.blur}');
+  debugPrint('Thickness: ${settings.thickness}');
+  debugPrint('Refractive Index: ${settings.refractiveIndex}');
+  debugPrint('Chromatic Aberration: ${settings.chromaticAberration}');
+  debugPrint('Light Intensity: ${settings.lightIntensity}');
+  debugPrint('Ambient Strength: ${settings.ambientStrength}');
+  debugPrint('Saturation: ${settings.saturation}');
+  debugPrint('Light Angle: ${settings.lightAngle}');
+  debugPrint('Glass Color: ${settings.glassColor}');
 }

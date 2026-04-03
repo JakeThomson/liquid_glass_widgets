@@ -13,6 +13,7 @@ export 'src/renderer/liquid_glass_renderer.dart'
         GlassGlow,
         debugPaintLiquidGlassGeometry;
 export 'src/renderer/liquid_shape.dart'; // all shapes are public
+export 'types/glass_specular_sharpness.dart'; // GlassSpecularSharpness enum
 
 // Setup and Configuration
 export 'liquid_glass_setup.dart';
@@ -30,14 +31,23 @@ export 'types/glass_quality.dart';
 // Shared widgets
 export 'widgets/shared/adaptive_glass.dart';
 export 'widgets/shared/adaptive_liquid_glass_layer.dart';
+export 'widgets/shared/glass_accessibility_scope.dart'; // GlassAccessibilityScope + GlassAccessibilityData
 export 'widgets/shared/glass_motion_scope.dart';
 export 'widgets/shared/inherited_liquid_glass.dart';
 export 'widgets/shared/lightweight_liquid_glass.dart';
 
+// Utils — for advanced / custom widget authors
+export 'utils/glass_spring.dart';
+export 'utils/glass_indicator_tap_mixin.dart'; // GlassIndicatorTapMixin: DX1 deferred-tap for custom indicator widgets
+
 // Widgets - Containers
 export 'widgets/containers/glass_card.dart';
 export 'widgets/containers/glass_container.dart';
+export 'widgets/containers/glass_divider.dart';
+export 'widgets/containers/glass_list_tile.dart';
 export 'widgets/containers/glass_panel.dart';
+export 'widgets/containers/glass_stepper.dart';
+export 'widgets/containers/glass_wizard.dart';
 // Widgets - Input
 export 'widgets/input/glass_form_field.dart';
 export 'widgets/input/glass_password_field.dart';

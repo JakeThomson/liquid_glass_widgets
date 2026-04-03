@@ -1,6 +1,6 @@
 # Liquid Glass Widgets
 
-Bring Apple's iOS 26 Liquid Glass to your Flutter app — 32 glass widgets with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
+Bring Apple's iOS 26 Liquid Glass to your Flutter app — 36 glass widgets with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
 
 [![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg)](https://pub.dev/packages/liquid_glass_widgets)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -13,12 +13,13 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 
 ## Features
 
-- **32 glass widgets** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces
+- **36 glass widgets** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces
 - **Real frosted glass** — native two-pass Gaussian blur + shader refraction on Impeller; lightweight shader on Skia/Web
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
 - **Zero dependencies** — no third-party runtime libraries, just the Flutter SDK
 - **One-line setup** — `LiquidGlassWidgets.wrap()` handles all performance optimization
 - **Gyroscope lighting** — `GlassMotionScope` drives specular highlights from any `Stream<double>`
+- **WCAG-compliant by default** — Reduce Motion and Reduce Transparency are respected automatically; no setup required
 
 
 ## Examples
@@ -33,7 +34,7 @@ cd example/showcase && flutter pub get && flutter run
 
 ### [Widget Showcase](example/) — Full Component Library
 
-A complete catalogue of all 32 widgets organized by category. Use it to explore every component, try live settings, and copy patterns directly into your app.
+A complete catalogue of all 36 widgets organized by category. Use it to explore every component, try live settings, and copy patterns directly into your app.
 
 ```bash
 cd example && flutter pub get && flutter run
@@ -45,7 +46,7 @@ cd example && flutter pub get && flutter run
 ## Widget Categories
 
 ### Containers
-`GlassContainer` · `GlassCard` · `GlassPanel`
+`GlassCard` · `GlassPanel` · `GlassContainer` · `GlassDivider` · `GlassListTile` · `GlassStepper` · `GlassWizard`
 
 ### Interactive
 `GlassButton` · `GlassIconButton` · `GlassChip` · `GlassSwitch` · `GlassSlider` · `GlassSegmentedControl` · `GlassPullDownButton` · `GlassButtonGroup` · `GlassBadge`
@@ -67,7 +68,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.6.1
+  liquid_glass_widgets: ^0.7.0
 ```
 
 ```bash
@@ -92,6 +93,8 @@ void main() async {
   runApp(LiquidGlassWidgets.wrap(const MyApp()));
 }
 ```
+
+> **Accessibility is on by default.** The library automatically reads the device's Reduce Motion and Reduce Transparency settings — no extra setup required. See [Accessibility](#accessibility) for details.
 
 Then add any glass widget to your tree:
 
@@ -178,6 +181,27 @@ Access the current theme variant programmatically:
 final variant = GlassThemeData.of(context).variantFor(context);
 ```
 
+### Specular Sharpness
+
+Control the tightness of the specular highlight on any glass surface via `LiquidGlassSettings.specularSharpness`:
+
+```dart
+GlassCard(
+  settings: LiquidGlassSettings(
+    specularSharpness: GlassSpecularSharpness.sharp, // tight, mirror-like
+  ),
+  child: ...,
+)
+```
+
+| Value | Look |
+|---|---|
+| `GlassSpecularSharpness.soft` | Wide, diffuse — frosted / matte glass |
+| `GlassSpecularSharpness.medium` | **Default** — matches iOS 26 |
+| `GlassSpecularSharpness.sharp` | Tight, polished — mirror-like surface |
+
+Each value maps to a fixed power-of-2 exponent. The GPU uses a zero-transcendental multiply chain for each — no `pow()` overhead.
+
 
 ## Performance Tips
 
@@ -185,13 +209,18 @@ final variant = GlassThemeData.of(context).variantFor(context);
 2. **`LiquidGlassWidgets.wrap()`** in `main.dart` — all glass surfaces inside automatically share one GPU backdrop capture on Impeller (equivalent to wrapping with `GlassBackdropScope` directly, which also remains available for explicit scope control)
 3. **Standard quality for scrollable content** — lists, forms, interactive widgets
 4. **Premium quality for fixed surfaces** — app bars, bottom bars, and hero sections
+5. **Accessibility fallbacks are zero-cost** — when Reduce Transparency is active, the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
 
 
 ## Custom Refraction for Interactive Indicators
 
-On Skia and Web, interactive widgets like `GlassSegmentedControl` can display true liquid glass refraction when wrapped in `LiquidGlassScope`:
+On Skia and Web, interactive widgets like `GlassSegmentedControl` can display
+true liquid glass refraction. Use `GlassRefractionSource` to mark the capture
+surface (or use the `LiquidGlassScope.stack()` shorthand for the common
+wallpaper-behind-content pattern):
 
 ```dart
+// Shorthand — wallpaper behind your Scaffold:
 LiquidGlassScope.stack(
   background: Image.asset('assets/wallpaper.jpg', fit: BoxFit.cover),
   content: Scaffold(
@@ -205,9 +234,28 @@ LiquidGlassScope.stack(
     ),
   ),
 )
+
+// Manual — granular control over which surface is sampled:
+LiquidGlassScope(
+  child: Stack(
+    children: [
+      Positioned.fill(
+        child: GlassRefractionSource(
+          child: Image.asset('assets/wallpaper.jpg'),
+        ),
+      ),
+      Center(child: GlassSegmentedControl(...)),
+    ],
+  ),
+)
 ```
 
-On Impeller, `GlassQuality.premium` uses the native scene graph — no `LiquidGlassScope` needed.
+On Impeller, `GlassQuality.premium` uses the native scene graph — no
+`LiquidGlassScope` needed.
+
+> **Migration note (0.7.0):** `LiquidGlassBackground` was renamed to
+> `GlassRefractionSource`. The old name still compiles (deprecated typedef)
+> and will be removed in 1.0.0.
 
 | When | Recommendation |
 |---|---|
@@ -233,6 +281,59 @@ GlassMotionScope(
 No new dependencies required — connect any stream source (scroll position, mouse, gyroscope).
 
 
+## Accessibility
+
+Every glass widget in this package respects the user's system accessibility preferences **automatically** — no setup required.
+
+| System Setting | Effect on glass widgets |
+|---|---|
+| **Reduce Motion** (iOS/macOS/Android) | All spring/jelly animations snap instantly to their target |
+| **Reduce Transparency / High Contrast** | Glass shader replaced with a plain frosted `BackdropFilter` panel — zero GPU shader cost |
+
+### No setup needed
+
+Just ship your app. If the user has Reduce Motion on, your widgets snap. If they have Reduce Transparency on, they get a solid frosted fallback. Nothing to configure.
+
+### Optional: `GlassAccessibilityScope`
+
+Place `GlassAccessibilityScope` in your tree to **override** system defaults — useful for testing, showcases, or per-subtree customisation:
+
+```dart
+// In your app (optional — place inside MaterialApp.builder for full coverage)
+MaterialApp(
+  builder: (context, child) => GlassAccessibilityScope(
+    child: child!, // reads system flags automatically
+  ),
+)
+
+// Force a specific state (e.g. demo frosted fallback in a settings screen)
+GlassAccessibilityScope(
+  reduceTransparency: true,
+  child: GlassSettingsPreview(),
+)
+```
+
+`GlassAccessibilityScope` always wins over the system flag — it's the highest-priority override.
+
+### Opting out globally
+
+For experiences where full glass fidelity is intentional (games, creative tools):
+
+```dart
+await LiquidGlassWidgets.initialize(
+  respectSystemAccessibility: false, // ignores system Reduce Motion / Reduce Transparency
+);
+```
+
+This disables only the automatic system-flag bridge. An explicit `GlassAccessibilityScope` in the widget tree still works regardless.
+
+### Priority order (highest wins)
+
+1. `GlassAccessibilityScope` in the widget tree — explicit developer override
+2. System `MediaQuery` flags — automatic, respects user's OS setting
+3. `initialize(respectSystemAccessibility: false)` — disables (2) globally
+
+
 ## Architecture
 
 On Impeller, every `GlassQuality.premium` surface uses a two-pass pipeline:
@@ -241,6 +342,16 @@ On Impeller, every `GlassQuality.premium` surface uses a two-pass pipeline:
 2. **Shader pass** — `BackdropFilterLayer(ImageFilter.shader)` — refraction, edge lighting, glass tint, and chromatic aberration.
 
 On Skia/Web, `lightweight_glass.frag` runs as a single pass with no backdrop capture.
+
+### Content-Adaptive Glass Strength (0.7.0)
+
+Both render paths automatically adapt glass strength to background brightness:
+
+- **Dark backgrounds** → richer, more opaque glass (1.2× strength, brighter Fresnel rim)
+- **Light backgrounds** → subtler, more translucent glass (0.8× strength)
+
+On Impeller, backdrop luminance is sampled directly from the refracted texture (zero extra reads).
+On Skia/Web, `MediaQuery.platformBrightnessOf` provides a lightweight proxy.
 
 
 ## Testing

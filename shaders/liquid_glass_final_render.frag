@@ -150,13 +150,52 @@ void main() {
     }
 
     vec4 finalColor = applyGlassColor(refractColor, uGlassColor);
-    finalColor.rgb  = applySaturation(finalColor.rgb, uSaturation);
+
+    // VQ4: Content-adaptive glass strength.
+    //
+    // iOS 26 glass dynamically adjusts its material intensity based on the
+    // luminance of the content beneath it.  Dark backdrops produce richer,
+    // more vivid glass; bright or uniform backdrops produce a subtler material
+    // to avoid overwhelming the UI.
+    //
+    // Implementation: dot-product backdrop luminance from refractColor —
+    // the already-sampled background at the refracted UV.  Zero extra texture
+    // reads; the sample is already in the register file.
+    //
+    // LUMA_WEIGHTS = vec3(0.299, 0.587, 0.114) (BT.601, defined in render.glsl)
+    //
+    // adaptiveStrength range [0.8, 1.2]:
+    //   • backdropLuma = 0.0 (black)  → strength 1.2 (richer glass)
+    //   • backdropLuma = 1.0 (white)  → strength 0.8 (subtler glass)
+    //
+    // Cost: 1 dot product + 1 mix() + 1 extra mix() for tint = 3 MADs.
+    // Effectively free on modern GPUs.
+    float backdropLuma     = dot(refractColor.rgb, LUMA_WEIGHTS);
+    float adaptiveStrength = mix(1.2, 0.8, backdropLuma);
+
+    // Apply saturation with adaptive scaling.
+    // adaptiveStrength > 1.0 → more vivid (dark backdrop).
+    // adaptiveStrength < 1.0 → more muted (bright/uniform backdrop).
+    // uSaturation is the artist-set base; we only modulate it, never replace it.
+    finalColor.rgb = applySaturation(finalColor.rgb, uSaturation * adaptiveStrength);
+
+    // Modulate glass tint blend weight by adaptiveStrength.
+    // On dark backgrounds the tint reads heavier (+20%); on bright backgrounds
+    // it reads lighter (-20%).  The delta is small (max ±20% of the 12% base
+    // weight = ±2.4%) — within a single JND step, noticeable as a property
+    // not a glitch.  Uses mix() to re-blend toward uGlassColor.rgb over the
+    // already-tinted finalColor, scaled by the adaptive delta only.
+    finalColor.rgb = mix(finalColor.rgb,
+                         uGlassColor.rgb,
+                         uGlassColor.a * 0.12 * (adaptiveStrength - 1.0));
+
 
     // Edge lighting — uses the true normal.xy (V1; was normalize(displacement))
     float normalizedHeight = geometryData.b;
     float thicknessScale   = clamp(40.0 / max(uThickness, 1.0), 1.0, 4.0);
     float edgeThreshold    = mix(0.8, 0.5, 1.0 / thicknessScale);
     float edgeFactor       = 1.0 - smoothstep(0.0, edgeThreshold, normalizedHeight);
+
 
     if (edgeFactor > 0.01) {
         // VQ1: Anisotropic specular — shape the highlight into a horizontal oval
@@ -181,7 +220,10 @@ void main() {
         float oppositeLight = max(0.0, dot(anisoN, -uLightDirection));
         float totalInfluence = mainLight + oppositeLight * 0.8;
 
-        float directional = pow(totalInfluence, 1.5) * uLightIntensity * 3.0;
+        // PP2 follow-up: pow(x, 1.5) = x·√x. sqrt() is a single hardware SFU
+        // instruction on all Metal/Vulkan/OpenGLES targets — not a transcendental.
+        // This replaces the last pow() in the Impeller path with zero exp/log ops.
+        float directional = totalInfluence * sqrt(totalInfluence) * uLightIntensity * 3.0;
         float ambient     = uAmbientStrength * 0.5;
 
         // Soft-clamp brightness with x/(1+x) to prevent mix() extrapolating

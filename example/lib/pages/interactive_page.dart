@@ -617,7 +617,7 @@ class _InteractivePageState extends State<InteractivePage> {
                           // Custom shader rendering (works everywhere)
                           _ShaderComparisonCard(
                             title: 'Custom Shader',
-                            subtitle: 'Uses LiquidGlassBackground',
+                            subtitle: 'Uses GlassRefractionSource',
                             badgeColor: Colors.green,
                             selectedIndex: _shaderCompareCustom,
                             onSegmentSelected: (index) {
@@ -640,7 +640,7 @@ class _InteractivePageState extends State<InteractivePage> {
                                   ),
                                 ),
                                 Text(
-                                  'No LiquidGlassBackground',
+                                  'No GlassRefractionSource (synthetic frost)',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.white.withValues(alpha: 0.7),
@@ -1872,7 +1872,7 @@ class _ShaderComparisonCard extends StatelessWidget {
             children: [
               // Background image (contained within card)
               Positioned.fill(
-                child: LiquidGlassBackground(
+                child: GlassRefractionSource(
                   child: Container(
                     decoration: const BoxDecoration(
                       image: DecorationImage(

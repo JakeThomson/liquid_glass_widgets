@@ -586,8 +586,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBottomBar() {
-    const _defaultGlassColor = Color(0x3DFFFFFF); // Colors.white24
-    const _defaultLightAngle =
+    const defaultGlassColor = Color(0x3DFFFFFF); // Colors.white24
+    const defaultLightAngle =
         0.75 * math.pi; // 135° — Apple standard, upper-left
     return Padding(
       padding: const EdgeInsets.only(bottom: 0),
@@ -603,8 +603,8 @@ class _HomePageState extends State<HomePage> {
           refractiveIndex: 1.59,
           saturation: 0.7,
           ambientStrength: 1,
-          lightAngle: _defaultLightAngle,
-          glassColor: _defaultGlassColor,
+          lightAngle: defaultLightAngle,
+          glassColor: defaultGlassColor,
         ),
         extraButton: GlassBottomBarExtraButton(
           icon: Icon(Icons.support_agent),

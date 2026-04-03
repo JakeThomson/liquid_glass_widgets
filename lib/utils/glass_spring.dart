@@ -9,6 +9,8 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import '../widgets/shared/glass_accessibility_scope.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Spring presets
 // These match motor's CupertinoMotion presets exactly.
@@ -275,7 +277,7 @@ class OffsetSpringController extends ChangeNotifier {
 // SpringBuilder  (replaces SingleMotionBuilder / MotionBuilder without velocity)
 // ─────────────────────────────────────────────────────────────────────────────
 
-typedef _SpringWidgetBuilder = Widget Function(
+typedef SpringWidgetBuilder = Widget Function(
   BuildContext context,
   double value,
   Widget? child,
@@ -300,7 +302,7 @@ class SpringBuilder extends StatefulWidget {
 
   final double value;
   final SpringDescription spring;
-  final _SpringWidgetBuilder builder;
+  final SpringWidgetBuilder builder;
   final Widget? child;
 
   @override
@@ -328,7 +330,16 @@ class _SpringBuilderState extends State<SpringBuilder>
       _ctrl.spring = widget.spring;
     }
     if (widget.value != oldWidget.value) {
-      _ctrl.animateTo(widget.value);
+      // IP1: When Reduce Motion is active, snap instantly instead of animating.
+      // GlassAccessibilityData.of reads MediaQuery directly when no
+      // GlassAccessibilityScope is present, so this always respects the system
+      // setting with no developer setup required.
+      final reduceMotion = GlassAccessibilityData.of(context).reduceMotion;
+      if (reduceMotion) {
+        _ctrl.setValue(widget.value);
+      } else {
+        _ctrl.animateTo(widget.value);
+      }
     }
   }
 
@@ -353,7 +364,7 @@ class _SpringBuilderState extends State<SpringBuilder>
 //                         SingleVelocityMotionBuilder)
 // ─────────────────────────────────────────────────────────────────────────────
 
-typedef _VelocitySpringWidgetBuilder = Widget Function(
+typedef VelocitySpringWidgetBuilder = Widget Function(
   BuildContext context,
   double value,
   double velocity,
@@ -390,7 +401,7 @@ class VelocitySpringBuilder extends StatefulWidget {
   /// Whether the user is currently dragging (selects [springWhenActive]).
   final bool active;
 
-  final _VelocitySpringWidgetBuilder builder;
+  final VelocitySpringWidgetBuilder builder;
   final Widget? child;
 
   @override
@@ -428,7 +439,13 @@ class _VelocitySpringBuilderState extends State<VelocitySpringBuilder>
       _ctrl.spring = _currentSpring;
     }
     if (widget.value != oldWidget.value) {
-      _ctrl.animateTo(widget.value);
+      // IP1: When Reduce Motion is active, snap instantly instead of animating.
+      final reduceMotion = GlassAccessibilityData.of(context).reduceMotion;
+      if (reduceMotion) {
+        _ctrl.setValue(widget.value);
+      } else {
+        _ctrl.animateTo(widget.value);
+      }
     }
   }
 
@@ -453,7 +470,7 @@ class _VelocitySpringBuilderState extends State<VelocitySpringBuilder>
 // OffsetSpringBuilder  (replaces MotionBuilder<Offset> with OffsetMotionConverter)
 // ─────────────────────────────────────────────────────────────────────────────
 
-typedef _OffsetSpringWidgetBuilder = Widget Function(
+typedef OffsetSpringWidgetBuilder = Widget Function(
   BuildContext context,
   Offset value,
   Widget? child,
@@ -472,7 +489,7 @@ class OffsetSpringBuilder extends StatefulWidget {
 
   final Offset value;
   final SpringDescription spring;
-  final _OffsetSpringWidgetBuilder builder;
+  final OffsetSpringWidgetBuilder builder;
   final Widget? child;
 
   @override

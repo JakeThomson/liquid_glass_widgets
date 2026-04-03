@@ -133,10 +133,10 @@ class _GlassEffectState extends State<GlassEffect>
   bool _loggedCreation = false;
   ui.Image? _backgroundImage;
   late Ticker _ticker;
-  bool _isCapturing = false;
-  int _lastCaptureTime = 0;
   Size? _lastCaptureSize;
   Offset? _lastCapturePosition;
+  // Web only: guards against overlapping async captures.
+  bool _isCapturingAsync = false;
 
   @override
   void initState() {
@@ -198,8 +198,6 @@ class _GlassEffectState extends State<GlassEffect>
   }
 
   void _handleTick(Duration elapsed) {
-    if (_isCapturing) return;
-
     final key = _effectiveKey;
     if (key == null) return;
 
@@ -207,51 +205,86 @@ class _GlassEffectState extends State<GlassEffect>
         key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) return;
 
-    final now = DateTime.now().millisecondsSinceEpoch;
     final currentSize = boundary.size;
     final currentPos = (key.currentContext?.findRenderObject() as RenderBox?)
         ?.localToGlobal(Offset.zero);
 
-    // Interaction Heartbeat
-    // - Resting: Capture ONLY on geometry change (Pos/Size). No periodic heartbeat.
-    // - Dragging: Capture on interaction (100ms heartbeat) to keep it "live".
-
+    // Capture on geometry change always; during interaction capture every frame
+    // since toImageSync() is synchronous (no GPU readback, no CPU copy).
     final bool isInteracting = widget.interactionIntensity > 0.05;
     bool needsCapture = _backgroundImage == null;
     needsCapture |= _lastCaptureSize != currentSize;
     needsCapture |= _lastCapturePosition != currentPos;
-
-    // Periodic update only during interaction (10fps capture)
-    // This makes the dragging feel "alive" while avoiding 60fps jitter.
-    if (isInteracting) {
-      needsCapture |= (now - _lastCaptureTime) > 100;
-    }
+    needsCapture |= isInteracting; // every frame during drag — free cost
 
     if (needsCapture) {
       _captureBackground(boundary, currentSize, currentPos);
-      _lastCaptureTime = now;
     }
   }
 
-  Future<void> _captureBackground(
-      RenderRepaintBoundary boundary, Size size, Offset? pos) async {
-    _isCapturing = true;
-    final dpr = View.of(context).devicePixelRatio;
-
+  /// Background capture — platform-adaptive.
+  ///
+  /// **Native (Impeller / Skia):** [RenderRepaintBoundary.toImageSync] —
+  /// fully synchronous, stays in GPU memory, zero CPU←GPU readback.
+  /// Runs every frame during active interaction at negligible cost.
+  ///
+  /// **Web (CanvasKit):** async [RenderRepaintBoundary.toImage] at
+  /// `pixelRatio: 1.0`. [toImageSync] is unreliable across CanvasKit versions
+  /// and unavailable in the legacy HTML renderer. The async path is still a
+  /// significant improvement over the previous `pixelRatio: dpr` approach —
+  /// same 1/DPR² memory reduction, with a 1-frame delivery lag during a drag.
+  /// An `_isCapturingAsync` guard prevents overlapping futures.
+  void _captureBackground(
+      RenderRepaintBoundary boundary, Size size, Offset? pos) {
     assert(() {
-      // Validate boundary size
       if (boundary.size.isEmpty) {
         debugPrint(
-          '⚠️ [GlassEffect] Warning: Background boundary has zero size.\n'
-          '   Refraction will not work correctly.\n'
-          '   Ensure LiquidGlassBackground has non-zero dimensions.',
+          '⚠️ [GlassEffect] Background boundary has zero size.\n'
+          '   Ensure GlassRefractionSource (or LiquidGlassScope.stack) wraps\n'
+          '   a widget with non-zero dimensions.',
         );
       }
       return true;
     }());
 
+    if (kIsWeb) {
+      _captureBackgroundAsync(boundary, size, pos);
+    } else {
+      _captureBackgroundSync(boundary, size, pos);
+    }
+  }
+
+  /// Synchronous capture path for native (non-web) platforms.
+  void _captureBackgroundSync(
+      RenderRepaintBoundary boundary, Size size, Offset? pos) {
     try {
-      final image = await boundary.toImage(pixelRatio: dpr);
+      // pixelRatio: 1.0 — logical resolution is sufficient for refraction.
+      // Stays in GPU-accessible memory; handed directly to setImageSampler.
+      final image = boundary.toImageSync(pixelRatio: 1.0);
+      _backgroundImage?.dispose();
+      _backgroundImage = image;
+      _lastCaptureSize = size;
+      _lastCapturePosition = pos;
+      if (mounted) setState(() {});
+    } catch (e) {
+      assert(() {
+        debugPrint('[GlassEffect] toImageSync failed: $e');
+        return true;
+      }());
+    }
+  }
+
+  /// Async capture path for web (CanvasKit / HTML renderer).
+  ///
+  /// [toImageSync] is not reliably available across all CanvasKit builds and
+  /// is absent in the legacy HTML renderer. Using async at `pixelRatio: 1.0`
+  /// still achieves the same memory reduction with an acceptable 1-frame lag.
+  Future<void> _captureBackgroundAsync(
+      RenderRepaintBoundary boundary, Size size, Offset? pos) async {
+    if (_isCapturingAsync) return; // prevent overlapping futures
+    _isCapturingAsync = true;
+    try {
+      final image = await boundary.toImage(pixelRatio: 1.0);
       if (mounted) {
         setState(() {
           _backgroundImage?.dispose();
@@ -262,16 +295,11 @@ class _GlassEffectState extends State<GlassEffect>
       }
     } catch (e) {
       assert(() {
-        debugPrint(
-          '⚠️ [GlassEffect] Warning: Failed to capture background.\n'
-          '   Error: $e\n'
-          '   Refraction may not work correctly.',
-        );
+        debugPrint('[GlassEffect] toImage (web) failed: $e');
         return true;
       }());
-      // Intentionally ignore capture errors to prevent log spam in release
     } finally {
-      _isCapturing = false;
+      _isCapturingAsync = false;
     }
   }
 
@@ -661,10 +689,11 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
         // Keep in LOGICAL pixels (don't multiply by DPR)
         bgRelativeOffset = indGlobalPos - bgGlobalPos;
 
-        // Convert texture size from physical to LOGICAL pixels
+        // Image captured at pixelRatio: 1.0 — dimensions are already logical pixels.
+        // No DPR conversion needed (was previously physical→logical).
         bgSize = Size(
-          _backgroundImage!.width / _devicePixelRatio,
-          _backgroundImage!.height / _devicePixelRatio,
+          _backgroundImage!.width.toDouble(),
+          _backgroundImage!.height.toDouble(),
         );
       }
     }

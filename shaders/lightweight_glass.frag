@@ -11,12 +11,20 @@ precision highp float;
 // -----------------------------------------------------------------------------
 // UNIFORMS
 // -----------------------------------------------------------------------------
-uniform vec4 uData0; // 0..3 (size.x, size.y, origin.x, origin.y)
-uniform vec4 uData1; // 4..7 (glassColor)
+uniform vec4 uData0; // 0..3  (size.x, size.y, origin.x, origin.y)
+uniform vec4 uData1; // 4..7  (glassColor)
 uniform vec4 uData2; // 8..11 (thickness, lightDir.x, lightDir.y, lightIntensity)
 uniform vec4 uData3; // 12..15 (ambientStrength, saturation, refractiveIndex, chromaticAberration)
 uniform vec4 uData4; // 16..19 (cornerRadius, scale.x, scale.y, glowIntensity)
-uniform vec4 uData5; // 20..23 (densityFactor, indicatorWeight, pad1, pad2)
+uniform vec4 uData5; // 20..23 (densityFactor, indicatorWeight, specularSharpnessF, backdropLuma)
+// Slot 22 (uData5.z): specular sharpness level — passed as float 0.0/1.0/2.0, cast to int.
+// Flutter's FragmentShader API only supports setFloat — no setInt exists.
+// Passing as a float and rounding in GLSL gives an exact integer; the GPU
+// compiler still sees literal-constant exponents per if/else branch.
+// Slot 23 (uData5.w): backdropLuma — VQ4 content-adaptive strength proxy.
+//   Dart passes MediaQuery.platformBrightness: dark=0.15, light=0.85.
+//   When LiquidGlassScope is active the app is explicitly light/dark themed;
+//   the brightness flag is the correct per-app signal.
 
 // -----------------------------------------------------------------------------
 // iOS 26 LIQUID GLASS: AESTHETIC PARAMETERS (ORIGINAL CALIBRATION)
@@ -106,8 +114,13 @@ void main() {
   float uCornerRadius = uData4.x;
   vec2 uScale = uData4.yz;
   float uGlowIntensity = uData4.w;
-  float uDensityFactor = uData5.x;
+  float uDensityFactor   = uData5.x;
   float uIndicatorWeight = uData5.y;
+  // VQ4 + specular: packed into uData5.z / uData5.w to use correct slot 22/23
+  // (uSpecularSharpnessF was previously declared as a separate uniform at slot 24,
+  // but Dart only writes 23 floats. Packing into uData5.z fixes the alignment.)
+  float uSpecularSharpnessF = uData5.z; // 0=soft, 1=medium, 2=sharp
+  float uBackdropLuma       = uData5.w; // VQ4: 0.15=dark platform, 0.85=light platform
 
   // ---- STAGE 0: COORDINATE SYNC ----
   vec2 pixelCoord = FlutterFragCoord().xy;
@@ -132,6 +145,15 @@ void main() {
   vec2 grad = p - closest;
   vec2 surfaceNormal = (length(grad) > kNormalThreshold) ? normalize(grad) : vec2(0.0);
 
+  // normalZ: the Z component of the 3D surface normal (view-facing component).
+  // normalZ → 0 at the rim (surface nearly perpendicular to view ray)
+  // normalZ → 1 at flat interior (surface facing camera directly)
+  // Used for VQ2 Fresnel below. Derived analytically from the 2D SDF normal:
+  //   normalXY is already unit in the rim zone; normalZ = sqrt(1 - |normalXY|²)
+  // Clamped to avoid NaN from floating-point imprecision near unit-length border.
+  float normalZSq = max(0.0, 1.0 - dot(surfaceNormal, surfaceNormal));
+  float normalZ   = sqrt(normalZSq);
+
   // ---- STAGE 3: HAIRLINE MASK ----
   float effectiveBorder = kBorderThickness + uIndicatorWeight * 0.5;
   float effectiveSmoothing = smoothing * (1.0 + uIndicatorWeight * 0.5);
@@ -153,15 +175,86 @@ void main() {
   //   3. Higher opacity (+15% alpha) - More "solid" appearance
   //   4. Brighter rim (+5% brightness) - Enhanced frost/edge definition
   float densityFactor = uDensityFactor;
-  float thicknessNorm = uThickness / kThicknessReference;
-  float specularSharpness = (1.0 + (thicknessNorm - 1.0) * 0.15) * (1.0 + densityFactor * 0.2);
 
-  // ---- STAGE 4: DETERMINISTIC LIGHTING ----
-  // uLightDirection is passed from Dart as [cos(angle), -sin(angle)]
-  float lightCatch = max(dot(surfaceNormal, uLightDirection), 0.0);
-  float keySpecular = pow(lightCatch, kSpecularPowerPrimary * specularSharpness) * uLightIntensity;
-  float kickCatch = max(dot(surfaceNormal, -uLightDirection), 0.0);
-  float kickSpecular = pow(kickCatch, kSpecularPowerKick * specularSharpness) * uLightIntensity * kKickIntensity;
+  // Density elevation physics: elevated surfaces have a slightly tighter highlight.
+  // Applied as a multiplier on the specular, NOT on the exponent — the exponent is
+  // now fixed per enum variant (zero-transcendental multiply chain below).
+  // Range: 1.0 (normal) → 1.2 (fully elevated), continuous.
+  float thicknessNorm = uThickness / kThicknessReference;
+  float densitySpecularBoost = (1.0 + (thicknessNorm - 1.0) * 0.15) * (1.0 + densityFactor * 0.2);
+
+  // Decode specular level. Flutter's FragmentShader API only supports setFloat,
+  // so the Dart side passes 0.0/1.0/2.0 and we round() to get an exact int.
+  // The GPU compiler sees literal-constant exponents per branch and fully unrolls.
+  int specLevel = int(round(uSpecularSharpnessF));
+
+  // ---- STAGE 4: DETERMINISTIC LIGHTING (zero-transcendental specular) ----
+  // PP2 optimisation: The old code was:
+  //   pow(lightCatch, kSpecularPowerPrimary * specularSharpness)
+  // pow(x, uniform) compiles on Metal/Vulkan as exp(n·log(x)) — two transcendental
+  // ops per fragment. On Apple Metal, ARM Mali, and Qualcomm Adreno this is 4–8×
+  // slower than a multiply. kSpecularPowerPrimary * specularSharpness ranged 14–20.
+  //
+  // Fix: uSpecularSharpness is an integer uniform (0/1/2). Each branch uses a
+  // GLSL literal-constant exponent the GPU compiler sees at compilation time and
+  // fully unrolls into a pure multiply chain — zero transcendentals.
+  //
+  // Wave coherency bonus: all fragments in a glass surface share the same value.
+  // The driver eliminates dead branches for the entire draw call. In practice:
+  // one branch executes, the rest are compiled away — zero warp divergence.
+  //
+  // Exponents chosen as powers-of-2 for minimum multiply count:
+  //   n=8  → 3 multiplies  (soft:   x² → x⁴ → x⁸)
+  //   n=16 → 4 multiplies  (medium: x² → x⁴ → x⁸ → x¹⁶, iOS 26 default)
+  //   n=32 → 5 multiplies  (sharp:  x² → x⁴ → x⁸ → x¹⁶ → x³²)
+  // VQ1: Anisotropic specular — ported from liquid_glass_final_render.frag.
+  // Stretches the specular lobe 20% along the surface tangent to produce an oval
+  // highlight matching iOS 26, instead of a circular dot.
+  //
+  // Safe-length guard: at the interior (normalXY ≈ 0) clamp to 0.01 so the
+  // tangent computation is stable. The aniso effect is negligible there anyway.
+  float snLen  = max(length(surfaceNormal), 0.01);
+  vec2 tangent = vec2(-surfaceNormal.y, surfaceNormal.x) / snLen; // unit perp
+  vec2 anisoN  = normalize(surfaceNormal + tangent * 0.20);       // 20% stretch
+
+  float lightCatch = max(dot(anisoN, uLightDirection), 0.0);
+  float kickCatch  = max(dot(anisoN, -uLightDirection), 0.0);
+
+  float keySpecular;
+  float kickSpecular;
+  if (specLevel == 0) {
+    // soft: n=8 — 3 multiplies
+    float lc2 = lightCatch * lightCatch;
+    float lc4 = lc2 * lc2;
+    keySpecular = lc4 * lc4;
+    float kc2 = kickCatch * kickCatch;
+    float kc4 = kc2 * kc2;
+    kickSpecular = kc4 * kc4;
+  } else if (specLevel == 1) {
+    // medium: n=16 — 4 multiplies (iOS 26 default)
+    float lc2 = lightCatch * lightCatch;
+    float lc4 = lc2 * lc2;
+    float lc8 = lc4 * lc4;
+    keySpecular = lc8 * lc8;
+    float kc2 = kickCatch * kickCatch;
+    float kc4 = kc2 * kc2;
+    float kc8 = kc4 * kc4;
+    kickSpecular = kc8 * kc8;
+  } else {
+    // sharp: n=32 — 5 multiplies
+    float lc2 = lightCatch * lightCatch;
+    float lc4 = lc2 * lc2;
+    float lc8 = lc4 * lc4;
+    float lc16 = lc8 * lc8;
+    keySpecular = lc16 * lc16;
+    float kc2 = kickCatch * kickCatch;
+    float kc4 = kc2 * kc2;
+    float kc8 = kc4 * kc4;
+    float kc16 = kc8 * kc8;
+    kickSpecular = kc16 * kc16;
+  }
+  keySpecular  *= uLightIntensity * densitySpecularBoost;
+  kickSpecular *= uLightIntensity * kKickIntensity * densitySpecularBoost;
 
   // ---- STAGE 5: BODY LAYER (WITH SYNTHETIC DENSITY) ----
   float bodyIntensityBoost = kBodyAmbientBoost * (1.0 + uLightIntensity * kBodyIntensityScale);
@@ -217,11 +310,37 @@ void main() {
   // preserve luminance, so white glass on a white surface → overexposed white.
   finalColor = applyGlassColorLW(finalColor, uGlassColor);
 
-  // STAGE 7.7: COLOR SATURATION
-  // Apply HSL-style saturation adjustment to final color.
+  // STAGE 7.7: VQ4 CONTENT-ADAPTIVE STRENGTH + COLOR SATURATION
+  //
+  // Mirror of the VQ4 block in liquid_glass_final_render.frag.
+  //
+  // In the lightweight path there is no backdrop texture, so we use the
+  // platform brightness as the backdrop luma proxy:
+  //   uBackdropLuma = 0.15 → dark app theme → richer glass (strength 1.2)
+  //   uBackdropLuma = 0.85 → light app theme → subtler glass (strength 0.8)
+  //
+  // This matches how iOS 26 adaptive glass actually behaves at the system
+  // level: dark mode glass is heavier; light mode glass is lighter.
+  //
+  // Cost: 1 mix() for adaptiveStrength + 1 modified saturation mix() = 2 MADs.
+  float adaptiveStrength = mix(1.2, 0.8, uBackdropLuma);
+
+  // Adaptive saturation: same formula as Impeller path.
+  float adaptiveSaturation = uSaturation * adaptiveStrength;
   float luminance = dot(finalColor, LUMA_WEIGHTS);
-  finalColor = mix(vec3(luminance), finalColor, uSaturation);
+  finalColor = mix(vec3(luminance), finalColor, adaptiveSaturation);
   finalColor = clamp(finalColor, 0.0, 1.0);
+
+  // STAGE 7.8: VQ2 FRESNEL EDGE BRIGHTENING — ported from liquid_glass_final_render.frag.
+  // iOS 26 glass is subtly brighter at grazing angles even without a directional
+  // highlight. normalZ → 0 at the rim, → 1 at the flat interior.
+  // Gated by borderMask (equivalent to Impeller's edgeFactor) so the effect is
+  // confined to the rim zone and does not accumulate on interior pixels.
+  // VQ4: scale fresnel by adaptiveStrength — rim is crisper on dark content,
+  // softer on light content, matching iOS 26 rim behaviour.
+  // Fully branchless — zero GPU divergence.
+  float fresnel = (1.0 - normalZ) * borderMask * 0.10 * adaptiveStrength;
+  finalColor = clamp(finalColor + vec3(fresnel), 0.0, 1.0);
 
   fragColor = vec4(finalColor * finalAlpha, finalAlpha);
 }

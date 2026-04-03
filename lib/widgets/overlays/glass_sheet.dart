@@ -296,29 +296,35 @@ class GlassSheet extends StatelessWidget {
   }
 }
 
-/// Drag indicator widget for glass sheets.
+/// Drag indicator / grab handle widget for glass sheets.
 ///
 /// A small pill-shaped bar that indicates the sheet can be dragged,
-/// following iOS design guidelines.
+/// precisely matching iOS 26's `UISheetPresentationController` grabber:
+/// 36×4dp, white at ~35% opacity.
 class _GlassDragIndicator extends StatelessWidget {
   const _GlassDragIndicator({
     this.color,
   });
 
-  // Cache default drag indicator color to avoid allocations
-  static const _defaultColor =
-      Color(0x4DFFFFFF); // white.withValues(alpha: 0.3)
+  // iOS 26: white at 35% opacity — matches UISheetPresentationController grabber
+  static const _defaultColor = Color(0x59FFFFFF); // 35% white
 
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 5,
-      decoration: BoxDecoration(
-        color: color ?? _defaultColor,
-        borderRadius: BorderRadius.circular(2.5),
+    return Semantics(
+      // VoiceOver on iOS announces the grabber as "Drag to resize, double-tap
+      // and hold, then drag up or down." We approximate this.
+      label: 'Drag handle',
+      hint: 'Swipe down to dismiss',
+      child: Container(
+        width: 36,
+        height: 4, // iOS 26 spec: 4dp (not 5dp)
+        decoration: BoxDecoration(
+          color: color ?? _defaultColor,
+          borderRadius: BorderRadius.circular(2),
+        ),
       ),
     );
   }

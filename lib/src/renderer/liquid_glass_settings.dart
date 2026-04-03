@@ -2,6 +2,9 @@ import 'dart:math';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
+// [LOCAL PATCH]: GlassSpecularSharpness is our own type (not vendored).
+// It lives in lib/types/ not lib/src/renderer/.
+import '../../types/glass_specular_sharpness.dart';
 import 'liquid_glass_renderer.dart';
 import 'liquid_glass_render_scope.dart';
 
@@ -19,6 +22,7 @@ class LiquidGlassSettings with EquatableMixin {
     this.ambientStrength = 0,
     this.refractiveIndex = 1.2,
     this.saturation = 1.5,
+    this.specularSharpness = GlassSpecularSharpness.medium,
   });
 
   /// Creates [LiquidGlassSettings] using Figma-inspired parameter names.
@@ -44,6 +48,7 @@ class LiquidGlassSettings with EquatableMixin {
     double lightIntensity = 50,
     double lightAngle = 0.5 * pi,
     Color glassColor = const Color.fromARGB(0, 255, 255, 255),
+    GlassSpecularSharpness specularSharpness = GlassSpecularSharpness.medium,
   }) : this(
           visibility: visibility,
           refractiveIndex: 1 + (refraction / 100) * 0.2,
@@ -55,6 +60,7 @@ class LiquidGlassSettings with EquatableMixin {
           ambientStrength: 0.1,
           saturation: 1.5,
           glassColor: glassColor,
+          specularSharpness: specularSharpness,
         );
 
   /// Retrieves the nearest [LiquidGlassSettings] from the widget tree.
@@ -141,6 +147,15 @@ class LiquidGlassSettings with EquatableMixin {
   /// Defaults to 1.0
   final double saturation;
 
+  /// The sharpness of the specular highlight on the glass rim.
+  ///
+  /// Controls how tightly focused the specular lobe is. Each variant maps to
+  /// a fixed power-of-2 exponent the shader computes with a zero-transcendental
+  /// multiply chain — 3–5× faster than `pow()` on mobile GPUs.
+  ///
+  /// Defaults to [GlassSpecularSharpness.medium] which matches iOS 26.
+  final GlassSpecularSharpness specularSharpness;
+
   /// The effective saturation taking visibility into account.
   double get effectiveSaturation => 1 + (saturation - 1) * visibility;
 
@@ -157,6 +172,7 @@ class LiquidGlassSettings with EquatableMixin {
     double? ambientStrength,
     double? refractiveIndex,
     double? saturation,
+    GlassSpecularSharpness? specularSharpness,
   }) =>
       LiquidGlassSettings(
         visibility: visibility ?? this.visibility,
@@ -169,6 +185,7 @@ class LiquidGlassSettings with EquatableMixin {
         ambientStrength: ambientStrength ?? this.ambientStrength,
         refractiveIndex: refractiveIndex ?? this.refractiveIndex,
         saturation: saturation ?? this.saturation,
+        specularSharpness: specularSharpness ?? this.specularSharpness,
       );
 
   @override
@@ -183,5 +200,6 @@ class LiquidGlassSettings with EquatableMixin {
         ambientStrength,
         refractiveIndex,
         saturation,
+        specularSharpness,
       ];
 }

@@ -5,6 +5,7 @@ import '../../src/renderer/liquid_glass_renderer.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../types/glass_quality.dart';
+import 'glass_accessibility_scope.dart';
 import 'lightweight_liquid_glass.dart';
 import 'inherited_liquid_glass.dart';
 
@@ -80,6 +81,29 @@ class AdaptiveGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ---- IP1: ACCESSIBILITY FAST-PATH ----------------------------------------
+    // iOS 26 glass degrades to a solid frosted panel when "Reduce Transparency"
+    // is enabled. We honour the equivalent Flutter signal (highContrast, which
+    // is the closest available platform proxy for isReduceTransparencyEnabled).
+    //
+    // When triggered, the entire glass shader pipeline is bypassed. The fallback
+    // is a ClipRRect + BackdropFilter(blur) + semi-opaque tinted container —
+    // still visually layered, but with no refraction, no specular, and no
+    // chromatic aberration. Zero GPU shader cost.
+    //
+    // GlassAccessibilityScope must be in the widget tree for this to activate;
+    // without it, defaults.reduceTransparency = false and we proceed normally.
+    // --------------------------------------------------------------------------
+    final accessibilityData = GlassAccessibilityData.of(context);
+    if (accessibilityData.reduceTransparency) {
+      return _FrostedFallback(
+        shape: shape,
+        settings: settings,
+        clipBehavior: clipBehavior,
+        child: child,
+      );
+    }
+
     // If we are on Skia/Web, we CANNOT use LiquidGlass.grouped or withOwnLayer
     // because those will fall back to FakeGlass (solid color) inside the renderer.
     // We MUST use our LightweightLiquidGlass to get actual glass effects.
@@ -176,5 +200,76 @@ class AdaptiveGlass extends StatelessWidget {
         child: child,
       );
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _FrostedFallback — IP1 accessibility degradation surface
+//
+// Replaces the full glass shader pipeline when "Reduce Transparency" (or its
+// per-platform equivalent) is active. Fully cross-platform:
+//   • iOS / macOS : ClipRRect + BackdropFilter are both supported
+//   • Android     : BackdropFilter maps to RenderEffect blur (API 31+), Skia below
+//   • Web         : BackdropFilter maps to CSS backdrop-filter (all major browsers)
+//   • Windows     : Skia BlurImageFilter
+//   • Linux       : Skia BlurImageFilter
+//
+// No GLSL shaders, no FragmentShader, no Impeller-specific paths.
+// Result: a solid frosted panel with the glass tint color applied as a
+// semi-opaque overlay — matching iOS 26's Reduce Transparency behaviour.
+// ---------------------------------------------------------------------------
+class _FrostedFallback extends StatelessWidget {
+  const _FrostedFallback({
+    required this.shape,
+    required this.settings,
+    required this.child,
+    this.clipBehavior = Clip.antiAlias,
+  });
+
+  final LiquidShape shape;
+  final LiquidGlassSettings settings;
+  final Widget child;
+  final Clip clipBehavior;
+
+  // Resolve the corner radius from the shape for ClipRRect.
+  // Only LiquidRoundedRectangle / LiquidRoundedSuperellipse carry a radius;
+  // LiquidOval and other shapes fall back to 0 (ClipRRect acts as ClipRect).
+  BorderRadius get _borderRadius {
+    final r = switch (shape) {
+      LiquidRoundedRectangle(:final borderRadius) => borderRadius,
+      LiquidRoundedSuperellipse(:final borderRadius) => borderRadius,
+      _ => 0.0,
+    };
+    return BorderRadius.circular(r);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final blur = settings.effectiveBlur.clamp(1.0, 40.0);
+    final tint = settings.effectiveGlassColor;
+
+    // A neutral-to-tinted frosted overlay:
+    //  • BackdropFilter provides the blur (same sigma as the normal glass blur)
+    //  • The colored container gives a subtle tint that approximates the glass
+    //    body color without any refraction or specular highlights
+    //  • Opacity is intentionally higher than normal glass (0.55-0.70) to meet
+    //    the intent of Reduce Transparency — less see-through, more legible
+    final double frostedAlpha = (tint.a * 0.5 + 0.40).clamp(0.40, 0.80);
+    final frostedColor = tint.withValues(alpha: frostedAlpha);
+
+    return ClipRRect(
+      borderRadius: _borderRadius,
+      clipBehavior: clipBehavior,
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        child: Container(
+          decoration: BoxDecoration(
+            color: frostedColor,
+            borderRadius: _borderRadius,
+          ),
+          child: child,
+        ),
+      ),
+    );
   }
 }

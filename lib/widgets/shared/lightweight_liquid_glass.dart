@@ -198,6 +198,14 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass> {
         (widget.settings == null ||
             widget.settings?.blur == inherited?.settings.blur);
 
+    // VQ4: Content-adaptive glass strength proxy.
+    // The lightweight shader has no backdrop texture, so platform brightness
+    // is used as the luma estimate — dark mode → richer glass (0.15),
+    // light mode → subtler glass (0.85). Maps to adaptiveStrength [1.2, 0.8]
+    // in the shader, matching iOS 26's adaptive material behaviour.
+    final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final backdropLuma = isDark ? 0.15 : 0.85;
+
     if (shader == null) {
       // Shader not ready yet - show fallback
       return ClipPath(
@@ -219,6 +227,7 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass> {
         glowIntensity: widget.glowIntensity,
         densityFactor: widget.densityFactor,
         indicatorWeight: widget.indicatorWeight,
+        backdropLuma: backdropLuma,
         child: widget.child,
       ),
     );
@@ -234,6 +243,7 @@ class _LightweightGlassEffect extends SingleChildRenderObjectWidget {
     required this.glowIntensity,
     required this.densityFactor,
     required this.indicatorWeight,
+    required this.backdropLuma,
     required super.child,
   });
 
@@ -245,6 +255,9 @@ class _LightweightGlassEffect extends SingleChildRenderObjectWidget {
   final double densityFactor;
   final double indicatorWeight;
 
+  /// VQ4: [0.15] for dark platform, [0.85] for light platform.
+  final double backdropLuma;
+
   @override
   RenderObject createRenderObject(BuildContext context) {
     return _RenderLightweightGlass(
@@ -255,6 +268,7 @@ class _LightweightGlassEffect extends SingleChildRenderObjectWidget {
       glowIntensity: glowIntensity,
       densityFactor: densityFactor,
       indicatorWeight: indicatorWeight,
+      backdropLuma: backdropLuma,
     );
   }
 
@@ -270,7 +284,8 @@ class _LightweightGlassEffect extends SingleChildRenderObjectWidget {
       ..skipBlur = skipBlur
       ..glowIntensity = glowIntensity
       ..densityFactor = densityFactor
-      ..indicatorWeight = indicatorWeight;
+      ..indicatorWeight = indicatorWeight
+      ..backdropLuma = backdropLuma;
   }
 }
 
@@ -283,13 +298,15 @@ class _RenderLightweightGlass extends RenderProxyBox {
     required double glowIntensity,
     required double densityFactor,
     required double indicatorWeight,
+    required double backdropLuma,
   })  : _shader = shader,
         _settings = settings,
         _shape = shape,
         _skipBlur = skipBlur,
         _glowIntensity = glowIntensity,
         _densityFactor = densityFactor,
-        _indicatorWeight = indicatorWeight;
+        _indicatorWeight = indicatorWeight,
+        _backdropLuma = backdropLuma;
 
   ui.FragmentShader _shader;
   ui.FragmentShader get shader => _shader;
@@ -344,6 +361,14 @@ class _RenderLightweightGlass extends RenderProxyBox {
   set indicatorWeight(double value) {
     if (_indicatorWeight == value) return;
     _indicatorWeight = value;
+    markNeedsPaint();
+  }
+
+  double _backdropLuma;
+  double get backdropLuma => _backdropLuma;
+  set backdropLuma(double value) {
+    if (_backdropLuma == value) return;
+    _backdropLuma = value;
     markNeedsPaint();
   }
 
@@ -522,5 +547,19 @@ class _RenderLightweightGlass extends RenderProxyBox {
 
     // 21: uIndicatorWeight (float) - Indicator style (0.0-1.0)
     _shader.setFloat(index++, _indicatorWeight.clamp(0.0, 1.0));
+
+    // 22 (uData5.z): uSpecularSharpnessF (float-encoded int)
+    // 0.0=soft(n=8), 1.0=medium(n=16), 2.0=sharp(n=32)
+    // PP2: Flutter's FragmentShader API only exposes setFloat (no setInt). We pass
+    // 0.0/1.0/2.0 exactly and the shader does int(round()) to recover the integer.
+    // The GPU compiler still sees literal-constant exponents per if/else branch.
+    // NOTE: Previously declared as a separate `uniform float uSpecularSharpnessF`
+    // at slot 24, but Dart only wrote 23 floats — so slot 24 was always 0 (soft).
+    // Fixed: packed into uData5.z so the slot index matches exactly.
+    _shader.setFloat(index++, _settings.specularSharpness.glslIndex.toDouble());
+
+    // 23 (uData5.w): backdropLuma — VQ4 content-adaptive strength
+    // 0.15 = dark platform (richer glass), 0.85 = light platform (subtler glass)
+    _shader.setFloat(index++, _backdropLuma.clamp(0.0, 1.0));
   }
 }

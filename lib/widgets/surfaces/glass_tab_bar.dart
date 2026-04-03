@@ -4,6 +4,7 @@ import '../../utils/glass_spring.dart';
 
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
+import '../../utils/glass_indicator_tap_mixin.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/animated_glass_indicator.dart';
 import '../shared/inherited_liquid_glass.dart';
@@ -349,7 +350,8 @@ class _TabBarContent extends StatefulWidget {
   State<_TabBarContent> createState() => _TabBarContentState();
 }
 
-class _TabBarContentState extends State<_TabBarContent> {
+class _TabBarContentState extends State<_TabBarContent>
+    with GlassIndicatorTapMixin<_TabBarContent> {
   // Cache default colors to avoid allocations
   static const _defaultIndicatorColor =
       Color(0x33FFFFFF); // white.withValues(alpha: 0.2)
@@ -381,6 +383,7 @@ class _TabBarContentState extends State<_TabBarContent> {
   }
 
   void _onDragDown(DragDownDetails details) {
+    cancelIndicatorTapTimer(); // DX1
     setState(() {
       _isDown = true;
       _xAlign = _getAlignmentFromGlobalPosition(details.globalPosition);
@@ -503,8 +506,8 @@ class _TabBarContentState extends State<_TabBarContent> {
             spring: GlassSpring.snappy(
               duration: const Duration(milliseconds: 300),
             ),
-            // Show glass indicator when dragging or far from target
-            value: _isDown || (alignment.x - targetAlignment).abs() > 0.15
+            // DX1: threshold 0.15 → 0.05 for desktop click visibility
+            value: _isDown || (alignment.x - targetAlignment).abs() > 0.05
                 ? 1.0
                 : 0.0,
             builder: (context, thickness, child) {
@@ -559,6 +562,16 @@ class _TabBarContentState extends State<_TabBarContent> {
             tab: tab,
             isSelected: isSelected,
             onTap: () => _onTabTap(index),
+            onTapDown: () => handleIndicatorTapDown(
+              setIsDown: (v) => _isDown = v,
+              snapAlign: () => _xAlign = _computeXAlignmentForTab(index),
+            ),
+            onLongPress: () => keepIndicatorDown(
+              setIsDown: (v) => _isDown = v,
+            ),
+            onLongPressEnd: () => releaseIndicatorDown(
+              setIsDown: (v) => setState(() => _isDown = v),
+            ),
             labelStyle: isSelected ? selectedStyle : unselectedStyle,
             iconColor: isSelected ? selectedIconColor : unselectedIconColor,
             iconSize: widget.iconSize,
@@ -587,6 +600,9 @@ class _TabItem extends StatelessWidget {
     required this.tab,
     required this.isSelected,
     required this.onTap,
+    required this.onTapDown, // DX1
+    required this.onLongPress, // DX1 long-press hold
+    required this.onLongPressEnd, // DX1 long-press release
     required this.labelStyle,
     required this.iconColor,
     required this.iconSize,
@@ -596,6 +612,9 @@ class _TabItem extends StatelessWidget {
   final GlassTab tab;
   final bool isSelected;
   final VoidCallback onTap;
+  final VoidCallback onTapDown; // DX1
+  final VoidCallback onLongPress; // DX1 long-press hold
+  final VoidCallback onLongPressEnd; // DX1 long-press release
   final TextStyle labelStyle;
   final Color iconColor;
   final double iconSize;
@@ -642,6 +661,9 @@ class _TabItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onTapDown: (_) => onTapDown(), // DX1
+      onLongPress: onLongPress, // DX1 long-press: keep indicator visible
+      onLongPressEnd: (_) => onLongPressEnd(), // DX1 long-press: hide on lift
       behavior: HitTestBehavior.opaque,
       child: Semantics(
         button: true,
