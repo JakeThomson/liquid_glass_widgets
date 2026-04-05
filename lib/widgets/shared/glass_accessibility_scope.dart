@@ -112,8 +112,9 @@ class GlassAccessibilityData {
     if (inherited != null) return inherited.data;
 
     // 2. If the global flag is off, skip MediaQuery entirely.
-    if (!glass_config.respectSystemAccessibility)
+    if (!glass_config.respectSystemAccessibility) {
       return GlassAccessibilityData.defaults;
+    }
 
     // 3. Read system flags so accessibility is respected with no dev setup.
     return GlassAccessibilityData(

@@ -1003,7 +1003,6 @@ class _TabIndicatorState extends State<_TabIndicator>
     cancelIndicatorTapTimer(); // DX1
     setState(() {
       _isDown = true;
-      _xAlign = _getAlignmentFromGlobalPosition(details.globalPosition);
     });
   }
 
@@ -1167,7 +1166,9 @@ class _TabIndicatorState extends State<_TabIndicator>
         child: VelocitySpringBuilder(
           value: _xAlign,
           springWhenActive: GlassSpring.interactive(),
-          springWhenReleased: GlassSpring.bouncy(),
+          springWhenReleased: GlassSpring.snappy(
+            duration: const Duration(milliseconds: 350),
+          ),
           active: _isDragging,
           builder: (context, value, velocity, child) {
             final alignment = Alignment(value, 0);

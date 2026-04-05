@@ -1,3 +1,13 @@
+# 0.7.1
+
+### Bug Fixes
+
+- **FIX**: `GlassBottomBar`, `GlassTabBar`, and `GlassSegmentedControl` pointer event handling.
+  - Resolved an interaction glitch on desktop platforms (macOS/Web) where quickly tapping a segment or tab would prematurely snap the alignment, killing the spring physics and causing the indicator to teleport rather than smoothly jump.
+  - Removed raw pixel-snapping from the `onHorizontalDragDown` handler. Pure taps now correctly leverage the full spatial distance between segments to generate an authentic iOS jump animation.
+
+---
+
 # 0.7.0
 
 ### New Components

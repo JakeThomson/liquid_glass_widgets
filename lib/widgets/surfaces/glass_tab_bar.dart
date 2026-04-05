@@ -386,7 +386,6 @@ class _TabBarContentState extends State<_TabBarContent>
     cancelIndicatorTapTimer(); // DX1
     setState(() {
       _isDown = true;
-      _xAlign = _getAlignmentFromGlobalPosition(details.globalPosition);
     });
   }
 
@@ -486,62 +485,100 @@ class _TabBarContentState extends State<_TabBarContent>
     final unselectedIconColor =
         widget.unselectedIconColor ?? _defaultUnselectedIconColor;
 
-    return GestureDetector(
-      onHorizontalDragDown: _onDragDown,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
-      onHorizontalDragCancel: () => setState(() {
-        _isDragging = false;
-        _isDown = false;
-      }),
-      child: VelocitySpringBuilder(
-        value: _xAlign,
-        springWhenActive: GlassSpring.interactive(),
-        springWhenReleased: GlassSpring.bouncy(),
-        active: _isDragging,
-        builder: (context, value, velocity, child) {
-          final alignment = Alignment(value, 0);
-
-          return SpringBuilder(
-            spring: GlassSpring.snappy(
-              duration: const Duration(milliseconds: 300),
-            ),
-            // DX1: threshold 0.15 → 0.05 for desktop click visibility
-            value: _isDown || (alignment.x - targetAlignment).abs() > 0.05
-                ? 1.0
-                : 0.0,
-            builder: (context, thickness, child) {
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // Unified Glass Indicator with jelly physics
-                  // The internal cross-fade in AnimatedGlassIndicator prevents flickering
-                  AnimatedGlassIndicator(
-                    velocity: velocity,
-                    itemCount: widget.tabs.length,
-                    alignment: alignment,
-                    thickness: thickness,
-                    quality: widget.quality,
-                    indicatorColor: indicatorColor,
-                    isBackgroundIndicator:
-                        false, // Internal logic now handles both
-                    borderRadius: widget.indicatorBorderRadius?.topLeft.x ?? 16,
-                    glassSettings: widget.indicatorSettings,
-                    backgroundKey: widget.backgroundKey,
-                  ),
-
-                  child!,
-                ],
-              );
-            },
-            child: _buildTabLabels(
-              selectedLabelStyle,
-              unselectedLabelStyle,
-              selectedIconColor,
-              unselectedIconColor,
-            ),
-          );
+    return Listener(
+      onPointerDown: (_) {
+        cancelIndicatorTapTimer();
+        setState(() => _isDown = true);
+      },
+      onPointerUp: (_) {
+        if (!_isDragging) {
+          cancelIndicatorTapTimer();
+          setState(() => _isDown = false);
+        }
+      },
+      onPointerCancel: (_) {
+        if (!_isDragging) {
+          cancelIndicatorTapTimer();
+          setState(() => _isDown = false);
+        }
+      },
+      child: GestureDetector(
+        onHorizontalDragDown: _onDragDown,
+        onHorizontalDragUpdate: _onDragUpdate,
+        onHorizontalDragEnd: _onDragEnd,
+        onHorizontalDragCancel: () {
+          if (_isDragging) {
+            final currentRelativeX = (_xAlign + 1) / 2;
+            final targetTabIndex = _computeTargetTab(
+              currentRelativeX: currentRelativeX,
+              velocityX: 0,
+              tabWidth: 1.0 / widget.tabs.length,
+            );
+            setState(() {
+              _isDragging = false;
+              _isDown = false;
+              _xAlign = _computeXAlignmentForTab(targetTabIndex);
+            });
+            if (targetTabIndex != widget.selectedIndex) {
+              widget.onTabSelected(targetTabIndex);
+            }
+          } else {
+            setState(
+                () => _xAlign = _computeXAlignmentForTab(widget.selectedIndex));
+          }
         },
+        child: VelocitySpringBuilder(
+          value: _xAlign,
+          springWhenActive: GlassSpring.interactive(),
+          springWhenReleased: GlassSpring.snappy(
+            duration: const Duration(milliseconds: 350),
+          ),
+          active: _isDragging,
+          builder: (context, value, velocity, child) {
+            final alignment = Alignment(value, 0);
+
+            return SpringBuilder(
+              spring: GlassSpring.snappy(
+                duration: const Duration(milliseconds: 300),
+              ),
+              // DX1: threshold 0.15 → 0.05 for desktop click visibility
+              value: _isDown || (alignment.x - targetAlignment).abs() > 0.05
+                  ? 1.0
+                  : 0.0,
+              builder: (context, thickness, child) {
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Unified Glass Indicator with jelly physics
+                    // The internal cross-fade in AnimatedGlassIndicator prevents flickering
+                    AnimatedGlassIndicator(
+                      velocity: velocity,
+                      itemCount: widget.tabs.length,
+                      alignment: alignment,
+                      thickness: thickness,
+                      quality: widget.quality,
+                      indicatorColor: indicatorColor,
+                      isBackgroundIndicator:
+                          false, // Internal logic now handles both
+                      borderRadius:
+                          widget.indicatorBorderRadius?.topLeft.x ?? 16,
+                      glassSettings: widget.indicatorSettings,
+                      backgroundKey: widget.backgroundKey,
+                    ),
+
+                    child!,
+                  ],
+                );
+              },
+              child: _buildTabLabels(
+                selectedLabelStyle,
+                unselectedLabelStyle,
+                selectedIconColor,
+                unselectedIconColor,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -562,16 +599,11 @@ class _TabBarContentState extends State<_TabBarContent>
             tab: tab,
             isSelected: isSelected,
             onTap: () => _onTabTap(index),
-            onTapDown: () => handleIndicatorTapDown(
-              setIsDown: (v) => _isDown = v,
-              snapAlign: () => _xAlign = _computeXAlignmentForTab(index),
-            ),
-            onLongPress: () => keepIndicatorDown(
-              setIsDown: (v) => _isDown = v,
-            ),
-            onLongPressEnd: () => releaseIndicatorDown(
-              setIsDown: (v) => setState(() => _isDown = v),
-            ),
+            onTapDown: () {
+              if (index != widget.selectedIndex) {
+                widget.onTabSelected(index);
+              }
+            },
             labelStyle: isSelected ? selectedStyle : unselectedStyle,
             iconColor: isSelected ? selectedIconColor : unselectedIconColor,
             iconSize: widget.iconSize,
@@ -600,9 +632,7 @@ class _TabItem extends StatelessWidget {
     required this.tab,
     required this.isSelected,
     required this.onTap,
-    required this.onTapDown, // DX1
-    required this.onLongPress, // DX1 long-press hold
-    required this.onLongPressEnd, // DX1 long-press release
+    required this.onTapDown,
     required this.labelStyle,
     required this.iconColor,
     required this.iconSize,
@@ -612,9 +642,7 @@ class _TabItem extends StatelessWidget {
   final GlassTab tab;
   final bool isSelected;
   final VoidCallback onTap;
-  final VoidCallback onTapDown; // DX1
-  final VoidCallback onLongPress; // DX1 long-press hold
-  final VoidCallback onLongPressEnd; // DX1 long-press release
+  final VoidCallback onTapDown;
   final TextStyle labelStyle;
   final Color iconColor;
   final double iconSize;
@@ -661,9 +689,7 @@ class _TabItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      onTapDown: (_) => onTapDown(), // DX1
-      onLongPress: onLongPress, // DX1 long-press: keep indicator visible
-      onLongPressEnd: (_) => onLongPressEnd(), // DX1 long-press: hide on lift
+      onTapDown: (_) => onTapDown(),
       behavior: HitTestBehavior.opaque,
       child: Semantics(
         button: true,

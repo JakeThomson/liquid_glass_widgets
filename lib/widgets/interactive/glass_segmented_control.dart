@@ -395,7 +395,6 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent>
     cancelIndicatorTapTimer(); // DX1: cancel pending tap-clear if a drag starts
     setState(() {
       _isDown = true;
-      _xAlign = _getAlignmentFromGlobalPosition(details.globalPosition);
     });
   }
 
@@ -483,117 +482,153 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent>
           color: _defaultUnselectedTextColor,
         );
 
-    return GestureDetector(
-      onHorizontalDragDown: _onDragDown,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
-      onHorizontalDragCancel: () => setState(() {
-        _isDragging = false;
-        _isDown = false;
-      }),
-      child: VelocitySpringBuilder(
-        value: _xAlign,
-        springWhenActive: GlassSpring.interactive(),
-        springWhenReleased: GlassSpring.bouncy(),
-        active: _isDragging,
-        builder: (context, value, velocity, child) {
-          final alignment = Alignment(value, 0);
+    return Listener(
+      // Raw pointer events fire BEFORE gesture recognizers and never compete
+      // in the gesture arena, so _isDown is always set on the very first event.
+      onPointerDown: (_) {
+        cancelIndicatorTapTimer();
+        setState(() => _isDown = true);
+      },
+      // On finger/button lift, clear _isDown if not mid-drag.
+      // Listener fires regardless of which gesture recognizer won the arena.
+      onPointerUp: (_) {
+        if (!_isDragging) {
+          cancelIndicatorTapTimer();
+          setState(() => _isDown = false);
+        }
+      },
+      onPointerCancel: (_) {
+        if (!_isDragging) {
+          cancelIndicatorTapTimer();
+          setState(() => _isDown = false);
+        }
+      },
+      child: GestureDetector(
+        onHorizontalDragDown: _onDragDown,
+        onHorizontalDragUpdate: _onDragUpdate,
+        onHorizontalDragEnd: _onDragEnd,
+        onHorizontalDragCancel: () {
+          if (_isDragging) {
+            final currentRelativeX = (_xAlign + 1) / 2;
+            final targetSegmentIndex = _computeTargetSegment(
+              currentRelativeX: currentRelativeX,
+              velocityX: 0,
+              segmentWidth: 1.0 / widget.segments.length,
+            );
+            setState(() {
+              _isDragging = false;
+              _isDown = false;
+              _xAlign = _computeXAlignmentForSegment(targetSegmentIndex);
+            });
+            if (targetSegmentIndex != widget.selectedIndex) {
+              widget.onSegmentSelected(targetSegmentIndex);
+            }
+          } else {
+            setState(() =>
+                _xAlign = _computeXAlignmentForSegment(widget.selectedIndex));
+          }
+        },
+        child: VelocitySpringBuilder(
+          value: _xAlign,
+          springWhenActive: GlassSpring.interactive(),
+          springWhenReleased: GlassSpring.snappy(
+            duration: const Duration(milliseconds: 350),
+          ),
+          active: _isDragging,
+          builder: (context, value, velocity, child) {
+            final alignment = Alignment(value, 0);
 
-          return SpringBuilder(
-            spring: GlassSpring.snappy(
-              duration: const Duration(milliseconds: 300),
-            ),
-            // Show glass indicator when: down, dragging, OR close to target.
-            // DX1: threshold lowered 0.15 → 0.05 so the indicator stays visible
-            // through more of the settling spring, making the animation legible
-            // even on desktop where drag velocity is zero.
-            value: _isDown || (alignment.x - targetAlignment).abs() > 0.05
-                ? 1.0
-                : 0.0,
-            builder: (context, thickness, child) {
-              // Wrap entire indicator stack in RepaintBoundary to prevent
-              // background and glass indicators from causing separate flickers
-              return RepaintBoundary(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Subtle background indicator (shown when not dragging)
-                    // Parent isolation prevents flickering with GlassCard
-                    // Unified Glass Indicator with jelly physics
-                    // The internal cross-fade in AnimatedGlassIndicator prevents flickering
-                    AnimatedGlassIndicator(
-                      velocity: velocity,
-                      itemCount: widget.segments.length,
-                      alignment: alignment,
-                      thickness: thickness,
-                      quality: widget.quality,
-                      indicatorColor: indicatorColor,
-                      isBackgroundIndicator:
-                          false, // Internal logic now handles both
-                      borderRadius: indicatorRadius,
-                      glassSettings: widget.indicatorSettings,
-                      backgroundKey: widget.backgroundKey,
-                    ),
+            return SpringBuilder(
+              spring: GlassSpring.snappy(
+                duration: const Duration(milliseconds: 300),
+              ),
+              // Show glass indicator when: down, dragging, OR close to target.
+              // DX1: threshold lowered 0.15 → 0.05 so the indicator stays visible
+              // through more of the settling spring, making the animation legible
+              // even on desktop where drag velocity is zero.
+              value: _isDown || (alignment.x - targetAlignment).abs() > 0.05
+                  ? 1.0
+                  : 0.0,
+              builder: (context, thickness, child) {
+                // Wrap entire indicator stack in RepaintBoundary to prevent
+                // background and glass indicators from causing separate flickers
+                return RepaintBoundary(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Subtle background indicator (shown when not dragging)
+                      // Parent isolation prevents flickering with GlassCard
+                      // Unified Glass Indicator with jelly physics
+                      // The internal cross-fade in AnimatedGlassIndicator prevents flickering
+                      AnimatedGlassIndicator(
+                        velocity: velocity,
+                        itemCount: widget.segments.length,
+                        alignment: alignment,
+                        thickness: thickness,
+                        quality: widget.quality,
+                        indicatorColor: indicatorColor,
+                        isBackgroundIndicator:
+                            false, // Internal logic now handles both
+                        borderRadius: indicatorRadius,
+                        glassSettings: widget.indicatorSettings,
+                        backgroundKey: widget.backgroundKey,
+                      ),
 
-                    // Segment labels (always on top, not affected by glass)
-                    child!,
-                  ],
-                ),
-              );
-            },
-            child: Row(
-              children: [
-                for (var i = 0; i < widget.segments.length; i++)
-                  Expanded(
-                    child: RepaintBoundary(
-                      child: GestureDetector(
-                        onTap: () => _onSegmentTap(i),
-                        onTapDown: (_) => handleIndicatorTapDown(
-                          setIsDown: (v) => _isDown = v,
-                          snapAlign: () =>
-                              _xAlign = _computeXAlignmentForSegment(i),
-                        ),
-                        onLongPress: () => keepIndicatorDown(
-                          setIsDown: (v) => _isDown = v,
-                        ),
-                        onLongPressEnd: (_) => releaseIndicatorDown(
-                          setIsDown: (v) => setState(() => _isDown = v),
-                        ),
-                        behavior: HitTestBehavior.opaque,
-                        child: Semantics(
-                          button: true,
-                          selected: widget.selectedIndex == i,
-                          label: widget.segments[i],
-                          child: Center(
-                            child: AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 200),
-                              style: widget.selectedIndex == i
-                                  ? selectedTextStyle
-                                  : unselectedTextStyle,
-                              child: Text(
-                                widget.segments[i],
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                      // Segment labels (always on top, not affected by glass)
+                      child!,
+                    ],
+                  ),
+                );
+              },
+              child: Row(
+                children: [
+                  for (var i = 0; i < widget.segments.length; i++)
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: GestureDetector(
+                          onTap: () => _onSegmentTap(i),
+                          onTapDown: (_) {
+                            // DX1: trigger selection immediately on touch down
+                            if (i != widget.selectedIndex) {
+                              widget.onSegmentSelected(i);
+                            }
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: Semantics(
+                            button: true,
+                            selected: widget.selectedIndex == i,
+                            label: widget.segments[i],
+                            child: Center(
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 200),
+                                style: widget.selectedIndex == i
+                                    ? selectedTextStyle
+                                    : unselectedTextStyle,
+                                child: Text(
+                                  widget.segments[i],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          );
-        },
-        child: Row(
-          children: [
-            for (var i = 0; i < widget.segments.length; i++)
-              Expanded(
-                child: Center(
-                  child: Text(widget.segments[i]),
-                ),
+                ],
               ),
-          ],
+            );
+          },
+          child: Row(
+            children: [
+              for (var i = 0; i < widget.segments.length; i++)
+                Expanded(
+                  child: Center(
+                    child: Text(widget.segments[i]),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
