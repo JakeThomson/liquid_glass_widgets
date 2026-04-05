@@ -126,10 +126,16 @@ void main() {
   vec2 pixelCoord = FlutterFragCoord().xy;
   vec2 localLogical = (pixelCoord - uOrigin) / uScale;
 
-  // ---- STAGE 1: SDF SHAPE ----
+  // ---- STAGE 1: SDF SHAPE & COMBINED NORMALS ----
+  // OPTIMIZATION: We merge SDF distance calculation with surface normal generation.
+  // The vector maxQ generated for the SDF exactly defines the surface gradient!
   vec2 halfSize = uSize * 0.5;
-  vec2 q = abs(localLogical - halfSize) - halfSize + uCornerRadius;
-  float dist = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uCornerRadius;
+  vec2 p = localLogical - halfSize;
+  vec2 q = abs(p) - halfSize + uCornerRadius;
+  
+  vec2 maxQ = max(q, 0.0);
+  float maxQLen = length(maxQ);
+  float dist = maxQLen + min(max(q.x, q.y), 0.0) - uCornerRadius;
   float smoothing = 1.0 / uScale.x;
   float mask = 1.0 - smoothstep(-smoothing, smoothing, dist);
 
@@ -139,20 +145,20 @@ void main() {
   }
 
   // ---- STAGE 2: SURFACE NORMALS ----
-  vec2 innerHalfSize = uSize * 0.5 - uCornerRadius;
-  vec2 p = localLogical - halfSize;
-  vec2 closest = clamp(p, -innerHalfSize, innerHalfSize);
-  vec2 grad = p - closest;
-  vec2 surfaceNormal = (length(grad) > kNormalThreshold) ? normalize(grad) : vec2(0.0);
+  // Since gradient is analytically derived from maximum positive divergence,
+  // we do not need to re-clamp and calculate vector magnitudes.
+  bool isEdge = maxQLen > kNormalThreshold;
+  vec2 surfaceNormal = isEdge ? (sign(p) * maxQ / maxQLen) : vec2(0.0);
 
   // normalZ: the Z component of the 3D surface normal (view-facing component).
   // normalZ → 0 at the rim (surface nearly perpendicular to view ray)
   // normalZ → 1 at flat interior (surface facing camera directly)
-  // Used for VQ2 Fresnel below. Derived analytically from the 2D SDF normal:
-  //   normalXY is already unit in the rim zone; normalZ = sqrt(1 - |normalXY|²)
-  // Clamped to avoid NaN from floating-point imprecision near unit-length border.
-  float normalZSq = max(0.0, 1.0 - dot(surfaceNormal, surfaceNormal));
-  float normalZ   = sqrt(normalZSq);
+  // Used by VQ2 Fresnel at Stage 7.8. Must be computed from dot(n,n) — not
+  // collapsed to a binary int — because the SDF normal varies smoothly across
+  // the corner arc, producing a continuous grazing-angle ramp that drives the
+  // iOS 26 rim brightening effect. A binary snap would turn this into a hard
+  // step, eliminating the smooth Fresnel highlight on rounded corners.
+  float normalZ = sqrt(max(0.0, 1.0 - dot(surfaceNormal, surfaceNormal)));
 
   // ---- STAGE 3: HAIRLINE MASK ----
   float effectiveBorder = kBorderThickness + uIndicatorWeight * 0.5;
@@ -207,15 +213,15 @@ void main() {
   //   n=8  → 3 multiplies  (soft:   x² → x⁴ → x⁸)
   //   n=16 → 4 multiplies  (medium: x² → x⁴ → x⁸ → x¹⁶, iOS 26 default)
   //   n=32 → 5 multiplies  (sharp:  x² → x⁴ → x⁸ → x¹⁶ → x³²)
-  // VQ1: Anisotropic specular — ported from liquid_glass_final_render.frag.
-  // Stretches the specular lobe 20% along the surface tangent to produce an oval
-  // highlight matching iOS 26, instead of a circular dot.
-  //
-  // Safe-length guard: at the interior (normalXY ≈ 0) clamp to 0.01 so the
-  // tangent computation is stable. The aniso effect is negligible there anyway.
-  float snLen  = max(length(surfaceNormal), 0.01);
-  vec2 tangent = vec2(-surfaceNormal.y, surfaceNormal.x) / snLen; // unit perp
-  vec2 anisoN  = normalize(surfaceNormal + tangent * 0.20);       // 20% stretch
+  
+  // VQ1: Anisotropic specular
+  // Mathematical shortcut: surfaceNormal is strictly length 1.0 (if isEdge)
+  // or 0.0. We avoid length(), division, and normalize() entirely.
+  // length(surfaceNormal + tangent*0.2) = sqrt(1.0 + 0.04) = 1.0198039
+  // 1.0 / 1.0198039 = 0.9805806
+  vec2 anisoN = isEdge 
+      ? (surfaceNormal + vec2(-surfaceNormal.y, surfaceNormal.x) * 0.2) * 0.9805806
+      : vec2(0.0);
 
   float lightCatch = max(dot(anisoN, uLightDirection), 0.0);
   float kickCatch  = max(dot(anisoN, -uLightDirection), 0.0);

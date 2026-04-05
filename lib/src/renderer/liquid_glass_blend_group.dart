@@ -395,10 +395,13 @@ class GlassGroupLink with ChangeNotifier {
   final Map<RenderLiquidGlass, (LiquidShape shape, bool glassContainsChild)>
       _shapes = {};
 
-  List<
+  /// Shape entries as an iterable — returned directly from the underlying Map
+  /// without allocating a new List. All call sites only need to iterate, never
+  /// index, so Iterable is sufficient and avoids 2–3 heap allocations per frame.
+  Iterable<
       MapEntry<RenderLiquidGlass,
           (LiquidShape shape, bool glassContainsChild)>> get shapeEntries =>
-      _shapes.entries.toList();
+      _shapes.entries;
 
   /// Check if any shapes are registered.
   bool get hasShapes => _shapes.isNotEmpty;

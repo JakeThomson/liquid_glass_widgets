@@ -14,20 +14,10 @@ float sdfRect(vec2 p, vec2 b) {
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
-// sdfSquircle uses a correct Euclidean rounded-rectangle SDF (same math as
-// sdfRRect). The algebraic n=4 superellipse approach was tried but reverted
-// because it degenerates catastrophically for pill shapes where
-// r ≈ min(b.x, b.y): the inner half-size collapses to (large, ~0), causing
-// the y-axis division to explode. Every interior pixel evaluated as sd >= 0,
-// making the geometry matte all-zero and the glass effect completely invisible.
-// A correct Euclidean superellipse SDF requires Newton-Raphson root finding —
-// too expensive for a real-time mobile shader hot path.
-float sdfSquircle(vec2 p, vec2 b, float r) {
-    float shortest = min(b.x, b.y);
-    r = min(r, shortest);
-    vec2 q = abs(p) - b + r;
-    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
-}
+// NOTE: sdfSquircle was removed — it was byte-for-byte identical to sdfRRect.
+// A true Euclidean superellipse SDF requires Newton-Raphson root finding which
+// is too expensive for a real-time mobile shader hot path. Both shape types
+// (squircle/superellipse and rounded rectangle) now route to sdfRRect.
 
 float sdfEllipse(vec2 p, vec2 r) {
     r = max(r, 1e-4);
@@ -58,8 +48,8 @@ float smoothUnion(float d1, float d2, float k) {
 // SDF functions for every pixel. Return 0.0 (inside shape) for unknown
 // types so a misconfigured shape fails visibly rather than silently.
 float getShapeSDF(float type, vec2 p, vec2 center, vec2 size, float r) {
-    if (type == 1.0) {        // squircle / superellipse
-        return sdfSquircle(p - center, size / 2.0, r);
+    if (type == 1.0) {        // squircle / superellipse → uses same SDF as rounded rect
+        return sdfRRect(p - center, size / 2.0, r);
     } else if (type == 2.0) { // ellipse / circle
         return sdfEllipse(p - center, size / 2.0);
     } else if (type == 3.0) { // rounded rectangle

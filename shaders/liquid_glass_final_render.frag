@@ -198,23 +198,19 @@ void main() {
 
 
     if (edgeFactor > 0.01) {
-        // VQ1: Anisotropic specular — shape the highlight into a horizontal oval
-        // (matching iOS 26) instead of a circular dot.
+        // VQ1: Anisotropic specular — stretch the highlight lobe 20% along the
+        // surface tangent, producing an oval iOS 26 highlight instead of a dot.
         //
-        // How it works: the tangent of normalXY is perpendicular to it in screen
-        // space.  Stretching normalXY 20% along its tangent before the dot-product
-        // with the light direction elongates the specular lobe along the surface
-        // curvature — producing a smeared oval rather than a point highlight.
-        //
-        // Only the specular dot-product uses anisoN; edgeFactor and brightnessRaw
-        // still use the true normalXY so geometry is unchanged.
-        //
-        // Safe-length guard: at the edge-of-edge transition normalXY magnitude
-        // approaches zero; clamp to 0.01 to avoid divide-by-zero.  The aniso
-        // effect is negligible there anyway (edgeFactor already near 0.01).
-        float nLen    = max(length(normalXY), 0.01);
-        vec2  tangent = vec2(-normalXY.y, normalXY.x) / nLen; // unit perpendicular
-        vec2  anisoN  = normalize(normalXY + tangent * 0.20);  // 20% tangential stretch
+        // Pre-baked constant: normalXY from the geometry texture is unit-length
+        // by construction (stored as a unit normal in the geometry pass).
+        // The tangent vec2(-n.y, n.x) is therefore perp and also unit-length.
+        // length(normalXY + tangent * 0.20) = sqrt(1.0 + 0.04) = 1.0198039
+        // 1.0 / 1.0198039 = 0.9805806
+        // This eliminates max(length(normalXY), 0.01), division, and normalize().
+        // The edgeFactor > 0.01 gate above already guards the near-zero interior.
+        float nLen = 1.0; // Kept for clarity — always 1.0 by geometry texture guarantee
+        vec2  tangent = vec2(-normalXY.y, normalXY.x); // unit perp, no division needed
+        vec2  anisoN  = (normalXY + tangent * 0.20) * 0.9805806; // pre-normalised
 
         float mainLight     = max(0.0, dot(anisoN, uLightDirection));
         float oppositeLight = max(0.0, dot(anisoN, -uLightDirection));

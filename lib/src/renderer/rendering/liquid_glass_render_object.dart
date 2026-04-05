@@ -26,13 +26,22 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   })  : _settings = settings,
         _devicePixelRatio = devicePixelRatio,
         _backdropKey = backdropKey,
-        _link = link {
+        _link = link,
+        _cachedLightDir = Offset(
+          cos(settings.lightAngle),
+          -sin(settings.lightAngle),
+        ) {
     _updateShaderSettings();
   }
 
   static final logger = Logger(LgrLogNames.render);
 
   final FragmentShader renderShader;
+
+  /// Cached light direction vector — updated only when [settings.lightAngle]
+  /// changes. Avoids recomputing cos/sin on every _updateShaderSettings() call
+  /// (which fires for any property change: visibility, blur, color, etc.).
+  Offset _cachedLightDir;
 
   /// The size that the geometry texture should have.
   Size get desiredMatteSize;
@@ -51,6 +60,13 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   LiquidGlassSettings get settings => _settings!;
   set settings(LiquidGlassSettings value) {
     if (_settings == value) return;
+    // Only recompute the trig if lightAngle actually changed.
+    if (value.lightAngle != _settings?.lightAngle) {
+      _cachedLightDir = Offset(
+        cos(value.lightAngle),
+        -sin(value.lightAngle),
+      );
+    }
     _settings = value;
     _updateShaderSettings();
     markNeedsPaint();
@@ -126,13 +142,9 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           settings.effectiveAmbientStrength,
           settings.effectiveSaturation,
         ])
-        ..setOffset(
-          Offset(
-            cos(settings.lightAngle),
-            -sin(settings
-                .lightAngle), // Negative: Flutter screen Y points down, angle is CCW from +X
-          ),
-        );
+        // Use pre-cached direction — cos/sin only recomputed when lightAngle changes,
+        // not on every visibility, blur, or color animation frame.
+        ..setOffset(_cachedLightDir);
     });
   }
 

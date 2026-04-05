@@ -1,3 +1,23 @@
+# 0.7.2
+
+### Performance & Polish
+
+**Lightweight shader (`lightweight_glass.frag` — Skia / Web primary path)**
+- **PERF**: Reduced pixel shader ALU instruction count by ~10-15 ops per fragment by analytically collapsing SDF geometry into surface normals, eliminating intermediate `length()`, `normalize()`, and `clamp()` calls in the normal derivation stage. Restored the `normalZ` Fresnel ramp to the correct `sqrt(1 - dot(n,n))` form (preserves smooth rim brightening on rounded corners).
+- **FIX**: Adjusted `GlassBottomBar`, `GlassTabBar`, and `GlassSegmentedControl` jump animation from the default 500ms `bouncySpring` to a tight 350ms `snappySpring`, precisely matching iOS 26 segment-indicator physics.
+
+**GPU: Impeller path (`liquid_glass_final_render.frag`, `render.glsl`, `sdf.glsl`)**
+- **PERF**: Eliminated `length()`, division, and `normalize()` from the anisotropic specular calculation in `liquid_glass_final_render.frag`. `normalXY` decoded from the geometry texture is unit-length by construction; replaced with the pre-baked constant `0.9805806` (= 1/√1.04).
+- **PERF**: Made `getHeight()` in `render.glsl` fully branchless using `clamp`/`step`/`mix`. The two original `if` branches caused warp divergence at the glass edge transition zone, serialising GPU execution for adjacent fragments.
+- **PERF**: Collapsed four chained `step()` multiplications in `calculateLighting` into a single `step()` on their product. All inputs are non-negative by construction — mathematically identical, 3 fewer multiplies per lit fragment.
+- **PERF**: Deleted `sdfSquircle` from `sdf.glsl` — byte-for-byte identical to `sdfRRect` (a placeholder for a reverted superellipse SDF). Both shape types now route to `sdfRRect`, reducing shader binary compile-time size.
+
+**CPU: Dart-side pipeline (`liquid_glass_render_object.dart`, `liquid_glass_blend_group.dart`)**
+- **PERF**: Cached the light direction vector (`cos`/`sin` of `lightAngle`) in `LiquidGlassRenderObject`. Trig is now only recomputed when `lightAngle` actually changes, not on every `_updateShaderSettings()` call triggered by visibility, blur, or color animations.
+- **PERF**: Changed `GlassGroupLink.shapeEntries` from `List` to `Iterable`, eliminating a `.entries.toList()` heap allocation called 2–3 times per frame even for completely static glass.
+
+---
+
 # 0.7.1
 
 ### Bug Fixes

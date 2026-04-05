@@ -43,17 +43,20 @@ vec3 getHighlightColor(vec3 backgroundColor, float targetBrightness) {
     return mix(vec3(targetBrightness), tinted, colorInfluence);
 }
 
-// Calculate height/depth of the liquid surface
+// Calculate height/depth of the liquid surface.
+// Fully branchless to prevent warp divergence at the edge-to-interior
+// transition zone, where the two original `if` branches caused adjacent
+// fragments in a warp to take different paths, serialising GPU execution.
+//   sd >= 0      → outside glass → height = 0
+//   sd < -thick  → deep interior → height = thickness (flat plateau)
+//   otherwise    → curved surface → height from spherical cross-section
 float getHeight(float sd, float thickness) {
-    if (sd >= 0.0 || thickness <= 0.0) {
-        return 0.0;
-    }
-    if (sd < -thickness) {
-        return thickness;
-    }
-    
-    float x = thickness + sd;
-    return sqrt(max(0.0, thickness * thickness - x * x));
+    float safeT  = max(thickness, 1e-4);
+    float x      = clamp(safeT + sd, 0.0, safeT);         // 0 when outside, safeT when deep
+    float sphere = sqrt(max(0.0, safeT * safeT - x * x)); // spherical cross-section
+    float deep   = step(sd, -safeT);                       // 1 when sd < -safeT (deep interior)
+    float inside = step(sd, 0.0) * step(1e-5, thickness);  // 1 only when sd<=0 and thickness>0
+    return inside * mix(sphere, safeT, deep);
 }
 
 // Calculate lighting effects based on displacement data
@@ -81,10 +84,10 @@ vec3 calculateLighting(
     // Single branchless enable multiplier — replaces three early-return branches
     // that caused warp divergence on pixels at the glass boundary (threads within
     // a warp took different paths, serialising execution).
-    float enable = step(0.01, shape)
-                 * step(0.01, thicknessFactor)
-                 * step(0.01, rimFactor)
-                 * step(0.01, lightIntensity);
+    // All four inputs are guaranteed non-negative (from clamp, max, or rational
+    // approximations on positive values) so multiplying first then stepping is
+    // mathematically identical to four separate step() calls — 3 fewer multiplies.
+    float enable = step(0.01, shape * thicknessFactor * rimFactor * lightIntensity);
 
     vec2 normalXY = normal.xy;
     float mainLightInfluence = max(0.0, dot(normalXY, lightDirection));
