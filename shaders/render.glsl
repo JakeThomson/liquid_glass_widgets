@@ -5,10 +5,8 @@
 // Constants
 const vec3 LUMA_WEIGHTS = vec3(0.299, 0.587, 0.114);
 
-// Utility functions
-mat2 rotate2d(float angle) {
-    return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-}
+// NOTE: rotate2d() was removed — it was never called by any shader and was
+// compiled into every shader binary that includes render.glsl for no benefit.
 
 // Compute Y coordinate reversing it for OpenGL backend
 float computeY(float coordY, vec2 size) {

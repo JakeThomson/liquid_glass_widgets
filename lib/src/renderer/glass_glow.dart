@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:meta/meta.dart';
@@ -53,12 +55,28 @@ class GlassGlow extends StatelessWidget {
 
   void _handlePointer(BuildContext context, PointerEvent event) {
     final layerState = GlassGlowLayer.maybeOf(context);
+    if (layerState == null) return;
 
-    layerState?.updateTouch(
-      event.localPosition,
-      radius: glowRadius,
-      color: glowColor,
-    );
+    // GlassGlowLayer may be at a different level than GlassGlow — e.g. a
+    // toolbar GlassGlowLayer wrapping three buttons, each with their own
+    // GlassGlow. event.localPosition is relative to this GlassGlow widget,
+    // not relative to the GlassGlowLayer. We must convert via global space.
+    final myBox = context.findRenderObject() as RenderBox?;
+    final layerBox = layerState.context.findRenderObject() as RenderBox?;
+
+    final Offset pos;
+    if (myBox != null &&
+        layerBox != null &&
+        myBox.attached &&
+        layerBox.attached) {
+      // local-in-GlassGlow → global screen → local-in-GlassGlowLayer
+      pos = layerBox.globalToLocal(myBox.localToGlobal(event.localPosition));
+    } else {
+      // Fallback for tests or during layout (same-level case is also correct).
+      pos = event.localPosition;
+    }
+
+    layerState.updateTouch(pos, radius: glowRadius, color: glowColor);
   }
 
   void _removeTouch(BuildContext context) {
@@ -142,6 +160,10 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
 
     if (!_dragging) {
       _dragging = true;
+      // Snap to the exact touch point immediately so the glow appears right
+      // where the finger lands — not at Offset.zero drifting over. Alpha then
+      // fades in at the correct position instead of mid-spring.
+      _offsetController.value = offset;
       _alphaController.spring = GlassSpring.interactive();
       _radiusController.spring = GlassSpring.interactive();
       _alphaController.animateTo(1, fromVelocity: 0);
@@ -253,38 +275,29 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
   @override
   void paint(PaintingContext context, Offset offset) {
     if (_glowColor.a == 0 || _glowRadius <= 0) {
-      // No glow to paint
       super.paint(context, offset);
       return;
     }
 
-    final canvas = context.canvas..save();
-
     final glowPosition = offset + _glowOffset;
+    // Geometric mean of width and height so the spotlight scales proportionally
+    // to the button area — not just the short side. For a 56x56 circle this is
+    // identical to shortestSide; for a 300x56 wide pill it gives ~130px instead
+    // of 56px, covering the glass surface correctly like iOS 26.
+    final radius = _glowRadius * math.sqrt(size.width * size.height);
 
-    final gradient = RadialGradient(
-      colors: [
-        _glowColor,
-        _glowColor.withValues(alpha: 0),
-      ],
-      stops: const [0.0, 1.0],
-    );
-
-    final radius = _glowRadius * size.shortestSide;
-
+    // RadialGradient.createShader() bakes the center position into the shader
+    // via the Rect passed to it — caching across position changes is incorrect.
+    // Per-frame creation is cheap for a simple radial gradient (uniform-only).
     final paint = Paint()
-      ..shader = gradient.createShader(
-        Rect.fromCircle(center: glowPosition, radius: radius),
-      )
+      ..shader = RadialGradient(
+        colors: [_glowColor, _glowColor.withValues(alpha: 0)],
+        stops: const [0.0, 1.0],
+      ).createShader(Rect.fromCircle(center: glowPosition, radius: radius))
       ..blendMode = BlendMode.plus;
 
-    canvas
-      ..drawCircle(
-        glowPosition,
-        radius,
-        paint,
-      )
-      ..restore();
+    // No canvas save/restore needed — we don't modify canvas state.
+    context.canvas.drawCircle(glowPosition, radius, paint);
     super.paint(context, offset);
   }
 }

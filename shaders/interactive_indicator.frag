@@ -107,7 +107,10 @@ void main() {
   vec2 closestOnSkeleton = clamp(p, -innerHalfSize, innerHalfSize);
   vec2 toEdge = p - closestOnSkeleton;
   float edgeLen = length(toEdge);
-  vec2 surfaceNormal = (edgeLen > 0.001) ? normalize(toEdge) : vec2(0.0);
+  // Reuse edgeLen for the division — normalize(toEdge) would recompute length()
+  // internally. Dividing by the already-computed scalar saves one length() call
+  // per fragment in the surface normal path.
+  vec2 surfaceNormal = (edgeLen > 0.001) ? (toEdge / edgeLen) : vec2(0.0);
   
   // ==========================================================================
   // BACKGROUND REFRACTION (THE MAIN EFFECT)

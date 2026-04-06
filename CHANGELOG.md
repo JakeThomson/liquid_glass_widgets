@@ -1,3 +1,25 @@
+# 0.7.3
+
+### Performance — Dead Code Removal & Runtime Optimizations
+
+**GPU: Shader binary size & instruction count**
+- **PERF**: Deleted `rotate2d()` from `render.glsl` — it was compiled into every shader binary that includes this shared library but was never called anywhere in the codebase. Removes a `cos()`/`sin()` pair and one `mat2` construction from each compiled shader.
+- **PERF**: Eliminated redundant `normalize()` call in `interactive_indicator.frag`. `length(toEdge)` was already computed as `edgeLen`; `normalize(toEdge)` was then recomputing the same length internally. Replaced with the algebraically identical `toEdge / edgeLen` to reuse the already-computed scalar.
+
+**CPU: Dart-side paint loop (`glass_glow.dart`)**
+- **PERF**: Removed unnecessary `canvas.save()`/`canvas.restore()` pair in `_RenderGlassGlowLayer.paint()` — no canvas state was being modified between them, making the push/pop overhead pure waste.
+
+### Bug Fixes
+
+- **FIX**: Corrected `_RenderGlassGlowLayer` glow tracking. A previous paint optimisation incorrectly assumed that `RadialGradient.createShader()` could be cached across position changes. In practice, `createShader(Rect.fromCircle(center: pos, ...))` bakes the gradient center into the shader at call time — reusing the cached `Paint` when `glowOffset` changed left the gradient frozen at its original position, causing the glow to snap to a fixed colour instead of following the pointer. The shader is now correctly recreated each frame (cheap for a simple radial gradient) and the `canvas.save()`/`restore()` removal is retained.
+- **FIX**: Position-tracking glow now works on the Skia/Web (lightweight) path. `GlassGlow` captures pointer events and routes them to `GlassGlowLayer` via `maybeOf(context)` — but `LightweightLiquidGlass` never wrapped its child in `GlassGlowLayer`, so `maybeOf()` returned null and all pointer events were silently dropped. Added `GlassGlowLayer` wrapping to `LightweightLiquidGlass`, matching the Impeller path in `LiquidGlass`. The position-tracking spotlight (`RadialGradient` + `BlendMode.plus`) is renderer-agnostic and now gives the Skia/Web path the same iOS 26 light-follows-touch behavior as Impeller.
+- **FIX**: Glow spotlight on first touch now appears immediately at the tap position. `_offsetController` previously initialised at `Offset.zero` and spring-animated to the touch point while alpha was simultaneously fading in — causing the glow to briefly appear at the widget's top-left corner and slide over. Fixed by snapping `_offsetController.value` to the touch position before starting the alpha animation, so the spotlight materialises at the exact tap location with no drift.
+- **FIX**: Glow spotlight now tracks correctly inside button groups and toolbars. `GlassGlow` was passing `event.localPosition` (relative to the individual button widget) directly to `GlassGlowLayer`, which may live at the group/container level rather than the button level. Every button in a toolbar therefore sent a small offset like `(28, 28)` that always resolved to the same left-side position on the toolbar glass. Fixed by converting `event.localPosition` through global screen space to the `GlassGlowLayer`'s own local coordinate system (`myBox.localToGlobal → layerBox.globalToLocal`), which is correct regardless of how many levels separate `GlassGlow` from its owning `GlassGlowLayer`. Transform chains (scroll views, rotations, scales) are handled automatically.
+- **FIX**: Glow radius now scales correctly on wide buttons. The previous formula (`glowRadius × shortestSide`) produced a 56 px spotlight on a 300×56 px pill button — a tiny isolated circle. Replaced with the geometric mean (`glowRadius × √(width × height)`) which scales proportionally to the button area. For square/round buttons the result is identical; for wide pill buttons the spotlight now covers the glass surface proportionally, matching iOS 26 behaviour.
+
+---
+
+
 # 0.7.2
 
 ### Performance & Polish

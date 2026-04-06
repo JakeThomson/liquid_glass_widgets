@@ -207,16 +207,22 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass> {
     final backdropLuma = isDark ? 0.15 : 0.85;
 
     if (shader == null) {
-      // Shader not ready yet - show fallback
+      // Shader not ready yet - show fallback.
+      // Still wrap in GlassGlowLayer so GlassGlow.maybeOf() works during hot reload.
       return ClipPath(
         clipper: ShapeBorderClipper(shape: widget.shape),
         child: Container(
           color: settings.effectiveGlassColor.withValues(alpha: 0.15),
-          child: widget.child,
+          child: GlassGlowLayer(child: widget.child),
         ),
       );
     }
 
+    // Wrap child in GlassGlowLayer so that GlassGlow.maybeOf() finds a valid
+    // ancestor on the Skia/Web path. Without this, GlassGlow captured pointer
+    // events but had no GlassGlowLayerState to route them to — the position-
+    // tracking spotlight was silently dropped. _RenderGlassGlowLayer is pure
+    // canvas (RadialGradient + BlendMode.plus) and is renderer-agnostic.
     return ClipPath(
       clipper: ShapeBorderClipper(shape: widget.shape),
       child: _LightweightGlassEffect(
@@ -228,7 +234,7 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass> {
         densityFactor: widget.densityFactor,
         indicatorWeight: widget.indicatorWeight,
         backdropLuma: backdropLuma,
-        child: widget.child,
+        child: GlassGlowLayer(child: widget.child),
       ),
     );
   }
