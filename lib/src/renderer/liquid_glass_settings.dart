@@ -1,9 +1,8 @@
-import 'dart:math';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 // [LOCAL PATCH]: GlassSpecularSharpness is our own type (not vendored).
 // It lives in lib/types/ not lib/src/renderer/.
+import '../../constants/glass_defaults.dart';
 import '../../types/glass_specular_sharpness.dart';
 import 'liquid_glass_renderer.dart';
 import 'liquid_glass_render_scope.dart';
@@ -17,7 +16,7 @@ class LiquidGlassSettings with EquatableMixin {
     this.thickness = 20,
     this.blur = 5,
     this.chromaticAberration = .01,
-    this.lightAngle = 0.5 * pi,
+    this.lightAngle = GlassDefaults.lightAngle,
     this.lightIntensity = .5,
     this.ambientStrength = 0,
     this.refractiveIndex = 1.2,
@@ -46,7 +45,7 @@ class LiquidGlassSettings with EquatableMixin {
     required double frost,
     double visibility = 1.0,
     double lightIntensity = 50,
-    double lightAngle = 0.5 * pi,
+    double lightAngle = GlassDefaults.lightAngle,
     Color glassColor = const Color.fromARGB(0, 255, 255, 255),
     GlassSpecularSharpness specularSharpness = GlassSpecularSharpness.medium,
   }) : this(

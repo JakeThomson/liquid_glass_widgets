@@ -1,7 +1,6 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_widgets/constants/glass_defaults.dart';
 import 'package:liquid_glass_widgets/src/renderer/liquid_glass_settings.dart';
 
 void main() {
@@ -20,8 +19,8 @@ void main() {
       test('ambientStrength is 0', () => expect(s.ambientStrength, 0));
       test('chromaticAberration is 0.01',
           () => expect(s.chromaticAberration, 0.01));
-      test('lightAngle is π/2',
-          () => expect(s.lightAngle, closeTo(0.5 * pi, 1e-10)));
+      test('lightAngle is 3π/4 (GlassDefaults.lightAngle — iOS 26 upper-left)',
+          () => expect(s.lightAngle, closeTo(GlassDefaults.lightAngle, 1e-10)));
       test('glassColor is fully transparent white', () {
         expect(s.glassColor, const Color.fromARGB(0, 255, 255, 255));
       });

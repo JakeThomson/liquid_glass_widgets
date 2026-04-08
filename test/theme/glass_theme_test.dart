@@ -316,7 +316,9 @@ void main() {
     });
 
     test('fallback has sensible defaults', () {
-      expect(GlassGlowColors.fallback.primary, isNotNull);
+      // primary is intentionally null — glowColorsFor() injects a
+      // brightness-adaptive neutral white at runtime (iOS 26 interaction model).
+      expect(GlassGlowColors.fallback.primary, isNull);
       expect(GlassGlowColors.fallback.secondary, isNotNull);
       expect(GlassGlowColors.fallback.success, isNotNull);
       expect(GlassGlowColors.fallback.warning, isNotNull);

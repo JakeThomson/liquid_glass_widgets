@@ -58,8 +58,14 @@ class GlassGlowColors {
   }
 
   /// Fallback glow colors with sensible defaults.
+  ///
+  /// The primary color is intentionally left null here so that
+  /// [GlassThemeData.glowColorsFor] can substitute a brightness-aware warm
+  /// specular highlight at runtime (more visible in light mode, more restrained
+  /// in dark mode where the glass surface is already luminous).
   static const GlassGlowColors fallback = GlassGlowColors(
-    primary: Color(0xFF007AFF), // iOS blue
+    // primary is null — resolved at runtime by glowColorsFor() based on
+    // current brightness. See GlassThemeData.glowColorsFor.
     secondary: Color(0xFF5856D6), // iOS purple
     success: Color(0xFF34C759), // iOS green
     warning: Color(0xFFFF9500), // iOS orange
@@ -244,8 +250,31 @@ class GlassThemeData {
   }
 
   /// Gets glow colors for current brightness.
+  ///
+  /// If the caller has not set an explicit [GlassGlowColors.primary], this
+  /// method substitutes a brightness-aware neutral white specular highlight
+  /// matching the iOS 26 press feedback model. iOS 26 glass surfaces produce
+  /// a bright, grey-white highlight on interaction — like light diffracting
+  /// through frosted glass — not a colored or dim tint.
+  ///
+  /// Opacity is higher in light mode (glass is more transparent, highlight
+  /// needs more presence) and slightly lower in dark mode (the glass surface
+  /// is already luminous from the dark blurred background).
   GlassGlowColors glowColorsFor(BuildContext context) {
-    return variantFor(context).glowColors ?? GlassGlowColors.fallback;
+    final colors = variantFor(context).glowColors ?? GlassGlowColors.fallback;
+
+    // Only inject the adaptive primary when the caller has not provided one.
+    if (colors.primary != null) return colors;
+
+    final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    // 0x59 = ~35% opacity in light mode; 0x38 = ~22% opacity in dark mode.
+    // Pure neutral white (0xFFFFFF) — iOS 26 highlights are bright and grey-white,
+    // not warm or tinted. The BlendMode.plus compositing in GlassGlowLayer keeps
+    // this from blowing out even at higher opacity values.
+    final adaptivePrimary =
+        isDark ? const Color(0x38FFFFFF) : const Color(0x59FFFFFF);
+
+    return colors.copyWith(primary: adaptivePrimary);
   }
 
   /// Creates a copy with overridden values.

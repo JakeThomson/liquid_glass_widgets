@@ -1,3 +1,19 @@
+# 0.7.4
+
+### New Components
+
+- **`GlassSearchableBottomBar`** — `GlassBottomBar` with a morphing search pill that shares the same `AdaptiveLiquidGlassLayer` as the tab pill, producing iOS 26 liquid-merge blending between them. When `isSearchActive` is `true` the tab pill collapses and the search pill expands via spring animation. Configured via `GlassSearchBarConfig` (hint text, mic icon, logo builder, text controller).
+
+### Examples
+
+- **Apple News demo** (`example/lib/apple_news/apple_news_demo.dart`) — iOS 26 Apple News replica showcasing `GlassSearchableBottomBar`. Run with `flutter run -t example/lib/apple_news/apple_news_demo.dart`.
+
+### Visual Fixes
+
+- **FIX**: Default glow color on press changed from iOS system blue to a brightness-adaptive neutral white (`~35%` light / `~22%` dark), matching the bright grey-white highlight iOS 26 glass produces on interaction. Explicit `glowColor` values are unaffected.
+
+---
+
 # 0.7.3
 
 ### Performance — Dead Code Removal & Runtime Optimizations

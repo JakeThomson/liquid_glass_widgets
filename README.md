@@ -1,6 +1,6 @@
 # Liquid Glass Widgets
 
-Bring Apple's iOS 26 Liquid Glass to your Flutter app — 36 glass widgets with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
+Bring Apple's iOS 26 Liquid Glass to your Flutter app — 37 glass widgets with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
 
 [![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg)](https://pub.dev/packages/liquid_glass_widgets)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -13,7 +13,7 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 
 ## Features
 
-- **36 glass widgets** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces
+- **37 glass widgets** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces
 - **Real frosted glass** — native two-pass Gaussian blur + shader refraction on Impeller; lightweight shader on Skia/Web
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
 - **Zero dependencies** — no third-party runtime libraries, just the Flutter SDK
@@ -32,9 +32,19 @@ A premium app demonstrating `liquid_glass_widgets` in a real-world production co
 cd example/showcase && flutter pub get && flutter run
 ```
 
+### [Apple News Demo](example/lib/apple_news/) — iOS 26 Replica
+
+A recreation of the Apple News app demonstrating `GlassSearchableBottomBar` with its morphing search pill, category chips, hero cards, and rounded article tiles.
+
+```bash
+cd example && flutter pub get && flutter run -t lib/apple_news/apple_news_demo.dart
+```
+
+<img width="390" alt="Apple News Demo" src="https://github.com/user-attachments/assets/8da8f118-e5f8-40e0-9b0e-d4cd5633a5cf" />
+
 ### [Widget Showcase](example/) — Full Component Library
 
-A complete catalogue of all 36 widgets organized by category. Use it to explore every component, try live settings, and copy patterns directly into your app.
+A complete catalogue of all 37 widgets organized by category. Use it to explore every component, try live settings, and copy patterns directly into your app.
 
 ```bash
 cd example && flutter pub get && flutter run
@@ -61,14 +71,14 @@ cd example && flutter pub get && flutter run
 `GlassDialog` · `GlassSheet` · `GlassActionSheet` · `GlassMenu` · `GlassMenuItem`
 
 ### Surfaces
-`GlassAppBar` · `GlassBottomBar` · `GlassTabBar` · `GlassSideBar` · `GlassToolbar`
+`GlassAppBar` · `GlassBottomBar` · `GlassSearchableBottomBar` · `GlassTabBar` · `GlassSideBar` · `GlassToolbar`
 
 
 ## Installation
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.7.3
+  liquid_glass_widgets: ^0.7.4
 ```
 
 ```bash

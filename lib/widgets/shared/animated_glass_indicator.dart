@@ -116,13 +116,13 @@ class AnimatedGlassIndicator extends StatelessWidget {
     );
 
     // 1. Background Indicator (Resting state)
-    // Fade out as thickness increases
-    // NOTE: This is meant to show BEHIND content, not obscure it
+    // Fade out as the drag spring thickness increases toward 0.15.
+    // The caller is responsible for setting indicatorColor to the desired
+    // final opacity — there is no hidden multiplier applied here.
     final backgroundOpacity = (1.0 - (thickness / 0.15)).clamp(0.0, 1.0);
     final backgroundIndicator = IgnorePointer(
       child: Opacity(
-        opacity: backgroundOpacity *
-            0.5, // Reduced opacity to prevent obscuring content
+        opacity: backgroundOpacity,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: indicatorColor,

@@ -23,6 +23,7 @@ import '../shared/adaptive_glass.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/animated_glass_indicator.dart';
 import '../shared/inherited_liquid_glass.dart';
+import 'shared/bottom_bar_internal.dart';
 
 /// A glass morphism bottom navigation bar following Apple's design patterns.
 ///
@@ -183,6 +184,7 @@ class GlassBottomBar extends StatefulWidget {
     this.selectedIconColor = Colors.white,
     this.unselectedIconColor = Colors.white,
     this.iconSize = 24,
+    this.labelFontSize = 11,
     this.textStyle,
     this.glowDuration = const Duration(milliseconds: 300),
     this.glowBlurRadius = 32,
@@ -394,6 +396,15 @@ class GlassBottomBar extends StatefulWidget {
   /// Defaults to 24.
   final double iconSize;
 
+  /// Font size for tab labels.
+  ///
+  /// Only applies when [textStyle] is null. Mirrors [iconSize] as a dedicated
+  /// sizing knob so color and weight are still managed automatically.
+  ///
+  /// Defaults to 11. Reduce to 10 for bars with 4+ tabs or longer labels
+  /// such as "Following".
+  final double labelFontSize;
+
   /// Text style for tab labels.
   ///
   /// If null, uses default style with fontSize 11, and fontWeight that
@@ -487,18 +498,18 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                 tabPadding: widget.tabPadding,
                 backgroundKey: widget.backgroundKey,
                 maskingQuality: widget.maskingQuality,
-                // Pass unselected tabs (background layer)
                 childUnselected: Row(
                   children: [
                     for (var i = 0; i < widget.tabs.length; i++)
                       Expanded(
                         child: RepaintBoundary(
-                          child: _BottomBarTab(
+                          child: BottomBarTabItem(
                             tab: widget.tabs[i],
-                            selected: false, // Always render as unselected
+                            selected: false,
                             selectedIconColor: widget.selectedIconColor,
                             unselectedIconColor: widget.unselectedIconColor,
                             iconSize: widget.iconSize,
+                            labelFontSize: widget.labelFontSize,
                             textStyle: widget.textStyle,
                             iconLabelSpacing: widget.iconLabelSpacing,
                             glowDuration: widget.glowDuration,
@@ -521,7 +532,7 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
 
             // Optional extra button
             if (widget.extraButton != null)
-              _ExtraButton(
+              BottomBarExtraBtn(
                 config: widget.extraButton!,
                 quality: effectiveQuality,
                 iconColor:
@@ -560,12 +571,13 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                 ? RepaintBoundary(
                     child: Transform.scale(
                       scale: scale,
-                      child: _BottomBarTab(
+                      child: BottomBarTabItem(
                         tab: widget.tabs[i],
-                        selected: true, // Always render as selected
+                        selected: true,
                         selectedIconColor: widget.selectedIconColor,
                         unselectedIconColor: widget.unselectedIconColor,
                         iconSize: widget.iconSize,
+                        labelFontSize: widget.labelFontSize,
                         textStyle: widget.textStyle,
                         iconLabelSpacing: widget.iconLabelSpacing,
                         glowDuration: widget.glowDuration,
@@ -576,7 +588,7 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                       ),
                     ),
                   )
-                : const SizedBox.shrink(), // Skip distant tabs for performance
+                : const SizedBox.shrink(),
           ),
       ],
     );
@@ -696,214 +708,6 @@ class GlassBottomBarExtraButton {
   /// Defaults to 64 to match the default bar height.
   final double size;
 }
-
-// =============================================================================
-// Internal Widgets
-// =============================================================================
-
-/// Internal widget that renders a single tab.
-class _BottomBarTab extends StatelessWidget {
-  const _BottomBarTab({
-    required this.tab,
-    required this.selected,
-    required this.selectedIconColor,
-    required this.unselectedIconColor,
-    required this.iconSize,
-    required this.textStyle,
-    required this.iconLabelSpacing,
-    required this.glowDuration,
-    required this.glowBlurRadius,
-    required this.glowSpreadRadius,
-    required this.glowOpacity,
-    required this.onTap,
-  });
-
-  final GlassBottomBarTab tab;
-  final bool selected;
-  final Color selectedIconColor;
-  final Color unselectedIconColor;
-  final double iconSize;
-  final TextStyle? textStyle;
-  final double iconLabelSpacing;
-  final Duration glowDuration;
-  final double glowBlurRadius;
-  final double glowSpreadRadius;
-  final double glowOpacity;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor = selected ? selectedIconColor : unselectedIconColor;
-    final iconWidget = selected ? (tab.activeIcon ?? tab.icon) : tab.icon;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: tab.label ?? 'Tab',
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            spacing: iconLabelSpacing,
-            children: [
-              // Icon with optional glow effect
-              ExcludeSemantics(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Animated glow effect (if glowColor is provided)
-                    if (tab.glowColor != null)
-                      Positioned(
-                        top: -24,
-                        right: -24,
-                        left: -24,
-                        bottom: -24,
-                        child: RepaintBoundary(
-                          child: AnimatedContainer(
-                            duration: glowDuration,
-                            transformAlignment: Alignment.center,
-                            curve: Curves.easeOutCirc,
-                            transform: selected
-                                ? Matrix4.identity()
-                                : (Matrix4.identity()
-                                  ..scale(0.4)
-                                  ..rotateZ(-math.pi)),
-                            child: AnimatedOpacity(
-                              duration: glowDuration,
-                              opacity: selected ? 1 : 0,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: tab.glowColor!.withOpacity(
-                                        selected ? glowOpacity : 0,
-                                      ),
-                                      blurRadius: glowBlurRadius,
-                                      spreadRadius: glowSpreadRadius,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    // Icon widget wrapped in IconTheme so that standard Icon
-                    // widgets inherit the correct color, size, and shadows
-                    // automatically. Custom widgets (SVG, PNG, etc.) are
-                    // unaffected by IconTheme and handle styling themselves.
-                    IconTheme(
-                      data: IconThemeData(
-                        color: iconColor,
-                        size: iconSize,
-                        shadows: _buildIconShadows(),
-                      ),
-                      child: DefaultTextStyle(
-                        style: DefaultTextStyle.of(context).style.copyWith(
-                              color: iconColor,
-                            ),
-                        child: iconWidget,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              if (tab.label != null)
-                // Label text
-                Text(
-                  tab.label!,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: textStyle ??
-                      TextStyle(
-                        color: iconColor,
-                        fontSize: 11,
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.w500,
-                      ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Builds a circular shadow halo for the icon thickness effect.
-  ///
-  /// These shadows are applied via [IconTheme], so they only take effect on
-  /// standard [Icon] widgets. Custom widgets must handle shadows themselves.
-  ///
-  /// Only applied when [GlassBottomBarTab.thickness] is provided and the tab
-  /// is unselected (or selected without a different [GlassBottomBarTab.activeIcon]).
-  List<Shadow>? _buildIconShadows() {
-    // Only show thickness effect when:
-    // 1. thickness is provided
-    // 2. Tab is unselected OR selected without a different active icon
-    if (tab.thickness == null || (selected && tab.activeIcon != null)) {
-      return null;
-    }
-
-    // Create circular shadow halo by placing shadows around the icon
-    final shadows = <Shadow>[];
-    const angleStep = math.pi / 4; // 8 shadows evenly distributed
-
-    for (double angle = 0; angle < math.pi * 2; angle += angleStep) {
-      shadows.add(
-        Shadow(
-          color: selected ? selectedIconColor : unselectedIconColor,
-          offset: Offset.fromDirection(angle, tab.thickness!),
-        ),
-      );
-    }
-
-    return shadows;
-  }
-}
-
-/// Internal widget that renders the extra button using [GlassButton].
-class _ExtraButton extends StatelessWidget {
-  const _ExtraButton({
-    required this.config,
-    required this.quality,
-    required this.iconColor,
-    this.borderRadius,
-  });
-
-  final GlassBottomBarExtraButton config;
-  final GlassQuality quality;
-  final Color iconColor;
-  final double? borderRadius;
-
-  @override
-  Widget build(BuildContext context) {
-    // Compose with GlassButton following Apple's compositional pattern
-    return GlassButton(
-      icon: config.icon,
-      onTap: config.onTap,
-      label: config.label,
-      width: config.size,
-      height: config.size,
-      quality: quality,
-      iconColor: iconColor,
-      shape: borderRadius == null
-          ? const LiquidOval()
-          : LiquidRoundedRectangle(borderRadius: borderRadius!),
-    );
-  }
-}
-
-// =============================================================================
-// Draggable Indicator
-// =============================================================================
 
 /// Internal widget that manages the draggable indicator with physics.
 class _TabIndicator extends StatefulWidget {
