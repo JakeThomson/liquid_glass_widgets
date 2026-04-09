@@ -50,23 +50,32 @@ class GlassButtonGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Inherit quality from parent layer if not explicitly set
+    // Inherit quality from parent layer if not explicitly set.
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
     final effectiveQuality =
         quality ?? inherited?.quality ?? GlassQuality.standard;
 
-    return GlassContainer(
-      useOwnLayer: useOwnLayer,
-      quality: effectiveQuality,
-      settings: glassSettings,
-      shape: LiquidRoundedSuperellipse(borderRadius: borderRadius),
-      padding: EdgeInsets.zero,
-      child: IntrinsicHeight(
-        child: Flex(
-          direction: direction,
-          mainAxisSize: MainAxisSize.min,
-          children: _buildChildrenWithDividers(),
+    // ClipRRect constrains the glass layer to the pill boundary on all backends.
+    // On Impeller, LiquidGlass.withOwnLayer (premium + useOwnLayer) can bleed
+    // its backdrop-capture rectangle outside the shape; ClipRRect.antiAlias
+    // hard-clips that bleed without downgrading the children's rendering quality,
+    // while allowing the shader's internal specular rim-light to serve as the outline.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      clipBehavior: Clip.antiAlias,
+      child: GlassContainer(
+        useOwnLayer: useOwnLayer,
+        quality: effectiveQuality,
+        settings: glassSettings,
+        shape: LiquidRoundedSuperellipse(borderRadius: borderRadius),
+        padding: EdgeInsets.zero,
+        child: IntrinsicHeight(
+          child: Flex(
+            direction: direction,
+            mainAxisSize: MainAxisSize.min,
+            children: _buildChildrenWithDividers(),
+          ),
         ),
       ),
     );

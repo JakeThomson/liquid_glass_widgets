@@ -72,33 +72,56 @@ float sceneSDF(vec2 p, int numShapes, float shapeData[MAX_SHAPES * 6], float ble
     if (numShapes == 0) {
         return 1e9;
     }
-    
-    float result = getShapeSDFFromArray(0, p, shapeData);
-    
-    // Optimized: unroll for common cases (1-4 shapes), use loop for 5+ shapes
-    if (numShapes <= 4) {
-        // Fully unrolled for 1-4 shapes (covers 90%+ of use cases)
-        if (numShapes >= 2) {
-            float shapeSDF = getShapeSDFFromArray(1, p, shapeData);
-            result = smoothUnion(result, shapeSDF, blend);
-        }
-        if (numShapes >= 3) {
-            float shapeSDF = getShapeSDFFromArray(2, p, shapeData);
-            result = smoothUnion(result, shapeSDF, blend);
-        }
-        if (numShapes >= 4) {
-            float shapeSDF = getShapeSDFFromArray(3, p, shapeData);
-            result = smoothUnion(result, shapeSDF, blend);
-        }
-    } else {
-        // Dynamic loop for 5+ shapes (uncommon cases)
-        for (int i = 1; i < min(numShapes, MAX_SHAPES); i++) {
-            float shapeSDF = getShapeSDFFromArray(i, p, shapeData);
-            result = smoothUnion(result, shapeSDF, blend);
-        }
+
+    if (numShapes == 1) {
+        return getShapeSDFFromArray(0, p, shapeData);
     }
-    
-    return result;
+
+    // Symmetric smooth-union via bidirectional averaging.
+    //
+    // A pure L→R chain accumulates blend influence unevenly: the leftmost
+    // (first-registered) shape participates in N-1 smoothUnion calls while
+    // the rightmost participates in only 1. This makes left buttons attract
+    // their neighbours more strongly than right buttons — a visible asymmetry
+    // on any group with 3+ shapes.
+    //
+    // Fix: compute both a forward pass (L→R) and a backward pass (R→L), then
+    // mix 50/50. The two biases are mirror images of each other, so they cancel
+    // exactly. For n=2, smoothUnion is pairwise commutative so fwd==bwd and
+    // the result is identical to the original — no visual change.
+    //
+    // Cost: 2× the smoothUnion ops (all cheap arithmetic, no exp/log).
+    // No new uniforms or API surface changes.
+
+    if (numShapes <= 4) {
+        // Fully unrolled forward pass (L→R)
+        float fwd = getShapeSDFFromArray(0, p, shapeData);
+        if (numShapes >= 2) fwd = smoothUnion(fwd, getShapeSDFFromArray(1, p, shapeData), blend);
+        if (numShapes >= 3) fwd = smoothUnion(fwd, getShapeSDFFromArray(2, p, shapeData), blend);
+        if (numShapes >= 4) fwd = smoothUnion(fwd, getShapeSDFFromArray(3, p, shapeData), blend);
+
+        // Fully unrolled backward pass (R→L)
+        float bwd = getShapeSDFFromArray(numShapes - 1, p, shapeData);
+        if (numShapes >= 2) bwd = smoothUnion(bwd, getShapeSDFFromArray(numShapes - 2, p, shapeData), blend);
+        if (numShapes >= 3) bwd = smoothUnion(bwd, getShapeSDFFromArray(numShapes - 3, p, shapeData), blend);
+        if (numShapes >= 4) bwd = smoothUnion(bwd, getShapeSDFFromArray(numShapes - 4, p, shapeData), blend);
+
+        return mix(fwd, bwd, 0.5);
+    } else {
+        // Dynamic loops for 5+ shapes (uncommon).
+        float fwd = getShapeSDFFromArray(0, p, shapeData);
+        for (int i = 1; i < min(numShapes, MAX_SHAPES); i++) {
+            fwd = smoothUnion(fwd, getShapeSDFFromArray(i, p, shapeData), blend);
+        }
+
+        // Backward: iterate i = 1..N-1, indexing from the tail.
+        float bwd = getShapeSDFFromArray(numShapes - 1, p, shapeData);
+        for (int i = 1; i < min(numShapes, MAX_SHAPES); i++) {
+            bwd = smoothUnion(bwd, getShapeSDFFromArray(numShapes - 1 - i, p, shapeData), blend);
+        }
+
+        return mix(fwd, bwd, 0.5);
+    }
 }
 
 // Calculate 3D normal using derivatives (shader-specific normal calculation)

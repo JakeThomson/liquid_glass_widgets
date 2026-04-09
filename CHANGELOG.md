@@ -1,3 +1,13 @@
+# 0.7.6
+
+### Bug Fixes
+
+- **FIX**: `LiquidGlassBlendGroup` — `blendAmount` asymmetry between buttons in a group. The left button was attracting its right neighbour more strongly than vice versa on any group with 3+ shapes. Root cause: the smooth-union SDF was accumulated left-to-right, so the leftmost shape participated in N−1 blend passes while the rightmost participated in only 1. Fix: compute both a forward (L→R) and backward (R→L) pass and mix 50/50 — the two biases cancel exactly, producing symmetric attraction in both directions. For 2-shape groups the result is mathematically identical to before (`smoothUnion` is pairwise commutative). No API changes.
+
+- **FIX**: `GlassButtonGroup` — Fixed an issue where the glass effect could bleed as a dark rectangular backdrop on Impeller when using `GlassQuality.premium` with `useOwnLayer: true`. A `ClipRRect(antiAlias)` is now applied around the group widget to accurately hard-clip the bleed at the superellipse boundary. This resolves the bleed issue without forcing a quality downgrade, allowing premium buttons inside the group to retain their full Impeller specular shading and lighting effects.
+
+---
+
 # 0.7.5
 
 ### Bug Fixes
