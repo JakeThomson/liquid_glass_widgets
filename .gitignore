@@ -109,9 +109,11 @@ test/golden/**/failures/
 RENDERER_IMPROVEMENT_PLAN.md
 
 # Example app — generated platform folders (not needed for a package example)
+example/android/
 example/ios/
 example/macos/
 example/web/
+example/.metadata
 example/showcase/ios/
 
 # Example app — AI working docs

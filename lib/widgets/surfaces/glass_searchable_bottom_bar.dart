@@ -64,6 +64,13 @@ class GlassSearchBarConfig {
     this.onSubmitted,
     this.onMicTap,
     this.textColor,
+    this.trailingBuilder,
+    this.textInputAction,
+    this.keyboardType,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.onTapOutside,
+    this.autoFocusOnExpand = false,
   });
 
   /// Called with `true` when search is activated, `false` when dismissed.
@@ -84,6 +91,8 @@ class GlassSearchBarConfig {
   final Color? searchIconColor;
 
   /// Color for the microphone icon specifically. Falls back to [searchIconColor].
+  ///
+  /// Ignored when [trailingBuilder] is provided.
   final Color? micIconColor;
 
   /// Text style for the hint text. Uses a sensible default when null.
@@ -103,11 +112,83 @@ class GlassSearchBarConfig {
   /// Called when the user submits the search (keyboard action).
   final ValueChanged<String>? onSubmitted;
 
-  /// Called when the user taps the microphone icon. If null the icon is hidden.
+  /// Called when the user taps the microphone icon.
+  ///
+  /// When null the microphone icon is hidden. Ignored when [trailingBuilder]
+  /// is provided (the builder is responsible for its own tap handling).
   final VoidCallback? onMicTap;
 
   /// Color of the typed text. Defaults to white.
   final Color? textColor;
+
+  // ── SearchBar parity ────────────────────────────────────────────────────────
+
+  /// Custom widget builder for the trailing section of the expanded search bar.
+  ///
+  /// When provided, **completely replaces** the microphone icon and [onMicTap]
+  /// behaviour. Use this to show a "Clear" button, voice-action indicator, or
+  /// any other widget in the trailing position — matching Flutter's own
+  /// [SearchBar.trailing] API.
+  ///
+  /// The builder receives a [BuildContext] that is a descendant of the
+  /// expanded glass pill. If null, the standard mic icon / empty logic applies.
+  ///
+  /// ## Example — clear button
+  /// ```dart
+  /// trailingBuilder: (ctx) => GestureDetector(
+  ///   onTap: () => searchController.clear(),
+  ///   child: Icon(CupertinoIcons.clear_circled_solid,
+  ///       color: Colors.white54, size: 18),
+  /// ),
+  /// ```
+  final WidgetBuilder? trailingBuilder;
+
+  /// The keyboard action button label for the search [TextField].
+  ///
+  /// Common values: [TextInputAction.search], [TextInputAction.done],
+  /// [TextInputAction.go]. Defaults to null (system / platform default).
+  final TextInputAction? textInputAction;
+
+  /// The type of keyboard to display for the search [TextField].
+  ///
+  /// Defaults to null, which uses [TextInputType.text]. Pass
+  /// [TextInputType.url] or [TextInputType.emailAddress] for specialised
+  /// search contexts.
+  final TextInputType? keyboardType;
+
+  /// Whether to enable autocorrection for the search [TextField].
+  ///
+  /// Defaults to `true`. Set to `false` for search bars where autocorrection
+  /// would interfere (e.g. product codes, usernames).
+  final bool autocorrect;
+
+  /// Whether to show input suggestions (QuickType bar on iOS) for the search
+  /// [TextField].
+  ///
+  /// Defaults to `true`. Mirrors [TextField.enableSuggestions].
+  final bool enableSuggestions;
+
+  /// Called when the user taps outside the expanded search [TextField].
+  ///
+  /// Passed directly to [TextField.onTapOutside]. A common use-case is
+  /// unfocusing the field so the keyboard dismisses when the user taps the
+  /// page content above the bar:
+  ///
+  /// ```dart
+  /// onTapOutside: (_) => FocusScope.of(context).unfocus(),
+  /// ```
+  final TapRegionCallback? onTapOutside;
+
+  /// Whether the search [TextField] should automatically receive keyboard focus
+  /// when the search bar expands.
+  ///
+  /// - `false` (default): the bar expands without triggering the keyboard;
+  ///   the user taps inside the pill to start typing. Matches the behaviour
+  ///   of the real iOS 26 Apple News search bar and looks more polished.
+  /// - `true`: the keyboard opens automatically as soon as the bar expands —
+  ///   useful for modal or dedicated search screens where typing is the
+  ///   immediate next action.
+  final bool autoFocusOnExpand;
 }
 
 // =============================================================================
@@ -715,6 +796,7 @@ class _SearchableTabIndicatorState extends State<_SearchableTabIndicator>
         }
       },
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onHorizontalDragDown: _onDragDown,
         onHorizontalDragUpdate: _onDragUpdate,
         onHorizontalDragEnd: _onDragEnd,
@@ -972,10 +1054,13 @@ class _SearchPillState extends State<_SearchPill> {
       _ownsController = true;
     }
     _focusNode = FocusNode();
-    if (widget.isActive) {
-      // Already active on first build — request focus after layout.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _focusNode.requestFocus();
+    if (widget.isActive && widget.config.autoFocusOnExpand) {
+      // Already active on first build — request focus after one frame so the
+      // AnimatedContainer has committed its initial expanded layout.
+      // 60 ms is enough for a single vsync cycle at 60-120 Hz while still
+      // feeling instant to the user (well under the ~100 ms perception threshold).
+      Future.delayed(const Duration(milliseconds: 60), () {
+        if (mounted && widget.isActive) _focusNode.requestFocus();
       });
     }
   }
@@ -983,10 +1068,15 @@ class _SearchPillState extends State<_SearchPill> {
   @override
   void didUpdateWidget(covariant _SearchPill old) {
     super.didUpdateWidget(old);
-    if (!old.isActive && widget.isActive) {
-      // Became active — autofocus the field.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _focusNode.requestFocus();
+    if (!old.isActive && widget.isActive && widget.config.autoFocusOnExpand) {
+      // Became active and auto-focus is enabled — request focus after one
+      // render frame so the pill has committed its first expanded layout
+      // before the IME is attached.
+      //
+      // 60 ms sits comfortably above a single 120 Hz vsync (~8 ms) and is
+      // well below the ~100 ms human-perception threshold for "immediate".
+      Future.delayed(const Duration(milliseconds: 60), () {
+        if (mounted && widget.isActive) _focusNode.requestFocus();
       });
     } else if (old.isActive && !widget.isActive) {
       // Dismissed — unfocus and clear.
@@ -1050,20 +1140,52 @@ class _SearchPillState extends State<_SearchPill> {
           );
         }
 
-        return AdaptiveGlass.grouped(
-          shape: shape,
-          quality: widget.quality,
-          child: _buildExpanded(iconColor, micColor),
+        // Wrap with an opaque GestureDetector so taps anywhere inside the
+        // glass pill — including the 16 px horizontal padding zones — focus
+        // the search field instead of passing through to background content.
+        // Without this, AdaptiveGlass.grouped defers hit-testing to its
+        // children, leaving the padding area as a transparent pass-through.
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _focusNode.requestFocus,
+          child: AdaptiveGlass.grouped(
+            shape: shape,
+            quality: widget.quality,
+            child: _buildExpanded(iconColor, micColor),
+          ),
         );
       },
     );
   }
 
   Widget _buildExpanded(Color iconColor, Color micColor) {
-    final textColor = widget.config.textColor ?? Colors.white;
+    final config = widget.config;
+    final textColor = config.textColor ?? Colors.white;
+
+    // Trailing section priority:
+    //   1. trailingBuilder — caller has full control, handles its own taps.
+    //   2. Default — mic icon (always visible). If onMicTap is null the tap
+    //      is a no-op, matching the original pre-0.7.6 behaviour so that
+    //      callers who don't pass onMicTap still see the icon.
+    //      To suppress the mic entirely, provide trailingBuilder returning
+    //      SizedBox.shrink().
+    final trailing = config.trailingBuilder != null
+        ? config.trailingBuilder!(context)
+        : GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: config.onMicTap,
+            child: Icon(CupertinoIcons.mic_fill, color: micColor, size: 18),
+          );
+
+    // The expanded pill content. The outer GestureDetector (in build()) is
+    // already opaque, so any tap on the padding zones focuses the field.
+    // Row uses CrossAxisAlignment.center so icons and text sit on the same
+    // baseline. A full-height transparent overlay is layered on top by the
+    // Stack in build() — this is not needed here; centering is correct.
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(CupertinoIcons.search, color: iconColor, size: 18),
           const SizedBox(width: 8),
@@ -1071,10 +1193,15 @@ class _SearchPillState extends State<_SearchPill> {
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
-              autofocus: false, // handled manually via FocusNode
-              onChanged: widget.config.onChanged,
-              onSubmitted: widget.config.onSubmitted,
-              style: widget.config.hintStyle ??
+              autofocus: false, // focus handled manually via FocusNode
+              onChanged: config.onChanged,
+              onSubmitted: config.onSubmitted,
+              onTapOutside: config.onTapOutside,
+              textInputAction: config.textInputAction,
+              keyboardType: config.keyboardType,
+              autocorrect: config.autocorrect,
+              enableSuggestions: config.enableSuggestions,
+              style: config.hintStyle ??
                   TextStyle(
                     color: textColor,
                     fontSize: 17,
@@ -1082,9 +1209,10 @@ class _SearchPillState extends State<_SearchPill> {
                   ),
               cursorColor: textColor,
               decoration: InputDecoration(
-                hintText: widget.config.hintText,
-                hintStyle: (widget.config.hintStyle ??
-                        TextStyle(fontSize: 17, fontWeight: FontWeight.w400))
+                hintText: config.hintText,
+                hintStyle: (config.hintStyle ??
+                        const TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w400))
                     .copyWith(color: iconColor),
                 border: InputBorder.none,
                 isDense: true,
@@ -1093,10 +1221,7 @@ class _SearchPillState extends State<_SearchPill> {
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: widget.config.onMicTap ?? () {},
-            child: Icon(CupertinoIcons.mic_fill, color: micColor, size: 18),
-          ),
+          trailing,
         ],
       ),
     );

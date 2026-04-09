@@ -1,4 +1,31 @@
+# 0.7.5
+
+### Bug Fixes
+
+- **FIX**: `GlassBottomBar` and `GlassSearchableBottomBar` — gesture reliability on simulator and desktop. Added `HitTestBehavior.opaque` to root `GestureDetector` so the full bar height consumes pointer events, preventing passthrough to widgets behind the bar.
+
+- **FIX**: `GlassSearchableBottomBar` — keyboard flickering on physical devices. Focus is now requested after the expansion animation completes, preventing the IME from dismissing itself mid-animation.
+
+- **FIX**: `GlassSearchableBottomBar` — dead zone / input passthrough at expanded search pill edges. The entire glass surface (including horizontal padding zones) now correctly claims taps and routes them to the search field.
+
+### New — `GlassSearchBarConfig` SearchBar parity
+
+Seven new parameters, all backwards-compatible:
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `autoFocusOnExpand` | `bool` | `false` | `true` = keyboard opens automatically on expand (useful for modal search screens). |
+| `trailingBuilder` | `WidgetBuilder?` | `null` | Replaces the mic icon with any custom widget. |
+| `textInputAction` | `TextInputAction?` | `null` | Keyboard action key (`search`, `done`, `go`, …). |
+| `keyboardType` | `TextInputType?` | `null` | Keyboard layout (`url`, `emailAddress`, …). |
+| `autocorrect` | `bool` | `true` | Disable for codes, usernames, etc. |
+| `enableSuggestions` | `bool` | `true` | Controls QuickType bar on iOS. |
+| `onTapOutside` | `TapRegionCallback?` | `null` | Called when user taps outside the field — use to dismiss the keyboard. |
+
+---
+
 # 0.7.4
+
 
 ### New Components
 

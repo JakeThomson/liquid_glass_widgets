@@ -934,6 +934,7 @@ class _TabIndicatorState extends State<_TabIndicator>
         }
       },
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onHorizontalDragDown: _onDragDown,
         onHorizontalDragUpdate: _onDragUpdate,
         onHorizontalDragEnd: _onDragEnd,

@@ -260,6 +260,9 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     return Scaffold(
       backgroundColor: _kBackground,
       extendBody: true, // Content flows behind the bottom bar
+      // Keep false so the bar can manage its own keyboard inset via the
+      // AnimatedPadding below — prevents the body from being double-inset.
+      resizeToAvoidBottomInset: false,
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (child, animation) =>
@@ -269,83 +272,97 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             : _buildTodayView(key: const ValueKey('today')),
       ),
       // ── GlassSearchableBottomBar: tabs + morphing search in one layer ─────────
-      bottomNavigationBar: GlassSearchableBottomBar(
-        selectedIndex: _selectedTab,
-        isSearchActive: _isSearching,
-        onTabSelected: (index) => setState(() {
-          _selectedTab = index;
-          _isSearching = false;
-        }),
-        selectedIconColor: Color.fromRGBO(255, 90, 130, 1),
-        unselectedIconColor: Colors.white.withValues(alpha: 0.9),
-        labelFontSize: 10,
-        iconSize: 28,
-        iconLabelSpacing: 0,
-        // Neutral frosted-glass pill. AnimatedGlassIndicator now renders
-        // this value directly without any hidden multiplier.
-        indicatorColor: Colors.white.withValues(alpha: 0.16),
-        quality: GlassQuality.premium,
-        glassSettings: LiquidGlassSettings(
-          glassColor: const Color(0xAA1C1C1E),
-          thickness: 30,
-          blur: 2, // Reduced from 20 to 10 so words and shapes are more legible
-          chromaticAberration: .01,
-          lightAngle: GlassDefaults.lightAngle,
-          lightIntensity: .5,
-          ambientStrength: 0,
-          refractiveIndex: 1.2,
-          saturation: 1.2,
-          specularSharpness: GlassSpecularSharpness.medium,
+      // AnimatedPadding lifts the bar above the keyboard when it opens.
+      // viewInsets.bottom is 0 when keyboard is hidden and the keyboard
+      // height (e.g. ~336 pt) when it is visible, so the bar smoothly
+      // rides up with the IME rather than being obscured by it.
+      bottomNavigationBar: AnimatedPadding(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
-        // ── Search bar config ─────────────────────────────────────────────────
-        searchConfig: GlassSearchBarConfig(
-          hintText: 'Apple News',
-          collapsedTabWidth: 64,
-          onSearchToggle: (active) => setState(() => _isSearching = active),
-          searchIconColor: Colors.white.withValues(alpha: 0.9),
-          collapsedLogoBuilder: (context) => Center(
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text(
-                  'N',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                    height: 1.0,
+        child: GlassSearchableBottomBar(
+          selectedIndex: _selectedTab,
+          isSearchActive: _isSearching,
+          onTabSelected: (index) => setState(() {
+            _selectedTab = index;
+            _isSearching = false;
+          }),
+          selectedIconColor: Color.fromRGBO(255, 90, 130, 1),
+          unselectedIconColor: Colors.white.withValues(alpha: 0.9),
+          labelFontSize: 10,
+          iconSize: 28,
+          iconLabelSpacing: 0,
+          // Neutral frosted-glass pill. AnimatedGlassIndicator now renders
+          // this value directly without any hidden multiplier.
+          indicatorColor: Colors.white.withValues(alpha: 0.16),
+          quality: GlassQuality.premium,
+          glassSettings: LiquidGlassSettings(
+            glassColor: const Color(0xAA1C1C1E),
+            thickness: 30,
+            blur: 2,
+            chromaticAberration: .01,
+            lightAngle: GlassDefaults.lightAngle,
+            lightIntensity: .5,
+            ambientStrength: 0,
+            refractiveIndex: 1.2,
+            saturation: 1.2,
+            specularSharpness: GlassSpecularSharpness.medium,
+          ),
+          // ── Search bar config ───────────────────────────────────────────────
+          searchConfig: GlassSearchBarConfig(
+            hintText: 'Apple News',
+            collapsedTabWidth: 64,
+            onSearchToggle: (active) => setState(() => _isSearching = active),
+            searchIconColor: Colors.white.withValues(alpha: 0.9),
+            textInputAction: TextInputAction.search,
+            // Dismiss the keyboard when the user taps outside the search pill.
+            onTapOutside: (_) => FocusScope.of(context).unfocus(),
+            collapsedLogoBuilder: (context) => Center(
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Text(
+                    'N',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      height: 1.0,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
+          tabs: [
+            GlassBottomBarTab(
+              label: 'Today',
+              icon: const Icon(CupertinoIcons.house),
+              activeIcon: const Icon(CupertinoIcons.house_fill),
+            ),
+            GlassBottomBarTab(
+              label: 'News+',
+              icon: const Icon(CupertinoIcons.news_solid),
+              activeIcon: const Icon(CupertinoIcons.news_solid),
+            ),
+            GlassBottomBarTab(
+              label: 'Audio',
+              icon: const Icon(CupertinoIcons.headphones),
+            ),
+            GlassBottomBarTab(
+              label: 'Following',
+              icon: const Icon(
+                  CupertinoIcons.rectangle_fill_on_rectangle_angled_fill),
+            ),
+          ],
         ),
-        tabs: [
-          GlassBottomBarTab(
-            label: 'Today',
-            icon: const Icon(CupertinoIcons.house),
-            activeIcon: const Icon(CupertinoIcons.house_fill),
-          ),
-          GlassBottomBarTab(
-            label: 'News+',
-            icon: const Icon(CupertinoIcons.news_solid),
-            activeIcon: const Icon(CupertinoIcons.news_solid),
-          ),
-          GlassBottomBarTab(
-            label: 'Audio',
-            icon: const Icon(CupertinoIcons.headphones),
-          ),
-          GlassBottomBarTab(
-            label: 'Following',
-            icon: const Icon(
-                CupertinoIcons.rectangle_fill_on_rectangle_angled_fill),
-          ),
-        ],
       ),
     );
   }
