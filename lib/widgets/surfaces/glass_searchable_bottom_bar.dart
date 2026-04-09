@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
-import '../../utils/glass_indicator_tap_mixin.dart';
 import '../../utils/glass_spring.dart';
 import '../interactive/glass_button.dart';
 import '../shared/adaptive_glass.dart';
@@ -655,8 +654,7 @@ class _SearchableTabIndicator extends StatefulWidget {
       _SearchableTabIndicatorState();
 }
 
-class _SearchableTabIndicatorState extends State<_SearchableTabIndicator>
-    with GlassIndicatorTapMixin<_SearchableTabIndicator> {
+class _SearchableTabIndicatorState extends State<_SearchableTabIndicator> {
   static const _fallbackIndicatorColor = Color(0x1AFFFFFF);
 
   bool _isDown = false;
@@ -685,7 +683,6 @@ class _SearchableTabIndicatorState extends State<_SearchableTabIndicator>
           g, context, widget.tabCount);
 
   void _onDragDown(DragDownDetails d) {
-    cancelIndicatorTapTimer();
     setState(() => _isDown = true);
   }
 
@@ -780,18 +777,15 @@ class _SearchableTabIndicatorState extends State<_SearchableTabIndicator>
 
     return Listener(
       onPointerDown: (_) {
-        cancelIndicatorTapTimer();
         setState(() => _isDown = true);
       },
       onPointerUp: (_) {
         if (!_isDragging) {
-          cancelIndicatorTapTimer();
           setState(() => _isDown = false);
         }
       },
       onPointerCancel: (_) {
         if (!_isDragging) {
-          cancelIndicatorTapTimer();
           setState(() => _isDown = false);
         }
       },

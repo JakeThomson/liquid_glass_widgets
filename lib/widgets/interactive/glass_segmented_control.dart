@@ -5,7 +5,6 @@ import '../../utils/glass_spring.dart';
 import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
-import '../../utils/glass_indicator_tap_mixin.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/animated_glass_indicator.dart';
 import '../shared/inherited_liquid_glass.dart';
@@ -347,8 +346,7 @@ class _SegmentedControlContent extends StatefulWidget {
       _SegmentedControlContentState();
 }
 
-class _SegmentedControlContentState extends State<_SegmentedControlContent>
-    with GlassIndicatorTapMixin<_SegmentedControlContent> {
+class _SegmentedControlContentState extends State<_SegmentedControlContent> {
   // Cache default colors to avoid allocations
   static const _defaultIndicatorColor =
       Color(0x33FFFFFF); // white.withValues(alpha: 0.2)
@@ -392,7 +390,6 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent>
   }
 
   void _onDragDown(DragDownDetails details) {
-    cancelIndicatorTapTimer(); // DX1: cancel pending tap-clear if a drag starts
     setState(() {
       _isDown = true;
     });
@@ -486,20 +483,17 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent>
       // Raw pointer events fire BEFORE gesture recognizers and never compete
       // in the gesture arena, so _isDown is always set on the very first event.
       onPointerDown: (_) {
-        cancelIndicatorTapTimer();
         setState(() => _isDown = true);
       },
       // On finger/button lift, clear _isDown if not mid-drag.
       // Listener fires regardless of which gesture recognizer won the arena.
       onPointerUp: (_) {
         if (!_isDragging) {
-          cancelIndicatorTapTimer();
           setState(() => _isDown = false);
         }
       },
       onPointerCancel: (_) {
         if (!_isDragging) {
-          cancelIndicatorTapTimer();
           setState(() => _isDown = false);
         }
       },

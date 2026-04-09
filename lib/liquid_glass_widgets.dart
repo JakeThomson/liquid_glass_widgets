@@ -38,7 +38,6 @@ export 'widgets/shared/lightweight_liquid_glass.dart';
 
 // Utils — for advanced / custom widget authors
 export 'utils/glass_spring.dart';
-export 'utils/glass_indicator_tap_mixin.dart'; // GlassIndicatorTapMixin: DX1 deferred-tap for custom indicator widgets
 
 // Widgets - Containers
 export 'widgets/containers/glass_card.dart';

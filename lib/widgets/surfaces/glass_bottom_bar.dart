@@ -17,7 +17,6 @@ import '../../utils/glass_spring.dart';
 
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
-import '../../utils/glass_indicator_tap_mixin.dart';
 import '../interactive/glass_button.dart';
 import '../shared/adaptive_glass.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
@@ -751,8 +750,7 @@ class _TabIndicator extends StatefulWidget {
   State<_TabIndicator> createState() => _TabIndicatorState();
 }
 
-class _TabIndicatorState extends State<_TabIndicator>
-    with GlassIndicatorTapMixin<_TabIndicator> {
+class _TabIndicatorState extends State<_TabIndicator> {
   // Cache fallback indicator color to avoid allocations
   static const _fallbackIndicatorColor =
       Color(0x1AFFFFFF); // white.withValues(alpha: 0.1)
@@ -804,7 +802,6 @@ class _TabIndicatorState extends State<_TabIndicator>
   }
 
   void _onDragDown(DragDownDetails details) {
-    cancelIndicatorTapTimer(); // DX1
     setState(() {
       _isDown = true;
     });
@@ -916,20 +913,17 @@ class _TabIndicatorState extends State<_TabIndicator>
       // Raw pointer events fire BEFORE gesture recognizers and never compete
       // in the gesture arena, so _isDown is always set on the very first event.
       onPointerDown: (_) {
-        cancelIndicatorTapTimer();
         setState(() => _isDown = true);
       },
       // On finger/button lift, clear _isDown if not mid-drag.
       // Listener fires regardless of which gesture recognizer won the arena.
       onPointerUp: (_) {
         if (!_isDragging) {
-          cancelIndicatorTapTimer();
           setState(() => _isDown = false);
         }
       },
       onPointerCancel: (_) {
         if (!_isDragging) {
-          cancelIndicatorTapTimer();
           setState(() => _isDown = false);
         }
       },

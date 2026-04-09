@@ -1,3 +1,11 @@
+# 0.7.7
+
+### Refactor
+
+- **Internal**: Removed `GlassIndicatorTapMixin` and migrated `GlassTabBar` and `GlassSegmentedControl` fully to raw `Listener` pointer events, bringing them to parity with `GlassBottomBar`'s robust drag-cancel and press-and-hold handling.
+
+---
+
 # 0.7.6
 
 ### Bug Fixes

@@ -4,7 +4,6 @@ import '../../utils/glass_spring.dart';
 
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
-import '../../utils/glass_indicator_tap_mixin.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/animated_glass_indicator.dart';
 import '../shared/inherited_liquid_glass.dart';
@@ -350,8 +349,7 @@ class _TabBarContent extends StatefulWidget {
   State<_TabBarContent> createState() => _TabBarContentState();
 }
 
-class _TabBarContentState extends State<_TabBarContent>
-    with GlassIndicatorTapMixin<_TabBarContent> {
+class _TabBarContentState extends State<_TabBarContent> {
   // Cache default colors to avoid allocations
   static const _defaultIndicatorColor =
       Color(0x33FFFFFF); // white.withValues(alpha: 0.2)
@@ -383,7 +381,6 @@ class _TabBarContentState extends State<_TabBarContent>
   }
 
   void _onDragDown(DragDownDetails details) {
-    cancelIndicatorTapTimer(); // DX1
     setState(() {
       _isDown = true;
     });
@@ -487,18 +484,15 @@ class _TabBarContentState extends State<_TabBarContent>
 
     return Listener(
       onPointerDown: (_) {
-        cancelIndicatorTapTimer();
         setState(() => _isDown = true);
       },
       onPointerUp: (_) {
         if (!_isDragging) {
-          cancelIndicatorTapTimer();
           setState(() => _isDown = false);
         }
       },
       onPointerCancel: (_) {
         if (!_isDragging) {
-          cancelIndicatorTapTimer();
           setState(() => _isDown = false);
         }
       },
