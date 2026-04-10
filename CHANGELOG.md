@@ -8,6 +8,8 @@
 
 - **Apple News demo** (`example/lib/apple_news/apple_news_demo.dart`) — Fixed Impeller GPU command buffer overflow (`kIOGPUCommandBufferCallbackErrorSubmissionsIgnored`) on iOS 26 physical devices. Root cause: simultaneous high-resolution network image decoding saturated the Impeller submission queue. All `Image.network` calls replaced with pre-sized bundled assets (`example/assets/news_images/`, 660 KB, 20 images at 600px/360px, q=70). Topic grid card colors now match Apple News: solid category color fills the card at full opacity, photo overlaid at `Opacity(0.45)` to add texture without suppressing the color.
 
+- **Apple News demo** — `collapsedLogoBuilder` now mirrors the active tab: the search pill's left icon shows the house, News+, headphones, or grid icon depending on which tab is selected, rather than a static "N" badge.
+
 
 ---
 
