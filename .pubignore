@@ -27,5 +27,10 @@ example/linux/
 # Showcase app (secondary example, not needed for pub.dev)
 example/showcase/
 
+# Apple News demo — downloaded image assets (660 KB JPEGs, binary, not useful
+# to package consumers). The example Dart source in example/lib/ IS published.
+# Run example/assets/download_news_images.sh to regenerate locally.
+example/assets/news_images/
+
 # Tools (internal sync scripts)
 tools/

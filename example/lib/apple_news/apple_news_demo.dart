@@ -299,27 +299,23 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             textInputAction: TextInputAction.search,
             // Dismiss the keyboard when the user taps outside the search pill.
             onTapOutside: (_) => FocusScope.of(context).unfocus(),
-            collapsedLogoBuilder: (context) => Center(
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(
+            collapsedLogoBuilder: (context) {
+              // Mirror the active tab icon so the collapsed pill feels
+              // contextual — house on Today, headphones on Audio, etc.
+              const tabIcons = [
+                CupertinoIcons.house_fill,
+                CupertinoIcons.news_solid,
+                CupertinoIcons.headphones,
+                CupertinoIcons.rectangle_fill_on_rectangle_angled_fill,
+              ];
+              return Center(
+                child: Icon(
+                  tabIcons[_selectedTab],
                   color: Colors.white,
-                  shape: BoxShape.circle,
+                  size: 26,
                 ),
-                child: const Center(
-                  child: Text(
-                    'N',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 22,
-                      height: 1.0,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+              );
+            },
           ),
           tabs: [
             GlassBottomBarTab(
