@@ -28,7 +28,7 @@ class _Article {
   const _Article({
     required this.headline,
     required this.publication,
-    required this.imageUrl,
+    required this.imageAsset,
     this.isLive = false,
     this.hasTopStoriesBadge = false,
     this.moreCoverage = false,
@@ -36,7 +36,7 @@ class _Article {
 
   final String headline;
   final String publication;
-  final String imageUrl;
+  final String imageAsset;
   final bool isLive;
   final bool hasTopStoriesBadge;
   final bool moreCoverage;
@@ -46,12 +46,12 @@ class _TopicCategory {
   const _TopicCategory({
     required this.name,
     required this.color,
-    required this.imageUrl,
+    required this.imageAsset,
   });
 
   final String name;
   final Color color;
-  final String imageUrl;
+  final String imageAsset;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,8 +63,7 @@ const _kTopStories = [
     headline:
         'Tehran warns US over Strait of Hormuz threat; Netanyahu suggests Israel helped rescue airman',
     publication: 'The Guardian',
-    imageUrl:
-        'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/tehran_guardian.jpg',
     // isLive: true,
     hasTopStoriesBadge: true,
     moreCoverage: true,
@@ -73,16 +72,14 @@ const _kTopStories = [
     headline:
         'Markets surge after Fed signals three rate cuts this year despite persistent inflation',
     publication: 'The Wall Street Journal',
-    imageUrl:
-        'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/markets_wsj.jpg',
     moreCoverage: true,
   ),
   _Article(
     headline:
         'Apple announces spatial computing breakthrough at WWDC, Vision Pro 2 coming this fall',
     publication: 'Bloomberg',
-    imageUrl:
-        'https://images.unsplash.com/photo-1592478411213-6153e4ebc07d?w=800&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/apple_bloomberg.jpg',
   ),
 ];
 
@@ -91,37 +88,32 @@ const _kMoreArticles = [
     headline:
         'Scientists discover potential link between gut microbiome and Alzheimer\'s disease risk',
     publication: 'Nature',
-    imageUrl:
-        'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/science_nature.jpg',
   ),
   _Article(
     headline:
         'UEFA Champions League: Real Madrid face Arsenal in stunning semi-final clash',
     publication: 'BBC Sport',
-    imageUrl:
-        'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/soccer_bbc.jpg',
   ),
   _Article(
     headline:
         'Climate summit reaches historic agreement on carbon emissions targets ahead of 2030 deadline',
     publication: 'Reuters',
-    imageUrl:
-        'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/climate_reuters.jpg',
     isLive: true,
   ),
   _Article(
     headline:
         'New AI model writes code faster than senior engineers, raising questions about the future of work',
     publication: 'MIT Technology Review',
-    imageUrl:
-        'https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=800&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/ai_mit.jpg',
   ),
   _Article(
     headline:
         'SpaceX Starship completes first fully successful orbital flight and ocean landing',
     publication: 'The Verge',
-    imageUrl:
-        'https://images.unsplash.com/photo-1517976487492-5750f3195933?w=800&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/spacex_verge.jpg',
   ),
 ];
 
@@ -129,74 +121,62 @@ const _kTopics = [
   _TopicCategory(
     name: 'Sport',
     color: Color(0xFF34C759),
-    imageUrl:
-        'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_sport.jpg',
   ),
   _TopicCategory(
     name: 'Entertainment',
     color: Color(0xFFFF3B30),
-    imageUrl:
-        'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_entertainment.jpg',
   ),
   _TopicCategory(
     name: 'Business',
     color: Color(0xFF007AFF),
-    imageUrl:
-        'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_business.jpg',
   ),
   _TopicCategory(
     name: 'Politics',
     color: Color(0xFF3A3A3C),
-    imageUrl:
-        'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_politics.jpg',
   ),
   _TopicCategory(
     name: 'Food',
     color: Color(0xFFFFCC02),
-    imageUrl:
-        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_food.jpg',
   ),
   _TopicCategory(
     name: 'Health',
     color: Color(0xFFFF9500),
-    imageUrl:
-        'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_health.jpg',
   ),
   _TopicCategory(
     name: 'Lifestyle',
     color: Color(0xFF30B0C7),
-    imageUrl:
-        'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_lifestyle.jpg',
   ),
   _TopicCategory(
     name: 'Science',
     color: Color(0xFFAF52DE),
-    imageUrl:
-        'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_science.jpg',
   ),
   _TopicCategory(
     name: 'Climate',
     color: Color(0xFF636366),
-    imageUrl:
-        'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_climate.jpg',
   ),
   _TopicCategory(
     name: 'Cars',
     color: Color(0xFF3634A3),
-    imageUrl:
-        'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_cars.jpg',
   ),
   _TopicCategory(
     name: 'Home & Garden',
     color: Color(0xFF34C759),
-    imageUrl:
-        'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_garden.jpg',
   ),
   _TopicCategory(
     name: 'Travel',
     color: Color(0xFF30B0C7),
-    imageUrl:
-        'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?w=400&auto=format&fit=crop&q=60',
+    imageAsset: 'assets/news_images/topic_travel.jpg',
   ),
 ];
 
@@ -514,17 +494,9 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           children: [
             AspectRatio(
               aspectRatio: 16 / 9,
-              child: Image.network(
-                article.imageUrl,
+              child: Image.asset(
+                article.imageAsset,
                 fit: BoxFit.cover,
-                loadingBuilder: (_, child, progress) => progress == null
-                    ? child
-                    : Container(color: _kCardBackground),
-                errorBuilder: (_, __, ___) => Container(
-                  color: _kCardBackground,
-                  child: const Icon(CupertinoIcons.photo,
-                      color: Colors.white24, size: 48),
-                ),
               ),
             ),
             Container(
@@ -633,21 +605,11 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
               const SizedBox(width: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  article.imageUrl,
+                child: Image.asset(
+                  article.imageAsset,
                   width: 90,
                   height: 90,
                   fit: BoxFit.cover,
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : Container(width: 90, height: 90, color: _kSeparator),
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 90,
-                    height: 90,
-                    color: _kSeparator,
-                    child:
-                        const Icon(CupertinoIcons.photo, color: Colors.white24),
-                  ),
                 ),
               ),
             ],
@@ -778,14 +740,13 @@ class _TopicCard extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           ColoredBox(color: topic.color),
+          // Image at partial opacity so the category color dominates —
+          // matches Apple News where the card IS the color, not the photo.
           Opacity(
-            opacity: 0.55,
-            child: Image.network(
-              topic.imageUrl,
+            opacity: 0.45,
+            child: Image.asset(
+              topic.imageAsset,
               fit: BoxFit.cover,
-              loadingBuilder: (_, child, progress) =>
-                  progress == null ? child : const SizedBox.shrink(),
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
           Positioned(

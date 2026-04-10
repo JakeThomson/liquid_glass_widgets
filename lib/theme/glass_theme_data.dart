@@ -139,8 +139,12 @@ class GlassThemeVariant {
     settings: LiquidGlassSettings(
       thickness: 30.0,
       blur: 3.0,
-      lightIntensity: 2.0,
-      refractiveIndex: 1.15,
+      glassColor:
+          Color(0x32D2DCF0), // Cool blue-white tint for white backgrounds
+      chromaticAberration: 0.5,
+      refractiveIndex: 1.65,
+      lightIntensity: 1.2,
+      ambientStrength: 0.6,
       saturation: 1.2,
     ),
     quality: GlassQuality.standard,

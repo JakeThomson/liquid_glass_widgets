@@ -1,9 +1,22 @@
+# 0.7.8
+
+### Tweak
+
+- **TWEAK**: `GlassThemeVariant.light` now intrinsically defaults to an optimal cool-tinted `glassColor` (`Color(0x32D2DCF0)`), stronger `refractiveIndex`, and boosted `ambientStrength` to ensure premium specular rendering and visible refraction (chromatic aberration) on flat white backgrounds, avoiding the luminosity-clamping dead zone.
+
+### Examples
+
+- **Apple News demo** (`example/lib/apple_news/apple_news_demo.dart`) — Fixed Impeller GPU command buffer overflow (`kIOGPUCommandBufferCallbackErrorSubmissionsIgnored`) on iOS 26 physical devices. Root cause: simultaneous high-resolution network image decoding saturated the Impeller submission queue. All `Image.network` calls replaced with pre-sized bundled assets (`example/assets/news_images/`, 660 KB, 20 images at 600px/360px, q=70). Topic grid card colors now match Apple News: solid category color fills the card at full opacity, photo overlaid at `Opacity(0.45)` to add texture without suppressing the color.
+
+
+---
+
+
 # 0.7.7
 
 ### Refactor
 
 - **Internal**: Removed `GlassIndicatorTapMixin` and migrated `GlassTabBar` and `GlassSegmentedControl` fully to raw `Listener` pointer events, bringing them to parity with `GlassBottomBar`'s robust drag-cancel and press-and-hold handling.
-
 ---
 
 # 0.7.6
