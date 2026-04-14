@@ -1,8 +1,19 @@
+# 0.7.10
+
+### Bug Fixes
+
+- **FIX**: Windows build failure — `flutter build windows` / `flutter run -d Windows` crashed during shader compilation. Three issues in `sdf.glsl` / `liquid_glass_geometry_blended.frag` that are fatal on Windows (SkSL/glslang) but silently accepted on Apple (Metal transpiler), addressed preemptively in one release: (1) ~~`initializers are not permitted on arrays`~~ — fixed in 0.7.9. (2) `no match for min(int, int)` — integer `min` overload absent in SkSL/glslang; replaced with a ternary clamp. (3) Global non-constant initialisers (`float x = uniform.y` at file scope) — rejected by SkSL; moved into `main()` as local variables. No visual or behavioural change on any platform.
+
+---
+
+
 # 0.7.9
 
 ### Bug Fixes
 
-- **FIX**: Windows build failure — `flutter build windows` / `flutter run -d Windows` crashed with `initializers are not permitted on arrays` and `unknown identifier 'param_2'` during shader compilation. Root cause: `sdf.glsl` passed `float uShapeData[MAX_SHAPES * 6]` as a by-value function parameter to `getShapeSDFFromArray` and `sceneSDF`; glslang (the GLSL → SPIR-V compiler used by Flutter's Vulkan/Impeller backend on Windows) rejects array-by-value parameters. Fix: functions now access `uShapeData` directly as a global uniform — semantically identical, compatible with all targets.
+- **FIX**: Windows build failure — `flutter build windows` / `flutter run -d Windows` crashed during shader compilation. `initializers are not permitted on arrays` — `uShapeData[MAX_SHAPES * 6]` was passed as a by-value function parameter; fixed by accessing it as a global uniform instead. No visual or behavioural change on any platform.
+
+### Tweak
 
 - **TWEAK**: `GlassSearchableBottomBar` iOS 26 Apple News parity improvements:
   - Search input now features an animated inline "×" clear button (replacing the microphone) when text is typed.

@@ -29,13 +29,15 @@ layout(location = 3) uniform float uShapeData[MAX_SHAPES * 6];
 #include "sdf.glsl"
 #include "displacement_encoding.glsl"
 
-float uThickness = uOpticalProps.z;
-float uRefractiveIndex = uOpticalProps.x;
-float uBlend = uOpticalProps.w;
-
 layout(location = 0) out vec4 fragColor;
 
 void main() {
+    // Unpacked here rather than at global scope: global non-constant initialisers
+    // (e.g. float x = uniform.y) are valid in desktop GLSL 4.6 but rejected by
+    // SkSL / glslang on Windows.
+    float uThickness = uOpticalProps.z;
+    float uBlend = uOpticalProps.w;
+
     vec2 fragCoord = FlutterFragCoord().xy;
 
     float sd = sceneSDF(fragCoord, int(uNumShapes), uBlend);
