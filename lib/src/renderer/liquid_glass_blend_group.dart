@@ -253,8 +253,8 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
         final size = shape.shapeBounds.size;
         value
           ..setFloat(shape.rawShapeType.shaderIndex)
-          ..setFloat((center.dx) * devicePixelRatio)
-          ..setFloat((center.dy) * devicePixelRatio)
+          ..setFloat(center.dx * devicePixelRatio)
+          ..setFloat(center.dy * devicePixelRatio)
           ..setFloat(size.width * devicePixelRatio)
           ..setFloat(size.height * devicePixelRatio)
           ..setFloat(shape.rawCornerRadius * devicePixelRatio);

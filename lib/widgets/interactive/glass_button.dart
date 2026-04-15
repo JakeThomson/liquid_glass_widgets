@@ -90,6 +90,36 @@ import '../shared/inherited_liquid_glass.dart';
 ///   child: Text('Click Me', style: TextStyle(color: Colors.white)),
 /// )
 /// ```
+///
+/// ## Navigation bar / toolbar usage
+///
+/// When multiple buttons share a [LiquidGlassBlendGroup] (e.g. inside an
+/// [AdaptiveLiquidGlassLayer]), the drag-follow animation physically moves each
+/// button's glass shape in the shader's coordinate space. Because the blend
+/// group treats all shapes as a connected liquid surface, dragging one button
+/// causes neighboring buttons to visually respond — this is intentional for
+/// isolated floating buttons, but can feel jarring in a nav bar.
+///
+/// Reduce [stretch] for tightly-grouped buttons to keep the tactile press feel
+/// without excessive cross-button coupling:
+///
+/// ```dart
+/// // Nav bar / toolbar — subtle liquid feel, minimal coupling
+/// GlassButton(
+///   stretch: 0.15,
+///   icon: Icon(CupertinoIcons.home),
+///   onTap: () {},
+/// )
+///
+/// // Standalone FAB — full liquid feel (default)
+/// GlassButton(
+///   icon: Icon(CupertinoIcons.add),
+///   onTap: () {},
+/// )
+/// ```
+///
+/// Setting [stretch] to `0.0` disables drag-following entirely while keeping
+/// the press-scale effect ([interactionScale]).
 class GlassButton extends StatefulWidget {
   /// Creates a glass button with an icon.
   const GlassButton({

@@ -78,7 +78,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.7.10
+  liquid_glass_widgets: ^0.7.11
 ```
 
 ```bash

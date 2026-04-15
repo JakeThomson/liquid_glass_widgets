@@ -1,3 +1,14 @@
+# 0.7.11
+
+### Bug Fixes
+
+- **FIX**: Windows/Android build failure — three further shader compilation errors after 0.7.10: (1) loop bounds must be compile-time constants (fixed by using `MAX_SHAPES` with an early `break`), (2) `dFdx`/`dFdy` on scalar `float` is rejected by glslang on the SPIR-V path — the geometry shader now uses platform-conditional compilation (`#ifdef IMPELLER_TARGET_METAL`) to keep hardware derivatives on iOS/macOS (crispest edge highlights) while falling back to centered ±0.5 px finite differences on Vulkan/OpenGL ES, and (3) global non-constant initialisers (`float x = uniform.y` at file scope) in `liquid_glass_final_render.frag` — moved into `main()` as local variables.
+
+- **FIX**: Blend-group asymmetry — the liquid glass merge neck between grouped buttons appeared to lean toward the left button. Root cause: the sequential L→R smooth-union in `sceneSDF` accumulated blend influence unevenly. Fixed with a bidirectional pass (L→R + R→L, averaged 50/50) that cancels the directional bias exactly. On the Vulkan/OpenGL ES path, centered finite differences in the geometry shader provide an additional symmetry guarantee at neck midpoints.
+
+---
+
+
 # 0.7.10
 
 ### Bug Fixes

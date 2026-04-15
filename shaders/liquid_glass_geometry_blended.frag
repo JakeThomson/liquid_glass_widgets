@@ -48,11 +48,26 @@ void main() {
         return;
     }
 
-    // Compute the SDF gradient (true surface normal XY).
-    // dFdx/dFdy give the rate of change of the SDF across neighbouring pixels,
-    // which is the outward surface normal direction in screen space.
+    // Compute the SDF gradient for surface normal generation.
+    //
+    // Metal (iOS/macOS): hardware dFdx/dFdy give the sharpest possible normals
+    // with zero extra SDF evaluations. Metal's shader compiler handles dFdx on
+    // scalar float without issue.
+    //
+    // Vulkan & OpenGL ES (Android/Windows): glslang rejects dFdx/dFdy on scalar
+    // float during SPIR-V compilation. Use centered ±0.5 px finite differences
+    // instead, which are symmetric (no neck lean bias) and match the ~1 px
+    // spatial resolution of hardware derivatives. Since normalize() cancels
+    // magnitude, only the gradient direction matters.
+    #ifdef IMPELLER_TARGET_METAL
     float dx = dFdx(sd);
     float dy = dFdy(sd);
+    #else
+    float dx = sceneSDF(fragCoord + vec2(0.5, 0.0), int(uNumShapes), uBlend)
+             - sceneSDF(fragCoord - vec2(0.5, 0.0), int(uNumShapes), uBlend);
+    float dy = sceneSDF(fragCoord + vec2(0.0, 0.5), int(uNumShapes), uBlend)
+             - sceneSDF(fragCoord - vec2(0.0, 0.5), int(uNumShapes), uBlend);
+    #endif
 
     float n_cos = max(uThickness + sd, 0.0) / uThickness;
     float n_sin = sqrt(max(0.0, 1.0 - n_cos * n_cos));

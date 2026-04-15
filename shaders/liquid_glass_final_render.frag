@@ -36,19 +36,22 @@ uniform vec3 uOpticalProps;
 uniform vec3 uLightConfig;
 uniform vec2 uLightDirection;
 
-float uRefractiveIndex    = uOpticalProps.x;
-float uChromaticAberration = uOpticalProps.y;
-float uThickness          = uOpticalProps.z;
-float uLightIntensity     = uLightConfig.x;
-float uAmbientStrength    = uLightConfig.y;
-float uSaturation         = uLightConfig.z;
-
 uniform sampler2D uBackgroundTexture;
 uniform sampler2D uGeometryTexture;
 
 layout(location = 0) out vec4 fragColor;
 
 void main() {
+    // Unpacked here rather than at global scope: global non-constant initialisers
+    // (e.g. float x = uniform.y) are valid in desktop GLSL 4.6 but rejected by
+    // SkSL / glslang on Windows (SPIR-V path). Same fix as 0.7.10 geometry shader.
+    float uRefractiveIndex     = uOpticalProps.x;
+    float uChromaticAberration = uOpticalProps.y;
+    float uThickness           = uOpticalProps.z;
+    float uLightIntensity      = uLightConfig.x;
+    float uAmbientStrength     = uLightConfig.y;
+    float uSaturation          = uLightConfig.z;
+
     vec2 fragCoord = FlutterFragCoord().xy;
 
     // Use the explicit uSize uniform for UV derivation. textureSize() was tried

@@ -113,32 +113,25 @@ float sceneSDF(vec2 p, int numShapes, float blend) {
         return mix(fwd, bwd, 0.5);
     } else {
         // Dynamic loops for 5+ shapes (uncommon).
-        // Ternary used instead of min(int,int) — that overload is absent in SkSL/glslang
-        // on Windows and would cause a build error.
+        // Loop bounds MUST be compile-time constants on Windows (SkSL/glslang SPIR-V path);
+        // use MAX_SHAPES as the fixed upper bound and break early once the real
+        // shape count is reached.  Ternary instead of min(int,int) — that overload
+        // is absent in SkSL/glslang on Windows.
         int clampedN = numShapes < MAX_SHAPES ? numShapes : MAX_SHAPES;
         float fwd = getShapeSDFFromArray(0, p);
-        for (int i = 1; i < clampedN; i++) {
+        for (int i = 1; i < MAX_SHAPES; i++) {
+            if (i >= clampedN) break;
             fwd = smoothUnion(fwd, getShapeSDFFromArray(i, p), blend);
         }
 
         // Backward: iterate i = 1..N-1, indexing from the tail.
-        float bwd = getShapeSDFFromArray(numShapes - 1, p);
-        for (int i = 1; i < clampedN; i++) {
-            bwd = smoothUnion(bwd, getShapeSDFFromArray(numShapes - 1 - i, p), blend);
+        float bwd = getShapeSDFFromArray(clampedN - 1, p);
+        for (int i = 1; i < MAX_SHAPES; i++) {
+            if (i >= clampedN) break;
+            bwd = smoothUnion(bwd, getShapeSDFFromArray(clampedN - 1 - i, p), blend);
         }
 
         return mix(fwd, bwd, 0.5);
     }
 }
 
-// Calculate 3D normal using derivatives (shader-specific normal calculation)
-vec3 getNormal(float sd, float thickness) {
-    float dx = dFdx(sd);
-    float dy = dFdy(sd);
-    
-    // The cosine and sine between normal and the xy plane
-    float n_cos = max(thickness + sd, 0.0) / thickness;
-    float n_sin = sqrt(max(0.0, 1.0 - n_cos * n_cos));
-    
-    return normalize(vec3(dx * n_cos, dy * n_cos, n_sin));
-}
