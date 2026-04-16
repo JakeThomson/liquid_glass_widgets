@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
@@ -124,8 +125,11 @@ class GlassToolbar extends StatelessWidget {
     // Inherit quality from parent layer if not explicitly set
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality =
-        quality ?? inherited?.quality ?? GlassQuality.premium;
+    final themeData = GlassThemeData.of(context);
+    final effectiveQuality = quality ??
+        inherited?.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.premium;
 
     // Standard iOS toolbar glass settings with high blur
     final effectiveSettings = glassSettings ?? _defaultSettings;

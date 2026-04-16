@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_button_style.dart';
@@ -53,8 +54,11 @@ class GlassButtonGroup extends StatelessWidget {
     // Inherit quality from parent layer if not explicitly set.
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality =
-        quality ?? inherited?.quality ?? GlassQuality.standard;
+    final themeData = GlassThemeData.of(context);
+    final effectiveQuality = quality ??
+        inherited?.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.standard;
 
     // ClipRRect constrains the glass layer to the pill boundary on all backends.
     // On Impeller, LiquidGlass.withOwnLayer (premium + useOwnLayer) can bleed

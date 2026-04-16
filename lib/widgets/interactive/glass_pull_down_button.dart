@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
 import '../overlays/glass_menu.dart';
 import '../overlays/glass_menu_item.dart';
@@ -56,8 +57,11 @@ class GlassPullDownButton extends StatelessWidget {
     // Inherit quality from parent layer if not explicitly set
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality =
-        quality ?? inherited?.quality ?? GlassQuality.standard;
+    final themeData = GlassThemeData.of(context);
+    final effectiveQuality = quality ??
+        inherited?.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.standard;
 
     return GlassMenu(
       menuWidth: menuWidth,

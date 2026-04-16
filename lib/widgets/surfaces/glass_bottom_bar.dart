@@ -12,6 +12,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../utils/glass_spring.dart';
 
@@ -460,11 +461,15 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
 
   @override
   Widget build(BuildContext context) {
-    // Inherit quality from parent layer if not explicitly set
+    // Inherit quality from parent layer or theme if not explicitly set
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality =
-        widget.quality ?? inherited?.quality ?? GlassQuality.premium;
+    final themeData = GlassThemeData.of(context);
+
+    final effectiveQuality = widget.quality ??
+        inherited?.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.premium;
 
     // Use custom glass settings or cached defaults for bottom bars
     final glassSettings = widget.glassSettings ?? _defaultGlassSettings;
@@ -674,7 +679,27 @@ class GlassBottomBarTab {
   final double? thickness;
 }
 
-/// Configuration for the extra button in [GlassBottomBar].
+/// Where a [GlassBottomBarExtraButton] appears relative to the search pill
+/// in a [GlassSearchableBottomBar].
+///
+/// Has no effect in [GlassBottomBar], where the extra button always sits
+/// between the tab content and the right edge.
+enum ExtraButtonPosition {
+  /// Place the button **before** the search pill — between the tab pill and
+  /// the search pill. This is the default and matches the classic iOS
+  /// "compose" button position seen in Mail and Messages.
+  beforeSearch,
+
+  /// Place the button **after** the search pill — pinned to the trailing
+  /// (right) edge of the bar. Use this when you want a persistent action
+  /// button that stays visible at the far right even while search is expanded.
+  /// The search pill's spring calculations automatically reserve the required
+  /// space so no RenderFlex overflow occurs during transitions.
+  afterSearch,
+}
+
+/// Configuration for the extra button in [GlassBottomBar] and
+/// [GlassSearchableBottomBar].
 ///
 /// The extra button is rendered as a [GlassButton] and typically used for
 /// primary actions like creating new content.
@@ -686,6 +711,7 @@ class GlassBottomBarExtraButton {
     required this.label,
     this.iconColor,
     this.size = 64,
+    this.position = ExtraButtonPosition.beforeSearch,
   });
 
   /// Icon widget displayed in the button.
@@ -706,6 +732,18 @@ class GlassBottomBarExtraButton {
   ///
   /// Defaults to 64 to match the default bar height.
   final double size;
+
+  /// Where this button is placed relative to the search pill in a
+  /// [GlassSearchableBottomBar].
+  ///
+  /// - [ExtraButtonPosition.beforeSearch] (default) — between the tab pill
+  ///   and the search pill. Classic iOS pattern (Mail compose button).
+  /// - [ExtraButtonPosition.afterSearch] — pinned to the right edge, after
+  ///   the search pill. The search pill's spring calculations automatically
+  ///   reserve space so no RenderFlex overflow occurs during transitions.
+  ///
+  /// Has no effect in [GlassBottomBar].
+  final ExtraButtonPosition position;
 }
 
 /// Internal widget that manages the draggable indicator with physics.

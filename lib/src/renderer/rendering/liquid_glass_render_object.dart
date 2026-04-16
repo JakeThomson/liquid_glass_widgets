@@ -196,7 +196,11 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
 
     _paintBounds = boundingBox;
 
-    if (settings.effectiveThickness <= 0) {
+    // Fast-path: if there is no geometric thickness AND no blur, there is
+    // nothing to render — skip the expensive async geometry build entirely.
+    // If blur > 0 but thickness == 0, we must still run paintLiquidGlass so
+    // the BackdropFilterLayer blur pass fires in liquid_glass_layer.dart.
+    if (settings.effectiveThickness <= 0 && settings.effectiveBlur <= 0) {
       _clearGeometryImage();
       paintShapeContents(
         context,
@@ -246,20 +250,25 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       );
     } else {
       if (_geometryImage case final geometryImage?) {
-        // Use _paintBounds (the current frame's bounding box, set at line 177)
-        // instead of _geometryLocalBounds (from the last completed build).
+        // Map the texture to exactly the bounds it was originally built for
+        // (_geometryLocalBounds) rather than the newly expanding current frame
+        // bounds (_paintBounds).
         //
-        // During expansion, layout() fires every frame and _geometryLocalBounds
-        // lags 1-2 frames behind. Using stale small bounds means the shader
-        // only covers the old smaller area → transparent gap at the new edges
-        // → the "line protruding from both sides" during press-and-hold.
+        // Map the texture to exactly the bounds it was originally built for
+        // (_geometryLocalBounds) rather than the newly expanding current frame
+        // bounds (_paintBounds).
         //
-        // _paintBounds is always the current frame's exact local bounding box.
-        // Any SDF size mismatch (texture built at old size vs. current size)
-        // is at most ~1px during the async build frames — sub-pixel, not visible.
+        // Using _paintBounds causes severe multi-button jitter during animations:
+        // as one button scales, _paintBounds expands/shifts to contain it. Since
+        // the asynchronous texture lags 1 frame behind, rendering the old texture
+        // using the new origin visually shifted entire group of buttons on the
+        // screen until the next texture arrived.
+        //
+        // Locking the shader mapping to the precise bounds the texture was built
+        // with ensures stable pixel positioning for the life of the texture.
         final activeBounds = MatrixUtils.transformRect(
           matteTransform,
-          _paintBounds,
+          _geometryLocalBounds,
         ).snapToPixels(devicePixelRatio);
         renderShader
           // Slot 0-1: uSize — physical-pixel size of the backdrop layer.

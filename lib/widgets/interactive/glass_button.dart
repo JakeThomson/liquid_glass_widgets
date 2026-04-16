@@ -486,8 +486,11 @@ class _GlassButtonState extends State<GlassButton>
         // Inherit quality from parent layer if not explicitly set
         final inherited =
             context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-        final effectiveQuality =
-            widget.quality ?? (inherited?.quality ?? GlassQuality.standard);
+        final themeData = GlassThemeData.of(context);
+        final effectiveQuality = widget.quality ??
+            (inherited?.quality ??
+                themeData.qualityFor(context) ??
+                GlassQuality.standard);
 
         // Pass glow intensity directly to AdaptiveGlass for Skia shader feedback.
         // On Impeller, GlassGlow widget is used instead (separate from glass effect).

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../utils/glass_spring.dart';
 
@@ -257,8 +258,11 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
     // Inherit quality from parent layer if not explicitly set
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality =
-        widget.quality ?? (inherited?.quality ?? GlassQuality.standard);
+    final themeData = GlassThemeData.of(context);
+    final effectiveQuality = widget.quality ??
+        (inherited?.quality ??
+            themeData.qualityFor(context) ??
+            GlassQuality.standard);
 
     // Use custom glass settings or optimized defaults
     final glassSettings = widget.glassSettings ??

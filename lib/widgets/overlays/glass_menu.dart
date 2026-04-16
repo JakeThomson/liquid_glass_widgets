@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart'; // Required for SpringSimulation
+import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
@@ -316,8 +317,11 @@ class _GlassMenuState extends State<GlassMenu>
     // Inherit quality from parent layer if not explicitly set
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality =
-        widget.quality ?? inherited?.quality ?? GlassQuality.standard;
+    final themeData = GlassThemeData.of(context);
+    final effectiveQuality = widget.quality ??
+        inherited?.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.standard;
 
     // Calculate menu height by measuring its natural size
     // This is necessary for proper height interpolation during morph

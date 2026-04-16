@@ -197,25 +197,12 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
   }
 
   void _onLinkUpdate() {
-    // One of the shapes might have changed.
     markGeometryNeedsUpdate();
     markNeedsPaint();
   }
 
   @override
   void onTransformChanged() {
-    // [LOCAL PATCH]: Do NOT call markGeometryNeedsUpdate() here. The blend
-    // group's geometry texture is in its own local coordinate space — shape
-    // positions relative to the blend group are unchanged when the group
-    // scrolls or animates on screen. Calling markGeometryNeedsUpdate() was
-    // triggering a full gatherShapeData() + getTransformTo() walk for every
-    // shape on every frame during any animation.
-    //
-    // Instead, notify the render link so the parent LiquidGlassRenderObject
-    // knows to recomposite the existing geometry texture into the new screen
-    // position on the next paint (link._dirty = true). The layer's own
-    // onTransformChanged handles needsGeometryUpdate for the screen-space
-    // composite.
     renderLink?.notifyGeometryChanged(this);
     markNeedsPaint();
   }
@@ -320,16 +307,6 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
     Offset offset, {
     required bool insideGlass,
   }) {
-    // [LOCAL PATCH]: Compute blend-group → ancestor transform once and reuse
-    // cached shapeToGeometry from the last geometry build for each shape,
-    // avoiding one full render-tree walk (getTransformTo) per shape per frame.
-    final blendGroupToAncestor = getTransformTo(from);
-    final shapeTransforms = <RenderLiquidGlass, Matrix4>{
-      for (final shape in geometry?.shapes ?? const <ShapeGeometry>[])
-        if (shape.shapeToGeometry != null)
-          shape.renderObject: shape.shapeToGeometry!,
-    };
-
     for (final shapeEntry in link.shapeEntries) {
       final renderObject = shapeEntry.key;
       if (!renderObject.attached ||
@@ -337,10 +314,10 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
         continue;
       }
 
-      final cachedToGeometry = shapeTransforms[renderObject];
-      final transform = cachedToGeometry != null
-          ? (blendGroupToAncestor * cachedToGeometry)
-          : renderObject.getTransformTo(from);
+      // Fetch the true live paint transform. Since paint-only animations
+      // (LiquidStretch, scale) bypass SDF geometry rebuilds, we must NOT use
+      // transforming caches derived from the old layout geometry.
+      final transform = renderObject.getTransformTo(from);
 
       renderObject.paintFromLayer(context, transform, offset);
     }

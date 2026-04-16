@@ -218,9 +218,13 @@ class RenderRawLiquidStretch extends RenderProxyBox {
     );
 
     final matrix = Matrix4.identity()
-      // ignore: deprecated_member_use To support older Flutter versions
+      // ignore: deprecated_member_use
+      ..translate(size.width / 2, size.height / 2)
+      // ignore: deprecated_member_use
       ..scale(scale.dx, scale.dy, 1)
-      // ignore: deprecated_member_use To support older Flutter versions
+      // ignore: deprecated_member_use
+      ..translate(-size.width / 2, -size.height / 2)
+      // ignore: deprecated_member_use
       ..translate(_stretchPixels.dx, _stretchPixels.dy);
 
     return matrix;

@@ -197,7 +197,7 @@ void main() {
     float normalizedHeight = geometryData.b;
     float thicknessScale   = clamp(40.0 / max(uThickness, 1.0), 1.0, 4.0);
     float edgeThreshold    = mix(0.8, 0.5, 1.0 / thicknessScale);
-    float edgeFactor       = 1.0 - smoothstep(0.0, edgeThreshold, normalizedHeight);
+    float edgeFactor       = uThickness < 0.01 ? 0.0 : 1.0 - smoothstep(0.0, edgeThreshold, normalizedHeight);
 
 
     if (edgeFactor > 0.01) {
@@ -211,9 +211,7 @@ void main() {
         // 1.0 / 1.0198039 = 0.9805806
         // This eliminates max(length(normalXY), 0.01), division, and normalize().
         // The edgeFactor > 0.01 gate above already guards the near-zero interior.
-        float nLen = 1.0; // Kept for clarity — always 1.0 by geometry texture guarantee
-        vec2  tangent = vec2(-normalXY.y, normalXY.x); // unit perp, no division needed
-        vec2  anisoN  = (normalXY + tangent * 0.20) * 0.9805806; // pre-normalised
+        vec2  anisoN  = normalXY; // True non-chiral normal for symmetric highlights
 
         float mainLight     = max(0.0, dot(anisoN, uLightDirection));
         float oppositeLight = max(0.0, dot(anisoN, -uLightDirection));

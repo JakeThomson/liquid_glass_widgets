@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
+import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
@@ -19,6 +20,7 @@ import '../shared/animated_glass_indicator.dart';
 import '../shared/inherited_liquid_glass.dart';
 import 'glass_bottom_bar.dart'
     show
+        ExtraButtonPosition,
         GlassBottomBarExtraButton,
         GlassBottomBarTab,
         MaskingQuality,
@@ -60,6 +62,7 @@ class GlassSearchBarConfig {
     this.micIconColor,
     this.hintStyle,
     this.controller,
+    this.focusNode,
     this.onChanged,
     this.onSubmitted,
     this.onMicTap,
@@ -106,6 +109,26 @@ class GlassSearchBarConfig {
   ///
   /// If null, the widget manages its own internal controller.
   final TextEditingController? controller;
+
+  /// Optional focus node for the search text field.
+  ///
+  /// Providing a [FocusNode] gives you full programmatic control over when
+  /// the search keyboard appears and disappears — independently of
+  /// [autoFocusOnExpand].  Typical use-cases:
+  ///
+  /// - Call `focusNode.requestFocus()` to open the keyboard at an arbitrary
+  ///   moment (e.g. after an animation completes or a voice-search result
+  ///   arrives).
+  /// - Call `focusNode.unfocus()` to dismiss the keyboard without collapsing
+  ///   the search bar.
+  /// - Listen to `focusNode.addListener(...)` for focus events in addition to
+  ///   or instead of [onSearchFocusChanged].
+  ///
+  /// **Lifecycle:** the caller is responsible for disposing the node.
+  /// The widget will never dispose a caller-provided [FocusNode].
+  ///
+  /// If null, an internal node is created and disposed automatically.
+  final FocusNode? focusNode;
 
   /// Called on every keystroke as the user types in the search field.
   ///
@@ -545,8 +568,11 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
   Widget build(BuildContext context) {
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality =
-        widget.quality ?? inherited?.quality ?? GlassQuality.premium;
+    final themeData = GlassThemeData.of(context);
+    final effectiveQuality = widget.quality ??
+        inherited?.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.premium;
     final glassSettings = widget.glassSettings ?? _defaultGlassSettings;
     final searching = widget.isSearchActive;
     final effectiveSearchH = widget.searchBarHeight ?? widget.barHeight;
@@ -574,7 +600,15 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final totalW = constraints.maxWidth;
-                final extraW = widget.extraButton != null
+                // Reserve space on the correct side based on button position.
+                final extraPos = widget.extraButton?.position ??
+                    ExtraButtonPosition.beforeSearch;
+                final extraWLeft = (widget.extraButton != null &&
+                        extraPos == ExtraButtonPosition.beforeSearch)
+                    ? (widget.extraButton!.size + widget.spacing)
+                    : 0.0;
+                final extraWRight = (widget.extraButton != null &&
+                        extraPos == ExtraButtonPosition.afterSearch)
                     ? (widget.extraButton!.size + widget.spacing)
                     : 0.0;
 
@@ -598,20 +632,24 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                     hasDismiss ? (targetDismissW + widget.spacing) : 0.0;
 
                 final targetTabW = !searching
-                    ? (totalW - targetCompactW - extraW - widget.spacing)
+                    ? (totalW -
+                        targetCompactW -
+                        extraWLeft -
+                        widget.spacing -
+                        extraWRight)
                     : math.min(widget.searchConfig.collapsedTabWidth, targetH);
 
                 final targetSearchLeft = !searching
-                    ? totalW - targetCompactW
+                    ? totalW - targetCompactW - extraWRight
                     : (_searchFocused && keyboardPresent)
                         ? 0.0
-                        : (targetTabW + extraW + widget.spacing);
+                        : (targetTabW + extraWLeft + widget.spacing);
 
                 final targetSearchW = !searching
                     ? targetCompactW
                     : (hasDismiss && _searchFocused && keyboardPresent)
-                        ? totalW - targetDismissReserve
-                        : totalW - targetSearchLeft;
+                        ? totalW - targetDismissReserve - extraWRight
+                        : totalW - targetSearchLeft - extraWRight;
 
                 // ── Spring trigger (post-frame to stay outside build phase) ────────
                 if (!_pillsInitialized && !_pillsInitScheduled) {
@@ -752,10 +790,15 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                         ),
                       ),
 
-                      // ── 2. Optional extra button (tracks tab pill spring) ────────
+                      // ── 2. Optional extra button ─────────────────────────────
                       if (widget.extraButton != null)
                         Positioned(
-                          left: curTabW + widget.spacing,
+                          left: extraPos == ExtraButtonPosition.beforeSearch
+                              ? curTabW + widget.spacing
+                              : null,
+                          right: extraPos == ExtraButtonPosition.afterSearch
+                              ? 0
+                              : null,
                           bottom: 0,
                           width: widget.extraButton!.size,
                           height: animH,
@@ -1415,6 +1458,7 @@ class _SearchPillState extends State<_SearchPill> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
   bool _ownsController = false;
+  bool _ownsFocusNode = false;
 
   // Tracks whether the × clear button should be visible.
   bool _hasText = false;
@@ -1430,7 +1474,12 @@ class _SearchPillState extends State<_SearchPill> {
       _controller = TextEditingController();
       _ownsController = true;
     }
-    _focusNode = FocusNode();
+    if (widget.config.focusNode != null) {
+      _focusNode = widget.config.focusNode!;
+    } else {
+      _focusNode = FocusNode();
+      _ownsFocusNode = true;
+    }
 
     _hasText = _controller.text.isNotEmpty;
     _controller.addListener(_onTextChanged);
@@ -1476,7 +1525,7 @@ class _SearchPillState extends State<_SearchPill> {
   void dispose() {
     _controller.removeListener(_onTextChanged);
     _focusNode.removeListener(_onFocusChanged);
-    _focusNode.dispose();
+    if (_ownsFocusNode) _focusNode.dispose();
     if (_ownsController) _controller.dispose();
     super.dispose();
   }

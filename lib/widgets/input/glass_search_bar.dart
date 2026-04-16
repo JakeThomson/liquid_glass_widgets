@@ -94,6 +94,7 @@ class GlassSearchBar extends StatefulWidget {
   const GlassSearchBar({
     super.key,
     this.controller,
+    this.focusNode,
     this.placeholder = 'Search',
     this.onChanged,
     this.onSubmitted,
@@ -121,6 +122,21 @@ class GlassSearchBar extends StatefulWidget {
   ///
   /// If null, a controller will be created internally.
   final TextEditingController? controller;
+
+  /// Optional focus node for the search field.
+  ///
+  /// Providing a [FocusNode] gives you programmatic control over keyboard
+  /// focus independently of [autofocus]:
+  ///
+  /// - `focusNode.requestFocus()` — open keyboard at any moment.
+  /// - `focusNode.unfocus()` — dismiss keyboard without clearing text.
+  /// - `focusNode.addListener(...)` — react to focus changes in your own code.
+  ///
+  /// **Lifecycle:** the caller is responsible for disposing the node.
+  /// The widget will never dispose a caller-provided [FocusNode].
+  ///
+  /// If null, an internal node is created and disposed automatically.
+  final FocusNode? focusNode;
 
   /// Placeholder text shown when the field is empty.
   ///
@@ -226,6 +242,7 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   bool _ownsController = false;
+  bool _ownsFocusNode = false;
   bool _hasText = false;
   bool _showCancelButton = false;
 
@@ -238,7 +255,12 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
       _controller = TextEditingController();
       _ownsController = true;
     }
-    _focusNode = FocusNode();
+    if (widget.focusNode != null) {
+      _focusNode = widget.focusNode!;
+    } else {
+      _focusNode = FocusNode();
+      _ownsFocusNode = true;
+    }
 
     _hasText = _controller.text.isNotEmpty;
     _controller.addListener(_onTextChanged);
@@ -249,7 +271,7 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
   void dispose() {
     _controller.removeListener(_onTextChanged);
     _focusNode.removeListener(_onFocusChanged);
-    _focusNode.dispose();
+    if (_ownsFocusNode) _focusNode.dispose();
     if (_ownsController) _controller.dispose();
     super.dispose();
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
@@ -365,11 +366,14 @@ class _GlassSliderState extends State<GlassSlider>
 
   @override
   Widget build(BuildContext context) {
-    // Inherit quality from parent layer if not explicitly set
+    // Inherit quality from parent layer or theme if not explicitly set
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    _effectiveQuality =
-        widget.quality ?? inherited?.quality ?? GlassQuality.standard;
+    final themeData = GlassThemeData.of(context);
+    _effectiveQuality = widget.quality ??
+        inherited?.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.standard;
 
     final effectiveValue = _dragValue ?? widget.value;
     final normalizedValue =

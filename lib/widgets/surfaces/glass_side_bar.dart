@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
@@ -130,8 +131,11 @@ class GlassSideBar extends StatelessWidget {
     // Inherit quality from parent layer if not explicitly set
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality =
-        quality ?? inherited?.quality ?? GlassQuality.premium;
+    final themeData = GlassThemeData.of(context);
+    final effectiveQuality = quality ??
+        inherited?.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.premium;
 
     // Standard sidebar glass settings (often slightly more opaque/different blur than toolbars)
     final effectiveSettings = glassSettings ?? _defaultGlassSettings;
