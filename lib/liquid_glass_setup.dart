@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'utils/accessibility_config.dart' as glass_config;
+import 'utils/glass_performance_monitor.dart';
 import 'src/renderer/liquid_glass_renderer.dart';
 import 'widgets/shared/glass_backdrop_scope.dart';
 import 'widgets/shared/glass_effect.dart';
@@ -51,12 +53,33 @@ class LiquidGlassWidgets {
   /// A [GlassAccessibilityScope] placed in the widget tree always takes
   /// precedence over this flag, allowing per-subtree overrides.
   ///
+  /// ### Performance Monitor
+  ///
+  /// When [enablePerformanceMonitor] is true (the default in debug and profile
+  /// builds), the library watches raster frame durations while
+  /// [GlassQuality.premium] surfaces are mounted. If frames exceed the GPU
+  /// budget for [GlassPerformanceMonitor.sustainedFrameThreshold] consecutive
+  /// frames, a single [FlutterError] is reported with actionable guidance.
+  ///
+  /// The monitor is **automatically disabled in release builds** — it registers
+  /// no callbacks and has zero overhead in shipped apps. Set
+  /// [enablePerformanceMonitor] to `false` to suppress it in debug builds too
+  /// (e.g. when profiling with artificial load).
+  ///
+  /// ```dart
+  /// await LiquidGlassWidgets.initialize(
+  ///   enablePerformanceMonitor: false, // silence the monitor
+  /// );
+  /// ```
+  ///
   /// Tasks performed:
   /// 1. Pre-warms/precaches the lightweight fragment shader.
   /// 2. Pre-warms the interactive indicator shader (for custom refraction).
   /// 3. Pre-warms Impeller rendering pipeline (iOS/Android/macOS).
+  /// 4. Optionally starts the performance monitor (debug/profile only).
   static Future<void> initialize({
     bool respectSystemAccessibility = true,
+    bool enablePerformanceMonitor = true,
   }) async {
     LiquidGlassWidgets.respectSystemAccessibility = respectSystemAccessibility;
     debugPrint('[LiquidGlass] Initializing library...');
@@ -68,6 +91,13 @@ class LiquidGlassWidgets {
       GlassEffect.preWarm(),
       _warmUpImpellerPipeline(),
     ]);
+
+    // 2. Start performance monitor (debug/profile builds only).
+    // kReleaseMode guard inside GlassPerformanceMonitor.start() ensures
+    // this is a no-op in production.
+    if (enablePerformanceMonitor && !kReleaseMode) {
+      GlassPerformanceMonitor.start();
+    }
 
     debugPrint('[LiquidGlass] Initialization complete.');
   }

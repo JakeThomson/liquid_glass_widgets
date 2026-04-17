@@ -40,7 +40,7 @@ A recreation of the Apple News app demonstrating `GlassSearchableBottomBar` with
 cd example && flutter pub get && flutter run -t lib/apple_news/apple_news_demo.dart
 ```
 
-<img width="390" alt="Apple News Demo" src="https://github.com/user-attachments/assets/8da8f118-e5f8-40e0-9b0e-d4cd5633a5cf" />
+<img width="390" height="844" alt="Apple News Demo" src="https://github.com/user-attachments/assets/8da8f118-e5f8-40e0-9b0e-d4cd5633a5cf" />
 
 ### [Widget Showcase](example/) — Full Component Library
 
@@ -78,7 +78,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.7.12
+  liquid_glass_widgets: ^0.7.13
 ```
 
 ```bash
@@ -164,6 +164,23 @@ GlassAppBar(
 
 > **Use Premium only for static, non-scrolling surfaces** (app bars, bottom bars, hero sections). It may not render correctly inside `ListView` or `CustomScrollView` on Impeller.
 
+### Minimal — Shader-Free
+
+Zero custom fragment shader cost on any device. Uses `BackdropFilter` blur + a Rec. 709 saturation matrix + a specular rim stroke. Visually equivalent to a high-quality frosted panel.
+
+```dart
+GlassCard(
+  quality: GlassQuality.minimal,
+  child: const Text('No shader overhead'),
+)
+```
+
+Two ideal use cases:
+- **Device fallback** — very old Android devices or any device where `ImageFilter.isShaderFilterSupported` is `false`
+- **GPU budget management** — use `minimal` for background panels and list cards while keeping `standard` or `premium` on the focal element. A screen with 15 glass list cards running `minimal` fires zero shader invocations during scroll
+
+> **Theme shorthand**: `GlassThemeVariant.minimal` applies `minimal` quality globally via `GlassThemeData`.
+
 
 ## Theming
 
@@ -219,7 +236,8 @@ Each value maps to a fixed power-of-2 exponent. The GPU uses a zero-transcendent
 2. **`LiquidGlassWidgets.wrap()`** in `main.dart` — all glass surfaces inside automatically share one GPU backdrop capture on Impeller (equivalent to wrapping with `GlassBackdropScope` directly, which also remains available for explicit scope control)
 3. **Standard quality for scrollable content** — lists, forms, interactive widgets
 4. **Premium quality for fixed surfaces** — app bars, bottom bars, and hero sections
-5. **Accessibility fallbacks are zero-cost** — when Reduce Transparency is active, the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
+5. **Minimal quality for shader-dense screens** — use `GlassQuality.minimal` for background panels and list cards to fire zero custom shader invocations during scroll, then keep `standard` or `premium` only on the focal element
+6. **Accessibility fallbacks are zero-cost** — when Reduce Transparency is active, the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
 
 
 ## Custom Refraction for Interactive Indicators

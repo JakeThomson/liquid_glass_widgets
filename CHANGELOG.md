@@ -1,3 +1,72 @@
+# 0.7.13
+
+### New — `GlassQuality.minimal`
+
+- **FEAT**: `GlassQuality.minimal` — third quality tier: a crisp frosted glass surface with
+  zero custom fragment shader execution on any platform. Uses `BackdropFilter` blur
+  + Rec. 709 saturation matrix + a light-angle specular rim stroke. No refraction
+  warping or chromatic aberration — a deliberately flat, clean aesthetic that looks
+  excellent on any background and never adds GPU shader cost.
+
+  Two distinct use cases:
+
+  **Device fallback** — for hardware where even [standard] is too heavy:
+  very old Android devices with limited shader driver support, or any device where
+  `ImageFilter.isShaderFilterSupported` returns `false`.
+
+  **GPU budget management** — for shader-dense screens: use [minimal] for background
+  panels, list cards, and decorative containers while keeping [standard] or [premium]
+  on the focal element. A screen with 15 glass list cards running [minimal] fires
+  zero shader invocations during scroll — only `BackdropFilter` compositing.
+
+  ```dart
+  AdaptiveGlass(
+    quality: GlassQuality.minimal,
+    child: child,
+  )
+  ```
+
+- **FEAT**: `GlassThemeVariant.minimal` — static preset that applies `.minimal` quality globally via
+  `GlassThemeData`:
+
+  ```dart
+  GlassTheme(
+    data: GlassThemeData(
+      light: GlassThemeVariant.minimal,
+      dark:  GlassThemeVariant.minimal,
+    ),
+    child: child,
+  )
+  ```
+
+### New — `GlassPerformanceMonitor`
+
+- **FEAT**: Debug/profile-only performance monitor that watches raster frame durations while
+  `GlassQuality.premium` surfaces are active. When frames exceed the GPU budget
+  for 60 consecutive frames, a single `FlutterError` is emitted with actionable guidance
+  (specific widget parameters, device compatibility notes, and alternative quality tiers).
+
+  **Zero production overhead** — the monitor never registers a callback in release builds.
+  Enabled by default in debug/profile builds via `LiquidGlassWidgets.initialize()`:
+
+  ```dart
+  // Default: auto-enabled in debug/profile, zero-cost in release
+  await LiquidGlassWidgets.initialize();
+
+  // Opt out:
+  await LiquidGlassWidgets.initialize(enablePerformanceMonitor: false);
+
+  // Custom thresholds (advanced):
+  GlassPerformanceMonitor.rasterBudget = const Duration(microseconds: 8333); // 120 fps
+  GlassPerformanceMonitor.sustainedFrameThreshold = 120; // 2 seconds at 60 fps
+  ```
+
+  The monitor correctly attributes slowdowns to premium glass by counting active
+  `GlassQuality.premium` surfaces. It stays silent when no premium widgets are mounted,
+  avoiding false positives from other parts of the app.
+
+---
+
 # 0.7.12
 
 ### Bug Fixes

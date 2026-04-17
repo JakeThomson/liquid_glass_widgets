@@ -13,6 +13,7 @@ import '../../widgets/interactive/liquid_glass_scope.dart';
 import 'inherited_liquid_glass.dart';
 
 import '../../types/glass_quality.dart';
+import 'adaptive_glass.dart';
 
 /// Enhanced glass renderer specifically for interactive indicators.
 ///
@@ -141,9 +142,11 @@ class _GlassEffectState extends State<GlassEffect>
   @override
   void initState() {
     super.initState();
-    // Always initialize the custom shader to ensure high-fidelity fallbacks
-    // are available even when native paths are restricted (e.g. inside cards).
-    _initShader();
+    // Skip shader init entirely in minimal quality — build() returns early via
+    // the _FrostedFallback path and the shader is never used.
+    if (widget.quality != GlassQuality.minimal) {
+      _initShader();
+    }
 
     _ticker = createTicker(_handleTick);
 
@@ -361,7 +364,29 @@ class _GlassEffectState extends State<GlassEffect>
     final shader = _activeShader;
 
     // 3. Selection Logic:
-    // Path A: Native Impeller (Premium only)
+
+    // Path A: Minimal (shader-free — BackdropFilter + ClipPath via _FrostedFallback)
+    // Routes through AdaptiveGlass which uses ClipPath(ShapeBorderClipper) for
+    // correct clipping on all shape types. No fragment shaders on any platform.
+    //
+    // IMPORTANT: always pass Clip.antiAlias here — never Clip.none.
+    // clipExpansion is only relevant for the LiquidStretch jelly displacement
+    // used in the full-shader path. _FrostedFallback has no displacement, so
+    // Clip.none would skip clipping entirely and let BackdropFilter blur the
+    // full rectangular bounds (the grey-square artifact).
+    if (widget.quality == GlassQuality.minimal || avoidsRefraction) {
+      return AdaptiveGlass(
+        shape: widget.shape,
+        settings: widget.settings,
+        quality: GlassQuality.minimal,
+        useOwnLayer: true,
+        clipBehavior: Clip.antiAlias,
+        isInteractive: true,
+        child: widget.child,
+      );
+    }
+
+    // Path B: Native Impeller (Premium only)
     if (isImpeller && widget.quality == GlassQuality.premium) {
       return LiquidGlass.withOwnLayer(
         shape: widget.shape,

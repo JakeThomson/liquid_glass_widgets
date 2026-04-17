@@ -103,7 +103,11 @@ class DraggableIndicatorPhysics {
     double velocityScale = 1000.0,
   }) {
     final speed = velocity.distance;
-    if (speed == 0) return Matrix4.identity();
+    if (speed == 0) {
+      // Force TransformLayer to stay mounted at rest by avoiding pure identity.
+      // This prevents sub-pixel vector edge snapping when velocity reaches 0.
+      return Matrix4.identity()..translate(0.0001, 0.0);
+    }
 
     // Normalize velocity direction
     final direction = velocity / speed;
@@ -124,7 +128,12 @@ class DraggableIndicatorPhysics {
     final scaleX = squashX * stretchX;
     final scaleY = squashY * stretchY;
 
-    return Matrix4.identity()..scale(scaleX, scaleY);
+    final matrix = Matrix4.identity()..scale(scaleX, scaleY);
+    if (matrix.isIdentity()) {
+      // Catch floating-point rounding rendering drops when speed is > 0 but microscopic
+      matrix.translate(0.0001, 0.0);
+    }
+    return matrix;
   }
 
   // ===========================================================================

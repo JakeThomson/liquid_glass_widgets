@@ -5,6 +5,7 @@ import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
+import '../../utils/glass_performance_monitor.dart';
 import 'inherited_liquid_glass.dart';
 
 /// An adaptive liquid glass layer that provides a glass background with proper
@@ -91,6 +92,32 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
     final effectiveQuality =
         quality ?? themeData.qualityFor(context) ?? GlassQuality.standard;
 
+    // ---- MINIMAL FAST-PATH --------------------------------------------------
+    // GlassQuality.minimal skips LiquidGlassLayer entirely.
+    //
+    // IMPORTANT: The layer has no shape — it wraps the full bounds including
+    // any padding around pill/circle children. Painting a BackdropFilter +
+    // tinted Container here bleeds into that padding area, creating the dark
+    // rectangle visible above/around the individual glass shapes.
+    //
+    // The correct approach matches how LiquidGlassLayer works in the normal
+    // path: the layer is a TRANSPARENT compositng context. Glass tinting and
+    // blur come entirely from the child AdaptiveGlass widgets, each of which
+    // renders as _FrostedFallback with correct shape-aware clipping.
+    //
+    // In minimal mode there are no blend groups, so the layer is a true
+    // pass-through — just InheritedLiquidGlass so descendants can read
+    // settings and quality.
+    // -------------------------------------------------------------------------
+    if (effectiveQuality == GlassQuality.minimal) {
+      return InheritedLiquidGlass(
+        settings: effectiveSettings,
+        quality: effectiveQuality,
+        isBlurProvidedByAncestor: false,
+        child: child,
+      );
+    }
+
     // Detect if we should use the full Impeller-native rendering pipeline
     final bool useFullRenderer =
         _canUseImpeller && effectiveQuality == GlassQuality.premium;
@@ -99,19 +126,21 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
     // to avoid each child doing its own expensive blur.
     Widget content = child;
 
-    return LiquidGlassLayer(
-      settings: effectiveSettings,
-      child: InheritedLiquidGlass(
+    return PremiumGlassTracker(
+      child: LiquidGlassLayer(
         settings: effectiveSettings,
-        quality: effectiveQuality,
-        isBlurProvidedByAncestor:
-            false, // Root never provides the blur; containers do.
-        child: useFullRenderer
-            ? LiquidGlassBlendGroup(
-                blend: blendAmount,
-                child: content,
-              )
-            : content,
+        child: InheritedLiquidGlass(
+          settings: effectiveSettings,
+          quality: effectiveQuality,
+          isBlurProvidedByAncestor:
+              false, // Root never provides the blur; containers do.
+          child: useFullRenderer
+              ? LiquidGlassBlendGroup(
+                  blend: blendAmount,
+                  child: content,
+                )
+              : content,
+        ),
       ),
     );
   }

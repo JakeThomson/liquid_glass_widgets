@@ -164,6 +164,35 @@ class GlassThemeVariant {
     glowColors: GlassGlowColors.fallback,
   );
 
+  /// Shader-free theme variant for maximum compatibility.
+  ///
+  /// All glass widgets in this subtree use [GlassQuality.minimal]: plain
+  /// BackdropFilter blur with a tinted container. No fragment shaders,
+  /// no texture capture, no specular effects.
+  ///
+  /// Use this as your global theme when targeting pre-iPhone 13 / pre-A15
+  /// devices, or when the [GlassPerformanceMonitor] consistently warns about
+  /// GPU budget overruns:
+  ///
+  /// ```dart
+  /// GlassTheme(
+  ///   data: GlassThemeData(
+  ///     light: GlassThemeVariant.minimal,
+  ///     dark: GlassThemeVariant.minimal,
+  ///   ),
+  ///   child: child!,
+  /// )
+  /// ```
+  static const GlassThemeVariant minimal = GlassThemeVariant(
+    settings: LiquidGlassSettings(
+      thickness: 30.0,
+      blur: 12.0,
+      lightIntensity: 1.0,
+    ),
+    quality: GlassQuality.minimal,
+    glowColors: GlassGlowColors.fallback,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

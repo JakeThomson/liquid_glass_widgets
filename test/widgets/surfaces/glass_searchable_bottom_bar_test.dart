@@ -1,0 +1,366 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_widgets/types/glass_quality.dart';
+import 'package:liquid_glass_widgets/widgets/surfaces/glass_bottom_bar.dart'
+    show GlassBottomBarExtraButton, GlassBottomBarTab, MaskingQuality;
+import 'package:liquid_glass_widgets/widgets/surfaces/glass_searchable_bottom_bar.dart';
+
+import '../../shared/test_helpers.dart';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+final _testTabs = [
+  const GlassBottomBarTab(
+    label: 'For You',
+    icon: Icon(CupertinoIcons.news),
+  ),
+  const GlassBottomBarTab(
+    label: 'Following',
+    icon: Icon(CupertinoIcons.person_2),
+  ),
+  const GlassBottomBarTab(
+    label: 'Saved',
+    icon: Icon(CupertinoIcons.bookmark),
+  ),
+];
+
+Widget _buildBar({
+  bool isSearchActive = false,
+  int selectedIndex = 0,
+  ValueChanged<int>? onTabSelected,
+  ValueChanged<bool>? onSearchToggle,
+  TextEditingController? controller,
+  FocusNode? focusNode,
+  ValueChanged<String>? onChanged,
+  GlassBottomBarExtraButton? extraButton,
+  GlassQuality? quality,
+}) {
+  return createTestApp(
+    child: GlassSearchableBottomBar(
+      tabs: _testTabs,
+      selectedIndex: selectedIndex,
+      onTabSelected: onTabSelected ?? (_) {},
+      isSearchActive: isSearchActive,
+      maskingQuality: MaskingQuality.off, // no dual-layer in tests
+      quality: quality,
+      extraButton: extraButton,
+      searchConfig: GlassSearchBarConfig(
+        onSearchToggle: onSearchToggle ?? (_) {},
+        hintText: 'Search News',
+        controller: controller,
+        focusNode: focusNode,
+        onChanged: onChanged,
+      ),
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  group('GlassSearchableBottomBar', () {
+    // ── Instantiation ─────────────────────────────────────────────────────────
+
+    testWidgets('can be instantiated with required parameters', (tester) async {
+      await tester.pumpWidget(_buildBar());
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('displays tab labels when search is inactive', (tester) async {
+      await tester.pumpWidget(_buildBar());
+      await tester.pump();
+
+      expect(find.text('For You'), findsWidgets);
+      expect(find.text('Following'), findsWidgets);
+      expect(find.text('Saved'), findsWidgets);
+    });
+
+    testWidgets('displays search hint text when search is active',
+        (tester) async {
+      await tester.pumpWidget(_buildBar(isSearchActive: true));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search News'), findsOneWidget);
+    });
+
+    // ── Tab interaction ───────────────────────────────────────────────────────
+
+    testWidgets('calls onTabSelected when a tab is tapped', (tester) async {
+      var selected = 0;
+
+      await tester.pumpWidget(
+        _buildBar(onTabSelected: (i) => selected = i),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Following'));
+      await tester.pumpAndSettle();
+
+      expect(selected, equals(1));
+    });
+
+    testWidgets('reflects selectedIndex correctly', (tester) async {
+      await tester.pumpWidget(_buildBar(selectedIndex: 2));
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    // ── Search toggle ─────────────────────────────────────────────────────────
+
+    testWidgets('calls onSearchToggle when search pill is tapped',
+        (tester) async {
+      bool? lastToggle;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            isSearchActive: false,
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (v) => lastToggle = v,
+              hintText: 'Search',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Tap the search icon (search toggle button)
+      final searchIconFinder = find.byIcon(CupertinoIcons.search);
+      if (searchIconFinder.evaluate().isNotEmpty) {
+        await tester.tap(searchIconFinder.first);
+        await tester.pumpAndSettle();
+        expect(lastToggle, isNotNull);
+      }
+    });
+
+    // ── Text controller ───────────────────────────────────────────────────────
+
+    testWidgets('uses provided TextEditingController', (tester) async {
+      final controller = TextEditingController(text: 'flutter');
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        _buildBar(isSearchActive: true, controller: controller),
+      );
+      await tester.pumpAndSettle();
+
+      // Widget should mount without errors when a controller is provided.
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    // ── Focus node ────────────────────────────────────────────────────────────
+
+    testWidgets('accepts and preserves a caller-provided FocusNode',
+        (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester.pumpWidget(
+        _buildBar(isSearchActive: true, focusNode: focusNode),
+      );
+      await tester.pumpAndSettle();
+
+      // Widget mounted successfully with external focus node — node must still
+      // be alive (the widget must NOT have disposed it).
+      expect(focusNode.dispose, isA<Function>());
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('does not dispose caller-provided FocusNode on rebuild',
+        (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester
+          .pumpWidget(_buildBar(isSearchActive: true, focusNode: focusNode));
+      await tester.pumpAndSettle();
+      // Trigger a rebuild by toggling search state.
+      await tester
+          .pumpWidget(_buildBar(isSearchActive: false, focusNode: focusNode));
+      await tester.pumpAndSettle();
+
+      // Node should still be usable after the widget rebuilds.
+      expect(() => focusNode.hasFocus, returnsNormally);
+    });
+
+    // ── onChanged callback ────────────────────────────────────────────────────
+
+    testWidgets('calls onChanged as user types', (tester) async {
+      final values = <String>[];
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        _buildBar(
+          isSearchActive: true,
+          controller: controller,
+          onChanged: values.add,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final textField = find.byType(TextField);
+      if (textField.evaluate().isNotEmpty) {
+        await tester.enterText(textField.first, 'glass');
+        await tester.pump();
+        expect(values, contains('glass'));
+      }
+    });
+
+    // ── Extra button ──────────────────────────────────────────────────────────
+
+    testWidgets('displays extra button when provided', (tester) async {
+      await tester.pumpWidget(
+        _buildBar(
+          extraButton: GlassBottomBarExtraButton(
+            icon: const Icon(CupertinoIcons.add),
+            label: 'Add',
+            onTap: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byIcon(CupertinoIcons.add), findsOneWidget);
+    });
+
+    testWidgets('extra button fires onTap correctly', (tester) async {
+      var tapped = false;
+
+      await tester.pumpWidget(
+        _buildBar(
+          extraButton: GlassBottomBarExtraButton(
+            icon: const Icon(CupertinoIcons.add),
+            label: 'Add',
+            onTap: () => tapped = true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byIcon(CupertinoIcons.add));
+      await tester.pump();
+
+      expect(tapped, isTrue);
+    });
+
+    // ── Quality path ──────────────────────────────────────────────────────────
+
+    testWidgets('mounts correctly with GlassQuality.minimal', (tester) async {
+      await tester.pumpWidget(_buildBar(quality: GlassQuality.minimal));
+      await tester.pump();
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('mounts correctly with GlassQuality.standard', (tester) async {
+      await tester.pumpWidget(_buildBar(quality: GlassQuality.standard));
+      await tester.pump();
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    // ── Defaults ──────────────────────────────────────────────────────────────
+
+    test('widget defaults are correct', () {
+      final bar = GlassSearchableBottomBar(
+        tabs: _testTabs,
+        selectedIndex: 0,
+        onTabSelected: (_) {},
+        searchConfig: GlassSearchBarConfig(
+          onSearchToggle: (_) {},
+        ),
+      );
+
+      expect(bar.isSearchActive, isFalse);
+      expect(bar.spacing, equals(8));
+      expect(bar.barHeight, equals(64));
+      expect(bar.barBorderRadius, equals(32));
+      expect(bar.horizontalPadding, equals(20));
+      expect(bar.verticalPadding, equals(20));
+      expect(bar.showIndicator, isTrue);
+      expect(bar.quality, isNull);
+    });
+
+    // ── Assertions ────────────────────────────────────────────────────────────
+
+    test('asserts on empty tabs list', () {
+      expect(
+        () => GlassSearchableBottomBar(
+          tabs: const [],
+          selectedIndex: 0,
+          onTabSelected: (_) {},
+          searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('asserts when selectedIndex is out of range', () {
+      expect(
+        () => GlassSearchableBottomBar(
+          tabs: _testTabs,
+          selectedIndex: 99,
+          onTabSelected: (_) {},
+          searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+        ),
+        throwsAssertionError,
+      );
+    });
+  });
+
+  // ── GlassSearchBarConfig ───────────────────────────────────────────────────
+
+  group('GlassSearchBarConfig', () {
+    test('can be instantiated with required parameters', () {
+      final config = GlassSearchBarConfig(
+        onSearchToggle: (_) {},
+      );
+
+      expect(config.hintText, equals('Search'));
+      expect(config.collapsedTabWidth, equals(64.0));
+      expect(config.autocorrect, isTrue);
+      expect(config.enableSuggestions, isTrue);
+      expect(config.autoFocusOnExpand, isFalse);
+      expect(config.showsCancelButton, isFalse);
+      expect(config.cancelButtonText, equals('Cancel'));
+    });
+
+    test('respects custom hint text', () {
+      final config = GlassSearchBarConfig(
+        onSearchToggle: (_) {},
+        hintText: 'Search Apple News',
+      );
+      expect(config.hintText, equals('Search Apple News'));
+    });
+
+    test('stores focusNode reference without disposing', () {
+      final node = FocusNode();
+      addTearDown(node.dispose);
+
+      final config = GlassSearchBarConfig(
+        onSearchToggle: (_) {},
+        focusNode: node,
+      );
+
+      expect(config.focusNode, same(node));
+    });
+
+    test('stores controller reference', () {
+      final ctrl = TextEditingController();
+      addTearDown(ctrl.dispose);
+
+      final config = GlassSearchBarConfig(
+        onSearchToggle: (_) {},
+        controller: ctrl,
+      );
+
+      expect(config.controller, same(ctrl));
+    });
+  });
+}

@@ -1099,15 +1099,22 @@ class _TabIndicatorState extends State<_TabIndicator> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Glass background with all tabs
+          // Glass background (Cached to prevent blur re-rasterization on pill drag)
           Positioned.fill(
-            child: AdaptiveGlass.grouped(
-              quality: widget.quality,
-              shape: _barShape,
-              child: Container(
-                padding: widget.tabPadding,
-                child: widget.childUnselected,
+            child: RepaintBoundary(
+              child: AdaptiveGlass.grouped(
+                quality: widget.quality,
+                shape: _barShape,
+                child: const SizedBox.expand(),
               ),
+            ),
+          ),
+
+          // Unselected icons above background
+          Positioned.fill(
+            child: Container(
+              padding: widget.tabPadding,
+              child: widget.childUnselected,
             ),
           ),
 
@@ -1151,52 +1158,33 @@ class _TabIndicatorState extends State<_TabIndicator> {
         children: [
           // 1. Glass Background Layer with ALL content
           // This provides the glass visual/refraction for everything
+          // 1. Static Blur Background (Cached)
           Positioned.fill(
-            child: AdaptiveGlass.grouped(
-              quality: widget.quality,
-              shape: _barShape,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // 2. Unselected Content Layer (inverse clipped)
-                  ClipPath(
-                    clipper: JellyClipper(
-                      itemCount: widget.tabCount,
-                      alignment: alignment,
-                      thickness: thickness,
-                      expansion: 14,
-                      transform: jellyTransform,
-                      borderRadius:
-                          thickness < 1 ? backgroundRadius : glassRadius,
-                      inverse: true,
-                    ),
-                    child: Container(
-                      padding: widget.tabPadding,
-                      height: widget.barHeight,
-                      child: widget.childUnselected,
-                    ),
-                  ),
+            child: RepaintBoundary(
+              child: AdaptiveGlass.grouped(
+                quality: widget.quality,
+                shape: _barShape,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
 
-                  // 3. Masked Selected Content Layer (normal clipped)
-                  if (thickness > 0.05 || widget.visible)
-                    ClipPath(
-                      clipper: JellyClipper(
-                        itemCount: widget.tabCount,
-                        alignment: alignment,
-                        thickness: thickness,
-                        expansion: 14,
-                        transform: jellyTransform,
-                        borderRadius:
-                            thickness < 1 ? backgroundRadius : glassRadius,
-                      ),
-                      child: Container(
-                        padding: widget.tabPadding,
-                        height: widget.barHeight,
-                        child: widget.selectedTabBuilder(
-                            context, thickness, alignment),
-                      ),
-                    ),
-                ],
+          // 2. Unselected Content Layer (inverse clipped)
+          Positioned.fill(
+            child: ClipPath(
+              clipper: JellyClipper(
+                itemCount: widget.tabCount,
+                alignment: alignment,
+                thickness: thickness,
+                expansion: 14,
+                transform: jellyTransform,
+                borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
+                inverse: true,
+              ),
+              child: Container(
+                padding: widget.tabPadding,
+                height: widget.barHeight,
+                child: widget.childUnselected,
               ),
             ),
           ),
@@ -1220,27 +1208,47 @@ class _TabIndicatorState extends State<_TabIndicator> {
           // 5. Selected Content ON TOP (ensures icons/text visible above indicator)
           // Always show to prevent jumping when animation completes
           Positioned.fill(
-            child: RepaintBoundary(
-              child: IgnorePointer(
-                child: ClipPath(
-                  clipper: JellyClipper(
-                    itemCount: widget.tabCount,
-                    alignment: alignment,
-                    thickness: thickness,
-                    expansion: 14,
-                    transform: jellyTransform,
-                    borderRadius:
-                        thickness < 1 ? backgroundRadius : glassRadius,
+            child: widget.quality == GlassQuality.minimal
+                ? IgnorePointer(
+                    child: ClipPath(
+                      clipper: JellyClipper(
+                        itemCount: widget.tabCount,
+                        alignment: alignment,
+                        thickness: thickness,
+                        expansion: 14,
+                        transform: jellyTransform,
+                        borderRadius:
+                            thickness < 1 ? backgroundRadius : glassRadius,
+                      ),
+                      child: Container(
+                        padding: widget.tabPadding,
+                        height: widget.barHeight,
+                        child: widget.selectedTabBuilder(
+                            context, thickness, alignment),
+                      ),
+                    ),
+                  )
+                : RepaintBoundary(
+                    child: IgnorePointer(
+                      child: ClipPath(
+                        clipper: JellyClipper(
+                          itemCount: widget.tabCount,
+                          alignment: alignment,
+                          thickness: thickness,
+                          expansion: 14,
+                          transform: jellyTransform,
+                          borderRadius:
+                              thickness < 1 ? backgroundRadius : glassRadius,
+                        ),
+                        child: Container(
+                          padding: widget.tabPadding,
+                          height: widget.barHeight,
+                          child: widget.selectedTabBuilder(
+                              context, thickness, alignment),
+                        ),
+                      ),
+                    ),
                   ),
-                  child: Container(
-                    padding: widget.tabPadding,
-                    height: widget.barHeight,
-                    child: widget.selectedTabBuilder(
-                        context, thickness, alignment),
-                  ),
-                ),
-              ),
-            ),
           ),
         ],
       ),

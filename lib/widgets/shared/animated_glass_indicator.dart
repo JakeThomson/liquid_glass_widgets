@@ -157,12 +157,13 @@ class AnimatedGlassIndicator extends StatelessWidget {
       ),
     );
 
+    final bool isMinimal = quality == GlassQuality.minimal;
     final interactiveIndicator = Opacity(
       opacity: glassOpacity,
       // Mount early (0.01) so geometry is built before the indicator is opaque,
       // preventing the 1-frame flicker at the edges on fast drags.
       child: thickness > 0.01
-          ? RepaintBoundary(child: glassWidget)
+          ? (isMinimal ? glassWidget : RepaintBoundary(child: glassWidget))
           : const SizedBox.expand(),
     );
 

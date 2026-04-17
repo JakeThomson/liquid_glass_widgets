@@ -76,7 +76,8 @@ class LiquidStretch extends StatelessWidget {
           spring:
               GlassSpring.smooth(duration: const Duration(milliseconds: 300)),
           builder: (context, value, child) => Transform.scale(
-            scale: value,
+            // Avoid exact 1.0 to prevent RenderTransform layer drops on resting
+            scale: value == 1.0 ? 1.00001 : value,
             child: child,
           ),
           child: OffsetSpringBuilder(
@@ -209,7 +210,9 @@ class RenderRawLiquidStretch extends RenderProxyBox {
 
   Matrix4? _getEffectiveTransform() {
     if (_stretchPixels == Offset.zero) {
-      return null;
+      // Avoid exact identity to prevent TransformLayer detachment on rest
+      // ignore: deprecated_member_use
+      return Matrix4.identity()..translate(0.0001, 0.0);
     }
 
     final scale = getScale(

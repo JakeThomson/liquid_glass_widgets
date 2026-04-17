@@ -440,8 +440,15 @@ class _GlassButtonState extends State<GlassButton>
 
   @override
   Widget build(BuildContext context) {
-    // Resolve glow color from theme if not explicitly provided
+    // Resolve quality and theme — hoisted here so stretchWidget can branch on quality
     final themeData = GlassThemeData.of(context);
+    final inherited =
+        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
+    final effectiveQuality = widget.quality ??
+        (inherited?.quality ??
+            themeData.qualityFor(context) ??
+            GlassQuality.standard);
+
     final effectiveGlowColor = widget.glowColor ??
         themeData.glowColorsFor(context).primary ??
         Colors.white24;
@@ -483,15 +490,6 @@ class _GlassButtonState extends State<GlassButton>
         final baseSettings =
             widget.settings ?? InheritedLiquidGlass.ofOrDefault(context);
 
-        // Inherit quality from parent layer if not explicitly set
-        final inherited =
-            context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-        final themeData = GlassThemeData.of(context);
-        final effectiveQuality = widget.quality ??
-            (inherited?.quality ??
-                themeData.qualityFor(context) ??
-                GlassQuality.standard);
-
         // Pass glow intensity directly to AdaptiveGlass for Skia shader feedback.
         // On Impeller, GlassGlow widget is used instead (separate from glass effect).
         // On Skia/Web, glowIntensity controls shader-based additive brightness.
@@ -507,21 +505,30 @@ class _GlassButtonState extends State<GlassButton>
     );
 
     // 4. Wrap with stretch animation and interaction containers
-    // These remain outside the AnimatedBuilder to prevent redundant rebuilds
-    final stretchWidget = RepaintBoundary(
-      child: LiquidStretch(
-        interactionScale: widget.interactionScale,
-        stretch: widget.stretch,
-        resistance: widget.resistance,
-        hitTestBehavior: widget.stretchHitTestBehavior,
-        child: Semantics(
-          button: true,
-          label: widget.label.isNotEmpty ? widget.label : null,
-          enabled: widget.enabled,
-          child: glassWidget,
-        ),
+    // These remain outside the AnimatedBuilder to prevent redundant rebuilds.
+    //
+    // We explicitly skip wrapping RepaintBoundary in minimal quality to
+    // prevent sub-pixel edge jitter ("flicker-on-rest"). When a shape is tightly
+    // cached inside a RepaintBoundary and subjected to fractional scaling by the
+    // LiquidStretch spring, the texture's bilinear interpolation edge snaps abruptly
+    // to physical pixels exactly when velocity hits 0. Omitting the boundary
+    // forces pure vector shape computation every frame, bypassing texture pixel-snapping.
+    final stretchContent = LiquidStretch(
+      interactionScale: widget.interactionScale,
+      stretch: widget.stretch,
+      resistance: widget.resistance,
+      hitTestBehavior: widget.stretchHitTestBehavior,
+      child: Semantics(
+        button: true,
+        label: widget.label.isNotEmpty ? widget.label : null,
+        enabled: widget.enabled,
+        child: glassWidget,
       ),
     );
+
+    final stretchWidget = effectiveQuality == GlassQuality.minimal
+        ? stretchContent // No RepaintBoundary — forces smooth vector anti-aliasing
+        : RepaintBoundary(child: stretchContent);
 
     // Apply opacity when disabled
     final finalWidget = widget.enabled
