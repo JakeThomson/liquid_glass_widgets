@@ -134,18 +134,29 @@ class AnimatedGlassIndicator extends StatelessWidget {
     );
 
     // 2. Glass Indicator (Active/Dragging state)
-    final glassOpacity = thickness.clamp(0.0, 1.0);
+    //
+    // We fade the glass in/out by setting `visibility` on the settings rather
+    // than wrapping the widget in `Opacity`. This approach:
+    //   • Avoids the BackdropFilter-inside-Opacity offscreen-buffer bug that
+    //     causes blur > 0 to pop in at full size instead of fading smoothly.
+    //   • Keeps one unified code path for all blur values — no special cases.
+    //   • Re-uses the existing `effective*` getters in LiquidGlassSettings:
+    //     effectiveBlur = blur * visibility → when visibility = 0, effectiveBlur
+    //     = 0, so the renderer's `if (effectiveBlur > 0)` guard never creates a
+    //     BackdropFilter, eliminating the offscreen buffer entirely.
+    final fade = thickness.clamp(0.0, 1.0);
+    final base = glassSettings ?? _baseGlassSettings;
+    final effectiveSettings = base.copyWith(visibility: fade);
+
     final shape = useSuperellipse
         ? LiquidRoundedSuperellipse(borderRadius: borderRadius * 2)
         : LiquidRoundedRectangle(borderRadius: borderRadius);
-
-    final indicatorSettings = glassSettings ?? _baseGlassSettings;
 
     // Use specialized interactive glass for better performance and "wow" factor
     // on all platforms. On Skia/web, it uses magnification effects.
     final glassWidget = GlassEffect(
       shape: shape,
-      settings: indicatorSettings,
+      settings: effectiveSettings,
       quality: quality,
       interactionIntensity: thickness,
       backgroundKey: backgroundKey,
@@ -158,20 +169,18 @@ class AnimatedGlassIndicator extends StatelessWidget {
     );
 
     final bool isMinimal = quality == GlassQuality.minimal;
-    final interactiveIndicator = Opacity(
-      opacity: glassOpacity,
-      // Mount early (0.01) so geometry is built before the indicator is opaque,
-      // preventing the 1-frame flicker at the edges on fast drags.
-      child: thickness > 0.01
-          ? (isMinimal ? glassWidget : RepaintBoundary(child: glassWidget))
-          : const SizedBox.expand(),
-    );
+    // Mount early (0.01) so geometry is built before the indicator is visible,
+    // preventing a 1-frame flicker at the edges on fast drags.
+    // No Opacity wrapper needed — fading is handled by effectiveSettings above.
+    final interactiveIndicator = thickness > 0.01
+        ? (isMinimal ? glassWidget : RepaintBoundary(child: glassWidget))
+        : const SizedBox.expand();
 
     // Unified indicator child
     final indicatorChild = Stack(
       children: [
         if (backgroundOpacity > 0) backgroundIndicator,
-        if (glassOpacity > 0.05) interactiveIndicator,
+        if (fade > 0.05) interactiveIndicator,
       ],
     );
 

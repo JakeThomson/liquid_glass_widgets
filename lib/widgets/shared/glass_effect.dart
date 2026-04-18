@@ -762,7 +762,7 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     _shader.setFloat(index++, _settings.effectiveLightIntensity);
     _shader.setFloat(index++, _settings.effectiveAmbientStrength);
     _shader.setFloat(index++, _settings.effectiveSaturation);
-    _shader.setFloat(index++, _settings.refractiveIndex);
+    _shader.setFloat(index++, _settings.effectiveRefractiveIndex);
     _shader.setFloat(index++, (_settings.chromaticAberration).clamp(0.0, 1.0));
 
     // 16: uCornerRadius (float) - Logical

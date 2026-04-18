@@ -698,6 +698,27 @@ enum ExtraButtonPosition {
   afterSearch,
 }
 
+/// Controls how the tab pill is anchored **horizontally** during the morph
+/// animation in [GlassSearchableBottomBar].
+///
+/// This only affects the tab pill's position. The search pill position is
+/// always computed from the trailing edge.
+enum GlassTabPillAnchor {
+  /// The tab pill is pinned to the **leading (left) edge** — the right edge
+  /// retracts as the pill collapses. This is the default and matches the
+  /// classic iOS News / Safari behaviour.
+  start,
+
+  /// The tab pill scales **from its centre** — both edges collapse inward
+  /// symmetrically as the pill morphs into the collapsed search state, and
+  /// expand outward symmetrically when search closes.
+  ///
+  /// Use this when you want a more balanced, symmetrical animation. Note that
+  /// while searching, the search pill will be slightly narrower than in
+  /// [start] mode because it starts after the centred collapsed tab pill.
+  center,
+}
+
 /// Configuration for the extra button in [GlassBottomBar] and
 /// [GlassSearchableBottomBar].
 ///
@@ -712,6 +733,7 @@ class GlassBottomBarExtraButton {
     this.iconColor,
     this.size = 64,
     this.position = ExtraButtonPosition.beforeSearch,
+    this.collapseOnSearchFocus = true,
   });
 
   /// Icon widget displayed in the button.
@@ -744,6 +766,21 @@ class GlassBottomBarExtraButton {
   ///
   /// Has no effect in [GlassBottomBar].
   final ExtraButtonPosition position;
+
+  /// Whether this button collapses (hides + frees layout space) when the
+  /// search field is focused (i.e. the keyboard is visible).
+  ///
+  /// When `true` (default), the button fades out and its horizontal layout
+  /// space spring-animates to zero on keyboard appearance, giving the search
+  /// input the full available width — matching native iOS system apps
+  /// (Weather, App Store, Apple News).
+  ///
+  /// When `false`, the button remains fully visible and tappable alongside
+  /// the search input. Use this for buttons with contextual relevance during
+  /// active search (e.g. a "Filter" action that applies to search results).
+  ///
+  /// Has no effect in [GlassBottomBar].
+  final bool collapseOnSearchFocus;
 }
 
 /// Internal widget that manages the draggable indicator with physics.

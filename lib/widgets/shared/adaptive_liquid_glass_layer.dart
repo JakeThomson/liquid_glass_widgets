@@ -84,11 +84,13 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Resolve settings and quality from theme if not explicitly provided
+    // Resolve settings: start with base defaults, apply theme partial override
+    // (only non-null fields), then let explicit widget settings win entirely.
     final themeData = GlassThemeData.of(context);
-    final effectiveSettings = settings ??
-        themeData.settingsFor(context) ??
-        const LiquidGlassSettings();
+    const baseSettings = LiquidGlassSettings();
+    final themeOverride = themeData.settingsFor(context);
+    final withTheme = themeOverride?.applyTo(baseSettings) ?? baseSettings;
+    final effectiveSettings = settings ?? withTheme;
     final effectiveQuality =
         quality ?? themeData.qualityFor(context) ?? GlassQuality.standard;
 

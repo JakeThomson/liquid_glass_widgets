@@ -135,7 +135,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       value
         ..setColor(settings.effectiveGlassColor)
         ..setFloats([
-          settings.refractiveIndex,
+          settings.effectiveRefractiveIndex,
           settings.effectiveChromaticAberration,
           settings.effectiveThickness,
           settings.effectiveLightIntensity,

@@ -323,11 +323,11 @@ void main() {
       );
 
       expect(config.hintText, equals('Search'));
-      expect(config.collapsedTabWidth, equals(64.0));
+      expect(config.collapsedTabWidth, isNull);
       expect(config.autocorrect, isTrue);
       expect(config.enableSuggestions, isTrue);
       expect(config.autoFocusOnExpand, isFalse);
-      expect(config.showsCancelButton, isFalse);
+      expect(config.showsCancelButton, isTrue);
       expect(config.cancelButtonText, equals('Cancel'));
     });
 

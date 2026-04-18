@@ -69,85 +69,88 @@ class BottomBarTabItem extends StatelessWidget {
         button: true,
         selected: selected,
         label: tab.label ?? 'Tab',
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            spacing: iconLabelSpacing,
-            children: [
-              ExcludeSemantics(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    if (tab.glowColor != null)
-                      Positioned(
-                        top: -24,
-                        right: -24,
-                        left: -24,
-                        bottom: -24,
-                        child: RepaintBoundary(
-                          child: AnimatedContainer(
-                            duration: glowDuration,
-                            transformAlignment: Alignment.center,
-                            curve: Curves.easeOutCirc,
-                            transform: selected
-                                ? Matrix4.identity()
-                                : (Matrix4.identity()
-                                  ..scale(0.4)
-                                  ..rotateZ(-math.pi)),
-                            child: AnimatedOpacity(
+        child: SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              spacing: iconLabelSpacing,
+              children: [
+                ExcludeSemantics(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      if (tab.glowColor != null)
+                        Positioned(
+                          top: -24,
+                          right: -24,
+                          left: -24,
+                          bottom: -24,
+                          child: RepaintBoundary(
+                            child: AnimatedContainer(
                               duration: glowDuration,
-                              opacity: selected ? 1 : 0,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: tab.glowColor!.withOpacity(
-                                        selected ? glowOpacity : 0,
+                              transformAlignment: Alignment.center,
+                              curve: Curves.easeOutCirc,
+                              transform: selected
+                                  ? Matrix4.identity()
+                                  : (Matrix4.identity()
+                                    ..scale(0.4)
+                                    ..rotateZ(-math.pi)),
+                              child: AnimatedOpacity(
+                                duration: glowDuration,
+                                opacity: selected ? 1 : 0,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: tab.glowColor!.withOpacity(
+                                          selected ? glowOpacity : 0,
+                                        ),
+                                        blurRadius: glowBlurRadius,
+                                        spreadRadius: glowSpreadRadius,
                                       ),
-                                      blurRadius: glowBlurRadius,
-                                      spreadRadius: glowSpreadRadius,
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
+                      IconTheme(
+                        data: IconThemeData(
+                          color: iconColor,
+                          size: iconSize,
+                          shadows: _buildIconShadows(iconColor),
+                        ),
+                        child: DefaultTextStyle(
+                          style: DefaultTextStyle.of(context)
+                              .style
+                              .copyWith(color: iconColor),
+                          child: iconWidget,
+                        ),
                       ),
-                    IconTheme(
-                      data: IconThemeData(
-                        color: iconColor,
-                        size: iconSize,
-                        shadows: _buildIconShadows(iconColor),
-                      ),
-                      child: DefaultTextStyle(
-                        style: DefaultTextStyle.of(context)
-                            .style
-                            .copyWith(color: iconColor),
-                        child: iconWidget,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              if (tab.label != null)
-                Text(
-                  tab.label!,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: textStyle ??
-                      TextStyle(
-                        color: iconColor,
-                        fontSize: labelFontSize,
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.w500,
-                      ),
-                ),
-            ],
+                if (tab.label != null)
+                  Text(
+                    tab.label!,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: textStyle ??
+                        TextStyle(
+                          color: iconColor,
+                          fontSize: labelFontSize,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

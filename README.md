@@ -40,7 +40,7 @@ A recreation of the Apple News app demonstrating `GlassSearchableBottomBar` with
 cd example && flutter pub get && flutter run -t lib/apple_news/apple_news_demo.dart
 ```
 
-<img width="390" height="844" alt="Apple News Demo" src="https://github.com/user-attachments/assets/8da8f118-e5f8-40e0-9b0e-d4cd5633a5cf" />
+<img width="390" height="844" alt="Apple News Demo" src="https://raw.githubusercontent.com/sdegenaar/liquid_glass_widgets/main/docs/assets/apple_news_demo.jpg" />
 
 ### [Widget Showcase](example/) — Full Component Library
 
@@ -78,7 +78,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.7.13
+  liquid_glass_widgets: ^0.7.14
 ```
 
 ```bash
@@ -190,17 +190,19 @@ All widgets automatically inherit from `GlassTheme` and adapt to light/dark mode
 GlassTheme(
   data: GlassThemeData(
     light: GlassThemeVariant(
-      settings: LiquidGlassSettings(thickness: 30, blur: 12),
+      settings: GlassThemeSettings(thickness: 30, blur: 12),
       quality: GlassQuality.standard,
     ),
     dark: GlassThemeVariant(
-      settings: LiquidGlassSettings(thickness: 50, blur: 18),
+      settings: GlassThemeSettings(thickness: 50, blur: 18),
       quality: GlassQuality.premium,
     ),
   ),
   child: MaterialApp(home: MyHomePage()),
 )
 ```
+
+> **`GlassThemeSettings` vs `LiquidGlassSettings`:** Use `GlassThemeSettings` inside `GlassThemeVariant`. It accepts the same parameters but all are nullable — only the fields you explicitly set are applied; everything else inherits from each widget's own defaults. `LiquidGlassSettings` is the full settings type used on individual widgets.
 
 Access the current theme variant programmatically:
 
@@ -238,6 +240,25 @@ Each value maps to a fixed power-of-2 exponent. The GPU uses a zero-transcendent
 4. **Premium quality for fixed surfaces** — app bars, bottom bars, and hero sections
 5. **Minimal quality for shader-dense screens** — use `GlassQuality.minimal` for background panels and list cards to fire zero custom shader invocations during scroll, then keep `standard` or `premium` only on the focal element
 6. **Accessibility fallbacks are zero-cost** — when Reduce Transparency is active, the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
+
+### GPU Budget Monitoring
+
+`GlassPerformanceMonitor` watches raster frame durations while `GlassQuality.premium` surfaces are active. When frames exceed the GPU budget for 60 consecutive frames it emits a single `FlutterError` with actionable guidance — which widget to change, which quality tier to try, and why.
+
+**Zero production overhead** — automatically disabled in release builds. Enabled by default in debug/profile via `LiquidGlassWidgets.initialize()`:
+
+```dart
+// Default — auto-enabled in debug/profile, zero-cost in release
+await LiquidGlassWidgets.initialize();
+
+// Opt out entirely
+await LiquidGlassWidgets.initialize(enablePerformanceMonitor: false);
+
+// Custom thresholds
+GlassPerformanceMonitor.rasterBudget = const Duration(microseconds: 8333); // 120 fps
+GlassPerformanceMonitor.sustainedFrameThreshold = 120;
+```
+
 
 
 ## Custom Refraction for Interactive Indicators

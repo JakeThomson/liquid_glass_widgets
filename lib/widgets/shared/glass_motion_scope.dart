@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/glass_theme_data.dart';
+import '../../theme/glass_theme_settings.dart';
 
 /// Drives the glass specular highlight angle from a stream of radians.
 ///
@@ -87,7 +88,7 @@ class _GlassMotionScopeState extends State<GlassMotionScope> {
 
     GlassThemeVariant applyAngle(GlassThemeVariant variant) {
       return variant.copyWith(
-        settings: (variant.settings ?? const LiquidGlassSettings())
+        settings: (variant.settings ?? const GlassThemeSettings())
             .copyWith(lightAngle: angle),
       );
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../src/renderer/liquid_glass_renderer.dart';
+import 'glass_theme_settings.dart';
 
 import '../types/glass_quality.dart';
 import 'glass_theme_helpers.dart';
@@ -108,10 +109,16 @@ class GlassThemeVariant {
     this.glowColors,
   });
 
-  /// Default glass visual settings for all widgets.
+  /// Partial glass visual settings applied on top of each widget's own defaults.
   ///
-  /// Individual widgets can override this via their `settings` parameter.
-  final LiquidGlassSettings? settings;
+  /// Only non-null fields in the override replace the corresponding widget
+  /// default — unset fields are left alone. This prevents a single-property
+  /// theme override from silently zeroing out unrelated properties (e.g. setting
+  /// only `thickness` no longer clears `glassColor` back to fully transparent).
+  ///
+  /// To override a specific widget entirely, pass explicit `settings` directly
+  /// to that widget constructor.
+  final GlassThemeSettings? settings;
 
   /// Default rendering quality for all widgets.
   ///
@@ -123,7 +130,7 @@ class GlassThemeVariant {
 
   /// Creates a copy with overridden values.
   GlassThemeVariant copyWith({
-    LiquidGlassSettings? settings,
+    GlassThemeSettings? settings,
     GlassQuality? quality,
     GlassGlowColors? glowColors,
   }) {
@@ -135,8 +142,13 @@ class GlassThemeVariant {
   }
 
   /// Default light theme variant.
+  ///
+  /// [quality] is intentionally `null` here so that each widget's own
+  /// documented default quality is respected (e.g. [GlassBottomBar] defaults
+  /// to [GlassQuality.premium]). Set quality explicitly in your
+  /// [GlassThemeVariant] to override all widgets globally.
   static const GlassThemeVariant light = GlassThemeVariant(
-    settings: LiquidGlassSettings(
+    settings: GlassThemeSettings(
       thickness: 30.0,
       blur: 3.0,
       glassColor:
@@ -147,20 +159,25 @@ class GlassThemeVariant {
       ambientStrength: 0.6,
       saturation: 1.2,
     ),
-    quality: GlassQuality.standard,
+    quality: null,
     glowColors: GlassGlowColors.fallback,
   );
 
   /// Default dark theme variant.
+  ///
+  /// [quality] is intentionally `null` here so that each widget's own
+  /// documented default quality is respected (e.g. [GlassBottomBar] defaults
+  /// to [GlassQuality.premium]). Set quality explicitly in your
+  /// [GlassThemeVariant] to override all widgets globally.
   static const GlassThemeVariant dark = GlassThemeVariant(
-    settings: LiquidGlassSettings(
+    settings: GlassThemeSettings(
       thickness: 40.0,
       blur: 5.0,
       lightIntensity: 1.5,
       refractiveIndex: 1.2,
       saturation: 1.1,
     ),
-    quality: GlassQuality.standard,
+    quality: null,
     glowColors: GlassGlowColors.fallback,
   );
 
@@ -184,7 +201,7 @@ class GlassThemeVariant {
   /// )
   /// ```
   static const GlassThemeVariant minimal = GlassThemeVariant(
-    settings: LiquidGlassSettings(
+    settings: GlassThemeSettings(
       thickness: 30.0,
       blur: 12.0,
       lightIntensity: 1.0,
@@ -272,8 +289,12 @@ class GlassThemeData {
     return brightness == Brightness.dark ? dark : light;
   }
 
-  /// Gets glass settings for current brightness.
-  LiquidGlassSettings? settingsFor(BuildContext context) {
+  /// Gets the partial glass settings override for the current brightness.
+  ///
+  /// Returns a [GlassThemeSettings] rather than a full
+  /// [LiquidGlassSettings] — callers should merge this on top of their own
+  /// defaults via [GlassThemeSettings.applyTo].
+  GlassThemeSettings? settingsFor(BuildContext context) {
     return variantFor(context).settings;
   }
 

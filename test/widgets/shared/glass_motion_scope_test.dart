@@ -33,7 +33,7 @@ void main() {
         home: GlassTheme(
           data: GlassThemeData(
             light: GlassThemeVariant(
-              settings: const LiquidGlassSettings(lightAngle: parentAngle),
+              settings: const GlassThemeSettings(lightAngle: parentAngle),
             ),
           ),
           child: GlassMotionScope(
@@ -77,7 +77,7 @@ void main() {
         home: GlassTheme(
           data: GlassThemeData(
             light: GlassThemeVariant(
-              settings: const LiquidGlassSettings(lightAngle: parentAngle),
+              settings: const GlassThemeSettings(lightAngle: parentAngle),
             ),
           ),
           child: ValueListenableBuilder<Stream<double>?>(

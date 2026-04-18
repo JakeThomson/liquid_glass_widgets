@@ -495,7 +495,7 @@ class _RenderLightweightGlass extends RenderProxyBox {
     _shader.setFloat(index++, _settings.effectiveSaturation);
 
     // 14: uRefractiveIndex (float)
-    _shader.setFloat(index++, _settings.refractiveIndex);
+    _shader.setFloat(index++, _settings.effectiveRefractiveIndex);
 
     // 15: uChromaticAberration (float)
     _shader.setFloat(index++, (_settings.chromaticAberration).clamp(0.0, 1.0));

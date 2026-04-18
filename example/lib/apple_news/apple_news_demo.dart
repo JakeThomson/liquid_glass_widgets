@@ -279,7 +279,6 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
       bottomNavigationBar: GlassSearchableBottomBar(
         selectedIndex: _selectedTab,
         isSearchActive: _isSearching,
-        searchBarHeight: 50,
         onTabSelected: (index) => setState(() {
           _selectedTab = index;
           _isSearching = false;
@@ -308,7 +307,6 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
         // ── Search bar config ───────────────────────────────────────────────
         searchConfig: GlassSearchBarConfig(
           hintText: 'Apple News',
-          collapsedTabWidth: 64,
           onSearchToggle: (active) => setState(() {
             _isSearching = active;
             // Reset focus state when search closes so next open is fresh.
@@ -321,23 +319,6 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           autoFocusOnExpand: false,
           showsCancelButton: true,
           onMicTap: () {},
-          collapsedLogoBuilder: (context) {
-            // Mirror the active tab icon so the collapsed pill feels
-            // contextual — house on Today, headphones on Audio, etc.
-            const tabIcons = [
-              CupertinoIcons.house_fill,
-              CupertinoIcons.news_solid,
-              CupertinoIcons.headphones,
-              CupertinoIcons.rectangle_fill_on_rectangle_angled_fill,
-            ];
-            return Center(
-              child: Icon(
-                tabIcons[_selectedTab],
-                color: Colors.white,
-                size: 26,
-              ),
-            );
-          },
         ),
         tabs: [
           GlassBottomBarTab(

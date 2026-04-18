@@ -158,6 +158,15 @@ class LiquidGlassSettings with EquatableMixin {
   /// The effective saturation taking visibility into account.
   double get effectiveSaturation => 1 + (saturation - 1) * visibility;
 
+  /// The effective refractive index taking visibility into account.
+  ///
+  /// Lerps from 1.0 (no refraction) at [visibility]=0 toward the configured
+  /// [refractiveIndex] as visibility increases. This matches how [Opacity]
+  /// would fade the refraction distortion — at zero visibility there is no
+  /// lens warp, at full visibility the warp is at its configured strength.
+  double get effectiveRefractiveIndex =>
+      1.0 + (refractiveIndex - 1.0) * visibility;
+
   /// Creates a new [LiquidGlassSettings] with the given settings.
   LiquidGlassSettings copyWith({
     double? visibility,
