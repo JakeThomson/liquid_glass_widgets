@@ -885,7 +885,8 @@ void main() {
       expect(ctrl.value, closeTo(0.0, 0.001));
     });
 
-    testWidgets('spring setter while ticker inactive updates spring without starting',
+    testWidgets(
+        'spring setter while ticker inactive updates spring without starting',
         (tester) async {
       late SingleSpringController ctrl;
       await tester.pumpWidget(

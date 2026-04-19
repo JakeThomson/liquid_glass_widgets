@@ -267,8 +267,10 @@ void main() {
 
   group('ExtraButtonPosition', () {
     test('has beforeSearch and afterSearch values', () {
-      expect(ExtraButtonPosition.values, contains(ExtraButtonPosition.beforeSearch));
-      expect(ExtraButtonPosition.values, contains(ExtraButtonPosition.afterSearch));
+      expect(ExtraButtonPosition.values,
+          contains(ExtraButtonPosition.beforeSearch));
+      expect(ExtraButtonPosition.values,
+          contains(ExtraButtonPosition.afterSearch));
     });
   });
 
@@ -341,7 +343,8 @@ void main() {
         const GlassBottomBarTab(label: 'B', icon: Icon(CupertinoIcons.search)),
         const GlassBottomBarTab(label: 'C', icon: Icon(CupertinoIcons.person)),
         const GlassBottomBarTab(label: 'D', icon: Icon(CupertinoIcons.bell)),
-        const GlassBottomBarTab(label: 'E', icon: Icon(CupertinoIcons.settings)),
+        const GlassBottomBarTab(
+            label: 'E', icon: Icon(CupertinoIcons.settings)),
       ];
       await tester.pumpWidget(
         createTestApp(
@@ -371,7 +374,8 @@ void main() {
       expect(find.byType(GlassBottomBar), findsOneWidget);
     });
 
-    testWidgets('custom selectedIconColor and unselectedIconColor', (tester) async {
+    testWidgets('custom selectedIconColor and unselectedIconColor',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: GlassBottomBar(
@@ -675,7 +679,8 @@ void main() {
       ];
     });
 
-    testWidgets('tap on different tab calls onTabSelected (_onBarTapDown)', (tester) async {
+    testWidgets('tap on different tab calls onTabSelected (_onBarTapDown)',
+        (tester) async {
       int selected = 0;
       await tester.pumpWidget(
         createTestApp(
@@ -699,7 +704,8 @@ void main() {
       expect(selected, 1);
     });
 
-    testWidgets('drag across bar fires _onDragUpdate and _onDragEnd', (tester) async {
+    testWidgets('drag across bar fires _onDragUpdate and _onDragEnd',
+        (tester) async {
       int selected = 0;
       await tester.pumpWidget(
         createTestApp(
@@ -761,7 +767,8 @@ void main() {
       expect(find.byType(GlassBottomBar), findsOneWidget);
     });
 
-    testWidgets('quality inherited from parent InheritedLiquidGlass', (tester) async {
+    testWidgets('quality inherited from parent InheritedLiquidGlass',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(

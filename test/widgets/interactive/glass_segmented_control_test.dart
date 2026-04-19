@@ -218,7 +218,6 @@ void main() {
 
   group('GlassSegmentedControl drag interaction', () {
     testWidgets('horizontal drag triggers segment change', (tester) async {
-      int? lastSelected;
       await tester.pumpWidget(
         createTestApp(
           child: SizedBox(
@@ -226,7 +225,7 @@ void main() {
             child: GlassSegmentedControl(
               segments: const ['P', 'Q', 'R'],
               selectedIndex: 0,
-              onSegmentSelected: (i) => lastSelected = i,
+              onSegmentSelected: (_) {},
             ),
           ),
         ),
@@ -360,7 +359,8 @@ void main() {
       expect(find.byType(GlassSegmentedControl), findsOneWidget);
     });
 
-    testWidgets('explicit glassSettings works with useOwnLayer', (tester) async {
+    testWidgets('explicit glassSettings works with useOwnLayer',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: GlassSegmentedControl(
@@ -381,7 +381,8 @@ void main() {
   // ──────────────────────────────────────────────────────────────────────────
 
   group('GlassSegmentedControl didUpdateWidget', () {
-    testWidgets('updates when selectedIndex changes externally', (tester) async {
+    testWidgets('updates when selectedIndex changes externally',
+        (tester) async {
       var index = 0;
       await tester.pumpWidget(
         StatefulBuilder(

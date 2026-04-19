@@ -200,8 +200,7 @@ void main() {
                   child: const SizedBox(width: 80, height: 40),
                 ),
                 ElevatedButton(
-                  onPressed: () =>
-                      setState(() => pixels = const Offset(15, 0)),
+                  onPressed: () => setState(() => pixels = const Offset(15, 0)),
                   child: const Text('Update'),
                 ),
               ],

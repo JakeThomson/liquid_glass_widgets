@@ -10,7 +10,8 @@ void main() {
   setUp(LightweightLiquidGlass.resetForTesting);
 
   group('LightweightLiquidGlass constructors', () {
-    testWidgets('main constructor renders with explicit settings', (tester) async {
+    testWidgets('main constructor renders with explicit settings',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: LightweightLiquidGlass(
@@ -23,7 +24,8 @@ void main() {
       expect(find.byType(LightweightLiquidGlass), findsOneWidget);
     });
 
-    testWidgets('inLayer constructor inherits settings from ancestor', (tester) async {
+    testWidgets('inLayer constructor inherits settings from ancestor',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
@@ -103,12 +105,11 @@ void main() {
       );
       expect(find.byType(LightweightLiquidGlass), findsOneWidget);
     });
-
   });
 
-
   group('LightweightLiquidGlass platform brightness paths', () {
-    testWidgets('renders correctly in dark platform brightness', (tester) async {
+    testWidgets('renders correctly in dark platform brightness',
+        (tester) async {
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(
@@ -125,7 +126,8 @@ void main() {
       expect(find.byType(LightweightLiquidGlass), findsOneWidget);
     });
 
-    testWidgets('renders correctly in light platform brightness', (tester) async {
+    testWidgets('renders correctly in light platform brightness',
+        (tester) async {
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(
@@ -238,8 +240,8 @@ void main() {
                   child: const SizedBox(width: 80, height: 40),
                 ),
                 GestureDetector(
-                  onTap: () =>
-                      setState(() => settings = const LiquidGlassSettings(thickness: 30)),
+                  onTap: () => setState(() =>
+                      settings = const LiquidGlassSettings(thickness: 30)),
                   child: const Text('bump'),
                 ),
               ],
@@ -265,8 +267,8 @@ void main() {
                   child: const SizedBox(width: 80, height: 40),
                 ),
                 GestureDetector(
-                  onTap: () =>
-                      setState(() => shape = const LiquidRoundedSuperellipse(borderRadius: 24)),
+                  onTap: () => setState(() => shape =
+                      const LiquidRoundedSuperellipse(borderRadius: 24)),
                   child: const Text('bump'),
                 ),
               ],
@@ -280,7 +282,8 @@ void main() {
       expect(find.byType(LightweightLiquidGlass), findsOneWidget);
     });
 
-    testWidgets('skipBlur update triggers rebuild via ancestor InheritedLiquidGlass',
+    testWidgets(
+        'skipBlur update triggers rebuild via ancestor InheritedLiquidGlass',
         (tester) async {
       // InheritedLiquidGlass with isBlurProvidedByAncestor=true triggers skipBlur path
       await tester.pumpWidget(

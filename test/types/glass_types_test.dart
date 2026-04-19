@@ -14,11 +14,13 @@ void main() {
     });
 
     test('values are standard, premium, minimal', () {
-      expect(GlassQuality.values, containsAll([
-        GlassQuality.standard,
-        GlassQuality.premium,
-        GlassQuality.minimal,
-      ]));
+      expect(
+          GlassQuality.values,
+          containsAll([
+            GlassQuality.standard,
+            GlassQuality.premium,
+            GlassQuality.minimal,
+          ]));
     });
 
     group('GlassQualityExtension.usesLightweightShader', () {
@@ -109,14 +111,17 @@ void main() {
     });
 
     test('values are filled and transparent', () {
-      expect(GlassButtonStyle.values, containsAll([
-        GlassButtonStyle.filled,
-        GlassButtonStyle.transparent,
-      ]));
+      expect(
+          GlassButtonStyle.values,
+          containsAll([
+            GlassButtonStyle.filled,
+            GlassButtonStyle.transparent,
+          ]));
     });
 
     test('filled is distinct from transparent', () {
-      expect(GlassButtonStyle.filled, isNot(equals(GlassButtonStyle.transparent)));
+      expect(
+          GlassButtonStyle.filled, isNot(equals(GlassButtonStyle.transparent)));
     });
 
     test('can be compared with ==', () {
@@ -141,11 +146,13 @@ void main() {
     });
 
     test('values are soft, medium, sharp', () {
-      expect(GlassSpecularSharpness.values, containsAll([
-        GlassSpecularSharpness.soft,
-        GlassSpecularSharpness.medium,
-        GlassSpecularSharpness.sharp,
-      ]));
+      expect(
+          GlassSpecularSharpness.values,
+          containsAll([
+            GlassSpecularSharpness.soft,
+            GlassSpecularSharpness.medium,
+            GlassSpecularSharpness.sharp,
+          ]));
     });
 
     group('glslIndex', () {

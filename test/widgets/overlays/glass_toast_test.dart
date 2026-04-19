@@ -393,7 +393,8 @@ void main() {
                   GlassToast.show(
                     context,
                     message: 'Swipeable toast',
-                    dismissible: true, // exercises line 496-501 Dismissible wrap
+                    dismissible:
+                        true, // exercises line 496-501 Dismissible wrap
                     duration: const Duration(seconds: 5),
                   );
                 },
@@ -416,8 +417,7 @@ void main() {
 
   // ── Center position (lines 516, 526) ────────────────────────────────────────
   group('GlassToast center position', () {
-    testWidgets(
-        'position=center wraps child in Center (lines 516, 526)',
+    testWidgets('position=center wraps child in Center (lines 516, 526)',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(

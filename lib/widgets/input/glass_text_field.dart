@@ -293,8 +293,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
     );
 
     // Inherit quality from parent layer if not explicitly set
-    final
-    effectiveQuality = GlassThemeHelpers.resolveQuality(
+    final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,
       widgetQuality: widget.quality,
     );

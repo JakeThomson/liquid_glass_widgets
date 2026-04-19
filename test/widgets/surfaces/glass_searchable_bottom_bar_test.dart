@@ -385,7 +385,8 @@ void main() {
       expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
     });
 
-    testWidgets('tabPillAnchor center activates centeredTab branch', (tester) async {
+    testWidgets('tabPillAnchor center activates centeredTab branch',
+        (tester) async {
       bool searching = false;
       late StateSetter outerSetState;
       await tester.pumpWidget(
@@ -469,7 +470,8 @@ void main() {
       expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
     });
 
-    testWidgets('extraButton with position afterSearch reserves right-side space',
+    testWidgets(
+        'extraButton with position afterSearch reserves right-side space',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -494,7 +496,8 @@ void main() {
       expect(find.byIcon(CupertinoIcons.mic), findsOneWidget);
     });
 
-    testWidgets('extraButton collapseOnSearchFocus=false keeps button during search',
+    testWidgets(
+        'extraButton collapseOnSearchFocus=false keeps button during search',
         (tester) async {
       bool searching = false;
       late StateSetter outerSetState;
@@ -529,7 +532,8 @@ void main() {
       expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
     });
 
-    testWidgets('showsCancelButton=false skips dismiss pill layout', (tester) async {
+    testWidgets('showsCancelButton=false skips dismiss pill layout',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: GlassSearchableBottomBar(

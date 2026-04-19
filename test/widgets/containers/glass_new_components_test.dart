@@ -307,7 +307,8 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: GlassStepper(
-              value: 5.5, // 5.5 != 5.5.truncateToDouble() → uses toStringAsFixed
+              value:
+                  5.5, // 5.5 != 5.5.truncateToDouble() → uses toStringAsFixed
               onChanged: (_) {},
             ),
           ),

@@ -16,12 +16,14 @@ void main() {
     });
 
     test('values are topRight, topLeft, bottomRight, bottomLeft', () {
-      expect(BadgePosition.values, containsAll([
-        BadgePosition.topRight,
-        BadgePosition.topLeft,
-        BadgePosition.bottomRight,
-        BadgePosition.bottomLeft,
-      ]));
+      expect(
+          BadgePosition.values,
+          containsAll([
+            BadgePosition.topRight,
+            BadgePosition.topLeft,
+            BadgePosition.bottomRight,
+            BadgePosition.bottomLeft,
+          ]));
     });
   });
 
@@ -122,10 +124,12 @@ void main() {
       );
       await tester.pump();
       final semantics = tester.widget<Semantics>(
-        find.ancestor(
-          of: find.text('5'),
-          matching: find.byType(Semantics),
-        ).first,
+        find
+            .ancestor(
+              of: find.text('5'),
+              matching: find.byType(Semantics),
+            )
+            .first,
       );
       expect(semantics.properties.label, contains('notifications'));
     });

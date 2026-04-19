@@ -80,7 +80,8 @@ void main() {
           body: AdaptiveLiquidGlassLayer(
             child: Center(
               child: GlassButtonGroup(
-                direction: Axis.vertical, // exercises line 97: Container(height:1)
+                direction:
+                    Axis.vertical, // exercises line 97: Container(height:1)
                 children: [
                   GlassButton(
                     icon: Icon(CupertinoIcons.up_arrow),

@@ -98,8 +98,7 @@ void main() {
       });
 
       test('secondary is iOS purple', () {
-        expect(GlassGlowColors.fallback.secondary,
-            const Color(0xFF5856D6));
+        expect(GlassGlowColors.fallback.secondary, const Color(0xFF5856D6));
       });
 
       test('success is iOS green', () {
@@ -150,8 +149,7 @@ void main() {
     });
 
     test('dark thickness is >= light thickness (dark glass is thicker)', () {
-      final lightThickness =
-          GlassThemeVariant.light.settings?.thickness ?? 0;
+      final lightThickness = GlassThemeVariant.light.settings?.thickness ?? 0;
       final darkThickness = GlassThemeVariant.dark.settings?.thickness ?? 0;
       expect(darkThickness, greaterThanOrEqualTo(lightThickness));
     });
@@ -303,8 +301,7 @@ void main() {
       Color? injected;
       await tester.pumpWidget(
         MediaQuery(
-          data:
-              const MediaQueryData(platformBrightness: Brightness.light),
+          data: const MediaQueryData(platformBrightness: Brightness.light),
           child: MaterialApp(
             home: GlassTheme(
               data: data,
@@ -333,8 +330,7 @@ void main() {
       Color? injected;
       await tester.pumpWidget(
         MediaQuery(
-          data:
-              const MediaQueryData(platformBrightness: Brightness.dark),
+          data: const MediaQueryData(platformBrightness: Brightness.dark),
           child: MaterialApp(
             home: GlassTheme(
               data: data,
@@ -463,8 +459,7 @@ void main() {
       GlassThemeVariant? variant;
       await tester.pumpWidget(
         MediaQuery(
-          data:
-              const MediaQueryData(platformBrightness: Brightness.light),
+          data: const MediaQueryData(platformBrightness: Brightness.light),
           child: MaterialApp(
             home: Builder(builder: (context) {
               variant = data.variantFor(context);
@@ -486,8 +481,7 @@ void main() {
       GlassThemeVariant? variant;
       await tester.pumpWidget(
         MediaQuery(
-          data:
-              const MediaQueryData(platformBrightness: Brightness.dark),
+          data: const MediaQueryData(platformBrightness: Brightness.dark),
           child: MaterialApp(
             home: Builder(builder: (context) {
               variant = data.variantFor(context);
@@ -510,8 +504,7 @@ void main() {
       GlassThemeSettings? settings;
       await tester.pumpWidget(
         MediaQuery(
-          data:
-              const MediaQueryData(platformBrightness: Brightness.light),
+          data: const MediaQueryData(platformBrightness: Brightness.light),
           child: MaterialApp(
             home: Builder(builder: (context) {
               settings = data.settingsFor(context);
@@ -532,8 +525,7 @@ void main() {
       GlassQuality? quality;
       await tester.pumpWidget(
         MediaQuery(
-          data:
-              const MediaQueryData(platformBrightness: Brightness.light),
+          data: const MediaQueryData(platformBrightness: Brightness.light),
           child: MaterialApp(
             home: Builder(builder: (context) {
               quality = data.qualityFor(context);

@@ -58,8 +58,8 @@ void main() {
     });
 
     testWidgets('standard quality renders without crashing', (tester) async {
-      await tester.pumpWidget(
-          _buildGlassEffect(quality: GlassQuality.standard));
+      await tester
+          .pumpWidget(_buildGlassEffect(quality: GlassQuality.standard));
       await tester.pump();
       expect(find.byType(GlassEffect), findsOneWidget);
     });
@@ -115,7 +115,8 @@ void main() {
       expect(find.byType(GlassEffect), findsNothing);
     });
 
-    testWidgets('disposes cleanly with interactionIntensity > 0 (ticker may be active)',
+    testWidgets(
+        'disposes cleanly with interactionIntensity > 0 (ticker may be active)',
         (tester) async {
       final key = GlobalKey(debugLabel: 'bg');
       await tester.pumpWidget(
@@ -177,7 +178,8 @@ void main() {
       expect(find.byType(GlassEffect), findsOneWidget);
     });
 
-    testWidgets('interactionIntensity change re-evaluates ticker', (tester) async {
+    testWidgets('interactionIntensity change re-evaluates ticker',
+        (tester) async {
       double intensity = 0.0;
       late StateSetter outerSetState;
       await tester.pumpWidget(
@@ -210,7 +212,8 @@ void main() {
       expect(find.byType(GlassEffect), findsOneWidget);
     });
 
-    testWidgets('settings update propagates via didUpdateWidget', (tester) async {
+    testWidgets('settings update propagates via didUpdateWidget',
+        (tester) async {
       LiquidGlassSettings s = const LiquidGlassSettings(thickness: 10);
       late StateSetter outerSetState;
       await tester.pumpWidget(

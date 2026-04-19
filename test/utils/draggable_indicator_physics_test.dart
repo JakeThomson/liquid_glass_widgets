@@ -40,14 +40,12 @@ void main() {
 
     test('clamps right overdrag to maxOverdrag', () {
       // Very large overdrag — should clamp to maxOverdrag=0.3
-      final result =
-          DraggableIndicatorPhysics.applyRubberBandResistance(10.0);
+      final result = DraggableIndicatorPhysics.applyRubberBandResistance(10.0);
       expect(result, closeTo(1.3, 1e-10));
     });
 
     test('clamps left overdrag to -maxOverdrag', () {
-      final result =
-          DraggableIndicatorPhysics.applyRubberBandResistance(-10.0);
+      final result = DraggableIndicatorPhysics.applyRubberBandResistance(-10.0);
       expect(result, closeTo(-0.3, 1e-10));
     });
 

@@ -170,8 +170,7 @@ void main() {
         ),
       );
 
-      final element =
-          tester.element(find.byType(GlassTheme));
+      final element = tester.element(find.byType(GlassTheme));
       final widget = element.widget as GlassTheme;
       // Verify debugFillProperties can be called by inspecting it
       expect(widget.data, equals(data));
@@ -199,7 +198,8 @@ void main() {
       expect(result, equals(fallback));
     });
 
-    testWidgets('returns theme data when GlassTheme is present', (tester) async {
+    testWidgets('returns theme data when GlassTheme is present',
+        (tester) async {
       final data = GlassThemeData(
         light: GlassThemeVariant(
           settings: const GlassThemeSettings(thickness: 42),

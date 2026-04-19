@@ -84,7 +84,8 @@ void main() {
       expect(find.text('a11y'), findsOneWidget);
     });
 
-    testWidgets('accessibility fallback with GlassQuality.standard', (tester) async {
+    testWidgets('accessibility fallback with GlassQuality.standard',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: GlassAccessibilityScope(
@@ -121,7 +122,8 @@ void main() {
       expect(find.text('interactive'), findsOneWidget);
     });
 
-    testWidgets('glowIntensity > 0 adds glow overlay (line 391-399)', (tester) async {
+    testWidgets('glowIntensity > 0 adds glow overlay (line 391-399)',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveGlass(
@@ -212,7 +214,8 @@ void main() {
       expect(find.text('elevated'), findsOneWidget);
     });
 
-    testWidgets('allowElevation=false wraps InheritedLiquidGlass (line 185-197)',
+    testWidgets(
+        'allowElevation=false wraps InheritedLiquidGlass (line 185-197)',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -234,7 +237,8 @@ void main() {
   });
 
   group('_SpecularRimPainter', () {
-    testWidgets('shouldRepaint returns true when settings change', (tester) async {
+    testWidgets('shouldRepaint returns true when settings change',
+        (tester) async {
       // Exercise via animation to ensure the painter is built
       LiquidGlassSettings s = const LiquidGlassSettings(lightIntensity: 0.3);
       late StateSetter outerSetState;
@@ -255,14 +259,14 @@ void main() {
       );
       await tester.pump();
 
-      outerSetState(
-          () => s = const LiquidGlassSettings(lightIntensity: 0.9));
+      outerSetState(() => s = const LiquidGlassSettings(lightIntensity: 0.9));
       await tester.pumpAndSettle();
 
       expect(find.byType(AdaptiveGlass), findsOneWidget);
     });
 
-    testWidgets('lightIntensity=0 skips painting without crash', (tester) async {
+    testWidgets('lightIntensity=0 skips painting without crash',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveGlass(

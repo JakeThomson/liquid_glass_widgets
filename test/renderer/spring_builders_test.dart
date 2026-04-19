@@ -240,7 +240,8 @@ void main() {
           home: SpringBuilder(
             value: 0.0,
             spring: GlassSpring.smooth(),
-            builder: (context, value, child) => child ?? const SizedBox.shrink(),
+            builder: (context, value, child) =>
+                child ?? const SizedBox.shrink(),
             child: const Text('spring child'),
           ),
         ),

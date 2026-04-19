@@ -193,16 +193,15 @@ void main() {
 
     test('copyWith updates side', () {
       const shape = LiquidRoundedRectangle(borderRadius: 8);
-      final copy =
-          shape.copyWith(side: const BorderSide(color: Colors.blue));
+      final copy = shape.copyWith(side: const BorderSide(color: Colors.blue));
       expect(copy.side.color, Colors.blue);
     });
 
     test('scale multiplies borderRadius', () {
       const shape = LiquidRoundedRectangle(borderRadius: 10);
       final scaled = shape.scale(0.5);
-      expect((scaled as LiquidRoundedRectangle).borderRadius,
-          closeTo(5.0, 1e-10));
+      expect(
+          (scaled as LiquidRoundedRectangle).borderRadius, closeTo(5.0, 1e-10));
     });
 
     test('getOuterPath returns a Path', () {

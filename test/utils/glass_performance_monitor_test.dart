@@ -315,16 +315,14 @@ void main() {
         expect(infos.first.toString(), contains('LiquidGlass'));
       } finally {
         FlutterError.onError = original;
-        GlassPerformanceMonitor.rasterBudget =
-            const Duration(milliseconds: 16);
+        GlassPerformanceMonitor.rasterBudget = const Duration(milliseconds: 16);
         GlassPerformanceMonitor.sustainedFrameThreshold = 60;
       }
     });
 
     test('under-budget frame resets consecutive counter', () {
       GlassPerformanceMonitor.sustainedFrameThreshold = 5;
-      GlassPerformanceMonitor.rasterBudget =
-          const Duration(milliseconds: 16);
+      GlassPerformanceMonitor.rasterBudget = const Duration(milliseconds: 16);
       GlassPerformanceMonitor.trackPremiumMount();
 
       // 2 over-budget frames builds up the counter...
@@ -345,8 +343,7 @@ void main() {
 
     test('silent when premiumCount == 0', () {
       GlassPerformanceMonitor.sustainedFrameThreshold = 1;
-      GlassPerformanceMonitor.rasterBudget =
-          const Duration(microseconds: 1);
+      GlassPerformanceMonitor.rasterBudget = const Duration(microseconds: 1);
       // No trackPremiumMount() called
 
       GlassPerformanceMonitor.simulateFrameTimings([
@@ -354,15 +351,13 @@ void main() {
       ]);
       expect(GlassPerformanceMonitor.warningEmitted, isFalse);
 
-      GlassPerformanceMonitor.rasterBudget =
-          const Duration(milliseconds: 16);
+      GlassPerformanceMonitor.rasterBudget = const Duration(milliseconds: 16);
       GlassPerformanceMonitor.sustainedFrameThreshold = 60;
     });
 
     test('early-return after warning prevents double-emit', () {
       GlassPerformanceMonitor.sustainedFrameThreshold = 1;
-      GlassPerformanceMonitor.rasterBudget =
-          const Duration(microseconds: 1);
+      GlassPerformanceMonitor.rasterBudget = const Duration(microseconds: 1);
       GlassPerformanceMonitor.trackPremiumMount();
 
       int errorCount = 0;
@@ -384,16 +379,14 @@ void main() {
         expect(errorCount, 1); // still just 1
       } finally {
         FlutterError.onError = original;
-        GlassPerformanceMonitor.rasterBudget =
-            const Duration(milliseconds: 16);
+        GlassPerformanceMonitor.rasterBudget = const Duration(milliseconds: 16);
         GlassPerformanceMonitor.sustainedFrameThreshold = 60;
       }
     });
 
     test('multiple frames required to reach threshold', () {
       GlassPerformanceMonitor.sustainedFrameThreshold = 3;
-      GlassPerformanceMonitor.rasterBudget =
-          const Duration(milliseconds: 16);
+      GlassPerformanceMonitor.rasterBudget = const Duration(milliseconds: 16);
       GlassPerformanceMonitor.trackPremiumMount();
 
       final original = FlutterError.onError;

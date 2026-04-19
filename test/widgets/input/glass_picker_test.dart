@@ -31,7 +31,8 @@ void main() {
       expect(find.text('Choose one'), findsOneWidget);
     });
 
-    testWidgets('renders default placeholder when value is null and no placeholder given',
+    testWidgets(
+        'renders default placeholder when value is null and no placeholder given',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -53,13 +54,15 @@ void main() {
       expect(find.byIcon(Icons.arrow_drop_down), findsOneWidget);
     });
 
-    testWidgets('renders default chevron icon when no icon given', (tester) async {
+    testWidgets('renders default chevron icon when no icon given',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: const GlassPicker(value: 'X'),
         ),
       );
-      expect(find.byIcon(CupertinoIcons.chevron_up_chevron_down), findsOneWidget);
+      expect(
+          find.byIcon(CupertinoIcons.chevron_up_chevron_down), findsOneWidget);
     });
 
     testWidgets('custom height is accepted', (tester) async {

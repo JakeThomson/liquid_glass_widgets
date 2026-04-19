@@ -126,8 +126,7 @@ void main() {
   });
 
   // ── GlassMenuItem tap-cancel (line 77) ──────────────────────────────────────
-  testWidgets(
-      'GlassMenuItem onTapCancel resets pressed state (line 77)',
+  testWidgets('GlassMenuItem onTapCancel resets pressed state (line 77)',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(

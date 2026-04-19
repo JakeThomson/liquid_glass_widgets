@@ -27,8 +27,7 @@ void main() {
     );
 
     test('visibility override', () {
-      final merged =
-          const GlassThemeSettings(visibility: 0.5).applyTo(base);
+      final merged = const GlassThemeSettings(visibility: 0.5).applyTo(base);
       expect(merged.visibility, 0.5);
       expect(merged.thickness, base.thickness);
     });
@@ -42,8 +41,7 @@ void main() {
     });
 
     test('thickness override', () {
-      final merged =
-          const GlassThemeSettings(thickness: 99.0).applyTo(base);
+      final merged = const GlassThemeSettings(thickness: 99.0).applyTo(base);
       expect(merged.thickness, 99.0);
       expect(merged.blur, base.blur);
     });
@@ -62,8 +60,7 @@ void main() {
     });
 
     test('lightAngle override', () {
-      final merged =
-          const GlassThemeSettings(lightAngle: 2.5).applyTo(base);
+      final merged = const GlassThemeSettings(lightAngle: 2.5).applyTo(base);
       expect(merged.lightAngle, 2.5);
     });
 
@@ -86,8 +83,7 @@ void main() {
     });
 
     test('saturation override', () {
-      final merged =
-          const GlassThemeSettings(saturation: 2.0).applyTo(base);
+      final merged = const GlassThemeSettings(saturation: 2.0).applyTo(base);
       expect(merged.saturation, 2.0);
     });
 
@@ -161,8 +157,7 @@ void main() {
     });
 
     test('copyWith glassColor', () {
-      final copy =
-          original.copyWith(glassColor: const Color(0xFF000000));
+      final copy = original.copyWith(glassColor: const Color(0xFF000000));
       expect(copy.glassColor, const Color(0xFF000000));
       expect(copy.blur, original.blur);
     });
@@ -245,14 +240,11 @@ void main() {
     test('differing in any field are not equal', () {
       const base =
           GlassThemeSettings(thickness: 30.0, blur: 5.0, saturation: 1.2);
-      expect(base,
-          isNot(equals(base.copyWith(thickness: 31.0))));
+      expect(base, isNot(equals(base.copyWith(thickness: 31.0))));
       expect(base, isNot(equals(base.copyWith(blur: 6.0))));
       expect(base, isNot(equals(base.copyWith(saturation: 1.3))));
-      expect(base,
-          isNot(equals(base.copyWith(visibility: 0.5))));
-      expect(base,
-          isNot(equals(base.copyWith(lightIntensity: 0.9))));
+      expect(base, isNot(equals(base.copyWith(visibility: 0.5))));
+      expect(base, isNot(equals(base.copyWith(lightIntensity: 0.9))));
     });
 
     test('hashCode differs when fields differ', () {

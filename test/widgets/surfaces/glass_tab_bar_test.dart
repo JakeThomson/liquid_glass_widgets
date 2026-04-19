@@ -550,8 +550,7 @@ void main() {
       expect(callCount, 0);
     });
 
-    testWidgets('GlassTab icon-only tab renders without label',
-        (tester) async {
+    testWidgets('GlassTab icon-only tab renders without label', (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
@@ -570,8 +569,7 @@ void main() {
       expect(find.byIcon(Icons.star), findsOneWidget);
     });
 
-    testWidgets('GlassTab label-only tab renders icon as null',
-        (tester) async {
+    testWidgets('GlassTab label-only tab renders icon as null', (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
@@ -598,7 +596,6 @@ void main() {
   group('GlassTabBar drag-cancel while dragging (line 509-518)', () {
     testWidgets('cancel after drag move exercises _isDragging==true branch',
         (tester) async {
-      int? selected;
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
@@ -612,7 +609,7 @@ void main() {
                   GlassTab(label: 'R'),
                 ],
                 selectedIndex: 0,
-                onTabSelected: (i) => selected = i,
+                onTabSelected: (_) {},
               ),
             ),
           ),
@@ -620,8 +617,8 @@ void main() {
       );
 
       // Start drag AND move enough to set _isDragging = true, then cancel
-      final gesture = await tester
-          .startGesture(tester.getCenter(find.byType(GlassTabBar)));
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.byType(GlassTabBar)));
       await tester.pump();
       await gesture.moveBy(const Offset(80, 0));
       await tester.pump();

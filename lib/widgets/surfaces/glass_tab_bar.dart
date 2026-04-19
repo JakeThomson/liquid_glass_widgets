@@ -251,8 +251,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer if not explicitly set
-    final
-    effectiveQuality = GlassThemeHelpers.resolveQuality(
+    final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,
       widgetQuality: widget.quality,
     );

@@ -58,11 +58,13 @@ void main() {
     });
 
     test('values are defaultStyle, destructive, cancel', () {
-      expect(GlassActionSheetStyle.values, containsAll([
-        GlassActionSheetStyle.defaultStyle,
-        GlassActionSheetStyle.destructive,
-        GlassActionSheetStyle.cancel,
-      ]));
+      expect(
+          GlassActionSheetStyle.values,
+          containsAll([
+            GlassActionSheetStyle.defaultStyle,
+            GlassActionSheetStyle.destructive,
+            GlassActionSheetStyle.cancel,
+          ]));
     });
   });
 

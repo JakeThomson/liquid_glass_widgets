@@ -315,8 +315,7 @@ class _GlassMenuState extends State<GlassMenu>
 
   Widget _buildMorphingContainer(double value) {
     // Inherit quality from parent layer if not explicitly set
-    final
-    effectiveQuality = GlassThemeHelpers.resolveQuality(
+    final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,
       widgetQuality: widget.quality,
     );

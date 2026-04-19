@@ -131,8 +131,8 @@ void main() {
 
   group('GlassDefaults — animation durations', () {
     test('animationDuration is 200ms', () {
-      expect(GlassDefaults.animationDuration,
-          const Duration(milliseconds: 200));
+      expect(
+          GlassDefaults.animationDuration, const Duration(milliseconds: 200));
     });
 
     test('animationDurationFast is 100ms', () {
