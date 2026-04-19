@@ -9,9 +9,8 @@ coverage/
 docs/
 .agent/
 
-# Test golden images (baselines + failure diffs — not needed by consumers)
-test/golden/
-test/renderer/goldens/
+# Test suite — consumers don't need these; tests are on GitHub
+test/
 
 # Example app planning/AI docs
 example/**/*.md
