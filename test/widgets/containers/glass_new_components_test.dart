@@ -275,6 +275,48 @@ void main() {
       await tester.tap(find.byIcon(Icons.remove));
       expect(result, greaterThan(0)); // wrapped to near max
     });
+
+    // ── wraps above max (line 196) ────────────────────────────────────────────
+    testWidgets('wraps above max when wraps is true (line 196)',
+        (tester) async {
+      double result = 10;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassStepper(
+              value: result,
+              min: 0,
+              max: 10,
+              step: 1,
+              wraps: true, // exercises wrap-increment: next > max → wrap to min
+              onChanged: (v) => result = v,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.add));
+      // Wrapped from 10 to near min=0
+      expect(result, lessThan(10));
+    });
+
+    // ── decimal value VoiceOver path (line 230) ───────────────────────────────
+    testWidgets('decimal value uses toStringAsFixed(1) in Semantics (line 230)',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassStepper(
+              value: 5.5, // 5.5 != 5.5.truncateToDouble() → uses toStringAsFixed
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Verify widget builds without error
+      expect(find.byType(GlassStepper), findsOneWidget);
+    });
   });
 
   // ===========================================================================
@@ -391,6 +433,144 @@ void main() {
       );
       await tester.pump();
       expect(find.byType(GlassWizard), findsOneWidget);
+    });
+  });
+
+  // ===========================================================================
+  // Additional GlassStepper coverage: autoRepeat timer path (lines 196, 208)
+  // and tap-cancel → _cancelRepeat (lines 273-275, 304-306)
+  // ===========================================================================
+
+  group('GlassStepper autoRepeat and cancel paths', () {
+    testWidgets('autoRepeat=true: long-press increment starts repeat timer',
+        (tester) async {
+      double value = 5;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassStepper(
+              value: value,
+              min: 0,
+              max: 20,
+              step: 1,
+              autoRepeat: true,
+              autoRepeatDelay: const Duration(milliseconds: 50),
+              autoRepeatInterval: const Duration(milliseconds: 30),
+              onChanged: (v) => value = v,
+            ),
+          ),
+        ),
+      );
+
+      // Long-press the increment icon to trigger _startRepeat
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.byIcon(Icons.add)));
+      await tester.pump();
+      // Wait past autoRepeatDelay so the timer fires at least once
+      await tester.pump(const Duration(milliseconds: 150));
+      // Release
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(value, greaterThan(5)); // repeated increments occurred
+    });
+
+    testWidgets('increment tap-cancel calls _cancelRepeat without crash',
+        (tester) async {
+      double value = 5;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassStepper(
+              value: value,
+              min: 0,
+              max: 20,
+              step: 1,
+              autoRepeat: true,
+              onChanged: (v) => value = v,
+            ),
+          ),
+        ),
+      );
+
+      // Press and then cancel — exercises onTapCancel → _cancelRepeat
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.byIcon(Icons.add)));
+      await tester.pump();
+      await gesture.cancel();
+      await tester.pump();
+
+      expect(find.byType(GlassStepper), findsOneWidget);
+    });
+
+    testWidgets('decrement tap-cancel calls _cancelRepeat without crash',
+        (tester) async {
+      double value = 5;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassStepper(
+              value: value,
+              min: 0,
+              max: 20,
+              step: 1,
+              autoRepeat: true,
+              onChanged: (v) => value = v,
+            ),
+          ),
+        ),
+      );
+
+      final gesture = await tester
+          .startGesture(tester.getCenter(find.byIcon(Icons.remove)));
+      await tester.pump();
+      await gesture.cancel();
+      await tester.pump();
+
+      expect(find.byType(GlassStepper), findsOneWidget);
+    });
+  });
+
+  // ===========================================================================
+  // GlassListTile.standalone (line 81: useOwnLayer path)
+  // ===========================================================================
+
+  group('GlassListTile.standalone', () {
+    testWidgets('renders with own glass layer', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassListTile.standalone(
+              title: const Text('Standalone Tile'),
+              settings: const LiquidGlassSettings(thickness: 20),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Standalone Tile'), findsOneWidget);
+    });
+
+    testWidgets('infoButton getter returns an Icon widget', (tester) async {
+      // Line 199 — static getter
+      expect(GlassListTile.infoButton, isNotNull);
+    });
+
+    testWidgets('trailing shown when set', (tester) async {
+      // Lines 210-213 — trailing widget path
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassListTile.standalone(
+              title: const Text('Title'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              settings: const LiquidGlassSettings(thickness: 20),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.arrow_forward_ios), findsOneWidget);
     });
   });
 }

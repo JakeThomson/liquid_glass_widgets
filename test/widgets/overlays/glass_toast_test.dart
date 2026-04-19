@@ -379,4 +379,71 @@ void main() {
       expect(action.onPressed, isA<VoidCallback>());
     });
   });
+
+  // ── Swipeable toast — Dismissible path (line 499) ───────────────────────────
+  group('GlassToast swipeable', () {
+    testWidgets('swipeable=true wraps toast in Dismissible (line 499)',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  GlassToast.show(
+                    context,
+                    message: 'Swipeable toast',
+                    dismissible: true, // exercises line 496-501 Dismissible wrap
+                    duration: const Duration(seconds: 5),
+                  );
+                },
+                child: const Text('Show Swipeable'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show Swipeable'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Swipeable toast'), findsOneWidget);
+      // Verify Dismissible wrapper is present
+      expect(find.byType(Dismissible), findsOneWidget);
+    });
+  });
+
+  // ── Center position (lines 516, 526) ────────────────────────────────────────
+  group('GlassToast center position', () {
+    testWidgets(
+        'position=center wraps child in Center (lines 516, 526)',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  GlassToast.show(
+                    context,
+                    message: 'Center toast',
+                    position: GlassToastPosition.center, // line 516 + 526
+                    duration: const Duration(seconds: 5),
+                  );
+                },
+                child: const Text('Show Center'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show Center'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Center toast'), findsOneWidget);
+    });
+  });
 }

@@ -389,11 +389,12 @@ class _ScenarioSpringDesyncState extends State<_ScenarioSpringDesync> {
   void _rapidReverse() {
     for (var i = 0; i < 5; i++) {
       Future.delayed(Duration(milliseconds: i * 80), () {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _searching = !_searching;
             _toggleCount++;
           });
+        }
       });
     }
   }

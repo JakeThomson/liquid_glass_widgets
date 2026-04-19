@@ -2,14 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
 import '../shared/glass_effect.dart';
-import '../shared/inherited_liquid_glass.dart';
+import '../../theme/glass_theme_helpers.dart';
 
 /// A glass morphism slider following Apple's iOS 26 design patterns.
 ///
@@ -367,13 +366,10 @@ class _GlassSliderState extends State<GlassSlider>
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer or theme if not explicitly set
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final themeData = GlassThemeData.of(context);
-    _effectiveQuality = widget.quality ??
-        inherited?.quality ??
-        themeData.qualityFor(context) ??
-        GlassQuality.standard;
+    _effectiveQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: widget.quality,
+    );
 
     final effectiveValue = _dragValue ?? widget.value;
     final normalizedValue =

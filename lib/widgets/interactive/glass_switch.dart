@@ -1,13 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
 import '../../types/glass_quality.dart';
 import '../shared/glass_effect.dart';
-import '../shared/inherited_liquid_glass.dart';
+import '../../theme/glass_theme_helpers.dart';
 
 /// A glass toggle switch with Apple's signature jump animation.
 ///
@@ -242,13 +241,10 @@ class _GlassSwitchState extends State<GlassSwitch>
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer or theme if not explicitly set
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final themeData = GlassThemeData.of(context);
-    _effectiveQuality = widget.quality ??
-        inherited?.quality ??
-        themeData.qualityFor(context) ??
-        GlassQuality.standard;
+    _effectiveQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: widget.quality,
+    );
 
     final thumbSize = widget.height - 4.0;
     final thumbWidth = thumbSize * 1.6; // Match _buildThumb ratio

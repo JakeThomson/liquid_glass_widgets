@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/adaptive_glass.dart';
-import '../shared/inherited_liquid_glass.dart';
+import '../../theme/glass_theme_helpers.dart';
 
 /// A glass morphism bottom sheet following Apple's iOS 26 design patterns.
 ///
@@ -251,13 +250,11 @@ class GlassSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer if not explicitly set
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final themeData = GlassThemeData.of(context);
-    final effectiveQuality = quality ??
-        inherited?.quality ??
-        themeData.qualityFor(context) ??
-        GlassQuality.standard;
+    final
+    effectiveQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: quality,
+    );
 
     const shape = LiquidRoundedSuperellipse(borderRadius: 20);
     final effectiveSettings = settings ?? const LiquidGlassSettings();

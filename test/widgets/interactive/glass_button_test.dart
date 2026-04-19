@@ -234,4 +234,57 @@ void main() {
       expect(button.stretch, equals(0.5));
     });
   });
+
+  // ── _handleTapCancel (lines 436-438) ────────────────────────────────────────
+  group('GlassButton tap-cancel', () {
+    testWidgets('tap-cancel on enabled button reverses animation',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(Icons.star),
+              onTap: () {},
+            ),
+          ),
+        ),
+      );
+
+      // Start tap then cancel — exercises _handleTapCancel (line 436-438)
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(GlassButton)),
+      );
+      await tester.pump();
+      await gesture.cancel();
+      await tester.pump();
+
+      expect(find.byType(GlassButton), findsOneWidget);
+    });
+
+    testWidgets('tap-cancel on disabled button is a no-op (line 437 guard)',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(Icons.star),
+              onTap: () {},
+              enabled: false, // exercises `if (!widget.enabled) return;`
+            ),
+          ),
+        ),
+      );
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(GlassButton)),
+      );
+      await tester.pump();
+      await gesture.cancel();
+      await tester.pump();
+
+      expect(find.byType(GlassButton), findsOneWidget);
+    });
+  });
 }

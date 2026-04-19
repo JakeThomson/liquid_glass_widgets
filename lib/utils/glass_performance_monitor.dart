@@ -112,6 +112,24 @@ class GlassPerformanceMonitor {
     _premiumCount = 0;
   }
 
+  /// Injects synthetic [FrameTiming] data directly into [_onFrameTimings].
+  ///
+  /// **For testing only.** Allows unit tests to exercise the budget-exceeded
+  /// and warning-emitted paths without requiring a real GPU raster loop.
+  ///
+  /// ```dart
+  /// GlassPerformanceMonitor.trackPremiumMount();
+  /// GlassPerformanceMonitor.sustainedFrameThreshold = 1;
+  /// GlassPerformanceMonitor.simulateFrameTimings([
+  ///   FrameTiming(rasterFinish: 100000 /* 100 ms */),
+  /// ]);
+  /// expect(GlassPerformanceMonitor.warningEmitted, isTrue);
+  /// ```
+  @visibleForTesting
+  static void simulateFrameTimings(List<FrameTiming> timings) {
+    _onFrameTimings(timings);
+  }
+
   // ── Widget integration ─────────────────────────────────────────────────────
 
   /// Called by [_PremiumGlassTracker] when a premium glass surface mounts.
@@ -176,7 +194,7 @@ class GlassPerformanceMonitor {
             '\n'
             '  Measured raster duration  : $ms ms\n'
             '  Budget                    : ${rasterBudget.inMilliseconds} ms '
-            '(${(1000 / rasterBudget.inMilliseconds).round()} fps)\n'
+            '(${rasterBudget.inMilliseconds > 0 ? (1000 / rasterBudget.inMilliseconds).round() : 'N/A'} fps)\n'
             '  Active premium surfaces   : $_premiumCount\n'
             '  Consecutive over-budget   : $_consecutiveOverBudget frames\n'
             '\n'

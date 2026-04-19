@@ -1,7 +1,6 @@
-import 'package:liquid_glass_widgets/widgets/input/glass_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:liquid_glass_widgets/widgets/shared/adaptive_liquid_glass_layer.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../shared/test_helpers.dart';
 
@@ -182,6 +181,41 @@ void main() {
       expect(textField.autofocus, isFalse);
       expect(textField.useOwnLayer, isFalse);
       expect(textField.quality, isNull);
+    });
+
+    // ── _effectiveBorderRadius shape paths (lines 349-352) ──────────────────
+    testWidgets('LiquidRoundedRectangle shape gives correct border radius',
+        (tester) async {
+      // Line 349: shape is LiquidRoundedRectangle → BorderRadius.circular(shape.borderRadius)
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassTextField(
+              shape: LiquidRoundedRectangle(borderRadius: 20),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassTextField), findsOneWidget);
+    });
+
+    testWidgets('LiquidOval shape falls back to default border radius',
+        (tester) async {
+      // Line 352: fallback → BorderRadius.circular(10)
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassTextField(
+              shape: LiquidOval(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassTextField), findsOneWidget);
     });
   });
 }

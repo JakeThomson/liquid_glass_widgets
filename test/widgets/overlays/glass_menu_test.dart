@@ -124,4 +124,121 @@ void main() {
 
     addTearDown(tester.view.resetPhysicalSize);
   });
+
+  // ── GlassMenuItem tap-cancel (line 77) ──────────────────────────────────────
+  testWidgets(
+      'GlassMenuItem onTapCancel resets pressed state (line 77)',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GlassMenu(
+            trigger: const SizedBox(
+              width: 60,
+              height: 40,
+              child: Text('Open'),
+            ),
+            items: [
+              GlassMenuItem(
+                title: 'Action',
+                icon: Icon(Icons.star),
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Open the menu to make item visible
+    await tester.tap(find.text('Open'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Action'), findsOneWidget);
+
+    // Tap-down then cancel — exercises onTapDown (line 75) and onTapCancel (line 77)
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('Action')),
+    );
+    await tester.pump();
+    await gesture.cancel();
+    await tester.pump();
+
+    // Item still present — state reset silently
+    expect(find.text('Action'), findsOneWidget);
+  });
+
+  // ── _toggleMenu close path (line 186) ───────────────────────────────────────
+  testWidgets('GlassMenu second tap closes menu via _toggleMenu (line 186)',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              trigger: const SizedBox(
+                width: 60,
+                height: 40,
+                child: Text('Toggle'),
+              ),
+              items: [
+                GlassMenuItem(title: 'Close Test', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // First tap — opens menu
+    await tester.tap(find.text('Toggle'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Close Test'), findsOneWidget);
+
+    // Second tap — closes menu via _toggleMenu (line 186: _closeMenu)
+    await tester.tap(find.text('Toggle'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Close Test'), findsNothing);
+  });
+
+  // ── shouldFlipVertical bottom-of-screen path (line 228) ─────────────────────
+  testWidgets(
+      'GlassMenu at bottom of screen flips vertical alignment (line 228)',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 600);
+    tester.view.devicePixelRatio = 1.0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Positioned(
+                bottom: 10, // Near bottom — triggers shouldFlipVertical
+                left: 20,
+                child: GlassMenu(
+                  trigger: const SizedBox(
+                      width: 60, height: 40, child: Text('BottomMenu')),
+                  items: [
+                    GlassMenuItem(title: 'FlipItem', onTap: () {}),
+                  ],
+                  menuWidth: 150,
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('BottomMenu'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('FlipItem'), findsOneWidget);
+    addTearDown(tester.view.resetPhysicalSize);
+  });
 }

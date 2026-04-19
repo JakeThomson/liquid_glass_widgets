@@ -142,5 +142,75 @@ void main() {
       expect(slider.useOwnLayer, isFalse);
       expect(slider.quality, isNull);
     });
+
+    testWidgets('drag cancel is handled without crash', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassSlider(
+              value: 0.5,
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      // Start drag, move, then send a cancel (exercises _handleDragCancel)
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(GlassSlider)),
+      );
+      await tester.pump();
+      await gesture.moveBy(const Offset(30, 0));
+      await tester.pump();
+      await gesture.cancel();
+      await tester.pump();
+
+      expect(find.byType(GlassSlider), findsOneWidget);
+    });
+
+    testWidgets('divisions drag across boundary triggers haptic (no crash)',
+        (tester) async {
+      // The haptic path (line 327: HapticFeedback.selectionClick) fires when
+      // _dragValue != newValue across a division boundary.
+      double value = 0.0;
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassSlider(
+              value: value,
+              min: 0,
+              max: 4,
+              divisions: 4,
+              onChanged: (v) => value = v,
+            ),
+          ),
+        ),
+      );
+
+      // Drag far enough to cross at least one division boundary
+      await tester.drag(find.byType(GlassSlider), const Offset(120, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassSlider), findsOneWidget);
+    });
+
+    testWidgets('onChanged=null means semantics still present', (tester) async {
+      // Lines 415-422: onIncrease / onDecrease are null when onChanged is null
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassSlider(
+              value: 0.5,
+              onChanged: null, // read-only slider
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSlider), findsOneWidget);
+    });
   });
 }

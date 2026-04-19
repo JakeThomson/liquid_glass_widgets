@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../utils/glass_spring.dart';
 
@@ -8,7 +7,7 @@ import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/animated_glass_indicator.dart';
-import '../shared/inherited_liquid_glass.dart';
+import '../../theme/glass_theme_helpers.dart';
 
 /// A glass morphism segmented control following Apple's design patterns.
 ///
@@ -156,6 +155,12 @@ class GlassSegmentedControl extends StatefulWidget {
   /// Called when a segment is selected.
   ///
   /// Provides the index of the newly selected segment.
+  ///
+  /// > **Note (iOS-style behaviour):** This callback may fire during a
+  /// > *cancelled* gesture if the drag indicator travelled far enough to
+  /// > snap to a different segment before the cancel arrived. This matches
+  /// > `UISegmentedControl` semantics. If you need strict tap-only selection,
+  /// > compare the received index against `selectedIndex` before acting.
   final ValueChanged<int> onSegmentSelected;
 
   // ===========================================================================
@@ -256,13 +261,11 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer if not explicitly set
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final themeData = GlassThemeData.of(context);
-    final effectiveQuality = widget.quality ??
-        (inherited?.quality ??
-            themeData.qualityFor(context) ??
-            GlassQuality.standard);
+    final
+    effectiveQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: widget.quality,
+    );
 
     // Use custom glass settings or optimized defaults
     final glassSettings = widget.glassSettings ??

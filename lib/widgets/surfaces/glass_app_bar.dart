@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
-
+import '../../theme/glass_theme_helpers.dart';
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_glass.dart';
-import '../shared/inherited_liquid_glass.dart';
 
 /// A glass morphism app bar following Apple's navigation bar design.
 ///
@@ -187,14 +185,11 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Inherit quality from parent layer if not explicitly set
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final themeData = GlassThemeData.of(context);
-    final effectiveQuality = quality ??
-        inherited?.quality ??
-        themeData.qualityFor(context) ??
-        GlassQuality.premium;
+    final effectiveQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: quality,
+      fallback: GlassQuality.premium,
+    );
 
     // Build the app bar content
     final appBarContent = SafeArea(

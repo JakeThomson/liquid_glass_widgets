@@ -97,5 +97,30 @@ void main() {
 
       expect(find.text(value), findsOneWidget);
     });
+
+    // ── GlassFormField helperText (lines 109-110) ────────────────────────────
+    testWidgets('GlassFormField helperText shown without error (lines 109-110)',
+        (tester) async {
+      const helper = 'Must be 8+ characters';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdaptiveLiquidGlassLayer(
+            settings: const LiquidGlassSettings(),
+            child: const Scaffold(
+              body: GlassFormField(
+                label: 'Password',
+                // No errorText — exercises else if (helperText != null)
+                helperText: helper,
+                child: GlassTextField(),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Password'), findsOneWidget);
+      expect(find.text(helper), findsOneWidget);
+    });
   });
 }

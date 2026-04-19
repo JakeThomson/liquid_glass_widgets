@@ -114,5 +114,51 @@ void main() {
       expect(container.quality, isNull);
       expect(container.clipBehavior, equals(Clip.none));
     });
+
+    testWidgets('applies alignment to child content (line 226-229)',
+        (tester) async {
+      // GlassContainer wraps content in Align when alignment != null
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassContainer(
+              width: 300,
+              height: 200,
+              alignment: Alignment.topRight,
+              child: Text('Aligned'),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Aligned'), findsOneWidget);
+      // Align widget should be in the tree
+      expect(
+        find.descendant(
+          of: find.byType(GlassContainer),
+          matching: find.byType(Align),
+        ),
+        findsAtLeast(1),
+      );
+    });
+
+    testWidgets('applies margin outside glass shell (line 262-265)',
+        (tester) async {
+      // GlassContainer wraps in Padding when margin != null
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassContainer(
+              margin: EdgeInsets.all(16),
+              child: Text('Margined'),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Margined'), findsOneWidget);
+    });
   });
 }

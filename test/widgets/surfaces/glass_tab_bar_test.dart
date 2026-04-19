@@ -389,5 +389,270 @@ void main() {
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.borderRadius, customRadius);
     });
+    testWidgets('GlassTab with semanticLabel renders tab label text',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: GlassTabBar(
+              tabs: const [
+                GlassTab(
+                  label: 'Home',
+                  semanticLabel: 'Go to Home',
+                ),
+                GlassTab(label: 'Settings'),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
+    testWidgets('GlassTabBar backgroundColor transparent uses default',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: GlassTabBar(
+              tabs: const [
+                GlassTab(label: 'A'),
+                GlassTab(label: 'B'),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              backgroundColor: Colors.transparent,
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(GlassTabBar), findsOneWidget);
+    });
+
+    testWidgets('scrollable tab bar didUpdateWidget scrolls on index change',
+        (tester) async {
+      int selectedIndex = 0;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                return GlassTabBar(
+                  isScrollable: true,
+                  tabs: List.generate(
+                    8,
+                    (i) => GlassTab(label: 'T${i + 1}'),
+                  ),
+                  selectedIndex: selectedIndex,
+                  onTabSelected: (index) =>
+                      setState(() => selectedIndex = index),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Tap tab 7 (index 6) — triggers scrollToIndex via didUpdateWidget
+      await tester.tap(find.text('T7').first);
+      await tester.pumpAndSettle();
+      expect(selectedIndex, 6);
+    });
+
+    testWidgets('drag cancel while not dragging resets alignment',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: SizedBox(
+              width: 300,
+              child: GlassTabBar(
+                tabs: const [
+                  GlassTab(label: 'A'),
+                  GlassTab(label: 'B'),
+                  GlassTab(label: 'C'),
+                ],
+                selectedIndex: 1,
+                onTabSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // A cancel without first moving triggers the else-branch
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.byType(GlassTabBar)));
+      await tester.pump();
+      await gesture.cancel();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassTabBar), findsOneWidget);
+    });
+
+    testWidgets('pointer-cancel while not dragging clears _isDown',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: GlassTabBar(
+              tabs: const [
+                GlassTab(label: 'A'),
+                GlassTab(label: 'B'),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.byType(GlassTabBar)));
+      await tester.pump();
+      // Cancel before any drag update fires (not dragging → else-branch of onPointerCancel)
+      await gesture.cancel();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassTabBar), findsOneWidget);
+    });
+
+    testWidgets('tab tapping same tab does not fire onTabSelected',
+        (tester) async {
+      int callCount = 0;
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: GlassTabBar(
+              tabs: const [
+                GlassTab(label: 'A'),
+                GlassTab(label: 'B'),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (_) => callCount++,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('A').first);
+      await tester.pump();
+      expect(callCount, 0);
+    });
+
+    testWidgets('GlassTab icon-only tab renders without label',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: GlassTabBar(
+              tabs: const [
+                GlassTab(icon: Icon(Icons.star)),
+                GlassTab(icon: Icon(Icons.settings)),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+      expect(find.byIcon(Icons.star), findsOneWidget);
+    });
+
+    testWidgets('GlassTab label-only tab renders icon as null',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: GlassTabBar(
+              tabs: const [
+                GlassTab(label: 'Alpha'),
+                GlassTab(label: 'Beta'),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Alpha'), findsOneWidget);
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Additional coverage: drag cancel while dragging (lines 509-518)
+  // and GlassTab.glowColor / thickness (lines 266, 513-521)
+  // ──────────────────────────────────────────────────────────────────────────
+  group('GlassTabBar drag-cancel while dragging (line 509-518)', () {
+    testWidgets('cancel after drag move exercises _isDragging==true branch',
+        (tester) async {
+      int? selected;
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: SizedBox(
+              width: 400,
+              child: GlassTabBar(
+                tabs: const [
+                  GlassTab(label: 'P'),
+                  GlassTab(label: 'Q'),
+                  GlassTab(label: 'R'),
+                ],
+                selectedIndex: 0,
+                onTabSelected: (i) => selected = i,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Start drag AND move enough to set _isDragging = true, then cancel
+      final gesture = await tester
+          .startGesture(tester.getCenter(find.byType(GlassTabBar)));
+      await tester.pump();
+      await gesture.moveBy(const Offset(80, 0));
+      await tester.pump();
+      await gesture.cancel(); // triggers _isDragging==true branch
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassTabBar), findsOneWidget);
+    });
+  });
+
+  group('GlassTabBar backgroundColor edge cases', () {
+    testWidgets(
+        'backgroundColor Colors.transparent uses default color (line 264-266)',
+        (tester) async {
+      // When backgroundColor == Colors.transparent, falls through to
+      // _defaultBackgroundColor branch
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: GlassTabBar(
+              tabs: const [GlassTab(label: 'A'), GlassTab(label: 'B')],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              backgroundColor: Colors.transparent,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassTabBar), findsOneWidget);
+    });
   });
 }

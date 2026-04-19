@@ -91,5 +91,23 @@ void main() {
       expect(panel.useOwnLayer, isFalse);
       expect(panel.quality, isNull);
     });
+
+    // ── Non-const constructor coverage (line 90) ──────────────────────────────
+    testWidgets('non-const GlassPanel instantiation covers constructor line 90',
+        (tester) async {
+      // Using Key() forces a non-const widget expression, executing line 90
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassPanel(
+              key: UniqueKey(), // non-const → exercises constructor line 90
+              child: const Text('Non-const panel'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Non-const panel'), findsOneWidget);
+    });
   });
 }

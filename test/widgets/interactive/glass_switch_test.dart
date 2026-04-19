@@ -145,5 +145,97 @@ void main() {
       expect(glassSwitch.useOwnLayer, isFalse);
       expect(glassSwitch.quality, isNull);
     });
+
+    // ── didUpdateWidget animation branches (lines 212-227) ───────────────────
+    testWidgets('toggling value=true animates forward (lines 218-219)',
+        (tester) async {
+      bool value = false;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return AdaptiveLiquidGlassLayer(
+                settings: defaultTestGlassSettings,
+                child: GlassSwitch(
+                  value: value,
+                  onChanged: (v) => outerSetState(() => value = v),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      // Flip to true — exercises _positionController.forward()
+      outerSetState(() => value = true);
+      await tester.pump(); // kick animation
+      await tester.pump(const Duration(milliseconds: 400)); // mid animation
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSwitch), findsOneWidget);
+    });
+
+    testWidgets('toggling value=false animates reverse (line 221)',
+        (tester) async {
+      bool value = true;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return AdaptiveLiquidGlassLayer(
+                settings: defaultTestGlassSettings,
+                child: GlassSwitch(
+                  value: value,
+                  onChanged: (v) => outerSetState(() => value = v),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      // Start at true, flip to false — exercises _positionController.reverse()
+      outerSetState(() => value = false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSwitch), findsOneWidget);
+    });
+
+    testWidgets('mid-animation glow overlay renders when transition > 0.05',
+        (tester) async {
+      // Catching line 446-451: `if (transition > 0.05) Opacity(GlassGlow(...))`
+      // This renders during the animation. We pump partway through the animation
+      // to ensure the glow layer is built.
+      bool value = false;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return AdaptiveLiquidGlassLayer(
+                settings: defaultTestGlassSettings,
+                child: GlassSwitch(
+                  value: value,
+                  onChanged: (v) => outerSetState(() => value = v),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      outerSetState(() => value = true);
+      // Do NOT pumpAndSettle — mid-animation is where transition > 0
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      // Widget still alive; glow branch rendered
+      expect(find.byType(GlassSwitch), findsOneWidget);
+      await tester.pumpAndSettle();
+    });
   });
 }

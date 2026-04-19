@@ -12,7 +12,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../theme/glass_theme_data.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../utils/glass_spring.dart';
 
@@ -23,6 +22,7 @@ import '../shared/adaptive_glass.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/animated_glass_indicator.dart';
 import '../shared/inherited_liquid_glass.dart';
+import '../../theme/glass_theme_helpers.dart';
 import 'shared/bottom_bar_internal.dart';
 
 /// A glass morphism bottom navigation bar following Apple's design patterns.
@@ -461,15 +461,11 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
 
   @override
   Widget build(BuildContext context) {
-    // Inherit quality from parent layer or theme if not explicitly set
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final themeData = GlassThemeData.of(context);
-
-    final effectiveQuality = widget.quality ??
-        inherited?.quality ??
-        themeData.qualityFor(context) ??
-        GlassQuality.premium;
+    final effectiveQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: widget.quality,
+      fallback: GlassQuality.premium,
+    );
 
     // Use custom glass settings or cached defaults for bottom bars
     final glassSettings = widget.glassSettings ?? _defaultGlassSettings;

@@ -1,10 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:liquid_glass_widgets/types/glass_quality.dart';
-import 'package:liquid_glass_widgets/widgets/surfaces/glass_bottom_bar.dart'
-    show GlassBottomBarExtraButton, GlassBottomBarTab, MaskingQuality;
-import 'package:liquid_glass_widgets/widgets/surfaces/glass_searchable_bottom_bar.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../shared/test_helpers.dart';
 
@@ -361,6 +358,225 @@ void main() {
       );
 
       expect(config.controller, same(ctrl));
+    });
+  });
+
+  // ── Additional coverage for uncovered branches ───────────────────────────
+
+  group('GlassSearchableBottomBar uncovered branch coverage', () {
+    testWidgets('quality inherited when quality param is null', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: GlassSearchableBottomBar(
+              tabs: _testTabs,
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              maskingQuality: MaskingQuality.off,
+              searchConfig: GlassSearchBarConfig(
+                onSearchToggle: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('tabPillAnchor center activates centeredTab branch', (tester) async {
+      bool searching = false;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return GlassSearchableBottomBar(
+                tabs: _testTabs,
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                isSearchActive: searching,
+                maskingQuality: MaskingQuality.off,
+                tabPillAnchor: GlassTabPillAnchor.center,
+                searchConfig: GlassSearchBarConfig(
+                  onSearchToggle: (v) => setState(() => searching = v),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      outerSetState(() => searching = true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('didUpdateWidget clears _searchFocused when search deactivated',
+        (tester) async {
+      bool searching = true;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return GlassSearchableBottomBar(
+                tabs: _testTabs,
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                isSearchActive: searching,
+                maskingQuality: MaskingQuality.off,
+                searchConfig: GlassSearchBarConfig(
+                  onSearchToggle: (v) => setState(() => searching = v),
+                  autoFocusOnExpand: true,
+                  showsCancelButton: true,
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      outerSetState(() => searching = false);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('collapsedTabWidth positive value is accepted', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            isSearchActive: true,
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (_) {},
+              collapsedTabWidth: 48.0,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('extraButton with position afterSearch reserves right-side space',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            extraButton: GlassBottomBarExtraButton(
+              icon: const Icon(CupertinoIcons.mic),
+              label: 'Mic',
+              onTap: () {},
+              position: ExtraButtonPosition.afterSearch,
+            ),
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byIcon(CupertinoIcons.mic), findsOneWidget);
+    });
+
+    testWidgets('extraButton collapseOnSearchFocus=false keeps button during search',
+        (tester) async {
+      bool searching = false;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return GlassSearchableBottomBar(
+                tabs: _testTabs,
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                isSearchActive: searching,
+                maskingQuality: MaskingQuality.off,
+                extraButton: GlassBottomBarExtraButton(
+                  icon: const Icon(CupertinoIcons.add_circled),
+                  label: 'Add',
+                  onTap: () {},
+                  collapseOnSearchFocus: false,
+                ),
+                searchConfig: GlassSearchBarConfig(
+                  onSearchToggle: (v) => setState(() => searching = v),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      outerSetState(() => searching = true);
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('showsCancelButton=false skips dismiss pill layout', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            isSearchActive: true,
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (_) {},
+              showsCancelButton: false,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('autoFocusOnExpand=true requests focus when search expands',
+        (tester) async {
+      bool searching = false;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return GlassSearchableBottomBar(
+                tabs: _testTabs,
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                isSearchActive: searching,
+                maskingQuality: MaskingQuality.off,
+                searchConfig: GlassSearchBarConfig(
+                  onSearchToggle: (v) => setState(() => searching = v),
+                  autoFocusOnExpand: true,
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      outerSetState(() => searching = true);
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
     });
   });
 }

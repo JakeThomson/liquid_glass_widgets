@@ -753,6 +753,210 @@ void main() {
       expect(dyValues.last, lessThan(50.0));
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SpringBuilder — reduce motion snap branch (line ~339)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('SpringBuilder reduce motion', () {
+    testWidgets('snaps instantly when reduceMotion is active', (tester) async {
+      // Inject a reduce-motion MediaQuery.
+      var target = 0.0;
+      late StateSetter outerSetState;
+      final collectedValues = <double>[];
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(
+            accessibleNavigation: false,
+            disableAnimations: true, // Reduce Motion
+          ),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              outerSetState = setState;
+              return Directionality(
+                textDirection: TextDirection.ltr,
+                child: SpringBuilder(
+                  value: target,
+                  spring: GlassSpring.smooth(),
+                  builder: (context, v, _) {
+                    collectedValues.add(v);
+                    return const SizedBox.shrink();
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      final before = collectedValues.length;
+
+      // Change target — should snap, not animate.
+      outerSetState(() => target = 1.0);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // After at most 2 frames the value should already be at 1.0 (snapped).
+      final snapValue = collectedValues.last;
+      expect(snapValue, closeTo(1.0, 0.01));
+      expect(collectedValues.length - before, lessThanOrEqualTo(3));
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // VelocitySpringBuilder — reduce motion snap branch (line ~445)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('VelocitySpringBuilder reduce motion', () {
+    testWidgets('snaps instantly when reduceMotion is active', (tester) async {
+      var target = 0.0;
+      late StateSetter outerSetState;
+      double? lastValue;
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            disableAnimations: true,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              outerSetState = setState;
+              return Directionality(
+                textDirection: TextDirection.ltr,
+                child: VelocitySpringBuilder(
+                  value: target,
+                  springWhenActive: GlassSpring.interactive(),
+                  springWhenReleased: GlassSpring.bouncy(),
+                  builder: (context, v, vel, _) {
+                    lastValue = v;
+                    return const SizedBox.shrink();
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      outerSetState(() => target = 1.0);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(lastValue, closeTo(1.0, 0.01));
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SingleSpringController — spring getter & setter no-op path (line ~127/129)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('SingleSpringController spring getter/setter', () {
+    testWidgets('spring getter returns the current spring', (tester) async {
+      late SingleSpringController ctrl;
+      final spring = GlassSpring.smooth();
+      await tester.pumpWidget(
+        _ControllerHarness(
+          build: (vsync) => ctrl = SingleSpringController(
+            vsync: vsync,
+            spring: spring,
+          ),
+        ),
+      );
+      expect(ctrl.spring.mass, spring.mass);
+      expect(ctrl.spring.stiffness, spring.stiffness);
+    });
+
+    testWidgets('setting the same spring value is a no-op', (tester) async {
+      late SingleSpringController ctrl;
+      final spring = GlassSpring.smooth();
+      await tester.pumpWidget(
+        _ControllerHarness(
+          build: (vsync) => ctrl = SingleSpringController(
+            vsync: vsync,
+            spring: spring,
+          ),
+        ),
+      );
+
+      // Setting the identical spring should not throw.
+      expect(() => ctrl.spring = spring, returnsNormally);
+      // Value must not have changed.
+      expect(ctrl.value, closeTo(0.0, 0.001));
+    });
+
+    testWidgets('spring setter while ticker inactive updates spring without starting',
+        (tester) async {
+      late SingleSpringController ctrl;
+      await tester.pumpWidget(
+        _ControllerHarness(
+          build: (vsync) => ctrl = SingleSpringController(
+            vsync: vsync,
+            spring: GlassSpring.smooth(),
+          ),
+        ),
+      );
+
+      // No animation running; setting a new spring should not start the ticker.
+      ctrl.spring = GlassSpring.bouncy();
+      // If ticker were active, further pump would show value change.
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(ctrl.value, closeTo(0.0, 0.001)); // still at initial
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // OffsetSpringController — spring setter
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('OffsetSpringController spring setter', () {
+    testWidgets('can swap spring mid-animation', (tester) async {
+      late OffsetSpringController ctrl;
+      await tester.pumpWidget(
+        _OffsetControllerHarness(
+          build: (vsync) => ctrl = OffsetSpringController(
+            vsync: vsync,
+            spring: GlassSpring.smooth(),
+          ),
+        ),
+      );
+
+      ctrl.animateTo(const Offset(50, 50));
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
+      // Swap spring — should not crash and should keep the simulation going.
+      expect(() => ctrl.spring = GlassSpring.bouncy(), returnsNormally);
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(ctrl.value.dx, greaterThan(0));
+    });
+
+    testWidgets('velocity getter returns non-zero Offset while animating',
+        (tester) async {
+      late OffsetSpringController ctrl;
+      await tester.pumpWidget(
+        _OffsetControllerHarness(
+          build: (vsync) => ctrl = OffsetSpringController(
+            vsync: vsync,
+            spring: GlassSpring.smooth(),
+          ),
+        ),
+      );
+
+      ctrl.animateTo(const Offset(100, 100));
+      // Pump several frames so the spring builds up velocity.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
+      // Velocity is an Offset — it should be a valid object (not throw).
+      final vel = ctrl.velocity;
+      expect(vel, isA<Offset>());
+      // While animating, at least one axis should be nonzero.
+      expect(vel.dx + vel.dy, greaterThan(0));
+    });
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

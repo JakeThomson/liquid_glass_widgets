@@ -14,6 +14,40 @@ import '../glass_bottom_bar.dart'
     show GlassBottomBarExtraButton, GlassBottomBarTab;
 
 // =============================================================================
+// buildIconShadows — pure utility function (visibleForTesting for unit tests)
+// =============================================================================
+
+/// Builds multi-directional icon shadows that simulate a stroke/outline effect.
+///
+/// Returns `null` (no shadow) when:
+/// - [thickness] is null (feature not requested), or
+/// - [selected] is true AND [activeIcon] is non-null (distinct active icon
+///   is used so outline shadow is not needed in that state).
+///
+/// Otherwise, generates 8 evenly-spaced [Shadow] offsets around the icon at
+/// the given [thickness] radius using 45° increments.
+///
+/// Extracted from [BottomBarTabItem] to enable isolated unit testing.
+@visibleForTesting
+List<Shadow>? buildIconShadows({
+  required Color iconColor,
+  required double? thickness,
+  required bool selected,
+  required Widget? activeIcon,
+}) {
+  if (thickness == null || (selected && activeIcon != null)) return null;
+  final shadows = <Shadow>[];
+  const step = math.pi / 4;
+  for (double a = 0; a < math.pi * 2; a += step) {
+    shadows.add(Shadow(
+      color: iconColor,
+      offset: Offset.fromDirection(a, thickness),
+    ));
+  }
+  return shadows;
+}
+
+// =============================================================================
 // BottomBarTabItem — shared tab item widget
 // =============================================================================
 
@@ -123,7 +157,13 @@ class BottomBarTabItem extends StatelessWidget {
                         data: IconThemeData(
                           color: iconColor,
                           size: iconSize,
-                          shadows: _buildIconShadows(iconColor),
+                          // Use the extracted top-level function for testability
+                          shadows: buildIconShadows(
+                            iconColor: iconColor,
+                            thickness: tab.thickness,
+                            selected: selected,
+                            activeIcon: tab.activeIcon,
+                          ),
                         ),
                         child: DefaultTextStyle(
                           style: DefaultTextStyle.of(context)
@@ -155,21 +195,6 @@ class BottomBarTabItem extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  List<Shadow>? _buildIconShadows(Color iconColor) {
-    if (tab.thickness == null || (selected && tab.activeIcon != null)) {
-      return null;
-    }
-    final shadows = <Shadow>[];
-    const step = math.pi / 4;
-    for (double a = 0; a < math.pi * 2; a += step) {
-      shadows.add(Shadow(
-        color: iconColor,
-        offset: Offset.fromDirection(a, tab.thickness!),
-      ));
-    }
-    return shadows;
   }
 }
 

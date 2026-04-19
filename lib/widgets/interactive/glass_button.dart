@@ -7,6 +7,7 @@ import '../../types/glass_quality.dart';
 import '../../types/glass_button_style.dart';
 import '../shared/adaptive_glass.dart';
 import '../shared/inherited_liquid_glass.dart';
+import '../../theme/glass_theme_helpers.dart';
 
 /// Glass morphism button with scale animation and glow effects.
 ///
@@ -441,16 +442,13 @@ class _GlassButtonState extends State<GlassButton>
   @override
   Widget build(BuildContext context) {
     // Resolve quality and theme — hoisted here so stretchWidget can branch on quality
-    final themeData = GlassThemeData.of(context);
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final effectiveQuality = widget.quality ??
-        (inherited?.quality ??
-            themeData.qualityFor(context) ??
-            GlassQuality.standard);
+    final effectiveQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: widget.quality,
+    );
 
     final effectiveGlowColor = widget.glowColor ??
-        themeData.glowColorsFor(context).primary ??
+        GlassThemeData.of(context).glowColorsFor(context).primary ??
         Colors.white24;
 
     // Build the content widget (either icon or custom child)
