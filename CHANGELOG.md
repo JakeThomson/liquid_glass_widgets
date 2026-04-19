@@ -1,3 +1,7 @@
+# 0.7.17
+
+- **CHORE**: add CI and Codecov badges.
+
 # 0.7.16
 
 ### Bug Fixes
