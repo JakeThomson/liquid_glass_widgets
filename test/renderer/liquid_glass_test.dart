@@ -1,6 +1,3 @@
-@Tags(['golden'])
-library;
-
 // Adapted from liquid_glass_renderer 0.2.0-dev.4
 // Original: test/src/liquid_glass_test.dart
 // Changes:
