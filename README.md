@@ -2,7 +2,12 @@
 
 Bring Apple's iOS 26 Liquid Glass to your Flutter app — 37 glass widgets with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
 
-[![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg)](https://pub.dev/packages/liquid_glass_widgets)
+[![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg?label=pub.dev&labelColor=333940&logo=dart)](https://pub.dev/packages/liquid_glass_widgets)
+[![pub points](https://img.shields.io/pub/points/liquid_glass_widgets?label=pub%20points&labelColor=333940)](https://pub.dev/packages/liquid_glass_widgets/score)
+[![popularity](https://img.shields.io/pub/popularity/liquid_glass_widgets?label=popularity&labelColor=333940)](https://pub.dev/packages/liquid_glass_widgets/score)
+[![likes](https://img.shields.io/pub/likes/liquid_glass_widgets?label=likes&labelColor=333940)](https://pub.dev/packages/liquid_glass_widgets/score)
+[![CI](https://github.com/sdegenaar/liquid_glass_widgets/actions/workflows/ci.yml/badge.svg)](https://github.com/sdegenaar/liquid_glass_widgets/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/sdegenaar/liquid_glass_widgets/graph/badge.svg)](https://codecov.io/gh/sdegenaar/liquid_glass_widgets)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 
@@ -78,7 +83,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.7.15
+  liquid_glass_widgets: ^0.7.16
 ```
 
 ```bash

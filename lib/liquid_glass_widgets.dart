@@ -82,6 +82,8 @@ export 'widgets/overlays/glass_toast.dart';
 export 'widgets/surfaces/glass_app_bar.dart';
 export 'widgets/surfaces/glass_bottom_bar.dart';
 export 'widgets/surfaces/glass_searchable_bottom_bar.dart';
+export 'widgets/surfaces/shared/glass_search_bar_config.dart';
+export 'widgets/surfaces/shared/searchable_bottom_bar_controller.dart';
 export 'widgets/surfaces/glass_side_bar.dart';
 export 'widgets/surfaces/glass_tab_bar.dart';
 export 'widgets/surfaces/glass_toolbar.dart';

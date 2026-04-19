@@ -4,254 +4,26 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../types/glass_quality.dart';
-import '../../utils/draggable_indicator_physics.dart';
-import '../../utils/glass_spring.dart';
-import '../interactive/glass_button.dart';
-import '../shared/adaptive_glass.dart';
-import '../shared/adaptive_liquid_glass_layer.dart';
-import '../shared/animated_glass_indicator.dart';
 import '../../theme/glass_theme_helpers.dart';
+import '../shared/adaptive_liquid_glass_layer.dart';
 import 'glass_bottom_bar.dart'
     show
         ExtraButtonPosition,
         GlassBottomBarExtraButton,
         GlassBottomBarTab,
         GlassTabPillAnchor,
-        MaskingQuality,
-        JellyClipper;
+        MaskingQuality;
 import 'shared/bottom_bar_internal.dart';
+import 'shared/glass_search_bar_config.dart';
+import 'shared/searchable_bottom_bar_controller.dart';
+import 'shared/searchable_bottom_bar_internal.dart';
 
-// =============================================================================
-// Public API — GlassSearchBarConfig
-// =============================================================================
-
-/// Configuration for the morphing search bar in [GlassSearchableBottomBar].
-///
-/// When the user taps the collapsed search pill, [onSearchToggle] is called
-/// with `true`. Set [GlassSearchableBottomBar.isSearchActive] to `true` to
-/// expand the search bar and collapse the tab pill.
-///
-/// ## Example
-/// ```dart
-/// GlassSearchableBottomBar(
-///   tabs: [...],
-///   selectedIndex: _tab,
-///   onTabSelected: (i) => setState(() => _tab = i),
-///   isSearchActive: _searching,
-///   searchConfig: GlassSearchBarConfig(
-///     onSearchToggle: (v) => setState(() => _searching = v),
-///     hintText: 'Apple News',
-///     collapsedLogoBuilder: (ctx) => ..., // N logo shown when searching
-///   ),
-/// )
-/// ```
-class GlassSearchBarConfig {
-  /// Creates a search bar configuration.
-  const GlassSearchBarConfig({
-    required this.onSearchToggle,
-    this.hintText = 'Search',
-    this.collapsedTabWidth,
-    this.collapsedLogoBuilder,
-    this.searchIconColor,
-    this.micIconColor,
-    this.hintStyle,
-    this.controller,
-    this.focusNode,
-    this.onChanged,
-    this.onSubmitted,
-    this.onMicTap,
-    this.textColor,
-    this.trailingBuilder,
-    this.textInputAction,
-    this.keyboardType,
-    this.autocorrect = true,
-    this.enableSuggestions = true,
-    this.onTapOutside,
-    this.autoFocusOnExpand = false,
-    this.showsCancelButton = true,
-    this.cancelButtonText = 'Cancel',
-    this.cancelButtonColor,
-    this.onSearchFocusChanged,
-  });
-
-  /// Called with `true` when search is activated, `false` when dismissed.
-  final ValueChanged<bool> onSearchToggle;
-
-  /// Placeholder text in the expanded search bar. Defaults to `'Search'`.
-  final String hintText;
-
-  /// Width of the collapsed tab pill when search is active.
-  ///
-  /// If omitted, defaults to matching the [GlassSearchableBottomBar.searchBarHeight]
-  /// to ensure the collapsed indicator perfectly shrinks proportionately into a circle.
-  final double? collapsedTabWidth;
-
-  /// Widget shown inside the collapsed tab pill when search is active.
-  ///
-  /// Optional builder for a custom logo/icon shown on the collapsed tab pill
-  /// when search is fully active.
-  ///
-  /// If omitted, this defaults to displaying the [activeIcon] (or fallback
-  /// [icon]) of the currently selected [GlassBottomBarTab], matching the native
-  /// iOS Apple News behavior.
-  final WidgetBuilder? collapsedLogoBuilder;
-
-  /// Color for the 🔍 and 🎙️ icons. Defaults to `Colors.white60`.
-  final Color? searchIconColor;
-
-  /// Color for the microphone icon specifically. Falls back to [searchIconColor].
-  ///
-  /// Ignored when [trailingBuilder] is provided.
-  final Color? micIconColor;
-
-  /// Text style for the hint text. Uses a sensible default when null.
-  final TextStyle? hintStyle;
-
-  /// Optional controller for the search text field.
-  ///
-  /// If null, the widget manages its own internal controller.
-  final TextEditingController? controller;
-
-  /// Optional focus node for the search text field.
-  ///
-  /// Providing a [FocusNode] gives you full programmatic control over when
-  /// the search keyboard appears and disappears — independently of
-  /// [autoFocusOnExpand].  Typical use-cases:
-  ///
-  /// - Call `focusNode.requestFocus()` to open the keyboard at an arbitrary
-  ///   moment (e.g. after an animation completes or a voice-search result
-  ///   arrives).
-  /// - Call `focusNode.unfocus()` to dismiss the keyboard without collapsing
-  ///   the search bar.
-  /// - Listen to `focusNode.addListener(...)` for focus events in addition to
-  ///   or instead of [onSearchFocusChanged].
-  ///
-  /// **Lifecycle:** the caller is responsible for disposing the node.
-  /// The widget will never dispose a caller-provided [FocusNode].
-  ///
-  /// If null, an internal node is created and disposed automatically.
-  final FocusNode? focusNode;
-
-  /// Called on every keystroke as the user types in the search field.
-  ///
-  /// Use this for live/incremental search filtering. For submit-only
-  /// behaviour (e.g. triggering a network request on Enter) use [onSubmitted].
-  final ValueChanged<String>? onChanged;
-
-  /// Called when the user submits the search (keyboard action).
-  final ValueChanged<String>? onSubmitted;
-
-  /// Called when the user taps the microphone icon.
-  ///
-  /// When null the microphone icon is hidden. Ignored when [trailingBuilder]
-  /// is provided (the builder is responsible for its own tap handling).
-  final VoidCallback? onMicTap;
-
-  /// Color of the typed text. Defaults to white.
-  final Color? textColor;
-
-  // ── SearchBar parity ────────────────────────────────────────────────────────
-
-  /// Custom widget builder for the trailing section of the expanded search bar.
-  ///
-  /// When provided, **completely replaces** the microphone icon and [onMicTap]
-  /// behaviour. Use this to show a "Clear" button, voice-action indicator, or
-  /// any other widget in the trailing position — matching Flutter's own
-  /// [SearchBar.trailing] API.
-  ///
-  /// The builder receives a [BuildContext] that is a descendant of the
-  /// expanded glass pill. If null, the standard mic icon / empty logic applies.
-  ///
-  /// ## Example — clear button
-  /// ```dart
-  /// trailingBuilder: (ctx) => GestureDetector(
-  ///   onTap: () => searchController.clear(),
-  ///   child: Icon(CupertinoIcons.clear_circled_solid,
-  ///       color: Colors.white54, size: 18),
-  /// ),
-  /// ```
-  final WidgetBuilder? trailingBuilder;
-
-  /// The keyboard action button label for the search [TextField].
-  ///
-  /// Common values: [TextInputAction.search], [TextInputAction.done],
-  /// [TextInputAction.go]. Defaults to null (system / platform default).
-  final TextInputAction? textInputAction;
-
-  /// The type of keyboard to display for the search [TextField].
-  ///
-  /// Defaults to null, which uses [TextInputType.text]. Pass
-  /// [TextInputType.url] or [TextInputType.emailAddress] for specialised
-  /// search contexts.
-  final TextInputType? keyboardType;
-
-  /// Whether to enable autocorrection for the search [TextField].
-  ///
-  /// Defaults to `true`. Set to `false` for search bars where autocorrection
-  /// would interfere (e.g. product codes, usernames).
-  final bool autocorrect;
-
-  /// Whether to show input suggestions (QuickType bar on iOS) for the search
-  /// [TextField].
-  ///
-  /// Defaults to `true`. Mirrors [TextField.enableSuggestions].
-  final bool enableSuggestions;
-
-  /// Called when the user taps outside the expanded search [TextField].
-  ///
-  /// Passed directly to [TextField.onTapOutside]. A common use-case is
-  /// unfocusing the field so the keyboard dismisses when the user taps the
-  /// page content above the bar:
-  ///
-  /// ```dart
-  /// onTapOutside: (_) => FocusScope.of(context).unfocus(),
-  /// ```
-  final TapRegionCallback? onTapOutside;
-
-  /// Whether the search [TextField] should automatically receive keyboard focus
-  /// when the search bar expands.
-  ///
-  /// - `false` (default): the bar expands without triggering the keyboard;
-  ///   the user taps inside the pill to start typing. Matches the behaviour
-  ///   of the real iOS 26 Apple News search bar and looks more polished.
-  /// - `true`: the keyboard opens automatically as soon as the bar expands —
-  ///   useful for modal or dedicated search screens where typing is the
-  ///   immediate next action.
-  final bool autoFocusOnExpand;
-
-  /// Whether to show a cancel/dismiss button when the search bar is focused.
-  ///
-  /// Defaults to `true`, providing an intuitive escape hatch for users to dismiss
-  /// the keyboard and search state. Note that if `true`, it renders a detached glass
-  /// dismiss pill with an "X" icon, replicating Apple News.
-  final bool showsCancelButton;
-
-  /// Label for the slide-in cancel button.
-  ///
-  /// Defaults to `'Cancel'`.
-  final String cancelButtonText;
-
-  /// Color of the cancel button text.
-  ///
-  /// Defaults to white with 90 % opacity, matching iOS system style.
-  final Color? cancelButtonColor;
-
-  /// Called whenever the search field gains or loses keyboard focus.
-  ///
-  /// `true`  — keyboard is visible, field is active.
-  /// `false` — keyboard dismissed, field is unfocused.
-  ///
-  /// Use this to switch the body content between a focused search state
-  /// (e.g. "No Recent Searches") and an unfocused search state (e.g. a topic
-  /// browse grid), without fully closing the search bar.
-  final ValueChanged<bool>? onSearchFocusChanged;
-}
+export 'shared/glass_search_bar_config.dart';
 
 // =============================================================================
 // Public Widget — GlassSearchableBottomBar
@@ -283,6 +55,7 @@ class GlassSearchableBottomBar extends StatefulWidget {
     required this.onTabSelected,
     required this.searchConfig,
     super.key,
+    this.controller,
     this.isSearchActive = false,
     this.extraButton,
     this.spacing = 8,
@@ -330,6 +103,15 @@ class GlassSearchableBottomBar extends StatefulWidget {
       SpringDescription(mass: 1.0, stiffness: 350.0, damping: 30.0);
 
   // ── Search ──────────────────────────────────────────────────────────────────
+  /// Optional controller to manage the search bar state machine externally.
+  ///
+  /// When provided, the widget uses this controller's state instead of
+  /// creating its own. Useful for programmatic open/close of search,
+  /// or for unit testing the layout computation independently.
+  ///
+  /// The caller owns the controller's lifecycle — [dispose] it when done.
+  final SearchableBottomBarController? controller;
+
   /// Configuration for the morphing search bar behaviour.
   final GlassSearchBarConfig searchConfig;
 
@@ -507,8 +289,17 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
     glassColor: _defaultGlassColor,
   );
 
-  /// Whether the search text field is currently focused (keyboard visible).
-  bool _searchFocused = false;
+  // ── Layout state machine controller ─────────────────────────────────────
+  // Owns focus state, spring target cache, and all layout computation.
+  // The widget may supply an external controller (for programmatic control
+  // or testing); if not, we create and own an internal one.
+  late SearchableBottomBarController _controller;
+  bool _ownsController = false;
+
+  /// Named listener stored so [removeListener] can find the exact closure.
+  /// Anonymous lambdas in [addListener]/[removeListener] create new objects
+  /// each time and would never match, leaking the old subscription.
+  void _onControllerChanged() => setState(() {});
 
   // ── Spring-simulation animation controllers ─────────────────────────────
   // Each drives one layout axis of the pill morph. Wide bounds allow the
@@ -523,20 +314,6 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
   /// Animated current width of the search pill.
   late AnimationController _searchWCtrl;
 
-  /// False until the first LayoutBuilder pass has run and the controllers
-  /// have been initialized to their correct starting positions.
-  bool _pillsInitialized = false;
-
-  /// Guard: prevents scheduling multiple init callbacks before the first
-  /// post-frame fires (handles rapid rebuilds at startup / hot reload).
-  bool _pillsInitScheduled = false;
-
-  // Cached spring targets — spring is only re-triggered when target changes.
-  double _prevTabWTarget = double.nan;
-  double _prevSearchLeftTarget = double.nan;
-  double _prevSearchWTarget = double.nan;
-  double _cachedTotalW = 0;
-
   @override
   void initState() {
     super.initState();
@@ -545,6 +322,16 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
           widget.searchConfig.collapsedTabWidth! > 0,
       'GlassSearchBarConfig.collapsedTabWidth must be positive',
     );
+    // Use the caller-supplied controller or create an internal one.
+    if (widget.controller != null) {
+      _controller = widget.controller!;
+      _ownsController = false;
+    } else {
+      _controller = SearchableBottomBarController();
+      _ownsController = true;
+    }
+    _controller.addListener(_onControllerChanged);
+
     // Wide bounds allow the spring value to pass beyond [0, 1] for overshoot.
     _tabWCtrl = AnimationController(
       vsync: this,
@@ -564,26 +351,43 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
   }
 
   @override
+  void didUpdateWidget(covariant GlassSearchableBottomBar old) {
+    super.didUpdateWidget(old);
+    // Swap controller if the caller provides a new one.
+    if (widget.controller != old.controller) {
+      _controller.removeListener(_onControllerChanged);
+      if (_ownsController) {
+        _controller.dispose();
+      }
+      if (widget.controller != null) {
+        _controller = widget.controller!;
+        _ownsController = false;
+      } else {
+        _controller = SearchableBottomBarController();
+        _ownsController = true;
+      }
+      _controller.addListener(_onControllerChanged);
+    }
+    // Delegate focus-clear logic to the controller.
+    _controller.onSearchActiveChanged(
+      wasActive: old.isSearchActive,
+      isActive: widget.isSearchActive,
+    );
+  }
+
+  @override
   void dispose() {
     _tabWCtrl.dispose();
     _searchLeftCtrl.dispose();
     _searchWCtrl.dispose();
+    _controller.removeListener(_onControllerChanged);
+    if (_ownsController) _controller.dispose();
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(covariant GlassSearchableBottomBar old) {
-    super.didUpdateWidget(old);
-    // When search is deactivated from outside, clear focus flag.
-    if (old.isSearchActive && !widget.isSearchActive && _searchFocused) {
-      _searchFocused = false;
-    }
-  }
-
   void _onFocusLost() {
-    // Clears _searchFocused → next build has dismissVisible=false →
-    // the LayoutBuilder detects the transition and schedules unmount.
-    setState(() => _searchFocused = false);
+    // Delegates to controller → triggers setState via listener.
+    _controller.onFocusChanged(false);
   }
 
   @override
@@ -614,172 +418,95 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
               horizontal: widget.horizontalPadding,
               vertical: widget.verticalPadding,
             ),
-            // LayoutBuilder provides real pixel widths so AnimatedContainer
-            // can spring between explicit values — no null-width hacks.
+            // LayoutBuilder provides real pixel widths so the spring controllers
+            // can animate between explicit values — no null-width hacks.
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final totalW = constraints.maxWidth;
-                // ── Spring target computation ─────────────────────────────────
-                // Targets use the FINAL stable heights (widget.barHeight /
-                // widget.searchBarHeight) rather than the in-flight animH, so
-                // the spring is not re-triggered on every frame height anim.
-                final targetH =
-                    searching ? widget.searchBarHeight : widget.barHeight;
 
                 // ── Keyboard & dismiss state ──────────────────────────────────
                 final keyboardH = MediaQuery.viewInsetsOf(context).bottom;
                 final keyboardPresent = keyboardH > 0;
                 final hasDismiss = widget.searchConfig.showsCancelButton;
+                final isKeyboardActive =
+                    _controller.searchFocused && keyboardPresent;
                 final dismissVisible = searching &&
-                    _searchFocused &&
+                    _controller.searchFocused &&
                     hasDismiss &&
                     keyboardPresent;
 
-                // Whether the extra button collapses (hides + frees space) when
-                // search is focused. Hoisted early so extraTargetW and all
-                // downstream layout math can use it.
+                final extraPos = widget.extraButton?.position ??
+                    ExtraButtonPosition.beforeSearch;
+                final extraFullW = widget.extraButton?.size ?? 0.0;
                 final extraCollapsesOnSearch =
                     widget.extraButton?.collapseOnSearchFocus ?? true;
 
-                // Extra button gracefully yields its horizontal dimension too.
-                // When collapseOnSearchFocus is true (default), the reserved width
-                // shrinks to match the search-bar pill height on enter — this
-                // prevents the "bloated gap" when searchBarHeight < barHeight.
-                // When false, the button keeps its full size throughout all states.
-                final extraPos = widget.extraButton?.position ??
-                    ExtraButtonPosition.beforeSearch;
+                // ── Delegate all layout math to the controller ────────────────
+                final layout = _controller.computeLayout(
+                  totalW: totalW,
+                  searching: searching,
+                  barHeight: widget.barHeight,
+                  searchBarHeight: widget.searchBarHeight,
+                  spacing: widget.spacing,
+                  hasDismiss: hasDismiss,
+                  dismissVisible: dismissVisible,
+                  collapsedTabWidth: widget.searchConfig.collapsedTabWidth,
+                  tabPillAnchor: widget.tabPillAnchor,
+                  extraFullW: extraFullW,
+                  extraPos: extraPos,
+                  extraCollapsesOnSearch: extraCollapsesOnSearch,
+                  isKeyboardActive: isKeyboardActive,
+                  keyboardH: keyboardH,
+                );
 
-                // Full (non-collapsed) button size — used for maxTabW so the
-                // tab pill zone boundary never shifts between states.
-                final extraFullW = widget.extraButton?.size ?? 0.0;
-
-                // Scale the layout reserve to min(size, targetH) whenever
-                // searching — this keeps the search pill flush regardless of whether
-                // collapseOnSearchFocus is on or off (the flag only controls
-                // visibility/opacity, not the sizing of the reserved slot).
-                final extraTargetW = widget.extraButton != null
-                    ? (searching ? math.min(extraFullW, targetH) : extraFullW)
-                    : 0.0;
-
-                // Reserve space on the correct side based on button position.
-                // maxTabW uses the FULL size for stability; layout uses extraTargetW.
-                final extraWLeft = (widget.extraButton != null &&
+                final targetTabW = layout.targetTabW;
+                final targetSearchLeft = layout.targetSearchLeft;
+                final targetSearchW = layout.targetSearchW;
+                // Recompute per-position widths used for extra button Positioned
+                // from the layout result (needed for rendering; not in layout type).
+                final targetH =
+                    searching ? widget.searchBarHeight : widget.barHeight;
+                final extraTargetW = layout.extraTargetW;
+                final extraWLeft = (extraFullW > 0 &&
                         extraPos == ExtraButtonPosition.beforeSearch)
                     ? (extraTargetW + widget.spacing)
                     : 0.0;
-                final extraWRight = (widget.extraButton != null &&
-                        extraPos == ExtraButtonPosition.afterSearch)
-                    ? (extraTargetW + widget.spacing)
-                    : 0.0;
-                final extraFullWLeft = (widget.extraButton != null &&
-                        extraPos == ExtraButtonPosition.beforeSearch)
-                    ? (extraFullW + widget.spacing)
-                    : 0.0;
-                final extraFullWRight = (widget.extraButton != null &&
-                        extraPos == ExtraButtonPosition.afterSearch)
-                    ? (extraFullW + widget.spacing)
-                    : 0.0;
-
-                final isKeyboardActive = _searchFocused && keyboardPresent;
                 final doCollapseLayout =
                     isKeyboardActive && extraCollapsesOnSearch;
-
-                final curExtraWLeft = doCollapseLayout ? 0.0 : extraWLeft;
-                final curExtraWRight = doCollapseLayout ? 0.0 : extraWRight;
-
-                final targetCompactW = targetH;
-                final targetDismissW = hasDismiss ? targetH : 0.0;
-                final targetDismissReserve =
-                    hasDismiss ? (targetDismissW + widget.spacing) : 0.0;
-
-                // maxTabW is ALWAYS computed with the full (non-collapsed) extraW
-                // reserves so the tab pill zone is stable throughout all states.
-                final maxTabW = totalW -
-                    targetCompactW -
-                    widget.spacing -
-                    extraFullWLeft -
-                    extraFullWRight;
-
-                // The tab pill is the fixed anchor at the left edge.
-                // It expands to fill its zone only when NOT searching.
-                // During search (collapsed or focused), it stays at
-                // collapsedTabWidth — a fixed circle. The dismissVisible
-                // branch has been intentionally removed: expanding to
-                // maxTabW on focus then contracting on dismiss caused a
-                // "split" animation. Now only the search pill springs —
-                // the circle sits still, matching iOS 26 Apple News
-                // behaviour exactly.
-                final targetTabW = !searching
-                    ? maxTabW
-                    : (widget.searchConfig.collapsedTabWidth ?? targetH);
-
-                // ── Tab-pill anchor ───────────────────────────────────────────
-                // maxTabW = the tab pill's own zone (its maximum usable width).
-                // This exactly equals targetTabW when not searching.
-                //
-                // start (default): curTabLeft = 0. Right edge retracts as the
-                // pill collapses — classic iOS News behaviour.
-                //
-                // center: curTabLeft = (maxTabW - curTabW) / 2.
-                // The pill's centre point stays fixed at maxTabW/2 throughout
-                // the spring, so BOTH edges animate symmetrically inward/outward.
-                // When curTabW == maxTabW (fully expanded) the result is 0, so
-                // the layout is pixel-identical to start mode — no gap visible.
-                // The centre effect is only visible during the morph.
+                final targetDismissReserve = layout.dismissReserve;
                 final centeredTab =
                     widget.tabPillAnchor == GlassTabPillAnchor.center;
+                final maxTabW = totalW -
+                    targetH -
+                    widget.spacing -
+                    (extraFullW > 0 &&
+                            extraPos == ExtraButtonPosition.beforeSearch
+                        ? extraFullW + widget.spacing
+                        : 0.0) -
+                    (extraFullW > 0 &&
+                            extraPos == ExtraButtonPosition.afterSearch
+                        ? extraFullW + widget.spacing
+                        : 0.0);
 
-                final targetSearchLeft = !searching
-                    ? totalW - targetCompactW - extraWRight
-                    : isKeyboardActive
-                        ? curExtraWLeft
-                        : centeredTab
-                            ? (maxTabW + targetTabW) / 2 +
-                                curExtraWLeft +
-                                widget.spacing
-                            : targetTabW + curExtraWLeft + widget.spacing;
-
-                final targetSearchW = !searching
-                    ? targetCompactW
-                    : totalW -
-                        targetSearchLeft -
-                        curExtraWRight -
-                        (dismissVisible ? targetDismissReserve : 0.0);
-
-                // ── Spring trigger (post-frame to stay outside build phase) ────────
-                if (!_pillsInitialized && !_pillsInitScheduled) {
-                  // First layout pass: initialize controllers to target values.
-                  // Guard _pillsInitScheduled prevents duplicate callbacks when
-                  // the parent rebuilds multiple times before first post-frame.
-                  _pillsInitScheduled = true;
-                  _cachedTotalW = totalW;
-                  _prevTabWTarget = targetTabW;
-                  _prevSearchLeftTarget = targetSearchLeft;
-                  _prevSearchWTarget = targetSearchW;
+                // ── Spring trigger (post-frame to stay outside build phase) ────
+                if (!_controller.pillsInitialized &&
+                    !_controller.pillsInitScheduled) {
+                  _controller.markInitScheduled(totalW: totalW);
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
                     _tabWCtrl.value = targetTabW;
                     _searchLeftCtrl.value = targetSearchLeft;
                     _searchWCtrl.value = targetSearchW;
-                    setState(() {
-                      _pillsInitialized = true;
-                      _pillsInitScheduled = false;
-                    });
+                    _controller.initializePills(
+                      tabW: targetTabW,
+                      searchLeft: targetSearchLeft,
+                      searchW: targetSearchW,
+                    );
                   });
-                } else if (_pillsInitialized) {
-                  // Retarget only when the destination actually changes.
-                  // IMPORTANT: All three springs are batched into a single
-                  // addPostFrameCallback so they start on the exact same frame.
-                  // Separate callbacks introduced a 1-frame desync that caused
-                  // a visible jump when reversing the morph direction.
-                  final newTabW = targetTabW != _prevTabWTarget;
-                  final newLeft = targetSearchLeft != _prevSearchLeftTarget;
-                  final newSearchW = targetSearchW != _prevSearchWTarget;
-
-                  if (newTabW || newLeft || newSearchW) {
-                    // Capture values immediately (before the post-frame delay)
-                    // so we read the current spring positions, not the ones after
-                    // any intermediate rebuilds.
+                } else if (_controller.pillsInitialized) {
+                  final retarget = _controller.checkRetarget(layout);
+                  if (retarget.any) {
+                    // Capture current spring positions before the post-frame delay.
                     final fromTabW = _tabWCtrl.value;
                     final fromLeft = _searchLeftCtrl.value;
                     final fromSearchW = _searchWCtrl.value;
@@ -787,37 +514,41 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                     final toLeft = targetSearchLeft;
                     final toSearchW = targetSearchW;
 
-                    if (newTabW) _prevTabWTarget = toTabW;
-                    if (newLeft) _prevSearchLeftTarget = toLeft;
-                    if (newSearchW) _prevSearchWTarget = toSearchW;
-
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!mounted) return;
                       final spring = widget.springDescription ??
                           GlassSearchableBottomBar._kSpring;
-                      if (newTabW) {
+                      if (retarget.tabW) {
                         _tabWCtrl.animateWith(
-                            SpringSimulation(spring, fromTabW, toTabW, 0.0));
+                            SearchableBottomBarController.makeSpring(
+                                spring: spring, from: fromTabW, to: toTabW));
                       }
-                      if (newLeft) {
+                      if (retarget.searchLeft) {
                         _searchLeftCtrl.animateWith(
-                            SpringSimulation(spring, fromLeft, toLeft, 0.0));
+                            SearchableBottomBarController.makeSpring(
+                                spring: spring, from: fromLeft, to: toLeft));
                       }
-                      if (newSearchW) {
-                        _searchWCtrl.animateWith(SpringSimulation(
-                            spring, fromSearchW, toSearchW, 0.0));
+                      if (retarget.searchW) {
+                        _searchWCtrl.animateWith(
+                            SearchableBottomBarController.makeSpring(
+                                spring: spring,
+                                from: fromSearchW,
+                                to: toSearchW));
                       }
                     });
                   }
-                  if (totalW != _cachedTotalW) _cachedTotalW = totalW;
+                  if (totalW != _controller.cachedTotalW) {
+                    _controller.cachedTotalW = totalW;
+                  }
                 }
 
                 // Current animated positions (spring-driven or initialized target).
                 // Clamped to [0, totalW] so spring overshoot never produces a
                 // negative Positioned width — which would throw a RenderBox error.
-                final curTabW =
-                    (_pillsInitialized ? _tabWCtrl.value : targetTabW)
-                        .clamp(0.0, totalW);
+                final curTabW = (_controller.pillsInitialized
+                        ? _tabWCtrl.value
+                        : targetTabW)
+                    .clamp(0.0, totalW);
 
                 // Horizontal anchor for the tab pill.
                 // center mode: left = (maxTabW - curTabW) / 2.
@@ -828,13 +559,14 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                     ? ((maxTabW - curTabW) / 2).clamp(0.0, maxTabW)
                     : 0.0;
 
-                final curSearchLeft = (_pillsInitialized
+                final curSearchLeft = (_controller.pillsInitialized
                         ? _searchLeftCtrl.value
                         : targetSearchLeft)
                     .clamp(0.0, totalW);
-                final curSearchW =
-                    (_pillsInitialized ? _searchWCtrl.value : targetSearchW)
-                        .clamp(0.0, totalW);
+                final curSearchW = (_controller.pillsInitialized
+                        ? _searchWCtrl.value
+                        : targetSearchW)
+                    .clamp(0.0, totalW);
 
                 // Y lift that moves pills above the keyboard.
                 // The SizedBox height expands by floatY while the dismiss pill is
@@ -845,12 +577,9 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                 // extendBody:true this only affects body MediaQuery.padding.bottom.
                 // For search-state body content that uses bottom padding, wrap with
                 // MediaQuery.removePadding(removeBottom:true).
-                // Float both pills above the keyboard whenever the field is focused,
-                // regardless of whether the dismiss pill is shown. Without this,
-                // showsCancelButton:false renders the expanded search pill behind
-                // the keyboard — it is present in the layout but fully occluded.
-                final floatY =
-                    (_searchFocused && keyboardPresent) ? keyboardH : 0.0;
+                // floatY is pre-computed by the controller (depends on
+                // _searchFocused and keyboardH, both of which it owns).
+                final floatY = layout.floatY;
                 final totalH = animH + floatY;
 
                 // ── Stack layout ──────────────────────────────────────────────────
@@ -866,7 +595,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                         bottom: 0,
                         width: math.max(0.01, curTabW),
                         height: animH,
-                        child: _SearchableTabIndicator(
+                        child: SearchableTabIndicator(
                           quality: effectiveQuality,
                           visible: widget.showIndicator && !searching,
                           tabIndex: widget.selectedIndex,
@@ -970,14 +699,14 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                         bottom: floatY,
                         width: math.max(0.01, curSearchW),
                         height: animH,
-                        child: _SearchPill(
+                        child: SearchPill(
                           config: widget.searchConfig,
                           isActive: searching,
                           barBorderRadius: widget.barBorderRadius,
                           quality: effectiveQuality,
                           onFocusChanged: (focused) {
                             if (focused) {
-                              setState(() => _searchFocused = true);
+                              _controller.onFocusChanged(true);
                             } else {
                               _onFocusLost();
                             }
@@ -999,7 +728,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                           bottom: floatY,
                           width: animH,
                           height: animH,
-                          child: _DismissPill(
+                          child: DismissPill(
                             onTap: () => FocusScope.of(context).unfocus(),
                             pillSize: animH,
                             barBorderRadius: widget.barBorderRadius,
@@ -1100,761 +829,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
   }
 }
 
-// =============================================================================
-// _DismissPill
-// =============================================================================
-// Rendered inside the parent [AdaptiveLiquidGlassLayer] (same layer as the
-// search pill and tab pill) so that all three glass surfaces share the identical
-// shader context. This gives perfect colour, blur, and lighting parity with no
-// additional configuration required.
-//
-// Hit-testing works because the parent [SizedBox] expands its height by
-// [keyboardH] while the pill is visible, keeping the pill inside the widget's
-// layout bounds even when it floats above the keyboard.
-
-class _DismissPill extends StatelessWidget {
-  const _DismissPill({
-    required this.onTap,
-    required this.pillSize,
-    required this.barBorderRadius,
-    required this.quality,
-    this.cancelButtonColor,
-    this.indicatorColor,
-    this.glassSettings,
-  });
-
-  final VoidCallback onTap;
-  final double pillSize;
-  final double barBorderRadius;
-  final GlassQuality quality;
-  final Color? cancelButtonColor;
-  final Color? indicatorColor;
-  final LiquidGlassSettings? glassSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    final safeColor = indicatorColor;
-    return GlassButton(
-      onTap: onTap,
-      width: pillSize,
-      height: pillSize,
-      quality: quality,
-      // useOwnLayer defaults to false — the pill participates in the parent
-      // AdaptiveLiquidGlassLayer so glass colour, blur and lighting are
-      // identical to the adjacent search pill.
-      settings: glassSettings?.copyWith(
-              glassColor: safeColor ?? glassSettings?.glassColor) ??
-          (safeColor != null
-              ? LiquidGlassSettings(glassColor: safeColor)
-              : null),
-      shape: LiquidRoundedSuperellipse(borderRadius: barBorderRadius),
-      icon: Icon(
-        CupertinoIcons.xmark,
-        color: cancelButtonColor ?? const Color(0xE6FFFFFF),
-        size: 16,
-      ),
-      iconColor: cancelButtonColor ?? const Color(0xE6FFFFFF),
-    );
-  }
-}
-
-// =============================================================================
-// _SearchableTabIndicator
-// =============================================================================
-
-/// Draggable glass indicator for [GlassSearchableBottomBar].
-///
-/// Uses identical spring physics and masking to [GlassBottomBar]'s internal
-/// `_TabIndicator`. When [isSearchActive] is `true`, it collapses to show only
-/// the [collapsedLogoBuilder] and a tap dismisses search.
-class _SearchableTabIndicator extends StatefulWidget {
-  const _SearchableTabIndicator({
-    required this.childUnselected,
-    required this.selectedTabBuilder,
-    required this.tabIndex,
-    required this.tabCount,
-    required this.onTabChanged,
-    required this.visible,
-    required this.quality,
-    required this.barHeight,
-    required this.barBorderRadius,
-    required this.tabPadding,
-    required this.magnification,
-    required this.innerBlur,
-    required this.maskingQuality,
-    required this.isSearchActive,
-    required this.onDismissSearch,
-    this.indicatorColor,
-    this.indicatorSettings,
-    this.backgroundKey,
-    this.collapsedLogoBuilder,
-  });
-
-  final int tabIndex;
-  final int tabCount;
-  final bool visible;
-  final Widget childUnselected;
-  final Widget Function(BuildContext, double, Alignment) selectedTabBuilder;
-  final Color? indicatorColor;
-  final LiquidGlassSettings? indicatorSettings;
-  final ValueChanged<int> onTabChanged;
-  final GlassQuality quality;
-  final double barHeight;
-  final double barBorderRadius;
-  final EdgeInsetsGeometry tabPadding;
-  final double magnification;
-  final double innerBlur;
-  final MaskingQuality maskingQuality;
-  final GlobalKey? backgroundKey;
-  final bool isSearchActive;
-  final VoidCallback onDismissSearch;
-  final WidgetBuilder? collapsedLogoBuilder;
-
-  @override
-  State<_SearchableTabIndicator> createState() =>
-      _SearchableTabIndicatorState();
-}
-
-class _SearchableTabIndicatorState extends State<_SearchableTabIndicator> {
-  static const _fallbackIndicatorColor = Color(0x1AFFFFFF);
-
-  bool _isDown = false;
-  bool _isDragging = false;
-  late double _xAlign = _alignFor(widget.tabIndex);
-  late LiquidRoundedSuperellipse _barShape =
-      LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
-
-  @override
-  void didUpdateWidget(covariant _SearchableTabIndicator old) {
-    super.didUpdateWidget(old);
-    if (old.tabIndex != widget.tabIndex || old.tabCount != widget.tabCount) {
-      setState(() => _xAlign = _alignFor(widget.tabIndex));
-    }
-    if (old.barBorderRadius != widget.barBorderRadius) {
-      _barShape =
-          LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
-    }
-  }
-
-  double _alignFor(int i) =>
-      DraggableIndicatorPhysics.computeAlignment(i, widget.tabCount);
-
-  double _alignFromGlobal(Offset g) =>
-      DraggableIndicatorPhysics.getAlignmentFromGlobalPosition(
-          g, context, widget.tabCount);
-
-  void _onDragDown(DragDownDetails d) {
-    setState(() => _isDown = true);
-  }
-
-  void _onBarTapDown(TapDownDetails d) {
-    final relX = (_alignFromGlobal(d.globalPosition) + 1) / 2;
-    final idx = (relX * widget.tabCount).floor().clamp(0, widget.tabCount - 1);
-    if (idx != widget.tabIndex) widget.onTabChanged(idx);
-  }
-
-  void _onDragUpdate(DragUpdateDetails d) {
-    setState(() {
-      _isDragging = true;
-      _xAlign = _alignFromGlobal(d.globalPosition);
-    });
-  }
-
-  void _onDragEnd(DragEndDetails d) {
-    setState(() {
-      _isDragging = false;
-      _isDown = false;
-    });
-    final box = context.findRenderObject()! as RenderBox;
-    final relX = (_xAlign + 1) / 2;
-    final tabW = 1.0 / widget.tabCount;
-    final draggableRange = 1.0 - tabW;
-    final velX =
-        (d.velocity.pixelsPerSecond.dx / box.size.width) / draggableRange;
-    final target = DraggableIndicatorPhysics.computeTargetIndex(
-      currentRelativeX: relX,
-      velocityX: velX,
-      itemWidth: tabW,
-      itemCount: widget.tabCount,
-    );
-    setState(() => _xAlign = _alignFor(target));
-    if (target != widget.tabIndex) widget.onTabChanged(target);
-  }
-
-  void _onDragCancel() {
-    if (_isDragging) {
-      final relX = (_xAlign + 1) / 2;
-      final tabW = 1.0 / widget.tabCount;
-      final target = DraggableIndicatorPhysics.computeTargetIndex(
-        currentRelativeX: relX,
-        velocityX: 0,
-        itemWidth: tabW,
-        itemCount: widget.tabCount,
-      );
-      setState(() {
-        _isDragging = false;
-        _isDown = false;
-        _xAlign = _alignFor(target);
-      });
-      if (target != widget.tabIndex) widget.onTabChanged(target);
-    } else {
-      setState(() => _xAlign = _alignFor(widget.tabIndex));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // ── Collapsed / search-active state ─────────────────────────────────────
-    if (widget.isSearchActive) {
-      return GlassButton(
-        onTap: widget.onDismissSearch,
-        width: double.infinity,
-        height: widget.barHeight,
-        quality: widget.quality,
-        shape: _barShape,
-        // Logo or empty — shown inside the glass button body.
-        icon: widget.collapsedLogoBuilder != null
-            ? AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                transitionBuilder: (c, a) =>
-                    FadeTransition(opacity: a, child: c),
-                child: SizedBox.expand(
-                  key: const ValueKey('logo'),
-                  child: widget.collapsedLogoBuilder!(context),
-                ),
-              )
-            : const SizedBox.shrink(key: ValueKey('empty')),
-      );
-    }
-
-    // ── Normal draggable tab bar — identical logic to GlassBottomBar ─────────
-    final theme = CupertinoTheme.of(context);
-    final indicatorColor = widget.indicatorColor ??
-        theme.textTheme.textStyle.color?.withValues(alpha: .1) ??
-        _fallbackIndicatorColor;
-    final targetAlignment = _alignFor(widget.tabIndex);
-    final backgroundRadius = widget.barBorderRadius * 2;
-    final glassRadius = widget.barBorderRadius;
-
-    return Listener(
-      onPointerDown: (_) {
-        setState(() => _isDown = true);
-      },
-      onPointerUp: (_) {
-        if (!_isDragging) {
-          setState(() => _isDown = false);
-        }
-      },
-      onPointerCancel: (_) {
-        if (!_isDragging) {
-          setState(() => _isDown = false);
-        }
-      },
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onHorizontalDragDown: _onDragDown,
-        onHorizontalDragUpdate: _onDragUpdate,
-        onHorizontalDragEnd: _onDragEnd,
-        onHorizontalDragCancel: _onDragCancel,
-        onTapDown: _onBarTapDown,
-        child: VelocitySpringBuilder(
-          value: _xAlign,
-          springWhenActive: GlassSpring.interactive(),
-          springWhenReleased: GlassSpring.snappy(
-            duration: const Duration(milliseconds: 350),
-          ),
-          active: _isDragging,
-          builder: (context, value, velocity, child) {
-            final alignment = Alignment(value, 0);
-            return SpringBuilder(
-              spring: GlassSpring.snappy(
-                duration: const Duration(milliseconds: 300),
-              ),
-              value: widget.visible &&
-                      (_isDown || (alignment.x - targetAlignment).abs() > 0.05)
-                  ? 1.0
-                  : 0.0,
-              builder: (context, thickness, _) {
-                if (thickness < 0.01 &&
-                    !widget.visible &&
-                    widget.maskingQuality == MaskingQuality.high) {
-                  return Container(
-                    height: widget.barHeight,
-                    decoration: ShapeDecoration(shape: _barShape),
-                    child: AdaptiveGlass.grouped(
-                      quality: widget.quality,
-                      shape: _barShape,
-                      child: Container(
-                        padding: widget.tabPadding,
-                        child: widget.childUnselected,
-                      ),
-                    ),
-                  );
-                }
-
-                final jellyTransform =
-                    DraggableIndicatorPhysics.buildJellyTransform(
-                  velocity: Offset(velocity, 0),
-                  maxDistortion: 0.8,
-                  velocityScale: 10,
-                );
-
-                switch (widget.maskingQuality) {
-                  case MaskingQuality.off:
-                    return _buildSimple(
-                      alignment: alignment,
-                      thickness: thickness,
-                      velocity: velocity,
-                      backgroundRadius: backgroundRadius,
-                      glassRadius: glassRadius,
-                      indicatorColor: indicatorColor,
-                    );
-                  case MaskingQuality.high:
-                    return _buildHighQuality(
-                      alignment: alignment,
-                      thickness: thickness,
-                      velocity: velocity,
-                      jellyTransform: jellyTransform,
-                      backgroundRadius: backgroundRadius,
-                      glassRadius: glassRadius,
-                      indicatorColor: indicatorColor,
-                    );
-                }
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSimple({
-    required Alignment alignment,
-    required double thickness,
-    required double velocity,
-    required double backgroundRadius,
-    required double glassRadius,
-    required Color indicatorColor,
-  }) {
-    return SizedBox(
-      height: widget.barHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Glass background (Cached to prevent blur re-rasterization on pill drag)
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: AdaptiveGlass.grouped(
-                quality: widget.quality,
-                shape: _barShape,
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ),
-
-          // Unselected icons above background
-          Positioned.fill(
-            child: Container(
-              padding: widget.tabPadding,
-              child: widget.childUnselected,
-            ),
-          ),
-          if (widget.visible && thickness > 0.05)
-            AnimatedGlassIndicator(
-              velocity: velocity,
-              itemCount: widget.tabCount,
-              alignment: alignment,
-              thickness: thickness,
-              quality: widget.quality,
-              indicatorColor: indicatorColor,
-              isBackgroundIndicator: false,
-              borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
-              padding: const EdgeInsets.all(4),
-              expansion: 14,
-              glassSettings: widget.indicatorSettings,
-              backgroundKey: widget.backgroundKey,
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHighQuality({
-    required Alignment alignment,
-    required double thickness,
-    required double velocity,
-    required Matrix4 jellyTransform,
-    required double backgroundRadius,
-    required double glassRadius,
-    required Color indicatorColor,
-  }) {
-    final effRadius = thickness < 1 ? backgroundRadius : glassRadius;
-    return SizedBox(
-      height: widget.barHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // 1. Static Blur Background (Cached)
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: AdaptiveGlass.grouped(
-                quality: widget.quality,
-                shape: _barShape,
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ),
-
-          // 2. Unselected Content Layer (inverse clipped)
-          Positioned.fill(
-            child: ClipPath(
-              clipper: JellyClipper(
-                itemCount: widget.tabCount,
-                alignment: alignment,
-                thickness: thickness,
-                expansion: 14,
-                transform: jellyTransform,
-                borderRadius: effRadius,
-                inverse: true,
-              ),
-              child: Container(
-                padding: widget.tabPadding,
-                height: widget.barHeight,
-                child: widget.childUnselected,
-              ),
-            ),
-          ),
-          AnimatedGlassIndicator(
-            velocity: velocity,
-            itemCount: widget.tabCount,
-            alignment: alignment,
-            thickness: thickness,
-            quality: widget.quality,
-            indicatorColor: indicatorColor,
-            isBackgroundIndicator: false,
-            borderRadius: effRadius,
-            padding: const EdgeInsets.all(4),
-            expansion: 14,
-            glassSettings: widget.indicatorSettings,
-            backgroundKey: widget.backgroundKey,
-          ),
-          Positioned.fill(
-            child: widget.quality == GlassQuality.minimal
-                ? IgnorePointer(
-                    child: ClipPath(
-                      clipper: JellyClipper(
-                        itemCount: widget.tabCount,
-                        alignment: alignment,
-                        thickness: thickness,
-                        expansion: 14,
-                        transform: jellyTransform,
-                        borderRadius: effRadius,
-                      ),
-                      child: Container(
-                        padding: widget.tabPadding,
-                        height: widget.barHeight,
-                        child: widget.selectedTabBuilder(
-                            context, thickness, alignment),
-                      ),
-                    ),
-                  )
-                : RepaintBoundary(
-                    child: IgnorePointer(
-                      child: ClipPath(
-                        clipper: JellyClipper(
-                          itemCount: widget.tabCount,
-                          alignment: alignment,
-                          thickness: thickness,
-                          expansion: 14,
-                          transform: jellyTransform,
-                          borderRadius: effRadius,
-                        ),
-                        child: Container(
-                          padding: widget.tabPadding,
-                          height: widget.barHeight,
-                          child: widget.selectedTabBuilder(
-                              context, thickness, alignment),
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// _SearchPill
-// =============================================================================
-
-/// The morphing search pill. Collapses to a square icon; expands to a
-/// real [TextField] with autofocus. Lives inside the parent
-/// [AdaptiveLiquidGlassLayer] so its glass rendering blends with the tab pill.
-class _SearchPill extends StatefulWidget {
-  const _SearchPill({
-    required this.config,
-    required this.isActive,
-    required this.barBorderRadius,
-    required this.quality,
-    this.onFocusChanged,
-  });
-
-  final GlassSearchBarConfig config;
-  final bool isActive;
-  final double barBorderRadius;
-  final GlassQuality quality;
-
-  /// Called when the search field gains or loses focus.
-  /// Used by the parent bar to drive the dismiss pill visibility.
-  final ValueChanged<bool>? onFocusChanged;
-
-  @override
-  State<_SearchPill> createState() => _SearchPillState();
-}
-
-class _SearchPillState extends State<_SearchPill> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
-  bool _ownsController = false;
-  bool _ownsFocusNode = false;
-
-  // Tracks whether the × clear button should be visible.
-  bool _hasText = false;
-  // Tracks focus so the outer bar can show/hide the dismiss pill.
-  bool _hasFocus = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.config.controller != null) {
-      _controller = widget.config.controller!;
-    } else {
-      _controller = TextEditingController();
-      _ownsController = true;
-    }
-    if (widget.config.focusNode != null) {
-      _focusNode = widget.config.focusNode!;
-    } else {
-      _focusNode = FocusNode();
-      _ownsFocusNode = true;
-    }
-
-    _hasText = _controller.text.isNotEmpty;
-    _controller.addListener(_onTextChanged);
-    _focusNode.addListener(_onFocusChanged);
-
-    if (widget.isActive && widget.config.autoFocusOnExpand) {
-      // Already active on first build — request focus after one frame so the
-      // AnimatedContainer has committed its initial expanded layout.
-      // 60 ms is enough for a single vsync cycle at 60-120 Hz while still
-      // feeling instant to the user (well under the ~100 ms perception threshold).
-      Future.delayed(const Duration(milliseconds: 60), () {
-        if (mounted && widget.isActive) _focusNode.requestFocus();
-      });
-    }
-  }
-
-  void _onTextChanged() {
-    final hasText = _controller.text.isNotEmpty;
-    if (hasText != _hasText) setState(() => _hasText = hasText);
-  }
-
-  @override
-  void didUpdateWidget(covariant _SearchPill old) {
-    super.didUpdateWidget(old);
-    if (!old.isActive && widget.isActive && widget.config.autoFocusOnExpand) {
-      // Became active and auto-focus is enabled — request focus after one
-      // render frame so the pill has committed its first expanded layout
-      // before the IME is attached.
-      //
-      // 60 ms sits comfortably above a single 120 Hz vsync (~8 ms) and is
-      // well below the ~100 ms human-perception threshold for "immediate".
-      Future.delayed(const Duration(milliseconds: 60), () {
-        if (mounted && widget.isActive) _focusNode.requestFocus();
-      });
-    } else if (old.isActive && !widget.isActive) {
-      // Dismissed — unfocus and clear.
-      _focusNode.unfocus();
-      _controller.clear();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.removeListener(_onTextChanged);
-    _focusNode.removeListener(_onFocusChanged);
-    if (_ownsFocusNode) _focusNode.dispose();
-    if (_ownsController) _controller.dispose();
-    super.dispose();
-  }
-
-  void _onFocusChanged() {
-    final hasFocus = _focusNode.hasFocus;
-    if (hasFocus != _hasFocus) {
-      setState(() => _hasFocus = hasFocus);
-      widget.onFocusChanged?.call(hasFocus);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor = widget.config.searchIconColor ?? Colors.white60;
-    final micColor = widget.config.micIconColor ?? iconColor;
-    final shape =
-        LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
-
-    // LayoutBuilder reads the ACTUAL rendered width on every frame.
-    // When isActive flips true, AnimatedContainer starts at compact width
-    // (barHeight ≈ 64 px) and animates outward. The expanded Row needs at
-    // least 84 px (padding 32 + icons 52). We gate on 90 px so the Row is
-    // never built at compact width → no layout overflow, no content bleed.
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        const kExpandThreshold = 90.0;
-
-        if (!widget.isActive || w < kExpandThreshold) {
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              GlassButton(
-                key: const ValueKey('pill-collapsed'),
-                icon: Icon(CupertinoIcons.search, color: iconColor),
-                // No-op while mid-animation to avoid double-toggling.
-                onTap: widget.isActive
-                    ? () {}
-                    : () => widget.config.onSearchToggle(true),
-                width: double.infinity,
-                height: double.infinity,
-                quality: widget.quality,
-                iconColor: iconColor,
-                shape: shape,
-              ),
-              // IgnorePointer+Opacity(0): forces Dart to JIT-compile the
-              // expanded widget tree on first frame. Unlike Offstage, this
-              // does NOT interact with the focus/IME system so there is no
-              // risk of hidden TextFields stealing keyboard input.
-              IgnorePointer(
-                child: Opacity(
-                  opacity: 0,
-                  child: _buildExpanded(iconColor, micColor),
-                ),
-              ),
-            ],
-          );
-        }
-
-        // Wrap with an opaque GestureDetector so taps anywhere inside the
-        // glass pill — including the 16 px horizontal padding zones — focus
-        // the search field instead of passing through to background content.
-        // Without this, AdaptiveGlass.grouped defers hit-testing to its
-        // children, leaving the padding area as a transparent pass-through.
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _focusNode.requestFocus,
-          child: AdaptiveGlass.grouped(
-            shape: shape,
-            quality: widget.quality,
-            child: _buildExpanded(iconColor, micColor),
-          ),
-        );
-      },
-    );
-  }
-
-  void _handleClear() {
-    _controller.clear();
-    widget.config.onChanged?.call('');
-  }
-
-  Widget _buildExpanded(Color iconColor, Color micColor) {
-    final config = widget.config;
-    final textColor = config.textColor ?? Colors.white;
-
-    // Trailing slot priority:
-    //   1. trailingBuilder — caller has full control.
-    //   2. Animated × clear when _hasText (iOS 26 pattern — clears without dismissing).
-    //   3. Default mic icon.
-    // Note: the dismiss (close-search) × is a SEPARATE sibling pill in the
-    // outer bar Row — it is NOT rendered here. This matches the real iOS 26
-    // Apple News layout where the × is its own glass button outside the search pill.
-    Widget trailing;
-    if (config.trailingBuilder != null) {
-      trailing = config.trailingBuilder!(context);
-    } else {
-      trailing = AnimatedSwitcher(
-        duration: const Duration(milliseconds: 180),
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: ScaleTransition(scale: animation, child: child),
-        ),
-        child: _hasText
-            ? GestureDetector(
-                key: const ValueKey('clear'),
-                behavior: HitTestBehavior.opaque,
-                onTap: _handleClear,
-                child: Icon(
-                  CupertinoIcons.clear_circled_solid,
-                  color: iconColor,
-                  size: 18,
-                ),
-              )
-            : GestureDetector(
-                key: const ValueKey('mic'),
-                behavior: HitTestBehavior.opaque,
-                onTap: config.onMicTap,
-                child: config.onMicTap != null
-                    ? Icon(CupertinoIcons.mic_fill, color: micColor, size: 18)
-                    : const SizedBox.shrink(),
-              ),
-      );
-    }
-
-    // The expanded pill content.
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(CupertinoIcons.search, color: iconColor, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              autofocus: false,
-              onChanged: config.onChanged,
-              onSubmitted: config.onSubmitted,
-              onTapOutside: config.onTapOutside,
-              textInputAction: config.textInputAction,
-              keyboardType: config.keyboardType,
-              autocorrect: config.autocorrect,
-              enableSuggestions: config.enableSuggestions,
-              style: config.hintStyle ??
-                  TextStyle(
-                    color: textColor,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w400,
-                  ),
-              cursorColor: textColor,
-              decoration: InputDecoration(
-                hintText: config.hintText,
-                hintStyle: (config.hintStyle ??
-                        const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w400))
-                    .copyWith(color: iconColor),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          trailing,
-        ],
-      ),
-    );
-  }
-}
+// Private sub-widgets (_DismissPill, _SearchPill, _SearchableTabIndicator)
+// have been extracted to:
+//   lib/widgets/surfaces/shared/searchable_bottom_bar_internal.dart
+// They are imported above as DismissPill, SearchPill, SearchableTabIndicator.

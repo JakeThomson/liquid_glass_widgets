@@ -103,9 +103,11 @@ class DraggableIndicatorPhysics {
     double velocityScale = 1000.0,
   }) {
     final speed = velocity.distance;
-    if (speed == 0) {
-      // Force TransformLayer to stay mounted at rest by avoiding pure identity.
-      // This prevents sub-pixel vector edge snapping when velocity reaches 0.
+    if (speed == 0 || !speed.isFinite) {
+      // speed == 0: no movement, avoid division by zero.
+      // !isFinite: NaN or Infinity from synthetic/custom velocity — fall back
+      // to a neutral transform. Keep a sub-pixel translation so the
+      // TransformLayer stays mounted and avoids edge-snapping artifacts.
       return Matrix4.identity()..translate(0.0001, 0.0);
     }
 
@@ -242,10 +244,14 @@ class DraggableIndicatorPhysics {
     if (currentRelativeX < 0) return 0;
     if (currentRelativeX > 1) return itemCount - 1;
 
-    if (velocityX.abs() > velocityThreshold) {
+    // Guard against NaN / Infinity from synthetic or injected velocity values.
+    // Fall through to nearest-item snap rather than projecting an invalid position.
+    final safeVelocityX = velocityX.isFinite ? velocityX : 0.0;
+
+    if (safeVelocityX.abs() > velocityThreshold) {
       // High velocity - project where we would end up
       final projectedX =
-          (currentRelativeX + velocityX * projectionTime).clamp(0.0, 1.0);
+          (currentRelativeX + safeVelocityX * projectionTime).clamp(0.0, 1.0);
       var targetIndex =
           (projectedX / itemWidth).round().clamp(0, itemCount - 1);
 
@@ -253,11 +259,11 @@ class DraggableIndicatorPhysics {
       final currentIndex =
           (currentRelativeX / itemWidth).round().clamp(0, itemCount - 1);
 
-      if (velocityX > velocityThreshold &&
+      if (safeVelocityX > velocityThreshold &&
           targetIndex <= currentIndex &&
           currentIndex < itemCount - 1) {
         targetIndex = currentIndex + 1;
-      } else if (velocityX < -velocityThreshold &&
+      } else if (safeVelocityX < -velocityThreshold &&
           targetIndex >= currentIndex &&
           currentIndex > 0) {
         targetIndex = currentIndex - 1;
