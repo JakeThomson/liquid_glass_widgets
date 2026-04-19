@@ -146,12 +146,13 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
       LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
 
   @override
-  void didUpdateWidget(covariant SearchableTabIndicator old) {
-    super.didUpdateWidget(old);
-    if (old.tabIndex != widget.tabIndex || old.tabCount != widget.tabCount) {
+  void didUpdateWidget(covariant SearchableTabIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tabIndex != widget.tabIndex ||
+        oldWidget.tabCount != widget.tabCount) {
       setState(() => _xAlign = _alignFor(widget.tabIndex));
     }
-    if (old.barBorderRadius != widget.barBorderRadius) {
+    if (oldWidget.barBorderRadius != widget.barBorderRadius) {
       _barShape =
           LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
     }
@@ -584,9 +585,11 @@ class SearchPillState extends State<SearchPill> {
   }
 
   @override
-  void didUpdateWidget(covariant SearchPill old) {
-    super.didUpdateWidget(old);
-    if (!old.isActive && widget.isActive && widget.config.autoFocusOnExpand) {
+  void didUpdateWidget(covariant SearchPill oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive &&
+        widget.isActive &&
+        widget.config.autoFocusOnExpand) {
       // Became active and auto-focus is enabled — request focus after one
       // render frame so the pill has committed its first expanded layout
       // before the IME is attached.
@@ -596,7 +599,7 @@ class SearchPillState extends State<SearchPill> {
       Future.delayed(const Duration(milliseconds: 60), () {
         if (mounted && widget.isActive) _focusNode.requestFocus();
       });
-    } else if (old.isActive && !widget.isActive) {
+    } else if (oldWidget.isActive && !widget.isActive) {
       // Dismissed — unfocus and clear.
       _focusNode.unfocus();
       _controller.clear();
