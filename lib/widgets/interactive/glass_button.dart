@@ -6,7 +6,6 @@ import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
 import '../../types/glass_button_style.dart';
 import '../shared/adaptive_glass.dart';
-import '../shared/inherited_liquid_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
 
 /// Glass morphism button with scale animation and glow effects.
@@ -485,8 +484,10 @@ class _GlassButtonState extends State<GlassButton>
           return child!;
         }
 
-        final baseSettings =
-            widget.settings ?? InheritedLiquidGlass.ofOrDefault(context);
+        final baseSettings = GlassThemeHelpers.resolveSettings(
+          context,
+          explicit: widget.settings,
+        );
 
         // Pass glow intensity directly to AdaptiveGlass for Skia shader feedback.
         // On Impeller, GlassGlow widget is used instead (separate from glass effect).

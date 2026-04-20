@@ -238,19 +238,6 @@ void main() {
       expect(LiquidGlassWidgets.globalSettings, isNull);
     });
 
-    test('wrap returns a GlassBackdropScope', () {
-      final wrapped = LiquidGlassWidgets.wrap(const SizedBox.shrink());
-      expect(wrapped.runtimeType.toString(), contains('GlassBackdropScope'));
-    });
-
-    test('respectSystemAccessibility getter/setter works', () {
-      final original = LiquidGlassWidgets.respectSystemAccessibility;
-      LiquidGlassWidgets.respectSystemAccessibility = !original;
-      expect(LiquidGlassWidgets.respectSystemAccessibility, isNot(original));
-      // Restore
-      LiquidGlassWidgets.respectSystemAccessibility = original;
-    });
-
     test('globalSettings can be set and cleared', () {
       const settings = LiquidGlassSettings(thickness: 25);
       LiquidGlassWidgets.globalSettings = settings;
@@ -259,44 +246,85 @@ void main() {
       LiquidGlassWidgets.globalSettings = null;
     });
 
+    // ── wrap() ───────────────────────────────────────────────────────────────
+
+    test('wrap returns a GlassBackdropScope by default', () {
+      final wrapped = LiquidGlassWidgets.wrap(const SizedBox.shrink());
+      expect(wrapped.runtimeType.toString(), contains('GlassBackdropScope'));
+    });
+
+    test('wrap with adaptiveQuality:true returns a GlassAdaptiveScope', () {
+      final wrapped = LiquidGlassWidgets.wrap(
+        const SizedBox.shrink(),
+        adaptiveQuality: true,
+      );
+      expect(wrapped.runtimeType.toString(), contains('GlassAdaptiveScope'));
+    });
+
+    test('wrap without adaptiveQuality does NOT insert GlassAdaptiveScope', () {
+      final wrapped = LiquidGlassWidgets.wrap(const SizedBox.shrink());
+      expect(
+        wrapped.runtimeType.toString(),
+        isNot(contains('GlassAdaptiveScope')),
+      );
+      expect(wrapped.runtimeType.toString(), contains('GlassBackdropScope'));
+    });
+
+    test('wrap(respectSystemAccessibility:false) sets the global flag', () {
+      LiquidGlassWidgets.wrap(
+        const SizedBox.shrink(),
+        respectSystemAccessibility: false,
+      );
+      expect(LiquidGlassWidgets.respectSystemAccessibility, isFalse);
+      // Restore
+      LiquidGlassWidgets.wrap(
+        const SizedBox.shrink(),
+        respectSystemAccessibility: true,
+      );
+      expect(LiquidGlassWidgets.respectSystemAccessibility, isTrue);
+    });
+
+    // ── initialize() ─────────────────────────────────────────────────────────
+
     testWidgets('initialize() completes without throwing', (tester) async {
-      // We call initialize() in test environment — shaders will fast-fail/skip
-      // but the method must not throw.
       await tester.runAsync(() async {
         await expectLater(
-          LiquidGlassWidgets.initialize(
-            respectSystemAccessibility: true,
-            enablePerformanceMonitor: false,
-          ),
+          LiquidGlassWidgets.initialize(enablePerformanceMonitor: false),
           completes,
         );
       });
     });
 
     testWidgets(
-        'initialize() with respectSystemAccessibility=false sets the flag',
+        'initialize() with enablePerformanceMonitor:true starts monitor',
         (tester) async {
       await tester.runAsync(() async {
-        await LiquidGlassWidgets.initialize(
-          respectSystemAccessibility: false,
-          enablePerformanceMonitor: false,
-        );
-        expect(LiquidGlassWidgets.respectSystemAccessibility, isFalse);
-        // Restore
-        LiquidGlassWidgets.respectSystemAccessibility = true;
-      });
-    });
-    testWidgets(
-        'initialize() with enablePerformanceMonitor=true starts monitor (line 99)',
-        (tester) async {
-      await tester.runAsync(() async {
-        await LiquidGlassWidgets.initialize(
-          enablePerformanceMonitor: true, // exercises line 99
-        );
-        // Monitor should have started — it can be stopped without error
+        await LiquidGlassWidgets.initialize(enablePerformanceMonitor: true);
         GlassPerformanceMonitor.stop();
         GlassPerformanceMonitor.reset();
       });
+    });
+
+    // ── wrap() + adaptive ────────────────────────────────────────────────────
+
+    testWidgets(
+        'wrap(adaptiveQuality:true) inserts GlassAdaptiveScope as outermost widget',
+        (tester) async {
+      final wrapped = LiquidGlassWidgets.wrap(
+        const SizedBox.shrink(),
+        adaptiveQuality: true,
+      );
+      expect(wrapped.runtimeType.toString(), contains('GlassAdaptiveScope'));
+    });
+
+    test('wrap() without adaptiveQuality does NOT insert GlassAdaptiveScope',
+        () {
+      final wrapped = LiquidGlassWidgets.wrap(const SizedBox.shrink());
+      expect(
+        wrapped.runtimeType.toString(),
+        isNot(contains('GlassAdaptiveScope')),
+      );
+      expect(wrapped.runtimeType.toString(), contains('GlassBackdropScope'));
     });
   });
 

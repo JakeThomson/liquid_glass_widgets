@@ -1,0 +1,570 @@
+// ignore_for_file: invalid_use_of_visible_for_testing_member
+
+import 'dart:ui';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/utils/glass_quality_adapter.dart';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Creates a fake [FrameTiming] with the given raster duration in microseconds.
+FrameTiming _frameTiming(int rasterUs) {
+  return FrameTiming(
+    vsyncStart: 0,
+    buildStart: 0,
+    buildFinish: 0,
+    rasterStart: 0,
+    rasterFinish: rasterUs,
+    rasterFinishWallTime: rasterUs,
+  );
+}
+
+/// Creates [count] identical [FrameTiming] entries at [rasterUs] each.
+List<FrameTiming> _frames(int count, int rasterUs) =>
+    List.generate(count, (_) => _frameTiming(rasterUs));
+
+/// Builds an adapter wired to capture quality change events.
+GlassQualityAdapter _makeAdapter({
+  GlassQuality min = GlassQuality.minimal,
+  GlassQuality max = GlassQuality.premium,
+  int targetMs = 16,
+  bool allowStepUp = false,
+  List<(GlassQuality, GlassQuality)>? changes,
+}) {
+  return GlassQualityAdapter(
+    minQuality: min,
+    maxQuality: max,
+    targetFrameMs: targetMs,
+    allowStepUp: allowStepUp,
+    onQualityChanged: (from, to) => changes?.add((from, to)),
+  );
+}
+
+/// Drives the adapter through a full warm-up by injecting [warmupFrames]
+/// synthetic frames, each at [rasterUs] microseconds.
+///
+/// Uses [simulateFrameTimings] — the test seam — rather than
+/// [SchedulerBinding], so no widget tree is needed.
+void _runWarmup(GlassQualityAdapter adapter, {required int rasterUs}) {
+  adapter.simulateFrameTimings(
+    _frames(GlassQualityAdapter.warmupFrames, rasterUs),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  // Initialize the Flutter test binding so that SchedulerBinding.instance
+  // is available to adapter.start() and adapter.stop().
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Reset tunable constants to deterministic values before each test.
+  setUp(() {
+    GlassQualityAdapter.warmupFrames = 10;
+    GlassQualityAdapter.windowSize = 5;
+    GlassQualityAdapter.degradeWindowCount = 3;
+    GlassQualityAdapter.upgradeWindowCount = 10;
+    GlassQualityAdapter.cooldownDuration = Duration.zero; // disable by default
+    // Bypass the static probe so tests run on headless VMs where
+    // ImageFilter.isShaderFilterSupported is false.
+    GlassQualityAdapter.skipStaticProbeForTesting = true;
+  });
+
+  tearDown(() {
+    GlassQualityAdapter.skipStaticProbeForTesting = false;
+    GlassQualityAdapter
+        .clearSessionCache(); // prevent cache leakage between tests
+  });
+
+  // ── Construction & initial state ──────────────────────────────────────────
+
+  group('construction', () {
+    test('initial quality equals maxQuality before any simulated frames', () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      expect(adapter.currentQuality, GlassQuality.premium);
+    });
+
+    test('initial phase is probe', () {
+      final adapter = _makeAdapter();
+      expect(adapter.phase, AdaptivePhase.probe);
+    });
+
+    test('start() does not throw', () {
+      final adapter = _makeAdapter();
+      expect(() => adapter.start(), returnsNormally);
+      adapter.stop();
+    });
+  });
+
+  // ── Phase 2 — warm-up benchmark ───────────────────────────────────────────
+
+  group('Phase 2 — warm-up benchmark', () {
+    test('P75 < 12 ms → stays at maxQuality (premium)', () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+      _runWarmup(adapter, rasterUs: 8000); // 8 ms — very fast
+
+      expect(adapter.currentQuality, GlassQuality.premium);
+      expect(changes, isEmpty);
+    });
+
+    test('P75 in [12, 20] ms → steps down to standard', () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+      _runWarmup(adapter, rasterUs: 15000); // 15 ms
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+      expect(changes.length, 1);
+      expect(changes.first, (GlassQuality.premium, GlassQuality.standard));
+    });
+
+    test('P75 > 20 ms → steps down to minimal', () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+      _runWarmup(adapter, rasterUs: 25000); // 25 ms — slow device
+
+      expect(adapter.currentQuality, GlassQuality.minimal);
+    });
+
+    test('minQuality floor is honoured even when P75 > 20 ms', () {
+      final adapter = _makeAdapter(
+        min: GlassQuality.standard,
+        max: GlassQuality.premium,
+      );
+      _runWarmup(adapter, rasterUs: 40000); // extremely slow
+
+      // Cannot go below standard.
+      expect(adapter.currentQuality, GlassQuality.standard);
+    });
+
+    test('maxQuality=standard caps result even on a fast device', () {
+      final adapter = _makeAdapter(
+        min: GlassQuality.minimal,
+        max: GlassQuality.standard,
+      );
+      _runWarmup(adapter, rasterUs: 5000); // very fast
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+    });
+
+    test('transitions to runtime phase after warmup completes', () {
+      final adapter = _makeAdapter();
+      _runWarmup(adapter, rasterUs: 8000);
+      expect(adapter.phase, AdaptivePhase.runtime);
+    });
+
+    test('does not trigger early if fewer than warmupFrames are delivered', () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+      // Deliver 9 slow frames — one short of the 10-frame threshold.
+      adapter.simulateFrameTimings(_frames(9, 30000));
+
+      expect(adapter.phase, AdaptivePhase.warmup);
+      expect(changes, isEmpty); // still collecting
+    });
+  });
+
+  // ── Phase 3 — runtime hysteresis ─────────────────────────────────────────
+
+  group('Phase 3 — runtime hysteresis', () {
+    test('3 consecutive over-budget windows → degrade premium → standard', () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+      _runWarmup(adapter, rasterUs: 5000); // fast → stays premium
+      changes.clear();
+
+      // Over-budget threshold: targetMs=16 × 1.5 = 24 ms. Send 30 ms frames.
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+      expect(changes, [(GlassQuality.premium, GlassQuality.standard)]);
+    });
+
+    test('second degrade: standard → minimal after 3 more over-budget windows',
+        () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      expect(adapter.currentQuality, GlassQuality.standard);
+
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      expect(adapter.currentQuality, GlassQuality.minimal);
+    });
+
+    test('does not degrade below minQuality floor', () {
+      final adapter = _makeAdapter(
+        min: GlassQuality.standard,
+        max: GlassQuality.premium,
+      );
+      _runWarmup(adapter, rasterUs: 5000);
+
+      // Saturate with many over-budget windows.
+      for (int i = 0; i < 9; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+    });
+
+    test('under-budget windows do not trigger step-up when allowStepUp=false',
+        () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(allowStepUp: false, changes: changes);
+      _runWarmup(adapter, rasterUs: 5000);
+      // Degrade once
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      changes.clear();
+
+      // Now send many under-budget windows.
+      for (int i = 0; i < 20; i++) {
+        adapter.simulateFrameTimings(_frames(5, 2000));
+      }
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+      expect(changes, isEmpty);
+    });
+
+    test('10 consecutive under-budget windows → step-up when allowStepUp=true',
+        () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(allowStepUp: true, changes: changes);
+      _runWarmup(adapter, rasterUs: 5000);
+      // Degrade once
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      expect(adapter.currentQuality, GlassQuality.standard);
+      changes.clear();
+
+      // Under-budget threshold: 16 × 0.6 = 9.6 ms. Send 2 ms frames.
+      for (int i = 0; i < 10; i++) {
+        adapter.simulateFrameTimings(_frames(5, 2000));
+      }
+
+      expect(adapter.currentQuality, GlassQuality.premium);
+      expect(changes, [(GlassQuality.standard, GlassQuality.premium)]);
+    });
+
+    test('step-up is blocked while cooldown is active', () {
+      GlassQualityAdapter.cooldownDuration = const Duration(hours: 1);
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(allowStepUp: true, changes: changes);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      // Step down (uses up cooldown window)
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      expect(adapter.currentQuality, GlassQuality.standard);
+      changes.clear();
+
+      // Step-up attempt — still within cooldown, so blocked.
+      for (int i = 0; i < 15; i++) {
+        adapter.simulateFrameTimings(_frames(5, 2000));
+      }
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+      expect(changes, isEmpty);
+    });
+
+    test('second step-down within cooldown is blocked', () {
+      GlassQualityAdapter.cooldownDuration = const Duration(hours: 1);
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      // First degrade (premium → standard) succeeds.
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      expect(adapter.currentQuality, GlassQuality.standard);
+
+      // Second degrade attempt (standard → minimal) blocked by cooldown.
+      for (int i = 0; i < 6; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      expect(adapter.currentQuality, GlassQuality.standard);
+    });
+
+    test('frames within the tolerable zone reset both counters → no change',
+        () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+      _runWarmup(adapter, rasterUs: 5000);
+      changes.clear();
+
+      // 16 ms exactly — right on budget, in the "no change" band.
+      for (int i = 0; i < 20; i++) {
+        adapter.simulateFrameTimings(_frames(5, 16000));
+      }
+
+      expect(adapter.currentQuality, GlassQuality.premium);
+      expect(changes, isEmpty);
+    });
+  });
+
+  // ── Lifecycle API ─────────────────────────────────────────────────────────
+
+  group('lifecycle', () {
+    test('isRunning is false after stop()', () {
+      final adapter = _makeAdapter();
+      // On the headless VM the static probe may have already stopped the
+      // adapter. Call start() explicitly (no-op if running) then stop().
+      // We verify simply that stop() does not throw.
+      adapter.stop();
+      expect(adapter.isRunning, isFalse);
+    });
+
+    test('reset() clears phase counters and returns to warmup', () {
+      GlassQualityAdapter.warmupFrames = 5;
+      final adapter = _makeAdapter();
+      _runWarmup(adapter, rasterUs: 5000);
+      expect(adapter.phase, AdaptivePhase.runtime);
+      adapter.reset();
+      expect(adapter.phase, AdaptivePhase.warmup);
+    });
+
+    test('reset() clears degrade counter', () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      // Deliver 2 out of 3 needed over-budget windows — not yet degraded.
+      for (int i = 0; i < 2; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      changes.clear();
+
+      adapter.reset();
+      _runWarmup(adapter, rasterUs: 5000); // new fast warmup
+
+      // No degrade should have fired.
+      expect(changes, isEmpty);
+      expect(adapter.currentQuality, GlassQuality.premium);
+    });
+  });
+
+  // ── Percentile math ───────────────────────────────────────────────────────
+
+  group('percentile math', () {
+    setUp(() {
+      GlassQualityAdapter.warmupFrames = 4;
+      GlassQualityAdapter.windowSize = 4;
+    });
+
+    test('P75 of [10, 12, 20, 25] ms → 20 ms → standard boundary', () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+
+      adapter.simulateFrameTimings([
+        _frameTiming(10000), // 10 ms
+        _frameTiming(12000), // 12 ms
+        _frameTiming(20000), // 20 ms
+        _frameTiming(25000), // 25 ms
+        // P75 of sorted[10,12,20,25]: rank=ceil(0.75*4)=3 → index 2 → 20 ms
+        // 20 ms is within [12,20] → standard
+      ]);
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+    });
+
+    test('P75 of [5, 6, 8, 10] ms → 8 ms → stays premium', () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
+
+      adapter.simulateFrameTimings([
+        _frameTiming(5000),
+        _frameTiming(6000),
+        _frameTiming(8000),
+        _frameTiming(10000),
+        // P75: rank=ceil(0.75*4)=3 → index 2 → 8 ms < 12 ms → premium
+      ]);
+
+      expect(adapter.currentQuality, GlassQuality.premium);
+      expect(changes, isEmpty);
+    });
+  });
+
+  // ── Session cache ──────────────────────────────────────────────────────────
+
+  group('session cache', () {
+    setUp(() => GlassQualityAdapter.clearSessionCache());
+    tearDown(() => GlassQualityAdapter.clearSessionCache());
+
+    test('Phase 2 writes settled quality to session cache', () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+
+      // Simulate 10 slow frames (25 ms each) → P75 > 20 ms → minimal.
+      adapter.simulateFrameTimings(
+        List.generate(10, (_) => _frameTiming(25000)),
+      );
+
+      expect(adapter.currentQuality, GlassQuality.minimal);
+
+      // A second adapter (simulating a remount) must read the cache.
+      final adapter2 = _makeAdapter(max: GlassQuality.premium);
+      adapter2.start();
+      // Cache is warm — Phase 2 was skipped, jumped straight to Phase 3.
+      expect(adapter2.usedCachedQuality, isTrue);
+      expect(adapter2.currentQuality, GlassQuality.minimal);
+      expect(adapter2.phase, AdaptivePhase.runtime);
+      adapter2.stop();
+    });
+
+    test('second adapter goes directly to runtime phase via session cache', () {
+      // Settle cache to standard via Phase 2.
+      final adapter1 = _makeAdapter(max: GlassQuality.premium);
+      adapter1.simulateFrameTimings(
+        List.generate(10, (_) => _frameTiming(15000)), // 15 ms → standard
+      );
+      expect(adapter1.currentQuality, GlassQuality.standard);
+
+      // Second adapter must skip Phase 2.
+      final adapter2 = _makeAdapter(max: GlassQuality.premium);
+      adapter2.start();
+      expect(adapter2.phase, AdaptivePhase.runtime);
+      expect(adapter2.currentQuality, GlassQuality.standard);
+      adapter2.stop();
+    });
+
+    test('clearSessionCache() forces Phase 2 on next adapter', () {
+      // Settle cache.
+      final adapter1 = _makeAdapter(max: GlassQuality.premium);
+      adapter1.simulateFrameTimings(
+        List.generate(10, (_) => _frameTiming(25000)),
+      );
+      expect(adapter1.currentQuality, GlassQuality.minimal);
+
+      // Clear and verify next adapter runs Phase 2.
+      GlassQualityAdapter.clearSessionCache();
+
+      final adapter2 = _makeAdapter(max: GlassQuality.premium);
+      adapter2.start();
+      expect(adapter2.usedCachedQuality, isFalse);
+      expect(adapter2.phase, AdaptivePhase.warmup);
+      adapter2.stop();
+    });
+
+    test('cached quality is clamped to new [minQuality, maxQuality] range', () {
+      // Settle cache to premium.
+      final adapter1 = _makeAdapter(max: GlassQuality.premium);
+      adapter1.simulateFrameTimings(
+        List.generate(10, (_) => _frameTiming(5000)), // 5 ms → premium
+      );
+      expect(adapter1.currentQuality, GlassQuality.premium);
+
+      // New adapter with maxQuality=standard must clamp premium → standard.
+      final adapter2 = _makeAdapter(max: GlassQuality.standard);
+      adapter2.start();
+      expect(adapter2.currentQuality, GlassQuality.standard);
+      adapter2.stop();
+    });
+  });
+
+  // ── initialQuality ─────────────────────────────────────────────────────────
+
+  group('initialQuality', () {
+    setUp(() => GlassQualityAdapter.clearSessionCache());
+    tearDown(() => GlassQualityAdapter.clearSessionCache());
+
+    test('initialQuality skips Phase 2 and jumps to runtime', () {
+      final adapter = GlassQualityAdapter(
+        minQuality: GlassQuality.minimal,
+        maxQuality: GlassQuality.premium,
+        targetFrameMs: 16,
+        allowStepUp: false,
+        initialQuality: GlassQuality.minimal,
+        onQualityChanged: (_, __) {},
+      );
+      adapter.start();
+      expect(adapter.usedCachedQuality, isTrue);
+      expect(adapter.phase, AdaptivePhase.runtime);
+      expect(adapter.currentQuality, GlassQuality.minimal);
+      adapter.stop();
+    });
+
+    test('initialQuality takes priority over session cache', () {
+      // First: write standard to the session cache.
+      final adapter1 = _makeAdapter(max: GlassQuality.premium);
+      adapter1.simulateFrameTimings(
+        List.generate(10, (_) => _frameTiming(15000)), // → standard
+      );
+      expect(adapter1.currentQuality, GlassQuality.standard);
+
+      // Developer explicitly provides minimal via initialQuality — must win.
+      final adapter2 = GlassQualityAdapter(
+        minQuality: GlassQuality.minimal,
+        maxQuality: GlassQuality.premium,
+        targetFrameMs: 16,
+        allowStepUp: false,
+        initialQuality: GlassQuality.minimal, // explicit — beats session cache
+        onQualityChanged: (_, __) {},
+      );
+      adapter2.start();
+      expect(adapter2.currentQuality, GlassQuality.minimal);
+      adapter2.stop();
+    });
+
+    test('initialQuality null falls through to session cache', () {
+      // Settle cache to minimal.
+      final adapter1 = _makeAdapter(max: GlassQuality.premium);
+      adapter1.simulateFrameTimings(
+        List.generate(10, (_) => _frameTiming(25000)), // → minimal
+      );
+      expect(adapter1.currentQuality, GlassQuality.minimal);
+
+      // No initialQuality provided — should pick up session cache.
+      final adapter2 = _makeAdapter(max: GlassQuality.premium);
+      adapter2.start();
+      expect(adapter2.currentQuality, GlassQuality.minimal);
+      expect(adapter2.usedCachedQuality, isTrue);
+      adapter2.stop();
+    });
+
+    test('reset() clears usedCachedQuality so Phase 2 state is accurate', () {
+      // Settle cache and create adapter that uses it.
+      final adapter1 = _makeAdapter(max: GlassQuality.premium);
+      adapter1.simulateFrameTimings(
+        List.generate(10, (_) => _frameTiming(25000)),
+      );
+
+      final adapter2 = _makeAdapter(max: GlassQuality.premium);
+      adapter2.start();
+      expect(adapter2.usedCachedQuality, isTrue);
+
+      // After reset(), Phase 2 re-runs — usedCachedQuality must be false.
+      adapter2.reset();
+      expect(adapter2.usedCachedQuality, isFalse);
+      expect(adapter2.phase, AdaptivePhase.warmup);
+      adapter2.stop();
+    });
+
+    test(
+        'sessionSettledQuality getter returns null before any Phase 2 completes',
+        () {
+      expect(GlassQualityAdapter.sessionSettledQuality, isNull);
+    });
+
+    test('sessionSettledQuality getter returns settled quality after Phase 2',
+        () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      adapter.simulateFrameTimings(
+        List.generate(10, (_) => _frameTiming(25000)), // → minimal
+      );
+      expect(GlassQualityAdapter.sessionSettledQuality, GlassQuality.minimal);
+    });
+  });
+}

@@ -4,7 +4,6 @@ import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_glass.dart';
-import '../shared/inherited_liquid_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
 
 /// A glass text field widget following Apple's input field design.
@@ -325,7 +324,10 @@ class _GlassTextFieldState extends State<GlassTextField> {
     // Apply glass effect
     final glassWidget = AdaptiveGlass(
       shape: widget.shape,
-      settings: widget.settings ?? InheritedLiquidGlass.ofOrDefault(context),
+      settings: GlassThemeHelpers.resolveSettings(
+        context,
+        explicit: widget.settings,
+      ),
       quality: effectiveQuality,
       useOwnLayer: widget.useOwnLayer,
       child: frostedWell,

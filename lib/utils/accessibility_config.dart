@@ -8,6 +8,6 @@ library;
 /// Whether glass widgets should auto-read system accessibility flags from
 /// [MediaQuery] when no [GlassAccessibilityScope] is present.
 ///
-/// Set by [LiquidGlassWidgets.initialize(respectSystemAccessibility: ...)].
+/// Set by [LiquidGlassWidgets.wrap(respectSystemAccessibility: ...)].
 /// Defaults to `true`.
 bool respectSystemAccessibility = true;

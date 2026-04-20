@@ -103,7 +103,7 @@ class GlassAccessibilityData {
   ///    `LiquidGlassWidgets.respectSystemAccessibility` is `true` (the default).
   /// 3. [GlassAccessibilityData.defaults] (no restrictions) when accessibility
   ///    is disabled globally via
-  ///    `LiquidGlassWidgets.initialize(respectSystemAccessibility: false)`.
+  ///    `LiquidGlassWidgets.wrap(respectSystemAccessibility: false)`.
   static GlassAccessibilityData of(BuildContext context) {
     // 1. Prefer an explicit scope — allows overrides and avoids duplicate
     // MediaQuery lookups in subtrees that do add the scope.

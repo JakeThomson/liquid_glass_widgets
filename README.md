@@ -1,6 +1,6 @@
 # Liquid Glass Widgets
 
-Bring Apple's iOS 26 Liquid Glass to your Flutter app — 37 glass widgets with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
+Bring Apple's iOS 26 Liquid Glass to your Flutter app — 36 glass widgets with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
 
 [![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg?label=pub.dev&labelColor=333940&logo=dart)](https://pub.dev/packages/liquid_glass_widgets)
 [![pub points](https://img.shields.io/pub/points/liquid_glass_widgets?label=pub%20points&labelColor=333940)](https://pub.dev/packages/liquid_glass_widgets/score)
@@ -17,11 +17,12 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 
 ## Features
 
-- **37 glass widgets** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces
+- **36 glass widgets** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces
 - **Real frosted glass** — native two-pass Gaussian blur + shader refraction on Impeller; lightweight shader on Skia/Web
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
+- **Adaptive quality** *(experimental)* — `GlassAdaptiveScope` benchmarks the device at startup and adjusts quality in real time: `minimal` on slow hardware, `standard` on mid-range, `premium` on fast devices. Degrades on thermal throttle, recovers when cool
 - **Zero dependencies** — no third-party runtime libraries, just the Flutter SDK
-- **One-line setup** — `LiquidGlassWidgets.wrap()` handles all performance optimization
+- **One-line setup** — `LiquidGlassWidgets.wrap(myApp)` handles shader prewarming, accessibility bridging, and root backdrop sharing; add `GlassBackdropScope` per screen to prevent ghost artifacts on navigation (see [Backdrop Isolation](#backdrop-isolation--preventing-ghost-artifacts))
 - **Gyroscope lighting** — `GlassMotionScope` drives specular highlights from any `Stream<double>`
 - **WCAG-compliant by default** — Reduce Motion and Reduce Transparency are respected automatically; no setup required
 
@@ -48,7 +49,7 @@ cd example && flutter pub get && flutter run -t lib/apple_news/apple_news_demo.d
 
 ### [Widget Showcase](example/) — Full Component Library
 
-A complete catalogue of all 37 widgets organized by category. Use it to explore every component, try live settings, and copy patterns directly into your app.
+A complete catalogue of all 36 widgets organized by category. Use it to explore every component, try live settings, and copy patterns directly into your app.
 
 ```bash
 cd example && flutter pub get && flutter run
@@ -72,7 +73,7 @@ cd example && flutter pub get && flutter run
 `GlassProgressIndicator` · `GlassToast` · `GlassSnackBar`
 
 ### Overlays
-`GlassDialog` · `GlassSheet` · `GlassActionSheet` · `GlassMenu` · `GlassMenuItem`
+`GlassDialog` · `GlassSheet` · `showGlassActionSheet` · `GlassMenu` · `GlassMenuItem`
 
 ### Surfaces
 `GlassAppBar` · `GlassBottomBar` · `GlassSearchableBottomBar` · `GlassTabBar` · `GlassSideBar` · `GlassToolbar`
@@ -82,7 +83,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.7.17
+  liquid_glass_widgets: ^0.8.0
 ```
 
 ```bash
@@ -92,7 +93,9 @@ flutter pub get
 
 ## Quick Start
 
-Initialize the library once in `main.dart`. This pre-caches shaders (eliminates first-render flash) and activates GPU backdrop sharing for multi-glass screens:
+Set up the library once in `main.dart`. `initialize()` pre-caches shaders and
+registers the debug performance monitor. `wrap()` installs the root backdrop
+scope and accessibility bridge:
 
 ```dart
 import 'package:flutter/material.dart';
@@ -100,15 +103,22 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Async platform setup: shader prewarming + Impeller pipeline.
   await LiquidGlassWidgets.initialize();
 
-  // wrap() ensures all glass surfaces share one GPU backdrop capture on Impeller.
-  // Safe to use on all platforms — no-op on Skia/Web.
-  runApp(LiquidGlassWidgets.wrap(const MyApp()));
+  // Widget-tree composition: installs GlassBackdropScope (required).
+  // Enable adaptiveQuality to automatically tune glass quality per device.
+  runApp(LiquidGlassWidgets.wrap(
+    const MyApp(),
+    adaptiveQuality: true,
+  ));
 }
 ```
 
-> **Accessibility is on by default.** The library automatically reads the device's Reduce Motion and Reduce Transparency settings — no extra setup required. See [Accessibility](#accessibility) for details.
+> **Accessibility is on by default.** The library automatically reads the
+> device's Reduce Motion and Reduce Transparency settings — no extra setup
+> required. See [Accessibility](#accessibility) for details.
 
 Then add any glass widget to your tree:
 
@@ -239,11 +249,79 @@ Each value maps to a fixed power-of-2 exponent. The GPU uses a zero-transcendent
 ## Performance Tips
 
 1. **`LiquidGlassWidgets.initialize()`** at startup — pre-caches shaders, eliminates the white flash on first render
-2. **`LiquidGlassWidgets.wrap()`** in `main.dart` — all glass surfaces inside automatically share one GPU backdrop capture on Impeller (equivalent to wrapping with `GlassBackdropScope` directly, which also remains available for explicit scope control)
+2. **`LiquidGlassWidgets.wrap()`** in `main.dart` — installs root backdrop sharing and accessibility; pass `adaptiveQuality: true` for automatic per-device quality tuning. For multi-screen apps, also add `GlassBackdropScope` to each route — see [Backdrop Isolation](#backdrop-isolation--preventing-ghost-artifacts)
 3. **Standard quality for scrollable content** — lists, forms, interactive widgets
 4. **Premium quality for fixed surfaces** — app bars, bottom bars, and hero sections
 5. **Minimal quality for shader-dense screens** — use `GlassQuality.minimal` for background panels and list cards to fire zero custom shader invocations during scroll, then keep `standard` or `premium` only on the focal element
 6. **Accessibility fallbacks are zero-cost** — when Reduce Transparency is active, the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
+
+### Automatic Quality Adaptation *(experimental)*
+
+> **Experimental in 0.8.0** — The Phase 2 timing thresholds (P75 < 12 ms → premium,
+> 12–20 ms → standard, > 20 ms → minimal) are based on reasoning, not yet validated
+> across the full device landscape. Enable this with `adaptiveQuality: true` and
+> [file an issue](https://github.com/sdegenaar/liquid_glass_widgets/issues) if you
+> observe unexpected quality degradation or promotion — your device model and raster
+> timings from Flutter DevTools are the most useful data points.
+
+`GlassAdaptiveScope` (enabled via `wrap(adaptiveQuality: true)`) automatically
+benchmarks the device at startup and adjusts quality in real time:
+
+```dart
+// Minimal — let the library decide the best quality for the device:
+runApp(LiquidGlassWidgets.wrap(const MyApp(), adaptiveQuality: true));
+
+// Per-screen — fine-grained control on specific routes:
+GlassAdaptiveScope(
+  initialQuality: GlassQuality.standard, // conservative start
+  allowStepUp: true,
+  child: Scaffold(...),
+)
+```
+
+#### Eliminating repeat warmup jank (recommended for production)
+
+On the first launch, `GlassAdaptiveScope` runs a ~3-second warm-up benchmark
+to measure real raster performance. On a Pixel 4a, this benchmark observes slow
+frames and steps down to `minimal`. Without persistence, this happens on every
+cold start — the user sees 3 seconds of degraded quality every time they open
+the app.
+
+**Within a single app process**, the library caches the settled quality
+automatically. If the scope is disposed and remounted (e.g. navigating away and
+back to the root), Phase 2 is not re-run — no extra code required.
+
+**Across cold starts**, use `onQualityChanged` + `initialQuality` with your
+preferred storage mechanism:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Load previously settled quality — avoids warmup jank on repeat launches.
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString('glass_quality');
+  final initial = saved != null
+      ? GlassQuality.values.byName(saved) // Dart 2.15+ built-in
+      : null; // null = run Phase 2 on first launch, then persist
+
+  await LiquidGlassWidgets.initialize();
+
+  runApp(LiquidGlassWidgets.wrap(
+    const MyApp(),
+    adaptiveQuality: true,
+    adaptiveConfig: GlassAdaptiveScopeConfig(
+      initialQuality: initial,       // restore immediately — no warmup window
+      allowStepUp: true,             // allow recovery after thermal throttle
+      onQualityChanged: (_, to) =>   // persist whenever quality settles
+          prefs.setString('glass_quality', to.name),
+    ),
+  ));
+}
+```
+
+On first launch: `initial` is null → Phase 2 runs → quality settles → persisted.  
+On every subsequent launch: `initial` is non-null → Phase 2 skipped → no jank.
 
 ### GPU Budget Monitoring
 
@@ -265,7 +343,47 @@ GlassPerformanceMonitor.sustainedFrameThreshold = 120;
 
 
 
+
+## Backdrop Isolation — Preventing Ghost Artifacts
+
+`LiquidGlassWidgets.wrap()` installs one root `BackdropGroup` that all glass
+surfaces share for GPU backdrop captures. When navigating between screens, the
+previous screen's backdrop texture stays bound for 1–2 frames — causing the old
+page's content to briefly bleed through glass on the new screen.
+
+**Fix: wrap each screen in `GlassBackdropScope`.**
+
+```dart
+class MyNewPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GlassBackdropScope(        // ← forces a fresh capture on mount
+      child: Scaffold(
+        appBar: GlassAppBar(title: const Text('New Page')),
+        body: ...,
+        bottomNavigationBar: GlassBottomBar(...),
+      ),
+    );
+  }
+}
+```
+
+`GlassBackdropScope` creates a child `BackdropGroup` scoped to that screen. The
+moment it mounts, it captures a fresh GPU backdrop — no memory of the previous
+page's content.
+
+> **Rule of thumb:** place a `GlassBackdropScope` at the top of every route or
+> screen that hosts glass surfaces. Think of it like a `RepaintBoundary` for
+> backdrop textures.
+
+**Why `adaptiveQuality` tabs don't ghost:**  
+When switching tabs *within the same screen*, all glass surfaces share the same
+`GlassBackdropScope` which is refreshed correctly during animation.
+The ghost appears only when crossing a `Navigator` route boundary or an
+`AnimatedSwitcher` that replaces the whole screen widget.
+
 ## Custom Refraction for Interactive Indicators
+
 
 On Skia and Web, interactive widgets like `GlassSegmentedControl` can display
 true liquid glass refraction. Use `GlassRefractionSource` to mark the capture
@@ -373,9 +491,11 @@ GlassAccessibilityScope(
 For experiences where full glass fidelity is intentional (games, creative tools):
 
 ```dart
-await LiquidGlassWidgets.initialize(
-  respectSystemAccessibility: false, // ignores system Reduce Motion / Reduce Transparency
-);
+// 0.8.0+: pass via wrap(), not initialize()
+runApp(LiquidGlassWidgets.wrap(
+  const MyApp(),
+  respectSystemAccessibility: false,
+));
 ```
 
 This disables only the automatic system-flag bridge. An explicit `GlassAccessibilityScope` in the widget tree still works regardless.
@@ -384,7 +504,7 @@ This disables only the automatic system-flag bridge. An explicit `GlassAccessibi
 
 1. `GlassAccessibilityScope` in the widget tree — explicit developer override
 2. System `MediaQuery` flags — automatic, respects user's OS setting
-3. `initialize(respectSystemAccessibility: false)` — disables (2) globally
+3. `wrap(respectSystemAccessibility: false)` — disables (2) globally
 
 
 ## Architecture

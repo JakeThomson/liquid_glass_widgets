@@ -1,0 +1,323 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/utils/glass_quality_adapter.dart';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Wraps [child] in a minimal Material app.
+Widget _app(Widget child) => MaterialApp(home: Scaffold(body: child));
+
+// ---------------------------------------------------------------------------
+// Widget tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  setUp(() {
+    GlassQualityAdapter.warmupFrames = 5;
+    GlassQualityAdapter.windowSize = 5;
+    GlassQualityAdapter.degradeWindowCount = 3;
+    GlassQualityAdapter.upgradeWindowCount = 10;
+    GlassQualityAdapter.cooldownDuration = Duration.zero;
+    GlassQualityAdapter.skipStaticProbeForTesting = true;
+  });
+
+  tearDown(() {
+    GlassQualityAdapter.skipStaticProbeForTesting = false;
+  });
+
+  // ── Basic construction ─────────────────────────────────────────────────────
+
+  group('GlassAdaptiveScope — construction', () {
+    testWidgets('builds without error with defaults', (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(child: SizedBox.shrink()),
+      ));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('initialQuality is exposed via GlassAdaptiveScopeData.of',
+        (tester) async {
+      GlassAdaptiveScopeData? captured;
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          initialQuality: GlassQuality.standard,
+          child: Builder(builder: (context) {
+            captured = GlassAdaptiveScopeData.of(context);
+            return const SizedBox.shrink();
+          }),
+        ),
+      ));
+      await tester.pump();
+      expect(captured?.effectiveQuality, GlassQuality.standard);
+    });
+
+    testWidgets('defaults to maxQuality when initialQuality is null',
+        (tester) async {
+      GlassAdaptiveScopeData? captured;
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          maxQuality: GlassQuality.premium,
+          child: Builder(builder: (context) {
+            captured = GlassAdaptiveScopeData.of(context);
+            return const SizedBox.shrink();
+          }),
+        ),
+      ));
+      await tester.pump();
+      expect(captured?.effectiveQuality, GlassQuality.premium);
+    });
+  });
+
+  // ── GlassAdaptiveScopeData accessors ──────────────────────────────────────
+
+  group('GlassAdaptiveScopeData accessors', () {
+    testWidgets('maybeOf returns null outside any scope', (tester) async {
+      GlassAdaptiveScopeData? result;
+      await tester.pumpWidget(_app(
+        Builder(builder: (context) {
+          result = GlassAdaptiveScopeData.maybeOf(context);
+          return const SizedBox.shrink();
+        }),
+      ));
+      await tester.pump();
+      expect(result, isNull);
+    });
+
+    testWidgets('maybeOf returns data inside scope', (tester) async {
+      GlassAdaptiveScopeData? result;
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          child: Builder(builder: (context) {
+            result = GlassAdaptiveScopeData.maybeOf(context);
+            return const SizedBox.shrink();
+          }),
+        ),
+      ));
+      await tester.pump();
+      expect(result, isNotNull);
+    });
+
+    testWidgets(
+        'GlassAdaptiveScopeData.of throws an AssertionError outside scope',
+        (tester) async {
+      await tester.pumpWidget(_app(
+        Builder(builder: (context) {
+          GlassAdaptiveScopeData.of(context);
+          return const SizedBox.shrink();
+        }),
+      ));
+      expect(tester.takeException(), isA<AssertionError>());
+    });
+  });
+
+  // ── GlassAdaptiveScopeData value type ────────────────────────────────────
+
+  group('GlassAdaptiveScopeData value type', () {
+    test('equality holds for identical values', () {
+      const a = GlassAdaptiveScopeData(
+        effectiveQuality: GlassQuality.premium,
+        phase: AdaptivePhase.runtime,
+      );
+      const b = GlassAdaptiveScopeData(
+        effectiveQuality: GlassQuality.premium,
+        phase: AdaptivePhase.runtime,
+      );
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
+    });
+
+    test('inequality when quality differs', () {
+      const a = GlassAdaptiveScopeData(
+        effectiveQuality: GlassQuality.premium,
+        phase: AdaptivePhase.runtime,
+      );
+      const b = GlassAdaptiveScopeData(
+        effectiveQuality: GlassQuality.standard,
+        phase: AdaptivePhase.runtime,
+      );
+      expect(a, isNot(equals(b)));
+    });
+
+    test('inequality when phase differs', () {
+      const a = GlassAdaptiveScopeData(
+        effectiveQuality: GlassQuality.premium,
+        phase: AdaptivePhase.warmup,
+      );
+      const b = GlassAdaptiveScopeData(
+        effectiveQuality: GlassQuality.premium,
+        phase: AdaptivePhase.runtime,
+      );
+      expect(a, isNot(equals(b)));
+    });
+
+    test('toString includes quality and phase', () {
+      const data = GlassAdaptiveScopeData(
+        effectiveQuality: GlassQuality.standard,
+        phase: AdaptivePhase.runtime,
+      );
+      expect(data.toString(), contains('standard'));
+      expect(data.toString(), contains('runtime'));
+    });
+  });
+
+  // ── Widget config update (didUpdateWidget) ────────────────────────────────
+
+  group('didUpdateWidget', () {
+    testWidgets('changing maxQuality recreates adapter without crash',
+        (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          maxQuality: GlassQuality.premium,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          maxQuality: GlassQuality.standard,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('changing minQuality recreates adapter without crash',
+        (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          minQuality: GlassQuality.minimal,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          minQuality: GlassQuality.standard,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('changing allowStepUp recreates adapter without crash',
+        (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          allowStepUp: false,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          allowStepUp: true,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── Dispose ───────────────────────────────────────────────────────────────
+
+  group('dispose', () {
+    testWidgets('no error when scope is removed from tree', (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(child: SizedBox.shrink()),
+      ));
+      await tester.pump();
+
+      // Remove from tree — triggers dispose.
+      await tester.pumpWidget(_app(const SizedBox.shrink()));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── Nested scopes ─────────────────────────────────────────────────────────
+
+  group('nested scopes', () {
+    testWidgets('inner scope shadows outer scope for descendants below it',
+        (tester) async {
+      GlassAdaptiveScopeData? outerData;
+      GlassAdaptiveScopeData? innerData;
+
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          initialQuality: GlassQuality.premium,
+          child: Column(
+            children: [
+              Builder(builder: (ctx) {
+                outerData = GlassAdaptiveScopeData.of(ctx);
+                return const SizedBox.shrink();
+              }),
+              GlassAdaptiveScope(
+                initialQuality: GlassQuality.standard,
+                child: Builder(builder: (ctx) {
+                  innerData = GlassAdaptiveScopeData.of(ctx);
+                  return const SizedBox.shrink();
+                }),
+              ),
+            ],
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      expect(outerData?.effectiveQuality, GlassQuality.premium);
+      expect(innerData?.effectiveQuality, GlassQuality.standard);
+    });
+  });
+
+  // ── onQualityChanged callback ─────────────────────────────────────────────
+
+  group('onQualityChanged', () {
+    testWidgets('no crash when callback is null', (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(child: SizedBox.shrink()),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('no crash when callback is provided', (tester) async {
+      final events = <(GlassQuality, GlassQuality)>[];
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          onQualityChanged: (from, to) => events.add((from, to)),
+          child: const SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+      // No error — static probe ran; callback not called if quality unchanged.
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── AdaptivePhase enum ────────────────────────────────────────────────────
+
+  group('AdaptivePhase enum', () {
+    test('all three phases exist', () {
+      expect(
+          AdaptivePhase.values,
+          containsAll([
+            AdaptivePhase.probe,
+            AdaptivePhase.warmup,
+            AdaptivePhase.runtime,
+          ]));
+    });
+  });
+}

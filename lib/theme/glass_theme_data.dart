@@ -149,15 +149,15 @@ class GlassThemeVariant {
   /// [GlassThemeVariant] to override all widgets globally.
   static const GlassThemeVariant light = GlassThemeVariant(
     settings: GlassThemeSettings(
-      thickness: 30.0,
-      blur: 3.0,
-      glassColor:
-          Color(0x32D2DCF0), // Cool blue-white tint for white backgrounds
-      chromaticAberration: 0.5,
-      refractiveIndex: 1.65,
+      thickness: 20.0,
+      blur: 6.0, // Enough frosted diffusion without heaviness
+      glassColor: Color(
+          0x4AD2DCF0), // ~29% cool blue-white — iOS 26 icy tint, visible on white
+      chromaticAberration: 0.3, // Premium feel without artefact risk
+      refractiveIndex: 1.2,
       lightIntensity: 1.2,
-      ambientStrength: 0.6,
-      saturation: 1.2,
+      ambientStrength: 0.2,
+      saturation: 1.1,
     ),
     quality: null,
     glowColors: GlassGlowColors.fallback,

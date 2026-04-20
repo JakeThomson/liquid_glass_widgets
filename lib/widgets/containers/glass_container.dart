@@ -229,15 +229,19 @@ class GlassContainer extends StatelessWidget {
     // 4. Apply glass effect with adaptive fallback
     // Premium quality uses Impeller on iOS/macOS, falls back to lightweight shader on web
     // Standard quality always uses lightweight shader
+    final effectiveSettings = GlassThemeHelpers.resolveSettings(
+      context,
+      explicit: settings,
+    );
     Widget glassWidget = AdaptiveGlass(
       shape: shape,
-      settings: settings ?? InheritedLiquidGlass.ofOrDefault(context),
+      settings: effectiveSettings,
       quality: effectiveQuality,
       useOwnLayer: useOwnLayer,
       clipBehavior: clipBehavior,
       allowElevation: allowElevation, // Configurable elevation behavior
       child: InheritedLiquidGlass(
-        settings: settings ?? InheritedLiquidGlass.ofOrDefault(context),
+        settings: effectiveSettings,
         quality: effectiveQuality,
         avoidsRefraction:
             true, // Containers block children from refracting background

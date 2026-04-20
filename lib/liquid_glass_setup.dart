@@ -2,36 +2,67 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'types/glass_quality.dart';
 import 'utils/accessibility_config.dart' as glass_config;
 import 'utils/glass_performance_monitor.dart';
 import 'src/renderer/liquid_glass_renderer.dart';
 import 'widgets/shared/glass_backdrop_scope.dart';
+import 'widgets/shared/glass_adaptive_scope.dart';
 import 'widgets/shared/glass_effect.dart';
 import 'widgets/shared/glass_accessibility_scope.dart';
 import 'widgets/shared/lightweight_liquid_glass.dart';
 
 /// Entry point and configuration for the Liquid Glass Widgets library.
 ///
-/// Use this class to initialize global resources, such as precaching shaders
-/// to prevent visual glitches during first-time rendering.
+/// The setup is intentionally split into two calls with distinct
+/// responsibilities:
+///
+/// - **[initialize]** — async platform / engine setup (shader prewarming,
+///   Impeller pipeline compilation, optional debug tooling). No widget-tree
+///   concerns.
+/// - **[wrap]** — widget-tree composition and behavioral configuration. All
+///   parameters that control how glass widgets behave at runtime live here.
+///
+/// Typical `main.dart`:
+///
+/// ```dart
+/// void main() async {
+///   WidgetsFlutterBinding.ensureInitialized();
+///   await LiquidGlassWidgets.initialize();
+///   runApp(LiquidGlassWidgets.wrap(const MyApp()));
+/// }
+/// ```
 class LiquidGlassWidgets {
   LiquidGlassWidgets._();
 
-  /// Whether glass widgets should automatically respect system accessibility
-  /// settings (Reduce Motion, Reduce Transparency / High Contrast).
+  // ── Global accessors ───────────────────────────────────────────────────────
+
+  /// Whether glass widgets automatically respect system accessibility settings
+  /// (Reduce Motion, Reduce Transparency / High Contrast).
   ///
-  /// Set via [initialize]. Defaults to `true`. When `false`, system flags are
-  /// ignored globally — useful for games or experiences where motion and full
-  /// glass are core to the design. An explicit [GlassAccessibilityScope] in
-  /// the widget tree always overrides this flag.
+  /// Set via [wrap]. Defaults to `true`. Read by glass widgets at build time
+  /// via [GlassAccessibilityScope] or a direct [MediaQuery] fallback.
+  ///
+  /// The setter is provided as an escape hatch for tests and advanced runtime
+  /// overrides. In production code, prefer setting this through [wrap].
   static bool get respectSystemAccessibility =>
       glass_config.respectSystemAccessibility;
   static set respectSystemAccessibility(bool value) =>
       glass_config.respectSystemAccessibility = value;
 
-  /// Initializes the Liquid Glass library.
+  /// Global [LiquidGlassSettings] override for the entire application.
   ///
-  /// This should be called in your `main()` function:
+  /// When set, these settings are used as the base for all glass widgets
+  /// unless overridden at the widget or layer level.
+  static LiquidGlassSettings? globalSettings;
+
+  // ── initialize() ───────────────────────────────────────────────────────────
+
+  /// Initializes platform-level resources for the Liquid Glass library.
+  ///
+  /// **Responsibility**: async platform / engine setup only. Call once in
+  /// `main()` before [runApp]. All behavioral configuration belongs in [wrap].
+  ///
   /// ```dart
   /// void main() async {
   ///   WidgetsFlutterBinding.ensureInitialized();
@@ -40,61 +71,36 @@ class LiquidGlassWidgets {
   /// }
   /// ```
   ///
-  /// ### Accessibility
+  /// ### Parameters
   ///
-  /// By default, system Reduce Motion and Reduce Transparency are respected
-  /// automatically — no extra setup needed. To opt out globally (e.g. for a
-  /// game where full glass fidelity is intentional):
+  /// **`enablePerformanceMonitor`** (default `true`)\
+  /// In debug and profile builds, the library registers a
+  /// `SchedulerBinding.addTimingsCallback` that watches raster durations while
+  /// [GlassQuality.premium] surfaces are mounted. When frames consistently
+  /// exceed the GPU budget, a single [FlutterError] is emitted with actionable
+  /// guidance. The monitor is **automatically disabled in release builds** —
+  /// zero overhead in shipped apps. Set to `false` to suppress it during
+  /// profiling sessions where the warning would be a false positive.
   ///
-  /// ```dart
-  /// await LiquidGlassWidgets.initialize(respectSystemAccessibility: false);
-  /// ```
+  /// ### Tasks performed
   ///
-  /// A [GlassAccessibilityScope] placed in the widget tree always takes
-  /// precedence over this flag, allowing per-subtree overrides.
-  ///
-  /// ### Performance Monitor
-  ///
-  /// When [enablePerformanceMonitor] is true (the default in debug and profile
-  /// builds), the library watches raster frame durations while
-  /// [GlassQuality.premium] surfaces are mounted. If frames exceed the GPU
-  /// budget for [GlassPerformanceMonitor.sustainedFrameThreshold] consecutive
-  /// frames, a single [FlutterError] is reported with actionable guidance.
-  ///
-  /// The monitor is **automatically disabled in release builds** — it registers
-  /// no callbacks and has zero overhead in shipped apps. Set
-  /// [enablePerformanceMonitor] to `false` to suppress it in debug builds too
-  /// (e.g. when profiling with artificial load).
-  ///
-  /// ```dart
-  /// await LiquidGlassWidgets.initialize(
-  ///   enablePerformanceMonitor: false, // silence the monitor
-  /// );
-  /// ```
-  ///
-  /// Tasks performed:
-  /// 1. Pre-warms/precaches the lightweight fragment shader.
-  /// 2. Pre-warms the interactive indicator shader (for custom refraction).
-  /// 3. Pre-warms Impeller rendering pipeline (iOS/Android/macOS).
-  /// 4. Optionally starts the performance monitor (debug/profile only).
+  /// 1. Pre-warms / precaches the lightweight fragment shader.
+  /// 2. Pre-warms the interactive indicator shader (custom refraction).
+  /// 3. Pre-warms the Impeller rendering pipeline (iOS / Android / macOS).
+  /// 4. Optionally registers the debug performance monitor.
   static Future<void> initialize({
-    bool respectSystemAccessibility = true,
     bool enablePerformanceMonitor = true,
   }) async {
-    LiquidGlassWidgets.respectSystemAccessibility = respectSystemAccessibility;
     debugPrint('[LiquidGlass] Initializing library...');
 
-    // 1. Pre-warm shaders
-    // This is the most critical step to prevent the "white flash" on Skia/Web
+    // 1. Pre-warm shaders — prevents the "white flash" on first render.
     await Future.wait([
       LightweightLiquidGlass.preWarm(),
       GlassEffect.preWarm(),
       _warmUpImpellerPipeline(),
     ]);
 
-    // 2. Start performance monitor (debug/profile builds only).
-    // kReleaseMode guard inside GlassPerformanceMonitor.start() ensures
-    // this is a no-op in production.
+    // 2. Register the debug performance monitor (no-op in release builds).
     if (enablePerformanceMonitor && !kReleaseMode) {
       GlassPerformanceMonitor.start();
     }
@@ -102,72 +108,153 @@ class LiquidGlassWidgets {
     debugPrint('[LiquidGlass] Initialization complete.');
   }
 
-  /// Wraps [child] in a [GlassBackdropScope] so all glass surfaces inside
-  /// automatically share a single GPU backdrop capture when multiple surfaces
-  /// are visible simultaneously (e.g. a [GlassAppBar] + [GlassBottomBar]).
+  // ── wrap() ─────────────────────────────────────────────────────────────────
+
+  /// Wraps [child] in the Liquid Glass infrastructure scopes and applies all
+  /// behavioral configuration.
   ///
-  /// Without this wrapper each glass surface captures its own backdrop
-  /// independently — correct, but wastes one GPU blit per extra surface.
-  /// With it, Impeller shares one capture across all surfaces on screen,
-  /// roughly halving GPU blit cost whenever two or more glass widgets coexist.
+  /// **Responsibility**: widget-tree composition and runtime behavior. All
+  /// configuration that affects how glass widgets behave lives here — explicit,
+  /// visible, and co-located with the widget tree entry point.
   ///
-  /// **Usage** — one word change in your `main.dart`:
+  /// **Always call this** — at minimum it installs [GlassBackdropScope], which
+  /// allows glass surfaces to share a single GPU backdrop capture and roughly
+  /// halves blit cost when multiple glass widgets are visible simultaneously.
+  ///
   /// ```dart
+  /// // Zero-config (most apps):
   /// runApp(LiquidGlassWidgets.wrap(const MyApp()));
+  ///
+  /// // Recommended for Android / broad device support:
+  /// runApp(LiquidGlassWidgets.wrap(
+  ///   const MyApp(),
+  ///   adaptiveQuality: true,
+  /// ));
+  ///
+  /// // Game / experience — bypass accessibility, conservative quality start:
+  /// runApp(LiquidGlassWidgets.wrap(
+  ///   const MyApp(),
+  ///   respectSystemAccessibility: false,
+  ///   adaptiveQuality: true,
+  ///   adaptiveConfig: GlassAdaptiveScopeConfig(
+  ///     initialQuality: GlassQuality.standard,
+  ///     allowStepUp: true,
+  ///   ),
+  /// ));
   /// ```
   ///
-  /// On Skia / Web the lightweight shader path is used instead, so this has
-  /// no effect on those backends.
-  static Widget wrap(Widget child) => GlassBackdropScope(child: child);
+  /// ### Parameters
+  ///
+  /// **`respectSystemAccessibility`** (default `true`)\
+  /// When `true`, system Reduce Motion and Reduce Transparency flags are
+  /// respected automatically — no extra setup required. All glass widgets read
+  /// `MediaQuery` directly and degrade gracefully. Set to `false` to ignore
+  /// system accessibility flags globally (e.g. for a game where full glass
+  /// fidelity is intentional regardless of OS settings). A
+  /// [GlassAccessibilityScope] placed anywhere in the widget tree always takes
+  /// precedence over this flag, allowing per-subtree overrides.
+  ///
+  /// **`adaptiveQuality`** (default `false`, **experimental**)\
+  /// When `true`, inserts a root [GlassAdaptiveScope] that automatically
+  /// benchmarks the device and adjusts the global glass quality ceiling in real
+  /// time. Three phases:
+  ///
+  /// - **Phase 1** (synchronous): forces `minimal` where shaders are
+  ///   unsupported; caps at `standard` on web.
+  /// - **Phase 2** (~180 frames ≈ 3 s at 60 fps): measures real P75 raster
+  ///   durations and sets the initial quality tier.
+  /// - **Phase 3** (ongoing, near-zero overhead): degrades when P95 exceeds
+  ///   1.5× the frame budget for 3 consecutive windows; recovers when P95
+  ///   drops below 0.6× budget for 10 consecutive windows.
+  ///
+  /// **Experimental in 0.8.0** — Phase 2 thresholds (12 ms / 20 ms P75) are
+  /// based on reasoning, not yet validated across the full Android device
+  /// landscape. Enable this feature and report unexpected quality degradation
+  /// or promotion to help us tune the thresholds.
+  ///
+  /// Acts as an app-wide *quality ceiling* — individual widgets with an
+  /// explicit `quality:` parameter are still capped by it. When no
+  /// [adaptiveConfig] is provided, the scope starts at [GlassQuality.standard]
+  /// to prevent jank during the warm-up window on mid-range devices.
+  ///
+  /// For per-screen control, use [GlassAdaptiveScope] directly in the tree.
+
+  ///
+  /// **`adaptiveConfig`** (optional)\
+  /// Custom [GlassAdaptiveScopeConfig] for the root [GlassAdaptiveScope].
+  /// Ignored when [adaptiveQuality] is `false`. Defaults to
+  /// `GlassAdaptiveScopeConfig(initialQuality: GlassQuality.standard)`.
+  ///
+  /// ### Scope nesting order (outermost → innermost → child)
+  ///
+  /// `GlassAdaptiveScope` (when enabled) → `GlassBackdropScope` → `child`
+  static Widget wrap(
+    Widget child, {
+    bool respectSystemAccessibility = true,
+    bool adaptiveQuality = false,
+    GlassAdaptiveScopeConfig? adaptiveConfig,
+  }) {
+    // Apply global accessibility preference.
+    glass_config.respectSystemAccessibility = respectSystemAccessibility;
+
+    Widget result = GlassBackdropScope(child: child);
+
+    if (adaptiveQuality) {
+      // Default to a conservative start: begin at `standard` so the warmup
+      // benchmark can promote to `premium` rather than assuming premium from
+      // frame 1 (which risks visible jank during the 180-frame warmup window
+      // on mid-range devices).
+      final config = adaptiveConfig ??
+          const GlassAdaptiveScopeConfig(
+            initialQuality: GlassQuality.standard,
+          );
+      result = GlassAdaptiveScope(
+        minQuality: config.minQuality,
+        maxQuality: config.maxQuality,
+        initialQuality: config.initialQuality,
+        targetFrameMs: config.targetFrameMs,
+        allowStepUp: config.allowStepUp,
+        onQualityChanged: config.onQualityChanged,
+        child: result,
+      );
+    }
+
+    return result;
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────────────
 
   /// Warms up the Impeller rendering pipeline for glass effects.
   ///
-  /// Creates a minimal LiquidGlass layer to trigger Impeller's pipeline
-  /// compilation. This eliminates "first frame jank" when glass effects
-  /// are first rendered.
-  ///
-  /// Benefits:
-  /// - 10-15% faster initial glass widget render
-  /// - No visual glitches on first appearance
-  /// - Precompiles Metal/Vulkan shaders ahead of time
-  ///
-  /// Only runs on Impeller (iOS/Android/macOS). Skipped on Skia/Web.
+  /// Instantiates a minimal [LiquidGlassLayer] to trigger Impeller pipeline
+  /// compilation — eliminating first-frame jank when glass effects appear.
+  /// Skipped on Skia / Web where Impeller is not active.
   static Future<void> _warmUpImpellerPipeline() async {
-    // Check if Impeller is available
     if (!ui.ImageFilter.isShaderFilterSupported) {
       debugPrint('[LiquidGlass] Skipping Impeller warm-up (Skia/Web detected)');
       return;
     }
 
     try {
-      // Create minimal glass settings to warm up the most common configuration
       const warmUpSettings = LiquidGlassSettings(
         blur: 3,
         thickness: 30,
         refractiveIndex: 1.5,
       );
 
-      // Create a LiquidGlassLayer widget to trigger pipeline compilation
-      // We don't actually render it - just instantiating it is enough to
-      // trigger Impeller's pipeline compilation and caching
+      // Instantiating the layer triggers Impeller pipeline compilation.
+      // We don't need to render it.
       final _ = LiquidGlassLayer(
         settings: warmUpSettings,
         child: const SizedBox.shrink(),
       );
 
-      // Small delay to ensure pipeline compilation completes
+      // Brief delay to allow pipeline compilation to complete.
       await Future.delayed(const Duration(milliseconds: 16));
 
       debugPrint('[LiquidGlass] ✓ Impeller pipeline warmed up');
     } catch (e) {
-      // Graceful degradation - warm-up is optional optimization
       debugPrint('[LiquidGlass] Impeller warm-up failed (non-critical): $e');
     }
   }
-
-  /// Global settings override for the entire application.
-  ///
-  /// If provided, these settings will be used as the base for all glass widgets
-  /// unless overridden at the individual widget or layer level.
-  static LiquidGlassSettings? globalSettings;
 }

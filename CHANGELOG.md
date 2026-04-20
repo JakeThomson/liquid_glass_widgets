@@ -1,4 +1,189 @@
-# 0.7.17
+# 0.8.0
+
+## New Features
+
+### `GlassAdaptiveScope` *(experimental)* — automatic runtime quality adaptation
+
+A new scope widget that automatically adjusts `GlassQuality` for its subtree
+based on real raster performance observed from `SchedulerBinding` frame timings.
+Handles the three device scenarios that are impossible to test on a developer
+device:
+
+- **Broken / slow shader drivers** (e.g. Pixel 4a, Galaxy A22 class): detected
+  synchronously at startup via `ImageFilter.isShaderFilterSupported` and capped
+  immediately to `minimal`.
+- **Warm-up jank** ("wrong quality at startup"): resolved by a ~180-frame
+  benchmark that measures real P75 raster durations and sets the initial quality
+  tier before the user notices.
+- **Thermal throttling** ("fine at launch, janky after 10 minutes"): detected
+  and corrected by a continuous runtime hysteresis engine.
+
+**Three-phase adaptation:**
+
+| Phase | Trigger | Action |
+|---|---|---|
+| Phase 1 — Static probe | Mount | Forces `minimal` on unsupported hardware; caps at `standard` on web |
+| Phase 2 — Warm-up | First ~180 frames (~3 s at 60 fps) | Sets initial quality from real P75 raster durations |
+| Phase 3 — Runtime hysteresis | Ongoing | Degrades after 3 bad windows; recovers after 10 good windows (8 s cooldown) |
+
+The scope acts as a **quality ceiling** — widgets with an explicit `quality:`
+parameter are unaffected. The ceiling is enforced by
+`GlassThemeHelpers.resolveQuality`, which reads `GlassAdaptiveScopeData` from
+the nearest ancestor scope.
+
+```dart
+// Per-screen control:
+GlassAdaptiveScope(
+  child: Scaffold(...),
+)
+
+// Advanced — conservative start for fragmented Android market:
+GlassAdaptiveScope(
+  initialQuality: GlassQuality.standard, // earn your way up to premium
+  allowStepUp: true,
+  onQualityChanged: (from, to) => analytics.log('glass_quality_changed'),
+  child: child,
+)
+```
+
+> **Experimental in 0.8.0.** `GlassAdaptiveScope` and `GlassAdaptiveScopeConfig` are
+> annotated `@experimental`. The three-phase adaptation logic is architecturally sound
+> and fully tested, but the Phase 2 timing thresholds (P75 < 12 ms → premium,
+> 12–20 ms → standard, > 20 ms → minimal) have been validated by reasoning, not yet
+> by broad real-device data across the Android fragmentation landscape.
+>
+> **How to enable it:** `LiquidGlassWidgets.wrap(myApp, adaptiveQuality: true)`
+> (opt-in, default `false`).
+>
+> **If you observe unexpected behaviour** — quality too low on a mid-range device,
+> or stuck at `standard` on a flagship — please file an issue with your device model
+> and raster timings from Flutter DevTools. Your data will be used to tune the
+> thresholds for 0.8.1.
+
+### `GlassAdaptiveScopeConfig` *(experimental)* — portable configuration value object
+
+Bundles all `GlassAdaptiveScope` parameters into a single `const`-constructible,
+equality-comparable value object. Used by `LiquidGlassWidgets.wrap()` and useful
+for passing scope configuration through APIs that cannot accept widget parameters
+directly.
+
+```dart
+const config = GlassAdaptiveScopeConfig(
+  initialQuality: GlassQuality.standard,
+  allowStepUp: true,
+  targetFrameMs: 8, // 120 Hz ProMotion
+);
+```
+
+## API Refactor — `initialize()` and `wrap()` separation
+
+The responsibilities of `initialize()` and `wrap()` have been clarified and
+made consistent with the broader Flutter ecosystem (cf. `easy_localization`,
+`MaterialApp`):
+
+| Method | Responsibility |
+|---|---|
+| `initialize()` | Async platform / engine setup only (shader prewarming, Impeller pipeline, debug monitor) |
+| `wrap()` | Widget-tree composition and all behavioral configuration |
+
+### `wrap()` — new parameters
+
+```dart
+runApp(LiquidGlassWidgets.wrap(
+  const MyApp(),
+  respectSystemAccessibility: false, // moved from initialize()
+  adaptiveQuality: true,             // new — inserts GlassAdaptiveScope
+  adaptiveConfig: GlassAdaptiveScopeConfig(
+    initialQuality: GlassQuality.standard,
+    allowStepUp: true,
+  ),
+));
+```
+
+### Scope nesting order inserted by `wrap()`
+
+`GlassAdaptiveScope` → `GlassBackdropScope` → `child`
+
+## Breaking Changes
+
+### `initialize(respectSystemAccessibility:)` removed
+
+`respectSystemAccessibility` has moved from `initialize()` to `wrap()`.
+
+**Migration** (one-line change):
+
+```dart
+// Before (0.7.x):
+await LiquidGlassWidgets.initialize(respectSystemAccessibility: false);
+runApp(LiquidGlassWidgets.wrap(const MyApp()));
+
+// After (0.8.0):
+await LiquidGlassWidgets.initialize();
+runApp(LiquidGlassWidgets.wrap(const MyApp(), respectSystemAccessibility: false));
+```
+
+The `LiquidGlassWidgets.respectSystemAccessibility` getter and setter remain
+available as an escape hatch for tests and advanced runtime overrides. In
+production code, set it through `wrap()`.
+
+## Bug Fixes
+
+### Glass invisible on white / light backgrounds (transparency regression)
+
+- **FIX**: Standalone glass widgets (`GlassButton`, `GlassContainer`, `GlassTextField`,
+  `GlassCard`, and all widgets that delegate to them) rendered with zero opacity on
+  light backgrounds when no explicit `settings:` were provided. Root cause: these
+  widgets fell through to `InheritedLiquidGlass.ofOrDefault()`, which returns
+  `LiquidGlassSettings()` — a default with `glassColor: Color(0x00FFFFFF)` (alpha = 0).
+  The lightweight shader computes `body tint = glassColor.alpha × 0.15`, so
+  `0 × 0.15 = 0` — the glass body was literally transparent regardless of `thickness`
+  or `blur`.
+
+  **Fix**: Replaced all `InheritedLiquidGlass.ofOrDefault()` call sites with the new
+  `GlassThemeHelpers.resolveSettings()`, which traverses the full 5-level priority chain:
+
+  1. Widget-level `settings:` parameter (explicit wins)
+  2. `InheritedLiquidGlass` — nearest parent `AdaptiveLiquidGlassLayer`
+  3. `LiquidGlassWidgets.globalSettings` — app-level override
+  4. `GlassThemeData` — brightness-aware theme variant (light / dark)
+  5. `LiquidGlassSettings()` — absolute last resort
+
+  Standalone widgets now correctly resolve to the theme's `glassColor` and are
+  always visible out of the box.
+
+### Light theme defaults rebalanced
+
+- **TWEAK**: `GlassThemeVariant.light` updated for an icy-frosted aesthetic that
+  reads clearly on white backgrounds:
+
+  | Property | Before | After |
+  |---|---|---|
+  | `blur` | 10.0 | 6.0 |
+  | `glassColor` | `0x73FFFFFF` (45% neutral white) | `0x4AD2DCF0` (~29% cool blue-white) |
+  | `chromaticAberration` | 0.1 | 0.3 |
+  | `thickness` | 16.0 | 20.0 |
+  | `lightIntensity` | 1.0 | 1.2 |
+
+  The cool blue-white tint (`D2DCF0`) matches the icy tone of iOS 26 frosted glass.
+  Blur 6 gives visible background diffusion without obscuring content.
+
+## API
+
+### `GlassBackdropScope` now exported from the main barrel
+
+- **FIX**: `GlassBackdropScope` was missing from `liquid_glass_widgets.dart`. Consumers
+  had to use the internal path
+  `package:liquid_glass_widgets/widgets/shared/glass_backdrop_scope.dart`, which is
+  fragile and undocumented. It is now a first-class public export.
+
+  **Migration** — update any direct internal imports:
+  ```dart
+  // Before (workaround, fragile):
+  import 'package:liquid_glass_widgets/widgets/shared/glass_backdrop_scope.dart';
+
+  // After (correct):
+  import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+  ```
 
 - **CHORE**: add CI and Codecov badges.
 
