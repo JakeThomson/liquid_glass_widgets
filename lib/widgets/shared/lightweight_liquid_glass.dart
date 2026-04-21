@@ -213,16 +213,12 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass> {
         clipper: ShapeBorderClipper(shape: widget.shape),
         child: Container(
           color: settings.effectiveGlassColor.withValues(alpha: 0.15),
-          child: GlassGlowLayer(child: widget.child),
+          child: widget.child,
         ),
       );
     }
 
-    // Wrap child in GlassGlowLayer so that GlassGlow.maybeOf() finds a valid
-    // ancestor on the Skia/Web path. Without this, GlassGlow captured pointer
-    // events but had no GlassGlowLayerState to route them to — the position-
-    // tracking spotlight was silently dropped. _RenderGlassGlowLayer is pure
-    // canvas (RadialGradient + BlendMode.plus) and is renderer-agnostic.
+    // GlassGlowLayer is now automatically provided by GlassGlow internally.
     return ClipPath(
       clipper: ShapeBorderClipper(shape: widget.shape),
       child: _LightweightGlassEffect(
@@ -234,7 +230,7 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass> {
         densityFactor: widget.densityFactor,
         indicatorWeight: widget.indicatorWeight,
         backdropLuma: backdropLuma,
-        child: GlassGlowLayer(child: widget.child),
+        child: widget.child,
       ),
     );
   }

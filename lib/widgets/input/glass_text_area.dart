@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
-
+import '../../src/types/glass_interaction_behavior.dart';
 import '../../types/glass_quality.dart';
 import 'glass_text_field.dart';
 
@@ -33,6 +33,12 @@ class GlassTextArea extends StatelessWidget {
     this.useOwnLayer = false,
     this.quality,
     this.shape = const LiquidRoundedSuperellipse(borderRadius: 10),
+    // ── iOS 26 interaction ────────────────────────────────────────────────
+    this.interactionBehavior = GlassInteractionBehavior.full,
+    this.pressScale = 1.03,
+    this.glowColor,
+    this.glowRadius = 1.5,
+    this.onTapOutside,
   });
 
   /// Controls the text.
@@ -92,6 +98,26 @@ class GlassTextArea extends StatelessWidget {
   /// Shape setting.
   final LiquidShape shape;
 
+  /// Controls which press-interaction effects are active.
+  ///
+  /// Mirrors [GlassTextField.interactionBehavior] — see that field for details.
+  /// Defaults to [GlassInteractionBehavior.full].
+  final GlassInteractionBehavior interactionBehavior;
+
+  /// Scale factor applied when the field is pressed.
+  ///
+  /// Mirrors [GlassTextField.pressScale]. Defaults to `1.03`.
+  final double pressScale;
+
+  /// Colour of the directional glow. Mirrors [GlassTextField.glowColor].
+  final Color? glowColor;
+
+  /// Spread radius of the glow. Mirrors [GlassTextField.glowRadius].
+  final double glowRadius;
+
+  /// Called when user taps outside. Mirrors [GlassTextField.onTapOutside].
+  final TapRegionCallback? onTapOutside;
+
   @override
   Widget build(BuildContext context) {
     return GlassTextField(
@@ -115,6 +141,11 @@ class GlassTextArea extends StatelessWidget {
       useOwnLayer: useOwnLayer,
       quality: quality,
       shape: shape,
+      interactionBehavior: interactionBehavior,
+      pressScale: pressScale,
+      glowColor: glowColor,
+      glowRadius: glowRadius,
+      onTapOutside: onTapOutside,
     );
   }
 }

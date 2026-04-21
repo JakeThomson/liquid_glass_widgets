@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../src/types/glass_interaction_behavior.dart';
 import '../../types/glass_quality.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
@@ -80,6 +81,8 @@ class GlassSearchableBottomBar extends StatefulWidget {
     this.glowBlurRadius = 32,
     this.glowSpreadRadius = 8,
     this.glowOpacity = 0.6,
+    this.interactionGlowColor,
+    this.interactionGlowRadius = 1.5,
     this.quality,
     this.magnification = 1.0,
     this.innerBlur = 0.0,
@@ -87,6 +90,9 @@ class GlassSearchableBottomBar extends StatefulWidget {
     this.backgroundKey,
     this.springDescription,
     this.tabPillAnchor = GlassTabPillAnchor.start,
+    // ── Interaction ──────────────────────────────────────────────────────────
+    this.interactionBehavior = GlassInteractionBehavior.full,
+    this.pressScale = 1.04,
   })  : assert(tabs.length > 0,
             'GlassSearchableBottomBar requires at least one tab'),
         assert(
@@ -249,6 +255,33 @@ class GlassSearchableBottomBar extends StatefulWidget {
   /// Opacity of the glow at full intensity. Defaults to 0.6.
   final double glowOpacity;
 
+  /// The color of the directional glow effect when interacting with the bar.
+  ///
+  /// Set to [Colors.transparent] to disable the glow effect.
+  final Color? interactionGlowColor;
+
+  /// The radius spread of the directional glow effect when interacting with the bar.
+  ///
+  /// Defaults to 1.5.
+  final double interactionGlowRadius;
+
+  // ── Interaction ───────────────────────────────────────────────────────────────
+
+  /// Controls which physical interaction effects are active when the user
+  /// presses the bar.
+  ///
+  /// Defaults to [GlassInteractionBehavior.full] — directional glow + spring
+  /// scale, matching native iOS 26 Apple News / Safari behaviour.
+  final GlassInteractionBehavior interactionBehavior;
+
+  /// Peak scale factor applied to the bar at maximum press depth.
+  ///
+  /// Only active when [interactionBehavior] includes scale
+  /// (i.e. [GlassInteractionBehavior.scaleOnly] or [GlassInteractionBehavior.full]).
+  ///
+  /// Defaults to 1.04 (4% growth — matches iOS 26 Apple News pill).
+  final double pressScale;
+
   // ── Advanced ─────────────────────────────────────────────────────────────────
   /// Magnification factor for the selected indicator lens effect. Defaults to 1.0.
   final double magnification;
@@ -261,6 +294,8 @@ class GlassSearchableBottomBar extends StatefulWidget {
 
   /// Background key for Skia/web refraction. Optional.
   final GlobalKey? backgroundKey;
+
+  // Note: interactionBehavior and pressScale fields are declared earlier in the Interaction section.
 
   @override
   State<GlassSearchableBottomBar> createState() =>
@@ -400,7 +435,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
     final glassSettings = widget.glassSettings ?? _defaultGlassSettings;
     final searching = widget.isSearchActive;
 
-    return TweenAnimationBuilder<double>(
+    final barContent = TweenAnimationBuilder<double>(
       // Animate the pill height between full tab-bar height and compact
       // search-bar height — matching the iOS 26 Apple News morph where the
       // whole bar shrinks when search is active.
@@ -408,7 +443,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
           end: searching ? widget.searchBarHeight : widget.barHeight),
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      builder: (_, animH, __) {
+      builder: (context, animH, child) {
         return AdaptiveLiquidGlassLayer(
           settings: glassSettings,
           quality: effectiveQuality,
@@ -418,8 +453,8 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
               horizontal: widget.horizontalPadding,
               vertical: widget.verticalPadding,
             ),
-            // LayoutBuilder provides real pixel widths so the spring controllers
-            // can animate between explicit values — no null-width hacks.
+            // LayoutBuilder provides real pixel widths so the spring
+            // controllers can animate between explicit values.
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final totalW = constraints.maxWidth;
@@ -611,6 +646,14 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                           indicatorSettings: widget.indicatorSettings,
                           backgroundKey: widget.backgroundKey,
                           isSearchActive: searching,
+                          interactionGlowColor:
+                              widget.interactionBehavior.hasGlow
+                                  ? widget.interactionGlowColor
+                                  : Colors.transparent,
+                          interactionGlowRadius: widget.interactionGlowRadius,
+                          enableBackgroundAnimation:
+                              widget.interactionBehavior.hasScale,
+                          backgroundPressScale: widget.pressScale,
                           collapsedLogoBuilder:
                               widget.searchConfig.collapsedLogoBuilder ??
                                   (context) {
@@ -704,6 +747,14 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                           isActive: searching,
                           barBorderRadius: widget.barBorderRadius,
                           quality: effectiveQuality,
+                          enableBackgroundAnimation:
+                              widget.interactionBehavior.hasScale,
+                          backgroundPressScale: widget.pressScale,
+                          interactionGlowColor:
+                              widget.interactionBehavior.hasGlow
+                                  ? widget.interactionGlowColor
+                                  : Colors.transparent,
+                          interactionGlowRadius: widget.interactionGlowRadius,
                           onFocusChanged: (focused) {
                             if (focused) {
                               _controller.onFocusChanged(true);
@@ -741,14 +792,16 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                         ),
                     ],
                   ),
-                );
+                ); // SizedBox
               },
             ),
           ),
-        ); // AdaptiveLiquidGlassLayer
-      }, // TweenAnimationBuilder.builder
-    ); // TweenAnimationBuilder
-  }
+        );
+      },
+    );
+
+    return barContent;
+  } // build()
 
   Widget _buildTabRow({
     required bool selected,

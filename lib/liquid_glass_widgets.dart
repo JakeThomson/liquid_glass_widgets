@@ -28,6 +28,7 @@ export 'theme/glass_theme_settings.dart';
 
 // Types
 export 'types/glass_quality.dart';
+export 'src/types/glass_interaction_behavior.dart'; // GlassInteractionBehavior enum
 
 // Shared widgets
 export 'widgets/shared/adaptive_glass.dart';

@@ -1,3 +1,104 @@
+# 0.8.1
+
+## New Features
+
+### `GlassInteractionBehavior` — precise, orthogonal control of press interactions
+
+A new first-class enum that independently controls the two dimensions of press
+feedback on `GlassBottomBar`, `GlassSearchableBottomBar`, and `GlassTextField`
+(as well as its derivative inputs):
+
+| Value | Glow | Scale |
+|---|---|---|
+| `none` | ✗ | ✗ |
+| `glowOnly` | ✓ | ✗ |
+| `scaleOnly` | ✗ | ✓ |
+| `full` *(default)* | ✓ | ✓ |
+
+The *glow* is the iOS 26-style directional light spotlight that follows the
+touch position across the glass surface. The *scale* is the spring-physics
+size pulse on press.
+
+```dart
+// Glow only — light follows your finger, no bounce:
+GlassBottomBar(
+  interactionBehavior: GlassInteractionBehavior.glowOnly,
+  ...
+)
+
+// Scale only — spring bounce, no glow:
+GlassSearchableBottomBar(
+  interactionBehavior: GlassInteractionBehavior.scaleOnly,
+  pressScale: 1.06,
+  ...
+)
+
+// Disable both for a completely static bar:
+GlassBottomBar(
+  interactionBehavior: GlassInteractionBehavior.none,
+  ...
+)
+```
+
+**Zero overhead when disabled.** When `interactionBehavior` suppresses glow (`none`
+or `scaleOnly`), the `GlassGlow` sensor widget is removed from the tree entirely —
+saving 3 widget allocations and 3 `RenderBox` nodes per tab indicator per frame.
+Scale is resolved at build time to a scalar `1.0` with no animation controller
+overhang.
+
+### New parameters on `GlassBottomBar`, `GlassSearchableBottomBar`, and `GlassTextField`
+
+`GlassTextField` now shares the same `interactionBehavior` API as the bar-family
+widgets. The *scale* dimension maps onto the subtle press-bounce animation
+(field squishes slightly when pressed down); the *glow* dimension is the directional
+spotlight that tracks touch position across the glass surface.
+
+`GlassPasswordField` and `GlassTextArea` delegate to `GlassTextField` and inherit
+the new parameter automatically.
+
+| Parameter | Widget(s) | Type | Default |
+|---|---|---|---|
+| `interactionBehavior` | All three | `GlassInteractionBehavior` | `.full` |
+| `pressScale` | Bar widgets / Inputs | `double` | `1.04` (bars) / `1.03` (inputs) |
+| `interactionGlowColor` | Bar widgets | `Color?` | `null` (theme default) |
+| `glowColor` | `GlassTextField` | `Color?` | `null` (~12% white) |
+| `interactionGlowRadius` | Bar widgets | `double` | `1.5` |
+| `glowRadius` | `GlassTextField` | `double` | `1.5` |
+
+All defaults preserve existing `0.8.0` visual behaviour — **no migration required**.
+
+#### Migration from `enableGlow` / `enableFocusAnimation`
+
+`GlassTextField.enableGlow` and `GlassTextField.enableFocusAnimation` have been
+replaced by `interactionBehavior`. The mapping is direct:
+
+```dart
+// Before (0.8.0):
+GlassTextField(enableGlow: false, enableFocusAnimation: false)
+
+// After (0.8.1):
+GlassTextField(interactionBehavior: GlassInteractionBehavior.none)
+
+// Before: glow only
+GlassTextField(enableGlow: true, enableFocusAnimation: false)
+// After:
+GlassTextField(interactionBehavior: GlassInteractionBehavior.glowOnly)
+```
+
+
+## Bug Fixes
+
+- **FIX**: `SearchPill` was silently ignoring `interactionBehavior`. The `interactionGlowColor`
+  parameter was never passed to the `SearchPill` constructor, so the search pill always rendered
+  with a visible glow regardless of the bar's `interactionBehavior` setting. The glow was
+  hardcoded to `Color(0x1FFFFFFF)` even when `behavior = none`.
+
+- **FIX**: `SearchPillState` had no glow short-circuit on the expanded pill path. Added
+  `_wrapWithGlow` helper (matching the pattern already in `TabIndicatorState` and
+  `SearchableTabIndicatorState`) to skip `GlassGlow` allocation when glow is suppressed.
+
+---
+
 # 0.8.0
 
 ## New Features
@@ -58,7 +159,7 @@ GlassAdaptiveScope(
 > **If you observe unexpected behaviour** — quality too low on a mid-range device,
 > or stuck at `standard` on a flagship — please file an issue with your device model
 > and raster timings from Flutter DevTools. Your data will be used to tune the
-> thresholds for 0.8.1.
+> thresholds for a future release.
 
 ### `GlassAdaptiveScopeConfig` *(experimental)* — portable configuration value object
 

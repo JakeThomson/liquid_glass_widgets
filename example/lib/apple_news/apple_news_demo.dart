@@ -292,6 +292,8 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
         // this value directly without any hidden multiplier.
         indicatorColor: Colors.white.withValues(alpha: 0.20),
         quality: GlassQuality.premium,
+        interactionBehavior:
+            GlassInteractionBehavior.full, // or .none / .glowOnly / .scaleOnly
         glassSettings: LiquidGlassSettings(
           glassColor: const Color(0xAA1C1C1E),
           thickness: 30,

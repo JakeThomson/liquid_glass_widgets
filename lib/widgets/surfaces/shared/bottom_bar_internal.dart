@@ -277,6 +277,9 @@ class TabIndicator extends StatefulWidget {
     required this.maskingQuality,
     this.indicatorSettings,
     this.backgroundKey,
+    this.interactionGlowColor,
+    this.interactionGlowRadius = 1.5,
+    this.interactionScale = 1.0,
     super.key,
   });
 
@@ -296,6 +299,14 @@ class TabIndicator extends StatefulWidget {
   final double innerBlur;
   final MaskingQuality maskingQuality;
   final GlobalKey? backgroundKey;
+  final Color? interactionGlowColor;
+  final double interactionGlowRadius;
+
+  /// The scale factor applied by [LiquidStretch] on press.
+  ///
+  /// Pass `1.0` to disable scaling. Resolved by the parent widget from
+  /// [GlassInteractionBehavior] before being forwarded here.
+  final double interactionScale;
 
   @override
   State<TabIndicator> createState() => TabIndicatorState();
@@ -462,140 +473,163 @@ class TabIndicatorState extends State<TabIndicator> {
     final glassRadius =
         widget.barBorderRadius; // 32 → becomes 64 after internal *2
 
-    return Listener(
-      // Raw pointer events fire BEFORE gesture recognizers and never compete
-      // in the gesture arena, so _isDown is always set on the very first event.
-      onPointerDown: (_) {
-        setState(() => _isDown = true);
-      },
-      // On finger/button lift, clear _isDown if not mid-drag.
-      // Listener fires regardless of which gesture recognizer won the arena.
-      onPointerUp: (_) {
-        if (!_isDragging) {
-          setState(() => _isDown = false);
-        }
-      },
-      onPointerCancel: (_) {
-        if (!_isDragging) {
-          setState(() => _isDown = false);
-        }
-      },
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onHorizontalDragDown: _onDragDown,
-        onHorizontalDragUpdate: _onDragUpdate,
-        onHorizontalDragEnd: _onDragEnd,
-        // On cancel (e.g. parent scroll steals the gesture or pointer goes
-        // off-screen), _isDown is cleared by the Listener when pointer lifts.
-        // Only snap _xAlign — never set _isDown from here.
-        onHorizontalDragCancel: () {
-          if (_isDragging) {
-            // Mid-drag cancel: snap to nearest tab from current position.
-            final currentRelativeX = (_xAlign + 1) / 2;
-            final tabWidth = 1.0 / widget.tabCount;
-            final targetTabIndex = _computeTargetTab(
-              currentRelativeX: currentRelativeX,
-              velocityX: 0,
-              tabWidth: tabWidth,
-            );
-            setState(() {
-              _isDragging = false;
-              _isDown = false;
-              _xAlign = _computeXAlignmentForTab(targetTabIndex);
-            });
-            if (targetTabIndex != widget.tabIndex) {
-              widget.onTabChanged(targetTabIndex);
+    return LiquidStretch(
+        interactionScale: widget.interactionScale,
+        stretch: 0.0,
+        resistance: 0.08,
+        child: Listener(
+          // Raw pointer events fire BEFORE gesture recognizers and never compete
+          // in the gesture arena, so _isDown is always set on the very first event.
+          onPointerDown: (_) {
+            setState(() => _isDown = true);
+          },
+          // On finger/button lift, clear _isDown if not mid-drag.
+          // Listener fires regardless of which gesture recognizer won the arena.
+          onPointerUp: (_) {
+            if (!_isDragging) {
+              setState(() => _isDown = false);
             }
-          } else {
-            // Not dragging (e.g. same-tab click): reset _xAlign to tab center
-            // so the indicator sits exactly on the tab, not at the raw click
-            // position that _onDragDown snapped to.
-            setState(() => _xAlign = _computeXAlignmentForTab(widget.tabIndex));
-            // _isDown intentionally NOT cleared — Listener.onPointerUp owns that.
-          }
-        },
-        onTapDown: _onBarTapDown, // DX1: makes jelly visible on desktop taps
-        child: VelocitySpringBuilder(
-          value: _xAlign,
-          springWhenActive: GlassSpring.interactive(),
-          springWhenReleased: GlassSpring.snappy(
-            duration: const Duration(milliseconds: 350),
-          ),
-          active: _isDragging,
-          builder: (context, value, velocity, child) {
-            final alignment = Alignment(value, 0);
-
-            return SpringBuilder(
-              spring: GlassSpring.snappy(
-                duration: const Duration(milliseconds: 300),
-              ),
-              // Keep thickness active while:
-              //  - _isDown (tap pressed, 420 ms window for spring travel), OR
-              //  - the spring still has meaningful separation from target.
-              // Threshold 0.05 (was 0.10) catches the full deceleration tail.
-              value: widget.visible &&
-                      (_isDown || (alignment.x - targetAlignment).abs() > 0.05)
-                  ? 1.0
-                  : 0.0,
-              builder: (context, thickness, child) {
-                // Lazy evaluation optimization: skip expensive calculations when hidden
-                if (thickness < 0.01 &&
-                    !widget.visible &&
-                    widget.maskingQuality == MaskingQuality.high) {
-                  // Fast path: indicator is hidden, render simple layout
-                  return Container(
-                    height: widget.barHeight,
-                    decoration: ShapeDecoration(
-                      shape: _barShape,
-                    ),
-                    child: AdaptiveGlass.grouped(
-                      quality: widget.quality,
-                      shape: _barShape,
-                      child: Container(
-                        padding: widget.tabPadding,
-                        child: widget.childUnselected,
-                      ),
-                    ),
-                  );
-                }
-
-                // Calculate jelly transform for the clipper (only when needed)
-                final jellyTransform =
-                    DraggableIndicatorPhysics.buildJellyTransform(
-                  velocity: Offset(velocity, 0),
-                  maxDistortion: 0.8,
-                  velocityScale: 10,
+          },
+          onPointerCancel: (_) {
+            if (!_isDragging) {
+              setState(() => _isDown = false);
+            }
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragDown: _onDragDown,
+            onHorizontalDragUpdate: _onDragUpdate,
+            onHorizontalDragEnd: _onDragEnd,
+            // On cancel (e.g. parent scroll steals the gesture or pointer goes
+            // off-screen), _isDown is cleared by the Listener when pointer lifts.
+            // Only snap _xAlign — never set _isDown from here.
+            onHorizontalDragCancel: () {
+              if (_isDragging) {
+                // Mid-drag cancel: snap to nearest tab from current position.
+                final currentRelativeX = (_xAlign + 1) / 2;
+                final tabWidth = 1.0 / widget.tabCount;
+                final targetTabIndex = _computeTargetTab(
+                  currentRelativeX: currentRelativeX,
+                  velocityX: 0,
+                  tabWidth: tabWidth,
                 );
-
-                // Switch rendering mode based on masking quality
-                switch (widget.maskingQuality) {
-                  case MaskingQuality.off:
-                    return _buildSimpleMode(
-                      alignment: alignment,
-                      thickness: thickness,
-                      velocity: velocity,
-                      backgroundRadius: backgroundRadius,
-                      glassRadius: glassRadius,
-                      indicatorColor: indicatorColor,
-                    );
-
-                  case MaskingQuality.high:
-                    return _buildHighQualityMode(
-                      alignment: alignment,
-                      thickness: thickness,
-                      velocity: velocity,
-                      jellyTransform: jellyTransform,
-                      backgroundRadius: backgroundRadius,
-                      glassRadius: glassRadius,
-                      indicatorColor: indicatorColor,
-                    );
+                setState(() {
+                  _isDragging = false;
+                  _isDown = false;
+                  _xAlign = _computeXAlignmentForTab(targetTabIndex);
+                });
+                if (targetTabIndex != widget.tabIndex) {
+                  widget.onTabChanged(targetTabIndex);
                 }
-              },
-            ); // SpringBuilder
-          }, // VelocitySpringBuilder builder
-        ), // VelocitySpringBuilder
-      ), // GestureDetector
-    ); // Listener
+              } else {
+                // Not dragging (e.g. same-tab click): reset _xAlign to tab center
+                // so the indicator sits exactly on the tab, not at the raw click
+                // position that _onDragDown snapped to.
+                setState(
+                    () => _xAlign = _computeXAlignmentForTab(widget.tabIndex));
+                // _isDown intentionally NOT cleared — Listener.onPointerUp owns that.
+              }
+            },
+            onTapDown:
+                _onBarTapDown, // DX1: makes jelly visible on desktop taps
+            child: VelocitySpringBuilder(
+              value: _xAlign,
+              springWhenActive: GlassSpring.interactive(),
+              springWhenReleased: GlassSpring.snappy(
+                duration: const Duration(milliseconds: 350),
+              ),
+              active: _isDragging,
+              builder: (context, value, velocity, child) {
+                final alignment = Alignment(value, 0);
+
+                return SpringBuilder(
+                  spring: GlassSpring.snappy(
+                    duration: const Duration(milliseconds: 300),
+                  ),
+                  // Keep thickness active while:
+                  //  - _isDown (tap pressed, 420 ms window for spring travel), OR
+                  //  - the spring still has meaningful separation from target.
+                  // Threshold 0.05 (was 0.10) catches the full deceleration tail.
+                  value: widget.visible &&
+                          (_isDown ||
+                              (alignment.x - targetAlignment).abs() > 0.05)
+                      ? 1.0
+                      : 0.0,
+                  builder: (context, thickness, child) {
+                    // Lazy evaluation optimization: skip expensive calculations when hidden
+                    if (thickness < 0.01 &&
+                        !widget.visible &&
+                        widget.maskingQuality == MaskingQuality.high) {
+                      // Fast path: indicator is hidden, render simple layout
+                      return Container(
+                        height: widget.barHeight,
+                        decoration: ShapeDecoration(
+                          shape: _barShape,
+                        ),
+                        child: AdaptiveGlass.grouped(
+                          quality: widget.quality,
+                          shape: _barShape,
+                          child: Container(
+                            padding: widget.tabPadding,
+                            child: widget.childUnselected,
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Calculate jelly transform for the clipper (only when needed)
+                    final jellyTransform =
+                        DraggableIndicatorPhysics.buildJellyTransform(
+                      velocity: Offset(velocity, 0),
+                      maxDistortion: 0.8,
+                      velocityScale: 10,
+                    );
+
+                    // Switch rendering mode based on masking quality
+                    switch (widget.maskingQuality) {
+                      case MaskingQuality.off:
+                        return _buildSimpleMode(
+                          alignment: alignment,
+                          thickness: thickness,
+                          velocity: velocity,
+                          backgroundRadius: backgroundRadius,
+                          glassRadius: glassRadius,
+                          indicatorColor: indicatorColor,
+                        );
+
+                      case MaskingQuality.high:
+                        return _buildHighQualityMode(
+                          alignment: alignment,
+                          thickness: thickness,
+                          velocity: velocity,
+                          jellyTransform: jellyTransform,
+                          backgroundRadius: backgroundRadius,
+                          glassRadius: glassRadius,
+                          indicatorColor: indicatorColor,
+                        );
+                    }
+                  },
+                ); // SpringBuilder
+              }, // VelocitySpringBuilder builder
+            ), // VelocitySpringBuilder
+          ), // GestureDetector
+        )); // Listener
+  }
+
+  /// Wraps [child] in a [GlassGlow] sensor if the resolved glow color is
+  /// non-transparent. When [GlassInteractionBehavior.none] or [scaleOnly] is
+  /// active, the parent passes [Colors.transparent] — we skip the wrapper
+  /// entirely to avoid three extra widget/render-object allocations per frame.
+  Widget _wrapWithGlow({required Widget child}) {
+    final effectiveColor =
+        widget.interactionGlowColor ?? const Color(0x1FFFFFFF);
+    if (effectiveColor.a == 0) return child;
+    return GlassGlow(
+      clipper: ShapeBorderClipper(shape: _barShape),
+      glowColor: effectiveColor,
+      glowRadius: widget.interactionGlowRadius,
+      child: child,
+    );
   }
 
   /// Builds simple rendering mode without masking (MaskingQuality.off).
@@ -611,45 +645,47 @@ class TabIndicatorState extends State<TabIndicator> {
   }) {
     return SizedBox(
       height: widget.barHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Glass background (Cached to prevent blur re-rasterization on pill drag)
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: AdaptiveGlass.grouped(
-                quality: widget.quality,
-                shape: _barShape,
-                child: const SizedBox.expand(),
+      child: _wrapWithGlow(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Glass background (Cached to prevent blur re-rasterization on pill drag)
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: AdaptiveGlass.grouped(
+                  quality: widget.quality,
+                  shape: _barShape,
+                  child: const SizedBox.expand(),
+                ),
               ),
             ),
-          ),
 
-          // Unselected icons above background
-          Positioned.fill(
-            child: Container(
-              padding: widget.tabPadding,
-              child: widget.childUnselected,
+            // Unselected icons above background
+            Positioned.fill(
+              child: Container(
+                padding: widget.tabPadding,
+                child: widget.childUnselected,
+              ),
             ),
-          ),
 
-          // Glass indicator
-          if (widget.visible && thickness > 0.05)
-            AnimatedGlassIndicator(
-              velocity: velocity,
-              itemCount: widget.tabCount,
-              alignment: alignment,
-              thickness: thickness,
-              quality: widget.quality,
-              indicatorColor: indicatorColor,
-              isBackgroundIndicator: false,
-              borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
-              padding: const EdgeInsets.all(4),
-              expansion: 14,
-              glassSettings: widget.indicatorSettings,
-              backgroundKey: widget.backgroundKey,
-            ),
-        ],
+            // Glass indicator
+            if (widget.visible && thickness > 0.05)
+              AnimatedGlassIndicator(
+                velocity: velocity,
+                itemCount: widget.tabCount,
+                alignment: alignment,
+                thickness: thickness,
+                quality: widget.quality,
+                indicatorColor: indicatorColor,
+                isBackgroundIndicator: false,
+                borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
+                padding: const EdgeInsets.all(4),
+                expansion: 14,
+                glassSettings: widget.indicatorSettings,
+                backgroundKey: widget.backgroundKey,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -668,83 +704,64 @@ class TabIndicatorState extends State<TabIndicator> {
   }) {
     return SizedBox(
       height: widget.barHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // 1. Glass Background Layer with ALL content
-          // This provides the glass visual/refraction for everything
-          // 1. Static Blur Background (Cached)
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: AdaptiveGlass.grouped(
-                quality: widget.quality,
-                shape: _barShape,
-                child: const SizedBox.expand(),
+      child: _wrapWithGlow(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // 1. Glass Background Layer with ALL content
+            // This provides the glass visual/refraction for everything
+            // 1. Static Blur Background (Cached)
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: AdaptiveGlass.grouped(
+                  quality: widget.quality,
+                  shape: _barShape,
+                  child: const SizedBox.expand(),
+                ),
               ),
             ),
-          ),
 
-          // 2. Unselected Content Layer (inverse clipped)
-          Positioned.fill(
-            child: ClipPath(
-              clipper: JellyClipper(
-                itemCount: widget.tabCount,
-                alignment: alignment,
-                thickness: thickness,
-                expansion: 14,
-                transform: jellyTransform,
-                borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
-                inverse: true,
-              ),
-              child: Container(
-                padding: widget.tabPadding,
-                height: widget.barHeight,
-                child: widget.childUnselected,
+            // 2. Unselected Content Layer (inverse clipped)
+            Positioned.fill(
+              child: ClipPath(
+                clipper: JellyClipper(
+                  itemCount: widget.tabCount,
+                  alignment: alignment,
+                  thickness: thickness,
+                  expansion: 14,
+                  transform: jellyTransform,
+                  borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
+                  inverse: true,
+                ),
+                child: Container(
+                  padding: widget.tabPadding,
+                  height: widget.barHeight,
+                  child: widget.childUnselected,
+                ),
               ),
             ),
-          ),
 
-          // 4. Moving Glass Indicator Layer (provides color highlight)
-          AnimatedGlassIndicator(
-            velocity: velocity,
-            itemCount: widget.tabCount,
-            alignment: alignment,
-            thickness: thickness,
-            quality: widget.quality,
-            indicatorColor: indicatorColor,
-            isBackgroundIndicator: false,
-            borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
-            padding: const EdgeInsets.all(4),
-            expansion: 14,
-            glassSettings: widget.indicatorSettings,
-            backgroundKey: widget.backgroundKey,
-          ),
+            // 4. Moving Glass Indicator Layer (provides color highlight)
+            AnimatedGlassIndicator(
+              velocity: velocity,
+              itemCount: widget.tabCount,
+              alignment: alignment,
+              thickness: thickness,
+              quality: widget.quality,
+              indicatorColor: indicatorColor,
+              isBackgroundIndicator: false,
+              borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
+              padding: const EdgeInsets.all(4),
+              expansion: 14,
+              glassSettings: widget.indicatorSettings,
+              backgroundKey: widget.backgroundKey,
+            ),
 
-          // 5. Selected Content ON TOP (ensures icons/text visible above indicator)
-          // Always show to prevent jumping when animation completes
-          Positioned.fill(
-            child: widget.quality == GlassQuality.minimal
-                ? IgnorePointer(
-                    child: ClipPath(
-                      clipper: JellyClipper(
-                        itemCount: widget.tabCount,
-                        alignment: alignment,
-                        thickness: thickness,
-                        expansion: 14,
-                        transform: jellyTransform,
-                        borderRadius:
-                            thickness < 1 ? backgroundRadius : glassRadius,
-                      ),
-                      child: Container(
-                        padding: widget.tabPadding,
-                        height: widget.barHeight,
-                        child: widget.selectedTabBuilder(
-                            context, thickness, alignment),
-                      ),
-                    ),
-                  )
-                : RepaintBoundary(
-                    child: IgnorePointer(
+            // 5. Selected Content ON TOP (ensures icons/text visible above indicator)
+            // Always show to prevent jumping when animation completes
+            Positioned.fill(
+              child: widget.quality == GlassQuality.minimal
+                  ? IgnorePointer(
                       child: ClipPath(
                         clipper: JellyClipper(
                           itemCount: widget.tabCount,
@@ -762,10 +779,31 @@ class TabIndicatorState extends State<TabIndicator> {
                               context, thickness, alignment),
                         ),
                       ),
+                    )
+                  : RepaintBoundary(
+                      child: IgnorePointer(
+                        child: ClipPath(
+                          clipper: JellyClipper(
+                            itemCount: widget.tabCount,
+                            alignment: alignment,
+                            thickness: thickness,
+                            expansion: 14,
+                            transform: jellyTransform,
+                            borderRadius:
+                                thickness < 1 ? backgroundRadius : glassRadius,
+                          ),
+                          child: Container(
+                            padding: widget.tabPadding,
+                            height: widget.barHeight,
+                            child: widget.selectedTabBuilder(
+                                context, thickness, alignment),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -174,9 +174,7 @@ class LiquidGlass extends StatelessWidget {
         clipBehavior: clipBehavior,
         child: Opacity(
           opacity: settings.visibility.clamp(0, 1),
-          child: GlassGlowLayer(
-            child: child,
-          ),
+          child: child,
         ),
       ),
     );

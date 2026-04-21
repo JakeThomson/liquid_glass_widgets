@@ -18,6 +18,7 @@ import '../interactive/glass_button.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/inherited_liquid_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
+import '../../src/types/glass_interaction_behavior.dart';
 import 'shared/bottom_bar_internal.dart';
 
 /// A glass morphism bottom navigation bar following Apple's design patterns.
@@ -190,6 +191,10 @@ class GlassBottomBar extends StatefulWidget {
     this.innerBlur = 0.0,
     this.maskingQuality = MaskingQuality.high,
     this.backgroundKey,
+    this.interactionGlowColor,
+    this.interactionGlowRadius = 1.5,
+    this.interactionBehavior = GlassInteractionBehavior.full,
+    this.pressScale = 1.04,
   })  : assert(tabs.length > 0, 'GlassBottomBar requires at least one tab'),
         assert(
           selectedIndex >= 0 && selectedIndex < tabs.length,
@@ -236,6 +241,34 @@ class GlassBottomBar extends StatefulWidget {
 
   /// Optional background key for Skia/Web refraction.
   final GlobalKey? backgroundKey;
+
+  /// The color of the directional glow effect when interacting with the bar.
+  ///
+  /// Only active when [interactionBehavior] includes glow
+  /// (i.e. [GlassInteractionBehavior.glowOnly] or [GlassInteractionBehavior.full]).
+  ///
+  /// Defaults to a subtle translucent white (`0x1FFFFFFF`) when null.
+  final Color? interactionGlowColor;
+
+  /// The radius spread of the directional glow effect when interacting with the bar.
+  ///
+  /// Defaults to 1.5.
+  final double interactionGlowRadius;
+
+  /// Controls which physical interaction effects are active when the user
+  /// presses the bar.
+  ///
+  /// Defaults to [GlassInteractionBehavior.full] — directional glow + spring scale,
+  /// matching native iOS 26 Apple News / Safari behaviour.
+  final GlassInteractionBehavior interactionBehavior;
+
+  /// Peak scale factor applied to the bar at maximum press depth.
+  ///
+  /// Only active when [interactionBehavior] includes scale
+  /// (i.e. [GlassInteractionBehavior.scaleOnly] or [GlassInteractionBehavior.full]).
+  ///
+  /// Defaults to 1.04 (4% growth — matches iOS 26 Apple News pill).
+  final double pressScale;
 
   // ===========================================================================
   // Tab Configuration
@@ -493,6 +526,13 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                 tabPadding: widget.tabPadding,
                 backgroundKey: widget.backgroundKey,
                 maskingQuality: widget.maskingQuality,
+                interactionGlowColor: widget.interactionBehavior.hasGlow
+                    ? widget.interactionGlowColor
+                    : Colors.transparent,
+                interactionGlowRadius: widget.interactionGlowRadius,
+                interactionScale: widget.interactionBehavior.hasScale
+                    ? widget.pressScale
+                    : 1.0,
                 childUnselected: Row(
                   children: [
                     for (var i = 0; i < widget.tabs.length; i++)

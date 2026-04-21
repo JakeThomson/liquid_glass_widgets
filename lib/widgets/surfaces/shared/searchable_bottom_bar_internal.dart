@@ -109,6 +109,10 @@ class SearchableTabIndicator extends StatefulWidget {
     this.indicatorSettings,
     this.backgroundKey,
     this.collapsedLogoBuilder,
+    this.interactionGlowColor,
+    this.interactionGlowRadius = 1.5,
+    required this.enableBackgroundAnimation,
+    required this.backgroundPressScale,
     super.key,
   });
 
@@ -131,6 +135,10 @@ class SearchableTabIndicator extends StatefulWidget {
   final bool isSearchActive;
   final VoidCallback onDismissSearch;
   final WidgetBuilder? collapsedLogoBuilder;
+  final Color? interactionGlowColor;
+  final double interactionGlowRadius;
+  final bool enableBackgroundAnimation;
+  final double backgroundPressScale;
 
   @override
   State<SearchableTabIndicator> createState() => SearchableTabIndicatorState();
@@ -234,6 +242,11 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
         height: widget.barHeight,
         quality: widget.quality,
         shape: _barShape,
+        // When interactionBehavior suppresses glow, the parent passes
+        // Colors.transparent (non-null). The ?? only fires when the caller
+        // sets no explicit glow color and behavior allows glow.
+        glowColor: widget.interactionGlowColor ?? const Color(0x33FFFFFF),
+        glowRadius: widget.interactionGlowRadius,
         // Logo or empty — shown inside the glass button body.
         icon: widget.collapsedLogoBuilder != null
             ? AnimatedSwitcher(
@@ -258,95 +271,118 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
     final backgroundRadius = widget.barBorderRadius * 2;
     final glassRadius = widget.barBorderRadius;
 
-    return Listener(
-      onPointerDown: (_) {
-        setState(() => _isDown = true);
-      },
-      onPointerUp: (_) {
-        if (!_isDragging) {
-          setState(() => _isDown = false);
-        }
-      },
-      onPointerCancel: (_) {
-        if (!_isDragging) {
-          setState(() => _isDown = false);
-        }
-      },
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onHorizontalDragDown: _onDragDown,
-        onHorizontalDragUpdate: _onDragUpdate,
-        onHorizontalDragEnd: _onDragEnd,
-        onHorizontalDragCancel: _onDragCancel,
-        onTapDown: _onBarTapDown,
-        child: VelocitySpringBuilder(
-          value: _xAlign,
-          springWhenActive: GlassSpring.interactive(),
-          springWhenReleased: GlassSpring.snappy(
-            duration: const Duration(milliseconds: 350),
-          ),
-          active: _isDragging,
-          builder: (context, value, velocity, child) {
-            final alignment = Alignment(value, 0);
-            return SpringBuilder(
-              spring: GlassSpring.snappy(
-                duration: const Duration(milliseconds: 300),
-              ),
-              value: widget.visible &&
-                      (_isDown || (alignment.x - targetAlignment).abs() > 0.05)
-                  ? 1.0
-                  : 0.0,
-              builder: (context, thickness, _) {
-                if (thickness < 0.01 &&
-                    !widget.visible &&
-                    widget.maskingQuality == MaskingQuality.high) {
-                  return Container(
-                    height: widget.barHeight,
-                    decoration: ShapeDecoration(shape: _barShape),
-                    child: AdaptiveGlass.grouped(
-                      quality: widget.quality,
-                      shape: _barShape,
-                      child: Container(
-                        padding: widget.tabPadding,
-                        child: widget.childUnselected,
-                      ),
-                    ),
-                  );
-                }
-
-                final jellyTransform =
-                    DraggableIndicatorPhysics.buildJellyTransform(
-                  velocity: Offset(velocity, 0),
-                  maxDistortion: 0.8,
-                  velocityScale: 10,
-                );
-
-                switch (widget.maskingQuality) {
-                  case MaskingQuality.off:
-                    return _buildSimple(
-                      alignment: alignment,
-                      thickness: thickness,
-                      velocity: velocity,
-                      backgroundRadius: backgroundRadius,
-                      glassRadius: glassRadius,
-                      indicatorColor: indicatorColor,
-                    );
-                  case MaskingQuality.high:
-                    return _buildHighQuality(
-                      alignment: alignment,
-                      thickness: thickness,
-                      velocity: velocity,
-                      jellyTransform: jellyTransform,
-                      backgroundRadius: backgroundRadius,
-                      glassRadius: glassRadius,
-                      indicatorColor: indicatorColor,
-                    );
-                }
-              },
-            );
+    return LiquidStretch(
+        interactionScale: widget.enableBackgroundAnimation
+            ? widget.backgroundPressScale
+            : 1.0,
+        stretch: 0.0,
+        resistance: 0.08,
+        child: Listener(
+          onPointerDown: (_) {
+            setState(() => _isDown = true);
           },
-        ),
-      ),
+          onPointerUp: (_) {
+            if (!_isDragging) {
+              setState(() => _isDown = false);
+            }
+          },
+          onPointerCancel: (_) {
+            if (!_isDragging) {
+              setState(() => _isDown = false);
+            }
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragDown: _onDragDown,
+            onHorizontalDragUpdate: _onDragUpdate,
+            onHorizontalDragEnd: _onDragEnd,
+            onHorizontalDragCancel: _onDragCancel,
+            onTapDown: _onBarTapDown,
+            child: VelocitySpringBuilder(
+              value: _xAlign,
+              springWhenActive: GlassSpring.interactive(),
+              springWhenReleased: GlassSpring.snappy(
+                duration: const Duration(milliseconds: 350),
+              ),
+              active: _isDragging,
+              builder: (context, value, velocity, child) {
+                final alignment = Alignment(value, 0);
+                return SpringBuilder(
+                  spring: GlassSpring.snappy(
+                    duration: const Duration(milliseconds: 300),
+                  ),
+                  value: widget.visible &&
+                          (_isDown ||
+                              (alignment.x - targetAlignment).abs() > 0.05)
+                      ? 1.0
+                      : 0.0,
+                  builder: (context, thickness, _) {
+                    if (thickness < 0.01 &&
+                        !widget.visible &&
+                        widget.maskingQuality == MaskingQuality.high) {
+                      return Container(
+                        height: widget.barHeight,
+                        decoration: ShapeDecoration(shape: _barShape),
+                        child: AdaptiveGlass.grouped(
+                          quality: widget.quality,
+                          shape: _barShape,
+                          child: Container(
+                            padding: widget.tabPadding,
+                            child: widget.childUnselected,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final jellyTransform =
+                        DraggableIndicatorPhysics.buildJellyTransform(
+                      velocity: Offset(velocity, 0),
+                      maxDistortion: 0.8,
+                      velocityScale: 10,
+                    );
+
+                    switch (widget.maskingQuality) {
+                      case MaskingQuality.off:
+                        return _buildSimple(
+                          alignment: alignment,
+                          thickness: thickness,
+                          velocity: velocity,
+                          backgroundRadius: backgroundRadius,
+                          glassRadius: glassRadius,
+                          indicatorColor: indicatorColor,
+                        );
+                      case MaskingQuality.high:
+                        return _buildHighQuality(
+                          alignment: alignment,
+                          thickness: thickness,
+                          velocity: velocity,
+                          jellyTransform: jellyTransform,
+                          backgroundRadius: backgroundRadius,
+                          glassRadius: glassRadius,
+                          indicatorColor: indicatorColor,
+                        );
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+        ));
+  }
+
+  /// Wraps [child] in [GlassGlow] only when the resolved glow color is
+  /// non-transparent. Skips the wrapper entirely for
+  /// [GlassInteractionBehavior.none] and [scaleOnly], avoiding three extra
+  /// widget/render-object allocations per frame.
+  Widget _wrapWithGlow({required Widget child}) {
+    final effectiveColor =
+        widget.interactionGlowColor ?? const Color(0x1FFFFFFF);
+    if (effectiveColor.a == 0) return child;
+    return GlassGlow(
+      clipper: ShapeBorderClipper(shape: _barShape),
+      glowColor: effectiveColor,
+      glowRadius: widget.interactionGlowRadius,
+      child: child,
     );
   }
 
@@ -359,46 +395,47 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
     required Color indicatorColor,
   }) {
     return SizedBox(
-      height: widget.barHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Glass background (Cached to prevent blur re-rasterization on pill drag)
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: AdaptiveGlass.grouped(
-                quality: widget.quality,
-                shape: _barShape,
-                child: const SizedBox.expand(),
+        height: widget.barHeight,
+        child: _wrapWithGlow(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Glass background (Cached to prevent blur re-rasterization on pill drag)
+              Positioned.fill(
+                child: RepaintBoundary(
+                  child: AdaptiveGlass.grouped(
+                    quality: widget.quality,
+                    shape: _barShape,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          // Unselected icons above background
-          Positioned.fill(
-            child: Container(
-              padding: widget.tabPadding,
-              child: widget.childUnselected,
-            ),
+              // Unselected icons above background
+              Positioned.fill(
+                child: Container(
+                  padding: widget.tabPadding,
+                  child: widget.childUnselected,
+                ),
+              ),
+              if (widget.visible && thickness > 0.05)
+                AnimatedGlassIndicator(
+                  velocity: velocity,
+                  itemCount: widget.tabCount,
+                  alignment: alignment,
+                  thickness: thickness,
+                  quality: widget.quality,
+                  indicatorColor: indicatorColor,
+                  isBackgroundIndicator: false,
+                  borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
+                  padding: const EdgeInsets.all(4),
+                  expansion: 14,
+                  glassSettings: widget.indicatorSettings,
+                  backgroundKey: widget.backgroundKey,
+                ),
+            ],
           ),
-          if (widget.visible && thickness > 0.05)
-            AnimatedGlassIndicator(
-              velocity: velocity,
-              itemCount: widget.tabCount,
-              alignment: alignment,
-              thickness: thickness,
-              quality: widget.quality,
-              indicatorColor: indicatorColor,
-              isBackgroundIndicator: false,
-              borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
-              padding: const EdgeInsets.all(4),
-              expansion: 14,
-              glassSettings: widget.indicatorSettings,
-              backgroundKey: widget.backgroundKey,
-            ),
-        ],
-      ),
-    );
+        ));
   }
 
   Widget _buildHighQuality({
@@ -412,98 +449,99 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
   }) {
     final effRadius = thickness < 1 ? backgroundRadius : glassRadius;
     return SizedBox(
-      height: widget.barHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // 1. Static Blur Background (Cached)
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: AdaptiveGlass.grouped(
-                quality: widget.quality,
-                shape: _barShape,
-                child: const SizedBox.expand(),
+        height: widget.barHeight,
+        child: _wrapWithGlow(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // 1. Static Blur Background (Cached)
+              Positioned.fill(
+                child: RepaintBoundary(
+                  child: AdaptiveGlass.grouped(
+                    quality: widget.quality,
+                    shape: _barShape,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          // 2. Unselected Content Layer (inverse clipped)
-          Positioned.fill(
-            child: ClipPath(
-              clipper: JellyClipper(
+              // 2. Unselected Content Layer (inverse clipped)
+              Positioned.fill(
+                child: ClipPath(
+                  clipper: JellyClipper(
+                    itemCount: widget.tabCount,
+                    alignment: alignment,
+                    thickness: thickness,
+                    expansion: 14,
+                    transform: jellyTransform,
+                    borderRadius: effRadius,
+                    inverse: true,
+                  ),
+                  child: Container(
+                    padding: widget.tabPadding,
+                    height: widget.barHeight,
+                    child: widget.childUnselected,
+                  ),
+                ),
+              ),
+              AnimatedGlassIndicator(
+                velocity: velocity,
                 itemCount: widget.tabCount,
                 alignment: alignment,
                 thickness: thickness,
-                expansion: 14,
-                transform: jellyTransform,
+                quality: widget.quality,
+                indicatorColor: indicatorColor,
+                isBackgroundIndicator: false,
                 borderRadius: effRadius,
-                inverse: true,
+                padding: const EdgeInsets.all(4),
+                expansion: 14,
+                glassSettings: widget.indicatorSettings,
+                backgroundKey: widget.backgroundKey,
               ),
-              child: Container(
-                padding: widget.tabPadding,
-                height: widget.barHeight,
-                child: widget.childUnselected,
-              ),
-            ),
-          ),
-          AnimatedGlassIndicator(
-            velocity: velocity,
-            itemCount: widget.tabCount,
-            alignment: alignment,
-            thickness: thickness,
-            quality: widget.quality,
-            indicatorColor: indicatorColor,
-            isBackgroundIndicator: false,
-            borderRadius: effRadius,
-            padding: const EdgeInsets.all(4),
-            expansion: 14,
-            glassSettings: widget.indicatorSettings,
-            backgroundKey: widget.backgroundKey,
-          ),
-          Positioned.fill(
-            child: widget.quality == GlassQuality.minimal
-                ? IgnorePointer(
-                    child: ClipPath(
-                      clipper: JellyClipper(
-                        itemCount: widget.tabCount,
-                        alignment: alignment,
-                        thickness: thickness,
-                        expansion: 14,
-                        transform: jellyTransform,
-                        borderRadius: effRadius,
-                      ),
-                      child: Container(
-                        padding: widget.tabPadding,
-                        height: widget.barHeight,
-                        child: widget.selectedTabBuilder(
-                            context, thickness, alignment),
-                      ),
-                    ),
-                  )
-                : RepaintBoundary(
-                    child: IgnorePointer(
-                      child: ClipPath(
-                        clipper: JellyClipper(
-                          itemCount: widget.tabCount,
-                          alignment: alignment,
-                          thickness: thickness,
-                          expansion: 14,
-                          transform: jellyTransform,
-                          borderRadius: effRadius,
+              Positioned.fill(
+                child: widget.quality == GlassQuality.minimal
+                    ? IgnorePointer(
+                        child: ClipPath(
+                          clipper: JellyClipper(
+                            itemCount: widget.tabCount,
+                            alignment: alignment,
+                            thickness: thickness,
+                            expansion: 14,
+                            transform: jellyTransform,
+                            borderRadius: effRadius,
+                          ),
+                          child: Container(
+                            padding: widget.tabPadding,
+                            height: widget.barHeight,
+                            child: widget.selectedTabBuilder(
+                                context, thickness, alignment),
+                          ),
                         ),
-                        child: Container(
-                          padding: widget.tabPadding,
-                          height: widget.barHeight,
-                          child: widget.selectedTabBuilder(
-                              context, thickness, alignment),
+                      )
+                    : RepaintBoundary(
+                        child: IgnorePointer(
+                          child: ClipPath(
+                            clipper: JellyClipper(
+                              itemCount: widget.tabCount,
+                              alignment: alignment,
+                              thickness: thickness,
+                              expansion: 14,
+                              transform: jellyTransform,
+                              borderRadius: effRadius,
+                            ),
+                            child: Container(
+                              padding: widget.tabPadding,
+                              height: widget.barHeight,
+                              child: widget.selectedTabBuilder(
+                                  context, thickness, alignment),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ));
   }
 }
 
@@ -518,9 +556,13 @@ class SearchPill extends StatefulWidget {
   const SearchPill({
     required this.config,
     required this.isActive,
-    required this.barBorderRadius,
     required this.quality,
+    required this.barBorderRadius,
+    required this.enableBackgroundAnimation,
+    required this.backgroundPressScale,
     this.onFocusChanged,
+    this.interactionGlowColor,
+    this.interactionGlowRadius = 1.5,
     super.key,
   });
 
@@ -528,10 +570,18 @@ class SearchPill extends StatefulWidget {
   final bool isActive;
   final double barBorderRadius;
   final GlassQuality quality;
+  final bool enableBackgroundAnimation;
+  final double backgroundPressScale;
 
   /// Called when the search field gains or loses focus.
   /// Used by the parent bar to drive the dismiss pill visibility.
   final ValueChanged<bool>? onFocusChanged;
+
+  /// The color of the directional glow effect when interacting with the pill.
+  final Color? interactionGlowColor;
+
+  /// The radius spread of the directional glow effect when interacting with the pill.
+  final double interactionGlowRadius;
 
   @override
   State<SearchPill> createState() => SearchPillState();
@@ -623,6 +673,21 @@ class SearchPillState extends State<SearchPill> {
     }
   }
 
+  /// Wraps [child] in [GlassGlow] only when the resolved glow color is
+  /// non-transparent. Skips the wrapper entirely for
+  /// [GlassInteractionBehavior.none] and [scaleOnly], avoiding three extra
+  /// widget/render-object allocations per frame.
+  Widget _wrapWithGlow({required Widget child}) {
+    final effectiveColor =
+        widget.interactionGlowColor ?? const Color(0x1FFFFFFF);
+    if (effectiveColor.a == 0) return child;
+    return GlassGlow(
+      glowColor: effectiveColor,
+      glowRadius: widget.interactionGlowRadius,
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final iconColor = widget.config.searchIconColor ?? Colors.white60;
@@ -676,15 +741,30 @@ class SearchPillState extends State<SearchPill> {
         // the search field instead of passing through to background content.
         // Without this, AdaptiveGlass.grouped defers hit-testing to its
         // children, leaving the padding area as a transparent pass-through.
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _focusNode.requestFocus,
-          child: AdaptiveGlass.grouped(
-            shape: shape,
-            quality: widget.quality,
-            child: _buildExpanded(iconColor, micColor),
-          ),
-        );
+        //
+        // iOS 26: wrapped in GlassGlowLayer so GlassGlow inside can report
+        // touch position and paint a soft directional highlight on the surface.
+        // iOS 26: directional glow on press (GlassGlowLayer + GlassGlow).
+        // No scale animation here — the pill is spring-positioned alongside
+        // the dismiss button so any visual overflow causes overlap.
+        return LiquidStretch(
+          interactionScale: widget.enableBackgroundAnimation
+              ? widget.backgroundPressScale
+              : 1.0,
+          stretch: 0.0,
+          resistance: 0.08,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _focusNode.requestFocus,
+            child: AdaptiveGlass.grouped(
+              shape: shape,
+              quality: widget.quality,
+              child: _wrapWithGlow(
+                child: _buildExpanded(iconColor, micColor),
+              ),
+            ), // AdaptiveGlass
+          ), // GestureDetector
+        ); // LiquidStretch
       },
     );
   }

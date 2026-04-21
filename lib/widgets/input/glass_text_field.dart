@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
-
+import '../../src/types/glass_interaction_behavior.dart';
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
@@ -92,6 +92,12 @@ class GlassTextField extends StatefulWidget {
     this.settings,
     this.useOwnLayer = false,
     this.quality,
+    // ── iOS 26 interaction ────────────────────────────────────────────────
+    this.interactionBehavior = GlassInteractionBehavior.full,
+    this.pressScale = 1.03,
+    this.glowColor,
+    this.glowRadius = 1.5,
+    this.onTapOutside,
   });
 
   // ===========================================================================
@@ -158,6 +164,11 @@ class GlassTextField extends StatefulWidget {
   /// Input formatters for the text field.
   final List<TextInputFormatter>? inputFormatters;
 
+  /// Called when the user taps outside the text field.
+  ///
+  /// Defaults to unfocusing the field, which dismisses the keyboard.
+  final TapRegionCallback? onTapOutside;
+
   // ===========================================================================
   // Style Properties
   // ===========================================================================
@@ -201,21 +212,117 @@ class GlassTextField extends StatefulWidget {
   /// Use [GlassQuality.premium] for shader-based glass in static layouts only.
   final GlassQuality? quality;
 
+  // ── iOS 26 interaction ────────────────────────────────────────────────────
+
+  /// Controls which press-interaction effects are active on this field.
+  ///
+  /// Mirrors the API on [GlassBottomBar] and [GlassSearchableBottomBar] for
+  /// a consistent developer experience across all glass surfaces:
+  ///
+  /// | Value | Glow | Scale-on-focus |
+  /// |---|---|---|
+  /// | `none` | ✗ | ✗ |
+  /// | `glowOnly` | ✓ | ✗ |
+  /// | `scaleOnly` | ✗ | ✓ |
+  /// | `full` *(default)* | ✓ | ✓ |
+  ///
+  /// **Glow** — the iOS 26-style directional spotlight that tracks the touch
+  /// position across the glass surface.
+  ///
+  /// **Scale** — the subtle press-bounce animation (`pressScale`) that fires
+  /// when the user presses down on the field, then springs back on release,
+  /// matching iOS 26 touch feedback.
+  ///
+  /// Defaults to [GlassInteractionBehavior.full], preserving the existing
+  /// visual behaviour.
+  final GlassInteractionBehavior interactionBehavior;
+
+  /// Scale factor applied when the field is pressed.
+  ///
+  /// Only active when [interactionBehavior] includes scale
+  /// ([GlassInteractionBehavior.scaleOnly] or [GlassInteractionBehavior.full]).
+  ///
+  /// A value of `1.03` means the field grows 3% when pressed.
+  /// Defaults to `1.03`.
+  final double pressScale;
+
+  /// Colour of the directional glow.
+  ///
+  /// Only active when [interactionBehavior] includes glow. If null, falls back
+  /// to a soft `Colors.white` at ~12% opacity — visibly lighter than
+  /// [GlassButton]'s `white24` to match the iOS 26 input look.
+  final Color? glowColor;
+
+  /// Spread radius of the directional glow relative to the field's dimensions.
+  ///
+  /// A value of `1.5` means the glow spreads 150% of the field's shorter
+  /// dimension, creating a wide, diffuse ambient highlight across the surface.
+  ///
+  /// Defaults to `1.5`.
+  final double glowRadius;
+
   @override
   State<GlassTextField> createState() => _GlassTextFieldState();
 }
 
 class _GlassTextFieldState extends State<GlassTextField> {
   late FocusNode _focusNode;
+  bool _isFocused = false;
+  bool _isPressed = false;
+
+  // Soft default glow colour — visibly more ambient than GlassButton's white24.
+  static const _defaultGlowColor = Color(0x1FFFFFFF); // white ~12%
+
+  /// Wraps [child] in a [GlassGlow] sensor only when [interactionBehavior]
+  /// includes glow. Skips the widget entirely otherwise — zero allocation cost.
+  Widget _wrapWithGlow(Widget child) {
+    if (!widget.interactionBehavior.hasGlow) return child;
+    return GlassGlow(
+      glowColor: widget.glowColor ?? _defaultGlowColor,
+      glowRadius: widget.glowRadius,
+      child: child,
+    );
+  }
 
   @override
   void initState() {
     super.initState();
     _focusNode = widget.focusNode ?? FocusNode();
+    _isFocused = _focusNode.hasFocus;
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_isFocused != _focusNode.hasFocus) {
+      setState(() => _isFocused = _focusNode.hasFocus);
+    }
+  }
+
+  @override
+  void didUpdateWidget(GlassTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the external focusNode changed, rewire the listener.
+    if (oldWidget.focusNode != widget.focusNode) {
+      _focusNode.removeListener(_onFocusChange);
+      if (widget.focusNode == null) {
+        // We own the node — keep the internal one.
+      } else {
+        // Dispose the old internal node if we owned it.
+        if (oldWidget.focusNode == null) _focusNode.dispose();
+        _focusNode = widget.focusNode!;
+      }
+      _focusNode.addListener(_onFocusChange);
+      _isFocused = _focusNode.hasFocus;
+    }
+    // If disabled, cancel any in-flight press so the spring always returns.
+    if (!widget.enabled && _isPressed) {
+      setState(() => _isPressed = false);
+    }
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
     // Only dispose if we created the focus node
     if (widget.focusNode == null) {
       _focusNode.dispose();
@@ -266,6 +373,8 @@ class _GlassTextFieldState extends State<GlassTextField> {
               autofocus: widget.autofocus,
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
+              onTapOutside: widget.onTapOutside ??
+                  (event) => FocusManager.instance.primaryFocus?.unfocus(),
               inputFormatters: widget.inputFormatters,
               style: widget.textStyle ?? defaultTextStyle,
               decoration: InputDecoration(
@@ -322,7 +431,10 @@ class _GlassTextFieldState extends State<GlassTextField> {
     );
 
     // Apply glass effect
-    final glassWidget = AdaptiveGlass(
+    // iOS 26: wrap in GlassGlow only when interactionBehavior includes glow.
+    // _wrapWithGlow skips the widget entirely when glow is suppressed,
+    // saving 3 widget/render-object allocations — same pattern as GlassBottomBar.
+    Widget glassWidget = AdaptiveGlass(
       shape: widget.shape,
       settings: GlassThemeHelpers.resolveSettings(
         context,
@@ -330,8 +442,29 @@ class _GlassTextFieldState extends State<GlassTextField> {
       ),
       quality: effectiveQuality,
       useOwnLayer: widget.useOwnLayer,
-      child: frostedWell,
+      child: _wrapWithGlow(frostedWell),
     );
+
+    // GlassGlowLayer is now automatically provided by GlassGlow internally.
+
+    // iOS 26: animate scale on press — field squishes/inflates on tap, springs back on release.
+    // Only active when interactionBehavior includes scale.
+    if (widget.interactionBehavior.hasScale) {
+      glassWidget = AnimatedScale(
+        scale: _isPressed ? widget.pressScale : 1.0,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        child: glassWidget,
+      );
+
+      // Wrap with Listener to capture pointer down/up state for the bounce animation
+      glassWidget = Listener(
+        onPointerDown: (_) => setState(() => _isPressed = true),
+        onPointerUp: (_) => setState(() => _isPressed = false),
+        onPointerCancel: (_) => setState(() => _isPressed = false),
+        child: glassWidget,
+      );
+    }
 
     return Opacity(
       opacity: widget.enabled ? 1.0 : 0.5,

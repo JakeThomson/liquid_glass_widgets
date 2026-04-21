@@ -15,6 +15,7 @@ class GlassGlow extends StatelessWidget {
     required this.child,
     this.glowColor = Colors.white24,
     this.glowRadius = 1,
+    this.clipper,
     this.hitTestBehavior = HitTestBehavior.opaque,
     super.key,
   });
@@ -41,15 +42,24 @@ class GlassGlow extends StatelessWidget {
   /// The child that will be painted above the glow effect.
   final Widget child;
 
+  /// The shape to clip the glow to.
+  /// Only clips the additive glow effect, not the child widget.
+  final CustomClipper<Path>? clipper;
+
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      behavior: hitTestBehavior,
-      onPointerDown: (event) => _handlePointer(context, event),
-      onPointerMove: (event) => _handlePointer(context, event),
-      onPointerUp: (event) => _removeTouch(context),
-      onPointerCancel: (event) => _removeTouch(context),
-      child: child,
+    return GlassGlowLayer(
+      clipper: clipper,
+      child: Builder(
+        builder: (innerContext) => Listener(
+          behavior: hitTestBehavior,
+          onPointerDown: (event) => _handlePointer(innerContext, event),
+          onPointerMove: (event) => _handlePointer(innerContext, event),
+          onPointerUp: (event) => _removeTouch(innerContext),
+          onPointerCancel: (event) => _removeTouch(innerContext),
+          child: child,
+        ),
+      ),
     );
   }
 
@@ -96,11 +106,15 @@ class GlassGlowLayer extends StatefulWidget {
   /// {@macro glass_glow}
   const GlassGlowLayer({
     required this.child,
+    this.clipper,
     super.key,
   });
 
   /// The child that will be painted above the glow effect.
   final Widget child;
+
+  /// The shape to clip the glow to.
+  final CustomClipper<Path>? clipper;
 
   @override
   State<GlassGlowLayer> createState() => GlassGlowLayerState();
@@ -133,7 +147,7 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
   late final _radiusController = SingleSpringController(
     vsync: this,
     spring: GlassSpring.smooth(),
-    initialValue: 10,
+    initialValue: 1.2,
   );
 
   bool _dragging = false;
@@ -178,8 +192,7 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
     _alphaController.spring = GlassSpring.smooth();
     _radiusController.spring = GlassSpring.smooth();
     _dragging = false;
-    _offsetController.animateTo(Offset.zero);
-    _radiusController.animateTo(10);
+    _radiusController.animateTo(1.2);
     _alphaController.animateTo(0);
   }
 
@@ -193,6 +206,7 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
       ]),
       builder: (context, child) {
         return _RenderGlassGlowLayerWidget(
+          clipper: widget.clipper,
           glowRadius: _baseRadius * _radiusController.value,
           glowColor: _baseColor.withValues(
             alpha: _baseColor.a * _alphaController.value,
@@ -208,12 +222,14 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
 
 class _RenderGlassGlowLayerWidget extends SingleChildRenderObjectWidget {
   const _RenderGlassGlowLayerWidget({
+    required this.clipper,
     required this.glowRadius,
     required this.glowColor,
     required this.glowOffset,
     required super.child,
   });
 
+  final CustomClipper<Path>? clipper;
   final double glowRadius;
   final Color glowColor;
   final Offset glowOffset;
@@ -221,6 +237,7 @@ class _RenderGlassGlowLayerWidget extends SingleChildRenderObjectWidget {
   @override
   RenderObject createRenderObject(BuildContext context) {
     return _RenderGlassGlowLayer(
+      clipper: clipper,
       glowRadius: glowRadius,
       glowColor: glowColor,
       glowOffset: glowOffset,
@@ -233,6 +250,7 @@ class _RenderGlassGlowLayerWidget extends SingleChildRenderObjectWidget {
     _RenderGlassGlowLayer renderObject,
   ) {
     renderObject
+      ..clipper = clipper
       ..glowRadius = glowRadius
       ..glowColor = glowColor
       ..glowOffset = glowOffset;
@@ -244,9 +262,19 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
     required double glowRadius,
     required Color glowColor,
     required Offset glowOffset,
+    CustomClipper<Path>? clipper,
   })  : _glowRadius = glowRadius,
         _glowColor = glowColor,
-        _glowOffset = glowOffset;
+        _glowOffset = glowOffset,
+        _clipper = clipper;
+
+  CustomClipper<Path>? _clipper;
+  CustomClipper<Path>? get clipper => _clipper;
+  set clipper(CustomClipper<Path>? value) {
+    if (_clipper == value) return;
+    _clipper = value;
+    markNeedsPaint();
+  }
 
   double _glowRadius;
   double get glowRadius => _glowRadius;
@@ -280,11 +308,9 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
     }
 
     final glowPosition = offset + _glowOffset;
-    // Geometric mean of width and height so the spotlight scales proportionally
-    // to the button area — not just the short side. For a 56x56 circle this is
-    // identical to shortestSide; for a 300x56 wide pill it gives ~130px instead
-    // of 56px, covering the glass surface correctly like iOS 26.
-    final radius = _glowRadius * math.sqrt(size.width * size.height);
+    // Use the shortest side so that wide pills don't generate massive glow
+    // spilling vertically off the surface.
+    final radius = _glowRadius * math.min(size.width, size.height);
 
     // RadialGradient.createShader() bakes the center position into the shader
     // via the Rect passed to it — caching across position changes is incorrect.
@@ -296,8 +322,17 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
       ).createShader(Rect.fromCircle(center: glowPosition, radius: radius))
       ..blendMode = BlendMode.plus;
 
-    // No canvas save/restore needed — we don't modify canvas state.
-    context.canvas.drawCircle(glowPosition, radius, paint);
+    // 1. Paint the children (which includes AdaptiveGlass taking its backdrop snapshot)
     super.paint(context, offset);
+
+    // 2. Additive light over geometry boundary only
+    if (_clipper != null) {
+      context.canvas.save();
+      context.canvas.clipPath(_clipper!.getClip(size).shift(offset));
+      context.canvas.drawCircle(glowPosition, radius, paint);
+      context.canvas.restore();
+    } else {
+      context.canvas.drawCircle(glowPosition, radius, paint);
+    }
   }
 }
