@@ -811,75 +811,65 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
   }) {
     if (selected) {
       final scale = ui.lerpDouble(1.0, widget.magnification, intensity) ?? 1.0;
-      final blur = ui.lerpDouble(0.0, widget.innerBlur, intensity) ?? 0.0;
       final currentTabFloat = ((alignment.x + 1) / 2) * widget.tabs.length;
       final aStart =
           (currentTabFloat - 1).floor().clamp(0, widget.tabs.length - 1);
       final aEnd =
           (currentTabFloat + 1).ceil().clamp(0, widget.tabs.length - 1);
 
-      Widget row = Row(
+      return Row(
         children: [
           for (var i = 0; i < widget.tabs.length; i++)
             Expanded(
               child: (i >= aStart && i <= aEnd)
-                  ? RepaintBoundary(
-                      child: Transform.scale(
-                        scale: scale,
-                        child: BottomBarTabItem(
-                          tab: widget.tabs[i],
-                          selected: true,
-                          selectedIconColor: widget.selectedIconColor,
-                          unselectedIconColor: widget.unselectedIconColor,
-                          iconSize: widget.iconSize,
-                          labelFontSize: widget.labelFontSize,
-                          textStyle: widget.textStyle,
-                          iconLabelSpacing: widget.iconLabelSpacing,
-                          glowDuration: widget.glowDuration,
-                          glowBlurRadius: widget.glowBlurRadius,
-                          glowSpreadRadius: widget.glowSpreadRadius,
-                          glowOpacity: widget.glowOpacity,
-                          // onTap is null: all tap selection goes through
-                          // SearchableTabIndicator.onBarTapDown (prevents double-fire).
-                          onTap: null,
-                        ),
+                  ? Transform.scale(
+                      scale: scale,
+                      child: BottomBarTabItem(
+                        tab: widget.tabs[i],
+                        selected: true,
+                        selectedIconColor: widget.selectedIconColor,
+                        unselectedIconColor: widget.unselectedIconColor,
+                        iconSize: widget.iconSize,
+                        labelFontSize: widget.labelFontSize,
+                        textStyle: widget.textStyle,
+                        iconLabelSpacing: widget.iconLabelSpacing,
+                        glowDuration: widget.glowDuration,
+                        glowBlurRadius: widget.glowBlurRadius,
+                        glowSpreadRadius: widget.glowSpreadRadius,
+                        glowOpacity: widget.glowOpacity,
+                        // onTap is null: all tap selection goes through
+                        // SearchableTabIndicator.onBarTapDown (prevents double-fire).
+                        onTap: null,
                       ),
                     )
                   : const SizedBox.shrink(),
             ),
         ],
       );
-      if (blur > 0) {
-        row = ImageFiltered(
-            imageFilter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-            child: row);
-      }
-      return row;
     }
 
-    // Unselected row
+    // Unselected row — no per-tab RepaintBoundary needed; the combined
+    // icon layer in SearchableTabIndicator wraps the whole row.
     return Row(
       children: [
         for (var i = 0; i < widget.tabs.length; i++)
           Expanded(
-            child: RepaintBoundary(
-              child: BottomBarTabItem(
-                tab: widget.tabs[i],
-                selected: false,
-                selectedIconColor: widget.selectedIconColor,
-                unselectedIconColor: widget.unselectedIconColor,
-                iconSize: widget.iconSize,
-                labelFontSize: widget.labelFontSize,
-                textStyle: widget.textStyle,
-                iconLabelSpacing: widget.iconLabelSpacing,
-                glowDuration: widget.glowDuration,
-                glowBlurRadius: widget.glowBlurRadius,
-                glowSpreadRadius: widget.glowSpreadRadius,
-                glowOpacity: widget.glowOpacity,
-                // onTap is null: all tap selection goes through
-                // SearchableTabIndicator.onBarTapDown (prevents double-fire).
-                onTap: null,
-              ),
+            child: BottomBarTabItem(
+              tab: widget.tabs[i],
+              selected: false,
+              selectedIconColor: widget.selectedIconColor,
+              unselectedIconColor: widget.unselectedIconColor,
+              iconSize: widget.iconSize,
+              labelFontSize: widget.labelFontSize,
+              textStyle: widget.textStyle,
+              iconLabelSpacing: widget.iconLabelSpacing,
+              glowDuration: widget.glowDuration,
+              glowBlurRadius: widget.glowBlurRadius,
+              glowSpreadRadius: widget.glowSpreadRadius,
+              glowOpacity: widget.glowOpacity,
+              // onTap is null: all tap selection goes through
+              // SearchableTabIndicator.onBarTapDown (prevents double-fire).
+              onTap: null,
             ),
           ),
       ],

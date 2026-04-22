@@ -573,9 +573,7 @@ class TabIndicatorState extends State<TabIndicator>
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // 1. Glass Background Layer with ALL content
-            // This provides the glass visual/refraction for everything
-            // 1. Static Blur Background (Cached)
+            // 1. Glass Background (Blur / Frosted Glass Layer — Cached)
             Positioned.fill(
               child: RepaintBoundary(
                 child: AdaptiveGlass.grouped(
@@ -586,27 +584,55 @@ class TabIndicatorState extends State<TabIndicator>
               ),
             ),
 
-            // 2. Unselected Content Layer (inverse clipped)
+            // 2. Icon Content Layer (Unselected + Selected combined for refraction)
+            // Put both layers into a single RepaintBoundary BEFORE the glass indicator
+            // so that the glass lens correctly refracts both layers.
             Positioned.fill(
-              child: ClipPath(
-                clipper: JellyClipper(
-                  itemCount: widget.tabCount,
-                  alignment: alignment,
-                  thickness: thickness,
-                  expansion: 14,
-                  transform: jellyTransform,
-                  borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
-                  inverse: true,
-                ),
-                child: Container(
-                  padding: widget.tabPadding,
-                  height: widget.barHeight,
-                  child: widget.childUnselected,
+              child: RepaintBoundary(
+                child: Stack(
+                  children: [
+                    // Unselected (inverse clipped)
+                    ClipPath(
+                      clipper: JellyClipper(
+                        itemCount: widget.tabCount,
+                        alignment: alignment,
+                        thickness: thickness,
+                        expansion: 14,
+                        transform: jellyTransform,
+                        borderRadius:
+                            thickness < 1 ? backgroundRadius : glassRadius,
+                        inverse: true,
+                      ),
+                      child: Container(
+                        padding: widget.tabPadding,
+                        height: widget.barHeight,
+                        child: widget.childUnselected,
+                      ),
+                    ),
+                    // Selected (forward clipped)
+                    ClipPath(
+                      clipper: JellyClipper(
+                        itemCount: widget.tabCount,
+                        alignment: alignment,
+                        thickness: thickness,
+                        expansion: 14,
+                        transform: jellyTransform,
+                        borderRadius:
+                            thickness < 1 ? backgroundRadius : glassRadius,
+                      ),
+                      child: Container(
+                        padding: widget.tabPadding,
+                        height: widget.barHeight,
+                        child: widget.selectedTabBuilder(
+                            context, thickness, alignment),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            // 4. Moving Glass Indicator Layer (provides color highlight)
+            // 3. Moving Glass Indicator Layer
             AnimatedGlassIndicator(
               velocity: velocity,
               itemCount: widget.tabCount,
@@ -620,52 +646,6 @@ class TabIndicatorState extends State<TabIndicator>
               expansion: 14,
               glassSettings: widget.indicatorSettings,
               backgroundKey: widget.backgroundKey,
-            ),
-
-            // 5. Selected Content ON TOP (ensures icons/text visible above indicator)
-            // Always show to prevent jumping when animation completes
-            Positioned.fill(
-              child: widget.quality == GlassQuality.minimal
-                  ? IgnorePointer(
-                      child: ClipPath(
-                        clipper: JellyClipper(
-                          itemCount: widget.tabCount,
-                          alignment: alignment,
-                          thickness: thickness,
-                          expansion: 14,
-                          transform: jellyTransform,
-                          borderRadius:
-                              thickness < 1 ? backgroundRadius : glassRadius,
-                        ),
-                        child: Container(
-                          padding: widget.tabPadding,
-                          height: widget.barHeight,
-                          child: widget.selectedTabBuilder(
-                              context, thickness, alignment),
-                        ),
-                      ),
-                    )
-                  : RepaintBoundary(
-                      child: IgnorePointer(
-                        child: ClipPath(
-                          clipper: JellyClipper(
-                            itemCount: widget.tabCount,
-                            alignment: alignment,
-                            thickness: thickness,
-                            expansion: 14,
-                            transform: jellyTransform,
-                            borderRadius:
-                                thickness < 1 ? backgroundRadius : glassRadius,
-                          ),
-                          child: Container(
-                            padding: widget.tabPadding,
-                            height: widget.barHeight,
-                            child: widget.selectedTabBuilder(
-                                context, thickness, alignment),
-                          ),
-                        ),
-                      ),
-                    ),
             ),
           ],
         ),

@@ -405,22 +405,44 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                 ),
               ),
 
-              // 2. Unselected Content Layer (inverse clipped)
+              // 2. Icon Content Layer (Unselected + Selected combined for refraction)
               Positioned.fill(
-                child: ClipPath(
-                  clipper: JellyClipper(
-                    itemCount: widget.tabCount,
-                    alignment: alignment,
-                    thickness: thickness,
-                    expansion: 14,
-                    transform: jellyTransform,
-                    borderRadius: effRadius,
-                    inverse: true,
-                  ),
-                  child: Container(
-                    padding: widget.tabPadding,
-                    height: widget.barHeight,
-                    child: widget.childUnselected,
+                child: RepaintBoundary(
+                  child: Stack(
+                    children: [
+                      ClipPath(
+                        clipper: JellyClipper(
+                          itemCount: widget.tabCount,
+                          alignment: alignment,
+                          thickness: thickness,
+                          expansion: 14,
+                          transform: jellyTransform,
+                          borderRadius: effRadius,
+                          inverse: true,
+                        ),
+                        child: Container(
+                          padding: widget.tabPadding,
+                          height: widget.barHeight,
+                          child: widget.childUnselected,
+                        ),
+                      ),
+                      ClipPath(
+                        clipper: JellyClipper(
+                          itemCount: widget.tabCount,
+                          alignment: alignment,
+                          thickness: thickness,
+                          expansion: 14,
+                          transform: jellyTransform,
+                          borderRadius: effRadius,
+                        ),
+                        child: Container(
+                          padding: widget.tabPadding,
+                          height: widget.barHeight,
+                          child: widget.selectedTabBuilder(
+                              context, thickness, alignment),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -437,47 +459,6 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                 expansion: 14,
                 glassSettings: widget.indicatorSettings,
                 backgroundKey: widget.backgroundKey,
-              ),
-              Positioned.fill(
-                child: widget.quality == GlassQuality.minimal
-                    ? IgnorePointer(
-                        child: ClipPath(
-                          clipper: JellyClipper(
-                            itemCount: widget.tabCount,
-                            alignment: alignment,
-                            thickness: thickness,
-                            expansion: 14,
-                            transform: jellyTransform,
-                            borderRadius: effRadius,
-                          ),
-                          child: Container(
-                            padding: widget.tabPadding,
-                            height: widget.barHeight,
-                            child: widget.selectedTabBuilder(
-                                context, thickness, alignment),
-                          ),
-                        ),
-                      )
-                    : RepaintBoundary(
-                        child: IgnorePointer(
-                          child: ClipPath(
-                            clipper: JellyClipper(
-                              itemCount: widget.tabCount,
-                              alignment: alignment,
-                              thickness: thickness,
-                              expansion: 14,
-                              transform: jellyTransform,
-                              borderRadius: effRadius,
-                            ),
-                            child: Container(
-                              padding: widget.tabPadding,
-                              height: widget.barHeight,
-                              child: widget.selectedTabBuilder(
-                                  context, thickness, alignment),
-                            ),
-                          ),
-                        ),
-                      ),
               ),
             ],
           ),

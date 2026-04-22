@@ -537,24 +537,22 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                   children: [
                     for (var i = 0; i < widget.tabs.length; i++)
                       Expanded(
-                        child: RepaintBoundary(
-                          child: BottomBarTabItem(
-                            tab: widget.tabs[i],
-                            selected: false,
-                            selectedIconColor: widget.selectedIconColor,
-                            unselectedIconColor: widget.unselectedIconColor,
-                            iconSize: widget.iconSize,
-                            labelFontSize: widget.labelFontSize,
-                            textStyle: widget.textStyle,
-                            iconLabelSpacing: widget.iconLabelSpacing,
-                            glowDuration: widget.glowDuration,
-                            glowBlurRadius: widget.glowBlurRadius,
-                            glowSpreadRadius: widget.glowSpreadRadius,
-                            glowOpacity: widget.glowOpacity,
-                            // onTap is null: all tap selection goes through
-                            // TabIndicator.onBarTapDown (prevents double-fire).
-                            onTap: null,
-                          ),
+                        child: BottomBarTabItem(
+                          tab: widget.tabs[i],
+                          selected: false,
+                          selectedIconColor: widget.selectedIconColor,
+                          unselectedIconColor: widget.unselectedIconColor,
+                          iconSize: widget.iconSize,
+                          labelFontSize: widget.labelFontSize,
+                          textStyle: widget.textStyle,
+                          iconLabelSpacing: widget.iconLabelSpacing,
+                          glowDuration: widget.glowDuration,
+                          glowBlurRadius: widget.glowBlurRadius,
+                          glowSpreadRadius: widget.glowSpreadRadius,
+                          glowOpacity: widget.glowOpacity,
+                          // onTap is null: all tap selection goes through
+                          // TabIndicator.onBarTapDown (prevents double-fire).
+                          onTap: null,
                         ),
                       ),
                   ],
@@ -589,58 +587,42 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
     // Lerp magnification: 1.0 -> widget.magnification
     final scale = ui.lerpDouble(1.0, widget.magnification, intensity) ?? 1.0;
 
-    // Lerp blur: 0.0 -> widget.innerBlur
-    final blur = ui.lerpDouble(0.0, widget.innerBlur, intensity) ?? 0.0;
-
-    // Selective rendering optimization: only render tabs near the indicator
-    // Calculate which tabs are affected by the indicator (within +/- 1 tab)
+    // Selective rendering: only render tabs near the indicator (within +/- 1 tab).
     final currentTabFloat = ((alignment.x + 1) / 2) * widget.tabs.length;
     final affectedStart =
         (currentTabFloat - 1).floor().clamp(0, widget.tabs.length - 1);
     final affectedEnd =
         (currentTabFloat + 1).ceil().clamp(0, widget.tabs.length - 1);
 
-    Widget row = Row(
+    return Row(
       children: [
         for (var i = 0; i < widget.tabs.length; i++)
           Expanded(
             child: (i >= affectedStart && i <= affectedEnd)
-                ? RepaintBoundary(
-                    child: Transform.scale(
-                      scale: scale,
-                      child: BottomBarTabItem(
-                        tab: widget.tabs[i],
-                        selected: true,
-                        selectedIconColor: widget.selectedIconColor,
-                        unselectedIconColor: widget.unselectedIconColor,
-                        iconSize: widget.iconSize,
-                        labelFontSize: widget.labelFontSize,
-                        textStyle: widget.textStyle,
-                        iconLabelSpacing: widget.iconLabelSpacing,
-                        glowDuration: widget.glowDuration,
-                        glowBlurRadius: widget.glowBlurRadius,
-                        glowSpreadRadius: widget.glowSpreadRadius,
-                        glowOpacity: widget.glowOpacity,
-                        // onTap is null: all tap selection goes through
-                        // TabIndicator.onBarTapDown (prevents double-fire).
-                        onTap: null,
-                      ),
+                ? Transform.scale(
+                    scale: scale,
+                    child: BottomBarTabItem(
+                      tab: widget.tabs[i],
+                      selected: true,
+                      selectedIconColor: widget.selectedIconColor,
+                      unselectedIconColor: widget.unselectedIconColor,
+                      iconSize: widget.iconSize,
+                      labelFontSize: widget.labelFontSize,
+                      textStyle: widget.textStyle,
+                      iconLabelSpacing: widget.iconLabelSpacing,
+                      glowDuration: widget.glowDuration,
+                      glowBlurRadius: widget.glowBlurRadius,
+                      glowSpreadRadius: widget.glowSpreadRadius,
+                      glowOpacity: widget.glowOpacity,
+                      // onTap is null: all tap selection goes through
+                      // TabIndicator.onBarTapDown (prevents double-fire).
+                      onTap: null,
                     ),
                   )
                 : const SizedBox.shrink(),
           ),
       ],
     );
-
-    // Apply blur to the whole row
-    if (blur > 0.0) {
-      row = ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: row,
-      );
-    }
-
-    return row;
   }
 }
 
