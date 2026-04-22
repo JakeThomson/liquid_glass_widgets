@@ -14,6 +14,7 @@ import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
 import '../../../utils/glass_spring.dart';
+import 'tab_drag_gesture_mixin.dart';
 import '../../interactive/glass_button.dart';
 import '../../shared/adaptive_glass.dart';
 import '../../shared/animated_glass_indicator.dart';
@@ -144,91 +145,29 @@ class SearchableTabIndicator extends StatefulWidget {
   State<SearchableTabIndicator> createState() => SearchableTabIndicatorState();
 }
 
-class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
+class SearchableTabIndicatorState extends State<SearchableTabIndicator>
+    with TabDragGestureMixin<SearchableTabIndicator> {
+  // ── Mixin interface ────────────────────────────────────────────────────────
+  @override
+  int get tabCount => widget.tabCount;
+  @override
+  int get tabIndex => widget.tabIndex;
+  @override
+  void notifyTabChanged(int index) => widget.onTabChanged(index);
+
   static const _fallbackIndicatorColor = Color(0x1AFFFFFF);
 
-  bool _isDown = false;
-  bool _isDragging = false;
-  late double _xAlign = _alignFor(widget.tabIndex);
+  // Cached shape to avoid recreation on every animation frame
   late LiquidRoundedSuperellipse _barShape =
       LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
 
   @override
   void didUpdateWidget(covariant SearchableTabIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.tabIndex != widget.tabIndex ||
-        oldWidget.tabCount != widget.tabCount) {
-      setState(() => _xAlign = _alignFor(widget.tabIndex));
-    }
+    updateTabAlignIfNeeded(oldWidget.tabIndex, oldWidget.tabCount);
     if (oldWidget.barBorderRadius != widget.barBorderRadius) {
       _barShape =
           LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
-    }
-  }
-
-  double _alignFor(int i) =>
-      DraggableIndicatorPhysics.computeAlignment(i, widget.tabCount);
-
-  double _alignFromGlobal(Offset g) =>
-      DraggableIndicatorPhysics.getAlignmentFromGlobalPosition(
-          g, context, widget.tabCount);
-
-  void _onDragDown(DragDownDetails d) {
-    setState(() => _isDown = true);
-  }
-
-  void _onBarTapDown(TapDownDetails d) {
-    final relX = (_alignFromGlobal(d.globalPosition) + 1) / 2;
-    final idx = (relX * widget.tabCount).floor().clamp(0, widget.tabCount - 1);
-    if (idx != widget.tabIndex) widget.onTabChanged(idx);
-  }
-
-  void _onDragUpdate(DragUpdateDetails d) {
-    setState(() {
-      _isDragging = true;
-      _xAlign = _alignFromGlobal(d.globalPosition);
-    });
-  }
-
-  void _onDragEnd(DragEndDetails d) {
-    setState(() {
-      _isDragging = false;
-      _isDown = false;
-    });
-    final box = context.findRenderObject()! as RenderBox;
-    final relX = (_xAlign + 1) / 2;
-    final tabW = 1.0 / widget.tabCount;
-    final draggableRange = 1.0 - tabW;
-    final velX =
-        (d.velocity.pixelsPerSecond.dx / box.size.width) / draggableRange;
-    final target = DraggableIndicatorPhysics.computeTargetIndex(
-      currentRelativeX: relX,
-      velocityX: velX,
-      itemWidth: tabW,
-      itemCount: widget.tabCount,
-    );
-    setState(() => _xAlign = _alignFor(target));
-    if (target != widget.tabIndex) widget.onTabChanged(target);
-  }
-
-  void _onDragCancel() {
-    if (_isDragging) {
-      final relX = (_xAlign + 1) / 2;
-      final tabW = 1.0 / widget.tabCount;
-      final target = DraggableIndicatorPhysics.computeTargetIndex(
-        currentRelativeX: relX,
-        velocityX: 0,
-        itemWidth: tabW,
-        itemCount: widget.tabCount,
-      );
-      setState(() {
-        _isDragging = false;
-        _isDown = false;
-        _xAlign = _alignFor(target);
-      });
-      if (target != widget.tabIndex) widget.onTabChanged(target);
-    } else {
-      setState(() => _xAlign = _alignFor(widget.tabIndex));
     }
   }
 
@@ -267,7 +206,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
     final indicatorColor = widget.indicatorColor ??
         theme.textTheme.textStyle.color?.withValues(alpha: .1) ??
         _fallbackIndicatorColor;
-    final targetAlignment = _alignFor(widget.tabIndex);
+    final targetAlignment = computeTabAlignment(widget.tabIndex);
     final backgroundRadius = widget.barBorderRadius * 2;
     final glassRadius = widget.barBorderRadius;
 
@@ -279,32 +218,33 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
         resistance: 0.08,
         child: Listener(
           onPointerDown: (_) {
-            setState(() => _isDown = true);
+            setState(() => tabIsDown = true);
           },
           onPointerUp: (_) {
-            if (!_isDragging) {
-              setState(() => _isDown = false);
+            if (!tabIsDragging) {
+              setState(() => tabIsDown = false);
             }
           },
           onPointerCancel: (_) {
-            if (!_isDragging) {
-              setState(() => _isDown = false);
+            if (!tabIsDragging) {
+              setState(() => tabIsDown = false);
             }
           },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onHorizontalDragDown: _onDragDown,
-            onHorizontalDragUpdate: _onDragUpdate,
-            onHorizontalDragEnd: _onDragEnd,
-            onHorizontalDragCancel: _onDragCancel,
-            onTapDown: _onBarTapDown,
+            onHorizontalDragDown: onBarDragDown,
+            onHorizontalDragStart: onBarDragStart,
+            onHorizontalDragUpdate: onBarDragUpdate,
+            onHorizontalDragEnd: onBarDragEnd,
+            onHorizontalDragCancel: onBarDragCancel,
+            onTapDown: onBarTapDown,
             child: VelocitySpringBuilder(
-              value: _xAlign,
+              value: tabXAlign,
               springWhenActive: GlassSpring.interactive(),
               springWhenReleased: GlassSpring.snappy(
                 duration: const Duration(milliseconds: 350),
               ),
-              active: _isDragging,
+              active: tabIsDragging,
               builder: (context, value, velocity, child) {
                 final alignment = Alignment(value, 0);
                 return SpringBuilder(
@@ -312,7 +252,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator> {
                     duration: const Duration(milliseconds: 300),
                   ),
                   value: widget.visible &&
-                          (_isDown ||
+                          (tabIsDown ||
                               (alignment.x - targetAlignment).abs() > 0.05)
                       ? 1.0
                       : 0.0,

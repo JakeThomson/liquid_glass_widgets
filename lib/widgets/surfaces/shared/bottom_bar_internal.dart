@@ -10,6 +10,7 @@ import 'package:flutter/cupertino.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
+import 'tab_drag_gesture_mixin.dart';
 import '../../../utils/glass_spring.dart';
 import '../../interactive/glass_button.dart';
 import '../../shared/adaptive_glass.dart';
@@ -97,7 +98,10 @@ class BottomBarTabItem extends StatelessWidget {
   final double glowBlurRadius;
   final double glowSpreadRadius;
   final double glowOpacity;
-  final VoidCallback onTap;
+  // Nullable: when null the GestureDetector does not handle taps.
+  // Pass null in contexts where the outer TabIndicator owns selection via
+  // onTapDown, and accessibility is handled by the indicator's own Semantics.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +109,9 @@ class BottomBarTabItem extends StatelessWidget {
     final iconWidget = selected ? (tab.activeIcon ?? tab.icon) : tab.icon;
 
     return GestureDetector(
+      // onTap may be null when selection is owned by the outer TabIndicator
+      // (visual path). When non-null it provides accessibility support for
+      // VoiceOver / TalkBack which route through onTap, not onTapDown.
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Semantics(
@@ -314,16 +321,19 @@ class TabIndicator extends StatefulWidget {
 
 /// State for [TabIndicator]. Public for testing via `@visibleForTesting`.
 @visibleForTesting
-class TabIndicatorState extends State<TabIndicator> {
+class TabIndicatorState extends State<TabIndicator>
+    with TabDragGestureMixin<TabIndicator> {
+  // ── Mixin interface ────────────────────────────────────────────────────────
+  @override
+  int get tabCount => widget.tabCount;
+  @override
+  int get tabIndex => widget.tabIndex;
+  @override
+  void notifyTabChanged(int index) => widget.onTabChanged(index);
+
   // Cache fallback indicator color to avoid allocations
   static const _fallbackIndicatorColor =
       Color(0x1AFFFFFF); // white.withValues(alpha: 0.1)
-
-  bool _isDown = false;
-  bool _isDragging = false;
-
-  // Current horizontal alignment of the indicator (-1 to 1)
-  late double _xAlign = _computeXAlignmentForTab(widget.tabIndex);
 
   // Cached shape to avoid recreation on every animation frame
   late LiquidRoundedSuperellipse _barShape =
@@ -332,14 +342,7 @@ class TabIndicatorState extends State<TabIndicator> {
   @override
   void didUpdateWidget(covariant TabIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    // Update alignment when tab index or count changes
-    if (oldWidget.tabIndex != widget.tabIndex ||
-        oldWidget.tabCount != widget.tabCount) {
-      setState(() {
-        _xAlign = _computeXAlignmentForTab(widget.tabIndex);
-      });
-    }
+    updateTabAlignIfNeeded(oldWidget.tabIndex, oldWidget.tabCount);
 
     // Update cached shape if border radius changes
     if (oldWidget.barBorderRadius != widget.barBorderRadius) {
@@ -348,124 +351,13 @@ class TabIndicatorState extends State<TabIndicator> {
     }
   }
 
-  /// Converts a tab index to horizontal alignment (-1 to 1).
-  double _computeXAlignmentForTab(int tabIndex) {
-    return DraggableIndicatorPhysics.computeAlignment(
-      tabIndex,
-      widget.tabCount,
-    );
-  }
-
-  /// Converts a global drag position to horizontal alignment (-1 to 1).
-  double _getAlignmentFromGlobalPosition(Offset globalPosition) {
-    return DraggableIndicatorPhysics.getAlignmentFromGlobalPosition(
-      globalPosition,
-      context,
-      widget.tabCount,
-    );
-  }
-
-  void _onDragDown(DragDownDetails details) {
-    setState(() {
-      _isDown = true;
-    });
-  }
-
-  /// DX1: Fires on any tap-down (no drag) anywhere on the bar.
-  ///
-  /// On macOS/desktop a click arrives as tapDown+tapUp in the same frame,
-  /// so the previous approach of snapping `_xAlign` immediately collapsed the
-  /// spring travel distance to zero — no velocity, no jelly.
-  ///
-  /// Fix: Do NOT snap `_xAlign`. Instead:
-  ///   1. Fire `onTabChanged` so the parent updates `selectedIndex`.
-  ///   2. Set `_isDown = true` to activate thickness.
-  ///   3. Keep `_isDown` true for the spring travel duration (~350 ms) so
-  ///      the jelly deformation is visible throughout the animation.
-  ///
-  /// `didUpdateWidget` will update `_xAlign` when the parent rebuilds with
-  /// the new `tabIndex`, and `VelocitySpringBuilder` will spring from the
-  /// old alignment to the new one — generating real velocity + jelly.
-  void _onBarTapDown(TapDownDetails details) {
-    final alignment = _getAlignmentFromGlobalPosition(details.globalPosition);
-    final relativeX = (alignment + 1) / 2;
-    final index =
-        (relativeX * widget.tabCount).floor().clamp(0, widget.tabCount - 1);
-
-    // Fire parent callback immediately so selectedIndex updates in the
-    // same frame, triggering didUpdateWidget → spring animation.
-    if (index != widget.tabIndex) {
-      widget.onTabChanged(index);
-    }
-
-    // DX1: _isDown is set by Listener.onPointerDown (raw, fires before any
-    // gesture recognizer). No timer needed — Listener.onPointerUp clears it
-    // when the pointer is released. Spring separation keeps the indicator
-    // visible during animation even when tapUp arrives in the same frame.
-  }
-
-  void _onDragUpdate(DragUpdateDetails details) {
-    setState(() {
-      _isDragging = true;
-      _xAlign = _getAlignmentFromGlobalPosition(details.globalPosition);
-    });
-  }
-
-  void _onDragEnd(DragEndDetails details) {
-    setState(() {
-      _isDragging = false;
-      _isDown = false;
-    });
-
-    final box = context.findRenderObject()! as RenderBox;
-
-    // Convert alignment to 0-1 range
-    final currentRelativeX = (_xAlign + 1) / 2;
-    final tabWidth = 1.0 / widget.tabCount;
-
-    // Calculate velocity in relative units
-    final indicatorWidth = 1.0 / widget.tabCount;
-    final draggableRange = 1.0 - indicatorWidth;
-    final velocityX =
-        (details.velocity.pixelsPerSecond.dx / box.size.width) / draggableRange;
-
-    // Determine target tab based on position and velocity
-    final targetTabIndex = _computeTargetTab(
-      currentRelativeX: currentRelativeX,
-      velocityX: velocityX,
-      tabWidth: tabWidth,
-    );
-
-    // Update alignment to target tab
-    _xAlign = _computeXAlignmentForTab(targetTabIndex);
-
-    // Notify parent if tab changed
-    if (targetTabIndex != widget.tabIndex) {
-      widget.onTabChanged(targetTabIndex);
-    }
-  }
-
-  /// Computes the target tab index based on drag position and velocity.
-  int _computeTargetTab({
-    required double currentRelativeX,
-    required double velocityX,
-    required double tabWidth,
-  }) {
-    return DraggableIndicatorPhysics.computeTargetIndex(
-      currentRelativeX: currentRelativeX,
-      velocityX: velocityX,
-      itemWidth: tabWidth,
-      itemCount: widget.tabCount,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = CupertinoTheme.of(context);
     final indicatorColor = widget.indicatorColor ??
         theme.textTheme.textStyle.color?.withValues(alpha: .1) ??
         _fallbackIndicatorColor;
-    final targetAlignment = _computeXAlignmentForTab(widget.tabIndex);
+    final targetAlignment = computeTabAlignment(widget.tabIndex);
 
     // AnimatedGlassIndicator multiplies by 2 for the glass superellipse shape,
     // but uses the value directly for the background DecoratedBox.
@@ -479,66 +371,39 @@ class TabIndicatorState extends State<TabIndicator> {
         resistance: 0.08,
         child: Listener(
           // Raw pointer events fire BEFORE gesture recognizers and never compete
-          // in the gesture arena, so _isDown is always set on the very first event.
+          // in the gesture arena, so tabIsDown is always set on the very first event.
           onPointerDown: (_) {
-            setState(() => _isDown = true);
+            setState(() => tabIsDown = true);
           },
-          // On finger/button lift, clear _isDown if not mid-drag.
+          // On finger/button lift, clear tabIsDown if not mid-drag.
           // Listener fires regardless of which gesture recognizer won the arena.
           onPointerUp: (_) {
-            if (!_isDragging) {
-              setState(() => _isDown = false);
+            if (!tabIsDragging) {
+              setState(() => tabIsDown = false);
             }
           },
           onPointerCancel: (_) {
-            if (!_isDragging) {
-              setState(() => _isDown = false);
+            if (!tabIsDragging) {
+              setState(() => tabIsDown = false);
             }
           },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onHorizontalDragDown: _onDragDown,
-            onHorizontalDragUpdate: _onDragUpdate,
-            onHorizontalDragEnd: _onDragEnd,
+            onHorizontalDragDown: onBarDragDown,
+            onHorizontalDragStart: onBarDragStart,
+            onHorizontalDragUpdate: onBarDragUpdate,
+            onHorizontalDragEnd: onBarDragEnd,
             // On cancel (e.g. parent scroll steals the gesture or pointer goes
-            // off-screen), _isDown is cleared by the Listener when pointer lifts.
-            // Only snap _xAlign — never set _isDown from here.
-            onHorizontalDragCancel: () {
-              if (_isDragging) {
-                // Mid-drag cancel: snap to nearest tab from current position.
-                final currentRelativeX = (_xAlign + 1) / 2;
-                final tabWidth = 1.0 / widget.tabCount;
-                final targetTabIndex = _computeTargetTab(
-                  currentRelativeX: currentRelativeX,
-                  velocityX: 0,
-                  tabWidth: tabWidth,
-                );
-                setState(() {
-                  _isDragging = false;
-                  _isDown = false;
-                  _xAlign = _computeXAlignmentForTab(targetTabIndex);
-                });
-                if (targetTabIndex != widget.tabIndex) {
-                  widget.onTabChanged(targetTabIndex);
-                }
-              } else {
-                // Not dragging (e.g. same-tab click): reset _xAlign to tab center
-                // so the indicator sits exactly on the tab, not at the raw click
-                // position that _onDragDown snapped to.
-                setState(
-                    () => _xAlign = _computeXAlignmentForTab(widget.tabIndex));
-                // _isDown intentionally NOT cleared — Listener.onPointerUp owns that.
-              }
-            },
-            onTapDown:
-                _onBarTapDown, // DX1: makes jelly visible on desktop taps
+            // off-screen), tabIsDown is cleared by the Listener when pointer lifts.
+            onHorizontalDragCancel: onBarDragCancel,
+            onTapDown: onBarTapDown, // DX1: makes jelly visible on desktop taps
             child: VelocitySpringBuilder(
-              value: _xAlign,
+              value: tabXAlign,
               springWhenActive: GlassSpring.interactive(),
               springWhenReleased: GlassSpring.snappy(
                 duration: const Duration(milliseconds: 350),
               ),
-              active: _isDragging,
+              active: tabIsDragging,
               builder: (context, value, velocity, child) {
                 final alignment = Alignment(value, 0);
 
@@ -547,11 +412,11 @@ class TabIndicatorState extends State<TabIndicator> {
                     duration: const Duration(milliseconds: 300),
                   ),
                   // Keep thickness active while:
-                  //  - _isDown (tap pressed, 420 ms window for spring travel), OR
+                  //  - tabIsDown (tap pressed, 420 ms window for spring travel), OR
                   //  - the spring still has meaningful separation from target.
                   // Threshold 0.05 (was 0.10) catches the full deceleration tail.
                   value: widget.visible &&
-                          (_isDown ||
+                          (tabIsDown ||
                               (alignment.x - targetAlignment).abs() > 0.05)
                       ? 1.0
                       : 0.0,

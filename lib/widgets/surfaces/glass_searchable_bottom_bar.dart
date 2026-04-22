@@ -839,7 +839,9 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                           glowBlurRadius: widget.glowBlurRadius,
                           glowSpreadRadius: widget.glowSpreadRadius,
                           glowOpacity: widget.glowOpacity,
-                          onTap: () => widget.onTabSelected(i),
+                          // onTap is null: all tap selection goes through
+                          // SearchableTabIndicator.onBarTapDown (prevents double-fire).
+                          onTap: null,
                         ),
                       ),
                     )
@@ -874,7 +876,9 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                 glowBlurRadius: widget.glowBlurRadius,
                 glowSpreadRadius: widget.glowSpreadRadius,
                 glowOpacity: widget.glowOpacity,
-                onTap: () => widget.onTabSelected(i),
+                // onTap is null: all tap selection goes through
+                // SearchableTabIndicator.onBarTapDown (prevents double-fire).
+                onTap: null,
               ),
             ),
           ),

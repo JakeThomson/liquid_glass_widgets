@@ -353,6 +353,94 @@ void main() {
       await tester.pump();
       expect(find.byType(SearchableTabIndicator), findsOneWidget);
     });
+
+    // ── Regression: issue #22 ────────────────────────────────────────────────
+
+    testWidgets(
+        'tapping the already-selected tab fires onTabChanged (issue #22)',
+        (tester) async {
+      final changes = <int>[];
+
+      await tester.pumpWidget(
+        _indicator(tabIndex: 0, tabCount: 3, onTabChanged: changes.add),
+      );
+      await tester.pump();
+
+      // Tap well into the left zone — tab 0 (already active).
+      final rect = tester.getRect(find.byType(SearchableTabIndicator));
+      await tester.tapAt(Offset(rect.left + rect.width * 0.1, rect.center.dy));
+      await tester.pumpAndSettle();
+
+      expect(changes, contains(0),
+          reason: 'SearchableTabIndicator must fire onTabChanged on repeat tap '
+              'of the active tab (issue #22)');
+    });
+
+    testWidgets(
+        'drag ending at centre of 5-tab searchable bar selects tab 2 (issue #23)',
+        (tester) async {
+      // Fixed-width 5-tab indicator so pixel percentages are deterministic.
+      final fiveTabs = List.generate(5, (i) => i);
+      final changes = <int>[];
+      int currentIndex = 0;
+
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 500,
+              height: 80,
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  outerSetState = setState;
+                  return SearchableTabIndicator(
+                    tabIndex: currentIndex,
+                    tabCount: 5,
+                    visible: true,
+                    childUnselected: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: fiveTabs
+                          .map((_) => const Icon(CupertinoIcons.star))
+                          .toList(),
+                    ),
+                    selectedTabBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    onTabChanged: (i) {
+                      changes.add(i);
+                      outerSetState(() => currentIndex = i);
+                    },
+                    quality: GlassQuality.minimal,
+                    barHeight: 64,
+                    barBorderRadius: 20,
+                    tabPadding: EdgeInsets.zero,
+                    magnification: 1.0,
+                    innerBlur: 0,
+                    maskingQuality: MaskingQuality.off,
+                    isSearchActive: false,
+                    onDismissSearch: () {},
+                    enableBackgroundAnimation: false,
+                    backgroundPressScale: 1.0,
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final rect = tester.getRect(find.byType(SearchableTabIndicator));
+      final startX = rect.left + rect.width * 0.05;
+      final endX = rect.left + rect.width * 0.50; // centre → tab 2
+      await tester.dragFrom(
+          Offset(startX, rect.center.dy), Offset(endX - startX, 0));
+      await tester.pumpAndSettle();
+
+      expect(changes, isNotEmpty);
+      expect(changes.last, equals(2),
+          reason: 'Centre of 5-tab bar must snap to tab 2, not tab 3 '
+              '(coordinate space fix — issue #23)');
+    });
   });
 
   group('SearchableTabIndicator — search-active state', () {
