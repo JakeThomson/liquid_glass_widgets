@@ -1,3 +1,20 @@
+# 0.8.2
+
+## Bug Fixes
+
+- **`GlassQuality.premium` no longer crashes outside a `LiquidGlassLayer`.** Previously caused an opaque `Null check operator` crash. Now throws a descriptive `AssertionError` in debug builds and falls back gracefully (renders child without glass) in release. Fix: add `useOwnLayer: true` to any standalone `GlassButton` using `premium` quality.
+
+## API
+
+- **`GlassSearchBarConfig.expandWhenActive`** (renamed from `expandOnSearch`). Controls whether the search pill expands when active. Default `true` — no change needed for standard usage. Only set to `false` for advanced layouts (e.g. Apple Music Play Pill pattern) where the search pill should remain compact while `isSearchActive` is used to drive a non-search transition.
+
+## Examples
+
+- **`apple_news_demo`** — added as a reference implementation of `GlassSearchableBottomBar` with the morphing search pill and tab collapse.
+- **`apple_music_demo`** — added as a production-level reference for the Play Pill pattern: a floating `GlassButton` (`useOwnLayer: true`, `GlassQuality.premium`) that animates between a full-screen player and a mini-mode docked pill using `AnimatedPositioned` + `AnimatedOpacity`, synchronized with `GlassSearchableBottomBar`'s spring morph via `expandWhenActive`.
+
+---
+
 # 0.8.1
 
 ## New Features

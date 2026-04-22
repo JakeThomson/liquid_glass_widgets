@@ -712,8 +712,10 @@ class SearchPillState extends State<SearchPill> {
               GlassButton(
                 key: const ValueKey('pill-collapsed'),
                 icon: Icon(CupertinoIcons.search, color: iconColor),
-                // No-op while mid-animation to avoid double-toggling.
-                onTap: widget.isActive
+                // No-op while mid-animation to avoid double-toggling, EXCEPT
+                // if expandWhenActive is false, which means this is a persistent
+                // collapsed search button that needs to be tappable to activate search.
+                onTap: (widget.isActive && widget.config.expandWhenActive)
                     ? () {}
                     : () => widget.config.onSearchToggle(true),
                 width: double.infinity,

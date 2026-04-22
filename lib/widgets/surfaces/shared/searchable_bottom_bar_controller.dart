@@ -254,6 +254,7 @@ class SearchableBottomBarController extends ChangeNotifier {
   SearchablePillLayout computeLayout({
     required double totalW,
     required bool searching,
+    required bool expandWhenActive,
     required double barHeight,
     required double searchBarHeight,
     required double spacing,
@@ -309,7 +310,7 @@ class SearchableBottomBarController extends ChangeNotifier {
     // ── Search pill ────────────────────────────────────────────────────────
     final centeredTab = tabPillAnchor == GlassTabPillAnchor.center;
 
-    final targetSearchLeft = !searching
+    final targetSearchLeft = !searching || !expandWhenActive
         ? totalW - targetCompactW - extraWRight
         : isKeyboardActive
             ? curExtraWLeft
@@ -317,7 +318,7 @@ class SearchableBottomBarController extends ChangeNotifier {
                 ? (maxTabW + targetTabW) / 2 + curExtraWLeft + spacing
                 : targetTabW + curExtraWLeft + spacing;
 
-    final targetSearchW = !searching
+    final targetSearchW = !searching || !expandWhenActive
         ? targetCompactW
         : totalW -
             targetSearchLeft -

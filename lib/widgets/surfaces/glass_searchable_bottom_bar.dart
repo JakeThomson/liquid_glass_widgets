@@ -479,7 +479,8 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                 // ── Delegate all layout math to the controller ────────────────
                 final layout = _controller.computeLayout(
                   totalW: totalW,
-                  searching: searching,
+                  searching: widget.isSearchActive,
+                  expandWhenActive: widget.searchConfig.expandWhenActive,
                   barHeight: widget.barHeight,
                   searchBarHeight: widget.searchBarHeight,
                   spacing: widget.spacing,

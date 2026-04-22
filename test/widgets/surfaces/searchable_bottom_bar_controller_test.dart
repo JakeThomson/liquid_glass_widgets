@@ -156,6 +156,7 @@ void main() {
         ctrl.computeLayout(
           totalW: totalW,
           searching: false,
+          expandWhenActive: true,
           barHeight: barH,
           searchBarHeight: searchH,
           spacing: spacing,
@@ -234,6 +235,7 @@ void main() {
         ctrl.computeLayout(
           totalW: totalW,
           searching: true,
+          expandWhenActive: true,
           barHeight: barH,
           searchBarHeight: searchH,
           spacing: spacing,
@@ -315,6 +317,7 @@ void main() {
       final l = ctrl.computeLayout(
         totalW: 400,
         searching: true,
+        expandWhenActive: true,
         barHeight: 64,
         searchBarHeight: 50,
         spacing: 8,
@@ -336,6 +339,7 @@ void main() {
       final l = ctrl.computeLayout(
         totalW: 400,
         searching: true,
+        expandWhenActive: true,
         barHeight: 64,
         searchBarHeight: 50,
         spacing: 8,

@@ -297,7 +297,30 @@ class GlassButton extends StatefulWidget {
   /// Defaults to [GlassQuality.standard], which uses backdrop filter rendering.
   /// This works reliably in all contexts, including scrollable lists.
   ///
-  /// Use [GlassQuality.premium] for shader-based glass in static layouts only.
+  /// Use [GlassQuality.premium] for the full Impeller shader pipeline. When using
+  /// premium quality on a standalone button (outside of an [AdaptiveLiquidGlassLayer]
+  /// or [LiquidGlassLayer]), you **must** also set [useOwnLayer] to `true`.
+  /// Without it, the button has no ancestor layer to render against and will show
+  /// an assertion error in debug mode (graceful pass-through in release).
+  ///
+  /// ```dart
+  /// // ✓ Correct — standalone premium button
+  /// GlassButton(
+  ///   quality: GlassQuality.premium,
+  ///   useOwnLayer: true,
+  ///   icon: Icon(CupertinoIcons.play),
+  ///   onTap: () {},
+  /// )
+  ///
+  /// // ✓ Also correct — inside an AdaptiveLiquidGlassLayer (no useOwnLayer needed)
+  /// AdaptiveLiquidGlassLayer(
+  ///   quality: GlassQuality.premium,
+  ///   child: GlassButton(
+  ///     icon: Icon(CupertinoIcons.play),
+  ///     onTap: () {},
+  ///   ),
+  /// )
+  /// ```
   final GlassQuality? quality;
 
   /// The visual style of the button.

@@ -43,6 +43,7 @@ class GlassSearchBarConfig {
     this.enableSuggestions = true,
     this.onTapOutside,
     this.autoFocusOnExpand = false,
+    this.expandWhenActive = true,
     this.showsCancelButton = true,
     this.cancelButtonText = 'Cancel',
     this.cancelButtonColor,
@@ -193,6 +194,14 @@ class GlassSearchBarConfig {
   ///   useful for modal or dedicated search screens where typing is the
   ///   immediate next action.
   final bool autoFocusOnExpand;
+
+  /// Whether the search pill expands horizontally to fill the available width
+  /// when search is active.
+  ///
+  /// Defaults to `true` (Apple News style). Set to `false` if you want the
+  /// search pill to remain a compact circular button on the right side when
+  /// active, creating an empty gap in the center of the bar.
+  final bool expandWhenActive;
 
   /// Whether to show a cancel/dismiss button when the search bar is focused.
   ///

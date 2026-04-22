@@ -81,14 +81,42 @@ class _LiquidGlassBlendGroupState extends State<LiquidGlassBlendGroup> {
     return _InheritedLiquidGlassBlendGroup(
       link: _geometryLink,
       child: ShaderBuilder(
-        (context, shader, child) => _RawLiquidGlassBlendGroup(
-          blend: widget.blend,
-          shader: shader,
-          link: _geometryLink,
-          renderLink: InheritedGeometryRenderLink.of(context)!,
-          settings: LiquidGlassRenderScope.of(context).settings,
-          child: child,
-        ),
+        (context, shader, child) {
+          final renderLink = InheritedGeometryRenderLink.of(context);
+
+          assert(
+            renderLink != null,
+            '\n'
+            '[liquid_glass_widgets] LiquidGlassBlendGroup could not find an '
+            'InheritedGeometryRenderLink in the widget tree.\n\n'
+            'This happens when GlassQuality.premium is used outside of a '
+            'LiquidGlassLayer (or AdaptiveLiquidGlassLayer).\n\n'
+            'To fix this, either:\n'
+            '  • Wrap the widget in a LiquidGlassLayer / AdaptiveLiquidGlassLayer, OR\n'
+            '  • Set useOwnLayer: true on your GlassButton / AdaptiveGlass, which '
+            'provisions its own layer automatically.\n\n'
+            'Example:\n'
+            '  GlassButton(\n'
+            '    quality: GlassQuality.premium,\n'
+            '    useOwnLayer: true, // ← add this\n'
+            '    ...\n'
+            '  )\n',
+          );
+
+          // In release builds, if no render link is available, fall back
+          // gracefully by rendering the child without the glass blend effect
+          // rather than crashing the app.
+          if (renderLink == null) return child!;
+
+          return _RawLiquidGlassBlendGroup(
+            blend: widget.blend,
+            shader: shader,
+            link: _geometryLink,
+            renderLink: renderLink,
+            settings: LiquidGlassRenderScope.of(context).settings,
+            child: child,
+          );
+        },
         assetKey: ShaderKeys.blendedGeometry,
         child: widget.child,
       ),
