@@ -142,8 +142,7 @@ mixin TabDragGestureMixin<T extends StatefulWidget> on State<T> {
   void onBarDragCancel() {
     if (tabIsDragging) {
       final relX = (tabXAlign + 1) / 2;
-      final target =
-          (relX * (tabCount - 1)).round().clamp(0, tabCount - 1);
+      final target = (relX * (tabCount - 1)).round().clamp(0, tabCount - 1);
       setState(() {
         tabIsDragging = false;
         tabIsDown = false;
