@@ -14,12 +14,11 @@
 
 ## API
 
-- **`GlassSearchBarConfig.expandWhenActive`** (renamed from `expandOnSearch`). Controls whether the search pill expands when active. Default `true` — no change needed for standard usage. Only set to `false` for advanced layouts (e.g. Apple Music Play Pill pattern) where the search pill should remain compact while `isSearchActive` is used to drive a non-search transition.
+- **`GlassSearchBarConfig.expandWhenActive`** *(new)*. Controls whether the search pill expands when `isSearchActive` is `true`. Default `true` — no change needed for standard usage. Set to `false` for advanced layouts (e.g. Apple Music Play Pill pattern) where the search pill should remain compact while `isSearchActive` drives a non-search transition independently.
 
 ## Examples
 
-- **`apple_news_demo`** — added as a reference implementation of `GlassSearchableBottomBar` with the morphing search pill and tab collapse.
-- **`apple_music_demo`** — added as a production-level reference for the Play Pill pattern: a floating `GlassButton` (`useOwnLayer: true`, `GlassQuality.premium`) that animates between a full-screen player and a mini-mode docked pill using `AnimatedPositioned` + `AnimatedOpacity`, synchronized with `GlassSearchableBottomBar`'s spring morph via `expandWhenActive`.
+- **`apple_music_demo`** — added as a reference for the Play Pill pattern: a floating `GlassButton` (`useOwnLayer: true`, `GlassQuality.premium`) that animates between a full-screen player and a mini-mode docked pill using `AnimatedPositioned` + `AnimatedOpacity`, synchronized with `GlassSearchableBottomBar`'s spring morph via `expandWhenActive`.
 
 ---
 
