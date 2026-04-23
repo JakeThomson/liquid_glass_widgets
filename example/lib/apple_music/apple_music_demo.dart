@@ -162,21 +162,26 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Note: Since we don't use SafeArea, the bottom bar sits directly at the
-    // physical screen bottom (overlapping the home indicator).
-    // Since we removed SafeArea around GlassSearchableBottomBar, it sits exactly
-    // at the absolute bottom of the screen (overlapping the home indicator).
-    // The expanded height is `barHeight` (64) + 2 * `verticalPadding` (8).
-    const double expandedNavBarH = 40 + 2 * _kPaddingV; // 80.0
+    // iOS native design floats the pill over the home indicator (ignoring safe area).
+    // Android 3-button nav requires us to clear the opaque system buttons.
+    // We also need to clear the keyboard (viewInsets) when search is focused.
+    final platform = Theme.of(context).platform;
+    final isIOS = platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    // Android 3-button nav requires us to clear the opaque system buttons.
+    final sysBottom = isIOS ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
+    
+    // The dynamic offset pushes the bars up to avoid the Android 3-button nav.
+    // We DO NOT add keyboardH here, because GlassSearchableBottomBar internally 
+    // animates its search pill to float perfectly above the keyboard natively!
+    final bottomOffset = sysBottom;
+
+    const double expandedNavBarH = 40 + 2 * _kPaddingV; // 72.0
 
     // aboveBarBottom: how far the floating play pill sits above the nav bar.
-    // expandedNavBarH gets us to the TOP of the nav bar. We add 16.0 gap.
-    final double aboveBarBottom = expandedNavBarH + 16.0;
+    final double aboveBarBottom = expandedNavBarH + 16.0 + bottomOffset;
 
     // miniBarBottom: position of the pill row inside the body Stack.
-    // Since the nav bar is at the absolute bottom, its pills are exactly
-    // `_kPaddingV` pixels from the bottom.
-    final double miniBarBottom = _kPaddingV;
+    final double miniBarBottom = _kPaddingV + bottomOffset;
 
     // contentPad: extra bottom space so the last sliver scrolls above all bars.
     final double contentPad = aboveBarBottom + 50.0 + 8.0;
@@ -193,82 +198,6 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
       backgroundColor: _kBackground,
       extendBody: true,
       resizeToAvoidBottomInset: false,
-
-      // ── Bottom navigation bar ──────────────────────────────────────────────
-      // GlassSearchableBottomBar natively handles the spring-collapse animation.
-      // With expandWhenActive configured dynamically, the right-side search pill
-      // does NOT expand across the screen when collapsing from a scroll, leaving
-      // a natural gap in the middle for the Play pill to slide down into.
-      bottomNavigationBar: GlassSearchableBottomBar(
-        // KEY: triggers the beautiful spring tab-collapse on scroll TOO.
-        isSearchActive: _isMiniMode || _isSearching,
-        selectedIndex: _selectedTab,
-        onTabSelected: (index) {
-          if (index == _selectedTab && _isMiniMode) {
-            _dismissMiniMode();
-          } else {
-            setState(() {
-              _selectedTab = index;
-              _isSearching = false;
-            });
-          }
-        },
-        barHeight: _kBarH,
-        searchBarHeight: 50.0,
-        horizontalPadding: _kPaddingH,
-        verticalPadding: _kPaddingV,
-        spacing: _kSpacing,
-        selectedIconColor: _kMusicRed,
-        unselectedIconColor: Colors.white.withValues(alpha: 0.9),
-        indicatorColor: Colors.white.withValues(alpha: 0.20),
-        labelFontSize: 10,
-        iconSize: 28,
-        iconLabelSpacing: 0,
-        quality: GlassQuality.premium,
-        interactionBehavior: GlassInteractionBehavior.full,
-        glassSettings: _barGlassSettings,
-        searchConfig: GlassSearchBarConfig(
-          focusNode: _searchFocusNode,
-          autoFocusOnExpand: false,
-          showsCancelButton: true,
-          // When in mini mode but NOT searching, prevent the search pill from expanding.
-          expandWhenActive: !_isMiniMode || _isSearching,
-          hintText: 'Apple Music',
-          onSearchToggle: (active) {
-            if (active) {
-              setState(() => _isSearching = true);
-            } else {
-              final wasSearching = _isSearching;
-              setState(() {
-                _isSearching = false;
-                _searchFieldFocused = false;
-              });
-              // Collapsed home-tab tapped in mini mode → scroll to top.
-              if (!wasSearching && _isMiniMode) _dismissMiniMode();
-            }
-          },
-          onSearchFocusChanged: (focused) =>
-              setState(() => _searchFieldFocused = focused),
-          searchIconColor: Colors.white.withValues(alpha: 0.9),
-          textInputAction: TextInputAction.search,
-        ),
-        tabs: [
-          GlassBottomBarTab(
-            label: 'Home',
-            icon: const Icon(CupertinoIcons.house),
-            activeIcon: const Icon(CupertinoIcons.house_fill),
-          ),
-          GlassBottomBarTab(
-            label: 'Radio',
-            icon: const Icon(CupertinoIcons.antenna_radiowaves_left_right),
-          ),
-          GlassBottomBarTab(
-            label: 'Library',
-            icon: const Icon(CupertinoIcons.music_albums),
-            activeIcon: const Icon(CupertinoIcons.music_albums_fill),
-          ),
-        ],
-      ),
 
       // ── Body ────────────────────────────────────────────────────────────────
       body: Stack(
@@ -290,6 +219,85 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                       : _buildSearchBrowseView(
                           key: const ValueKey('search-browse'),
                           contentPad: contentPad),
+            ),
+          ),
+
+          // ── Bottom navigation bar ──────────────────────────────────────────────
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutQuart,
+            bottom: bottomOffset,
+            left: 0,
+            right: 0,
+            child: GlassSearchableBottomBar(
+              // KEY: triggers the beautiful spring tab-collapse on scroll TOO.
+              isSearchActive: _isMiniMode || _isSearching,
+              selectedIndex: _selectedTab,
+              onTabSelected: (index) {
+                if (index == _selectedTab && _isMiniMode) {
+                  _dismissMiniMode();
+                } else {
+                  setState(() {
+                    _selectedTab = index;
+                    _isSearching = false;
+                  });
+                }
+              },
+              barHeight: _kBarH,
+              searchBarHeight: 50.0,
+              horizontalPadding: _kPaddingH,
+              verticalPadding: _kPaddingV,
+              spacing: _kSpacing,
+              selectedIconColor: _kMusicRed,
+              unselectedIconColor: Colors.white.withValues(alpha: 0.9),
+              indicatorColor: Colors.white.withValues(alpha: 0.20),
+              labelFontSize: 10,
+              iconSize: 28,
+              iconLabelSpacing: 0,
+              quality: GlassQuality.premium,
+              interactionBehavior: GlassInteractionBehavior.full,
+              glassSettings: _barGlassSettings,
+              searchConfig: GlassSearchBarConfig(
+                focusNode: _searchFocusNode,
+                autoFocusOnExpand: false,
+                showsCancelButton: true,
+                // When in mini mode but NOT searching, prevent the search pill from expanding.
+                expandWhenActive: !_isMiniMode || _isSearching,
+                hintText: 'Apple Music',
+                onSearchToggle: (active) {
+                  if (active) {
+                    setState(() => _isSearching = true);
+                  } else {
+                    final wasSearching = _isSearching;
+                    setState(() {
+                      _isSearching = false;
+                      _searchFieldFocused = false;
+                    });
+                    // Collapsed home-tab tapped in mini mode → scroll to top.
+                    if (!wasSearching && _isMiniMode) _dismissMiniMode();
+                  }
+                },
+                onSearchFocusChanged: (focused) =>
+                    setState(() => _searchFieldFocused = focused),
+                searchIconColor: Colors.white.withValues(alpha: 0.9),
+                textInputAction: TextInputAction.search,
+              ),
+              tabs: [
+                GlassBottomBarTab(
+                  label: 'Home',
+                  icon: const Icon(CupertinoIcons.house),
+                  activeIcon: const Icon(CupertinoIcons.house_fill),
+                ),
+                GlassBottomBarTab(
+                  label: 'Radio',
+                  icon: const Icon(CupertinoIcons.antenna_radiowaves_left_right),
+                ),
+                GlassBottomBarTab(
+                  label: 'Library',
+                  icon: const Icon(CupertinoIcons.music_albums),
+                  activeIcon: const Icon(CupertinoIcons.music_albums_fill),
+                ),
+              ],
             ),
           ),
 
