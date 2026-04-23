@@ -164,15 +164,13 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
   Widget build(BuildContext context) {
     // iOS native design floats the pill over the home indicator (ignoring safe area).
     // Android 3-button nav requires us to clear the opaque system buttons.
-    // We also need to clear the keyboard (viewInsets) when search is focused.
+    // On gesture-nav devices safeBottom is 0, so no offset is applied.
     final platform = Theme.of(context).platform;
     final isIOS = platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
-    // Android 3-button nav requires us to clear the opaque system buttons.
     final sysBottom = isIOS ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
-    
-    // The dynamic offset pushes the bars up to avoid the Android 3-button nav.
-    // We DO NOT add keyboardH here, because GlassSearchableBottomBar internally 
-    // animates its search pill to float perfectly above the keyboard natively!
+
+    // GlassSearchableBottomBar handles keyboard avoidance internally (floatY),
+    // so we only need to push the wrapper up by the system nav bar height.
     final bottomOffset = sysBottom;
 
     const double expandedNavBarH = 40 + 2 * _kPaddingV; // 72.0
@@ -186,13 +184,10 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
     // contentPad: extra bottom space so the last sliver scrolls above all bars.
     final double contentPad = aboveBarBottom + 50.0 + 8.0;
 
-    // he sliding pill logic needs to know the exact dimensions of the
-    // Home pill and the Search pill to shrink horizontally to fit between them.
-    // The tabs pill width when collapsed is `_kBarH`.
-    // The search pill width when expandWhenActive: false is `_kBarH`.
-    // Both sides also have `_kSpacing` and `_kPaddingH`.
-    final double miniPlayLeft = _kPaddingH + 50.0 + _kSpacing;
-    final double miniPlayRight = _kPaddingH + 50.0 + _kSpacing;
+    // The play pill slides horizontally to fit between the collapsed Home and
+    // Search pills in mini mode. Each side pill is `_kBarH` wide + `_kSpacing`.
+    final double miniPlayLeft = _kPaddingH + _kBarH + _kSpacing;
+    final double miniPlayRight = _kPaddingH + _kBarH + _kSpacing;
 
     return Scaffold(
       backgroundColor: _kBackground,
@@ -222,7 +217,38 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
             ),
           ),
 
+          // ── Body play pill ─────────────────────────────────────────────────
+          // Drawn FIRST (below in z-order) so the nav bar's animated indicator
+          // always paints on top of the play pill during tab transitions.
+          // In mini mode it slides down into the gap between Home and Search pills.
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.easeInOutCubic,
+            bottom: _isMiniMode ? miniBarBottom : aboveBarBottom,
+            left: _isMiniMode ? miniPlayLeft : _kPaddingH,
+            right: _isMiniMode ? miniPlayRight : _kPaddingH,
+            height: 50.0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOut,
+              // Only hide when the search UI overtakes the whole screen
+              opacity: _isSearching ? 0.0 : 1.0,
+              child: IgnorePointer(
+                ignoring: _isSearching,
+                child: _PlayBarPill(
+                  onTap: () {
+                    if (_isMiniMode) {
+                      _dismissMiniMode();
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+
           // ── Bottom navigation bar ──────────────────────────────────────────────
+          // Drawn LAST (highest z-order) so its animated tab indicator always
+          // renders on top of the floating play pill during tab transitions.
           AnimatedPositioned(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutQuart,
@@ -298,35 +324,6 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                   activeIcon: const Icon(CupertinoIcons.music_albums_fill),
                 ),
               ],
-            ),
-          ),
-
-          // ── Body play pill ─────────────────────────────────────────────────
-          // This is the ONLY play pill now. It stays fully visible and interactive.
-          // In mini mode, it simply slides down into the empty gap left between
-          // the Home and Search pills.
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 420),
-            curve: Curves.easeInOutCubic,
-            bottom: _isMiniMode ? miniBarBottom : aboveBarBottom,
-            left: _isMiniMode ? miniPlayLeft : _kPaddingH,
-            right: _isMiniMode ? miniPlayRight : _kPaddingH,
-            height: 50.0,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOut,
-              // Only hide when the search UI overtakes the whole screen
-              opacity: _isSearching ? 0.0 : 1.0,
-              child: IgnorePointer(
-                ignoring: _isSearching,
-                child: _PlayBarPill(
-                  onTap: () {
-                    if (_isMiniMode) {
-                      _dismissMiniMode();
-                    }
-                  },
-                ),
-              ),
             ),
           ),
         ],

@@ -238,6 +238,12 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Android 3-button nav requires us to push the bar above the opaque buttons.
+    // On iOS and gesture-nav Android, viewPaddingOf returns 0 so no offset applies.
+    final platform = Theme.of(context).platform;
+    final isIOS = platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    final sysBottom = isIOS ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
+
     return Scaffold(
       backgroundColor: _kBackground,
       extendBody: true, // Content flows behind the bottom bar
@@ -269,14 +275,12 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           ],
         ),
       ),
-      // ── GlassSearchableBottomBar: tabs + morphing search in one layer ─────────────
-      // The bar is ALWAYS fixed at the bottom of the screen.
-      // The pills inside handle keyboard avoidance themselves via
-      // Transform.translate(Offset(0, -viewInsets.bottom)): the search pill
-      // and dismiss × float above the keyboard while the left tab button
-      // stays pinned at its natural bottom position — matching iOS 26
-      // Apple News behaviour exactly.
-      bottomNavigationBar: GlassSearchableBottomBar(
+      // ── GlassSearchableBottomBar ─────────────────────────────────────────
+      // Wrapped in Padding to clear Android 3-button nav (sysBottom > 0).
+      // On iOS and gesture-nav Android, sysBottom is 0 so no offset is applied.
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(bottom: sysBottom),
+        child: GlassSearchableBottomBar(
         selectedIndex: _selectedTab,
         isSearchActive: _isSearching,
         onTabSelected: (index) => setState(() {
@@ -343,7 +347,8 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                 CupertinoIcons.rectangle_fill_on_rectangle_angled_fill),
           ),
         ],
-      ),
+        ),
+      ), // Padding
     );
   }
 
