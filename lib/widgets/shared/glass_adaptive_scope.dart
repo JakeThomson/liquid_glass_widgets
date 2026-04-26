@@ -73,12 +73,14 @@
 // ```
 // ---------------------------------------------------------------------------
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
-import '../../utils/glass_quality_adapter.dart';
 import '../../types/glass_quality.dart';
+import '../../types/glass_quality_change_reason.dart';
+import '../../utils/glass_quality_adapter.dart';
 
 // ---------------------------------------------------------------------------
 // GlassAdaptiveScopeData — immutable data carried by the InheritedWidget
@@ -150,6 +152,84 @@ class GlassAdaptiveScopeData {
 }
 
 // ---------------------------------------------------------------------------
+// GlassAdaptiveDiagnostic — rich event emitted on quality changes
+// ---------------------------------------------------------------------------
+
+/// Rich diagnostic snapshot emitted by [GlassAdaptiveScope] whenever the
+/// effective quality changes.
+///
+/// Passed to [GlassAdaptiveScope.onDiagnostic] and printed by
+/// [GlassAdaptiveScope.debugLogDiagnostics]. Contains the full context of
+/// *why* the quality changed — P75/P95 timing, phase, frame count, and reason.
+///
+/// **Use [reason] to filter analytics:**
+/// - [GlassQualityChangeReason.warmupComplete] — the most useful event for
+///   threshold calibration. [p75Ms] will be set.
+/// - [GlassQualityChangeReason.thermalDegradation] — thermal throttle detected.
+///   [p95Ms] will be set.
+/// - [GlassQualityChangeReason.restoredFromCache] — skip in analytics; this
+///   fires on every remount and carries no new timing data.
+@experimental
+@immutable
+class GlassAdaptiveDiagnostic {
+  /// Creates a [GlassAdaptiveDiagnostic].
+  const GlassAdaptiveDiagnostic({
+    required this.from,
+    required this.to,
+    required this.reason,
+    required this.phase,
+    this.p75Ms,
+    this.p95Ms,
+    this.framesMeasured,
+  });
+
+  /// The quality tier before the change.
+  final GlassQuality from;
+
+  /// The quality tier after the change.
+  final GlassQuality to;
+
+  /// What triggered this quality change.
+  final GlassQualityChangeReason reason;
+
+  /// The adaptation phase at the moment of the change.
+  final AdaptivePhase phase;
+
+  /// The P75 raster time (ms) measured during Phase 2 warm-up.
+  ///
+  /// Only set when [reason] is [GlassQualityChangeReason.warmupComplete].
+  /// This is the threshold calibration data point — please post it to the
+  /// [community discussion](https://github.com/sdegenaar/liquid_glass_widgets/discussions).
+  final double? p75Ms;
+
+  /// The P95 raster time (ms) from the Phase 3 window that triggered this change.
+  ///
+  /// Only set when [reason] is [GlassQualityChangeReason.thermalDegradation]
+  /// or [GlassQualityChangeReason.thermalRecovery].
+  final double? p95Ms;
+
+  /// Number of frames measured to reach this decision.
+  ///
+  /// Equals [GlassQualityAdapter.warmupFrames] for [GlassQualityChangeReason.warmupComplete]
+  /// and [GlassQualityAdapter.windowSize] for Phase 3 changes.
+  final int? framesMeasured;
+
+  @override
+  String toString() {
+    final buf = StringBuffer()
+      ..write('GlassAdaptiveDiagnostic(')
+      ..write('${from.name}\u2192${to.name}')
+      ..write(', reason: ${reason.name}')
+      ..write(', phase: ${phase.name}');
+    if (p75Ms != null) buf.write(', p75: ${p75Ms!.toStringAsFixed(1)}ms');
+    if (p95Ms != null) buf.write(', p95: ${p95Ms!.toStringAsFixed(1)}ms');
+    if (framesMeasured != null) buf.write(', frames: $framesMeasured');
+    buf.write(')');
+    return buf.toString();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // GlassAdaptiveScopeConfig — bundled configuration value object
 // ---------------------------------------------------------------------------
 
@@ -189,6 +269,8 @@ class GlassAdaptiveScopeConfig {
     this.targetFrameMs = 16,
     this.allowStepUp = false,
     this.onQualityChanged,
+    this.onDiagnostic,
+    this.debugLogDiagnostics = false,
   });
 
   /// The lowest quality tier the scope will ever enforce.
@@ -213,6 +295,27 @@ class GlassAdaptiveScopeConfig {
   /// Called whenever the effective quality tier changes.
   final void Function(GlassQuality from, GlassQuality to)? onQualityChanged;
 
+  /// Called with rich diagnostic data whenever the effective quality changes.
+  ///
+  /// Provides [GlassAdaptiveDiagnostic] with P75/P95 timing, reason, phase,
+  /// and frame count. Useful for analytics and for posting to the
+  /// [Threshold Calibration Discussion](https://github.com/sdegenaar/liquid_glass_widgets/discussions).
+  ///
+  /// See also [debugLogDiagnostics] for a zero-wiring alternative.
+  final void Function(GlassAdaptiveDiagnostic)? onDiagnostic;
+
+  /// When `true`, prints a structured diagnostic log to the console on every
+  /// quality change — debug builds only (no-op in release/profile).
+  ///
+  /// Zero setup required. Add this to quickly capture data for bug reports:
+  ///
+  /// ```dart
+  /// GlassAdaptiveScopeConfig(debugLogDiagnostics: true)
+  /// ```
+  ///
+  /// Defaults to `false`.
+  final bool debugLogDiagnostics;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -222,7 +325,8 @@ class GlassAdaptiveScopeConfig {
           maxQuality == other.maxQuality &&
           initialQuality == other.initialQuality &&
           targetFrameMs == other.targetFrameMs &&
-          allowStepUp == other.allowStepUp;
+          allowStepUp == other.allowStepUp &&
+          debugLogDiagnostics == other.debugLogDiagnostics;
 
   @override
   int get hashCode => Object.hash(
@@ -231,6 +335,7 @@ class GlassAdaptiveScopeConfig {
         initialQuality,
         targetFrameMs,
         allowStepUp,
+        debugLogDiagnostics,
       );
 }
 
@@ -276,6 +381,8 @@ class GlassAdaptiveScope extends StatefulWidget {
     this.targetFrameMs = 16,
     this.allowStepUp = false,
     this.onQualityChanged,
+    this.onDiagnostic,
+    this.debugLogDiagnostics = false,
     super.key,
   });
 
@@ -347,13 +454,32 @@ class GlassAdaptiveScope extends StatefulWidget {
 
   /// Called on the main thread whenever the effective quality changes.
   ///
-  /// Receives `(GlassQuality from, GlassQuality to)`. Useful for analytics:
+  /// Receives `(GlassQuality from, GlassQuality to)`. Use [onDiagnostic] for
+  /// richer context including P75/P95 timings and change reason.
+  final void Function(GlassQuality from, GlassQuality to)? onQualityChanged;
+
+  /// Called with a [GlassAdaptiveDiagnostic] whenever the effective quality
+  /// changes. Provides P75/P95 raster timings, change reason, phase, and frame
+  /// count — everything needed for bug reports and analytics.
+  ///
   /// ```dart
-  /// onQualityChanged: (from, to) {
-  ///   analytics.log('glass_quality', {'from': from.name, 'to': to.name});
+  /// onDiagnostic: (d) {
+  ///   if (d.reason == GlassQualityChangeReason.warmupComplete) {
+  ///     analytics.log('glass_warmup', {'p75': d.p75Ms, 'quality': d.to.name});
+  ///   }
   /// },
   /// ```
-  final void Function(GlassQuality from, GlassQuality to)? onQualityChanged;
+  final void Function(GlassAdaptiveDiagnostic)? onDiagnostic;
+
+  /// When `true`, prints a structured diagnostic log on every quality change
+  /// in debug builds (no-op in profile/release).
+  ///
+  /// ```dart
+  /// GlassAdaptiveScope(debugLogDiagnostics: true, child: child)
+  /// ```
+  ///
+  /// Defaults to `false`.
+  final bool debugLogDiagnostics;
 
   @override
   State<GlassAdaptiveScope> createState() => _GlassAdaptiveScopeState();
@@ -424,18 +550,110 @@ class _GlassAdaptiveScopeState extends State<GlassAdaptiveScope>
       allowStepUp: widget.allowStepUp,
       initialQuality: widget.initialQuality,
       onQualityChanged: _onQualityChanged,
+      onWarmupComplete: _onWarmupComplete,
     );
   }
 
+  /// Called by the adapter whenever Phase 2 completes — even if quality
+  /// didn't change. This is the critical path for fast devices (e.g. iPhone,
+  /// flagship Android) that stay at [GlassQuality.premium] throughout warmup:
+  /// [_onQualityChanged] never fires for them, so without this callback their
+  /// P75 data would be completely invisible.
+  void _onWarmupComplete(GlassQuality settled, double p75Ms, int frames) {
+    // Snapshot synchronously: did quality change as a result of warmup?
+    // If yes, _onQualityChanged already fired for this event and will emit the
+    // diagnostic — avoid double-firing.
+    final noQualityChange = _effectiveQuality == settled;
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Nothing to update in state here — _effectiveQuality is already correct.
+      // Only emit diagnostic for the no-change path; the changed path was
+      // already handled by _onQualityChanged.
+      if (noQualityChange) {
+        final diagnostic = GlassAdaptiveDiagnostic(
+          from: settled,
+          to: settled,
+          reason: GlassQualityChangeReason.warmupComplete,
+          phase: AdaptivePhase.runtime,
+          p75Ms: p75Ms,
+          framesMeasured: frames,
+        );
+        widget.onDiagnostic?.call(diagnostic);
+        if (widget.debugLogDiagnostics) _logDiagnostic(diagnostic);
+      }
+    });
+  }
+
   void _onQualityChanged(GlassQuality from, GlassQuality to) {
-    // Defer the setState to after the next frame draw to avoid causing the very
+    // Snapshot diagnostic fields from the adapter NOW (before the async gap)
+    // since the adapter may process further frames in the meantime.
+    final reason = _adapter.lastChangeReason;
+    final p75 = _adapter.lastP75Ms;
+    final p95 = _adapter.lastP95Ms;
+    final frames = _adapter.lastFramesMeasured;
+    final phase = _adapter.phase;
+
+    // Defer setState to after the next frame draw to avoid causing the very
     // frame drop we are trying to fix. addPostFrameCallback is properly
     // drained in widget tests (unlike scheduleTask).
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() => _effectiveQuality = to);
+
+      // Legacy callback — unchanged signature for backward compatibility.
       widget.onQualityChanged?.call(from, to);
+
+      // Rich diagnostic callback.
+      final diagnostic = GlassAdaptiveDiagnostic(
+        from: from,
+        to: to,
+        reason: reason,
+        phase: phase,
+        p75Ms: p75,
+        p95Ms: p95,
+        framesMeasured: frames,
+      );
+      widget.onDiagnostic?.call(diagnostic);
+
+      if (widget.debugLogDiagnostics) {
+        _logDiagnostic(diagnostic);
+      }
     });
+  }
+
+  /// Prints a structured diagnostic block. Always gated on [kDebugMode] —
+  /// no output in profile or release builds regardless of the flag value.
+  void _logDiagnostic(GlassAdaptiveDiagnostic d) {
+    if (!kDebugMode) return;
+    final noChange = d.from == d.to;
+    final buf = StringBuffer()
+      ..writeln(
+          '┌─ 📊 GlassAdaptiveScope ─────────────────────────────────────');
+    if (noChange) {
+      buf.writeln('│  Stayed  : ${d.to.name} (no change needed)');
+    } else {
+      buf.writeln('│  Change  : ${d.from.name} → ${d.to.name}');
+    }
+    buf
+      ..writeln('│  Reason  : ${d.reason.name}')
+      ..writeln('│  Phase   : ${d.phase.name}');
+    if (d.p75Ms != null) {
+      buf.writeln('│  P75     : ${d.p75Ms!.toStringAsFixed(1)} ms');
+    }
+    if (d.p95Ms != null) {
+      buf.writeln('│  P95     : ${d.p95Ms!.toStringAsFixed(1)} ms');
+    }
+    if (d.framesMeasured != null) {
+      buf.writeln('│  Frames  : ${d.framesMeasured}');
+    }
+    buf
+      ..writeln('│')
+      ..writeln(
+          '│  📬 Post to: github.com/sdegenaar/liquid_glass_widgets/discussions')
+      ..write('└──────────────────────────────────────────────────────────');
+    // ignore: avoid_print
+    debugPrint(buf.toString());
   }
 
   @override

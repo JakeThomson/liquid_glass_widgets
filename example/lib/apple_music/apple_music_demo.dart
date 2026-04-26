@@ -166,7 +166,8 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
     // Android 3-button nav requires us to clear the opaque system buttons.
     // On gesture-nav devices safeBottom is 0, so no offset is applied.
     final platform = Theme.of(context).platform;
-    final isIOS = platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    final isIOS =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
     final sysBottom = isIOS ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
 
     // GlassSearchableBottomBar handles keyboard avoidance internally (floatY),
@@ -316,7 +317,8 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                 ),
                 GlassBottomBarTab(
                   label: 'Radio',
-                  icon: const Icon(CupertinoIcons.antenna_radiowaves_left_right),
+                  icon:
+                      const Icon(CupertinoIcons.antenna_radiowaves_left_right),
                 ),
                 GlassBottomBarTab(
                   label: 'Library',

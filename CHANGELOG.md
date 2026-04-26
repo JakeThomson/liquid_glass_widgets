@@ -1,6 +1,118 @@
+# 0.8.4
+
+## CI & Tooling
+
+- **CI: Multi-platform test matrix.** The CI pipeline now runs the full test suite
+  on `ubuntu-latest`, `macos-latest`, and `windows-latest` across both `stable`
+  and `beta` Flutter channels. Previously only `macos-latest / stable` was tested,
+  which silently allowed the three Windows shader regressions shipped in 0.7.9–0.7.12.
+  Fail-fast is disabled so all platform failures are visible in a single run.
+
+- **CI: Windows shader validation gate.** `glslangValidator` (the same SPIR-V
+  compiler core Flutter uses on Windows) now runs in CI on every push and PR via
+  the `shader-validation` job. Any shader that would produce a
+  _"index expression must be constant"_ or _"loop bounds must be compile-time
+  constants"_ error is caught before it reaches `main`. Previously this check only
+  ran locally via `bash scripts/validate_shaders.sh` on macOS.
+
+- **CI: pub.dev publish dry-run gate.** A dedicated `pub-check` job runs
+  `dart pub publish --dry-run` on every push and PR. Catches missing dartdoc
+  comments, `pubspec.yaml` issues, platform declaration gaps, and score regressions
+  before they land in a release.
+
+- **CI: Coverage threshold guard (≥ 90 % effective).** The pipeline now fails if
+  effective line coverage drops below 90 % on the stable channel. _Effective_
+  coverage is computed after stripping `lib/src/renderer/*` — 16 GPU
+  `CustomPainter` / `RenderObject` files that cannot execute in a headless VM (no
+  GPU rasterizer; documented as untestable in `ARCHITECTURE.md`). Current effective
+  coverage is **91.8 %** (4 146 / 4 514 lines). A `.codecov.yml` config now mirrors
+  this exclusion so the pub.dev / GitHub badge agrees with the CI gate rather than
+  showing the raw ~81 % figure that included the untestable renderer paths.
+
+- **CI: Run concurrency cancel.** Added `concurrency` group so redundant
+  in-progress runs on the same branch are cancelled automatically, saving CI
+  minutes on rapid-push workflows.
+
+- **Tooling: `scripts/validate_shaders.sh` cross-platform update.** The shader
+  validation script now resolves `glslangValidator` / `glslangValidator.exe`
+  automatically, works on Windows (Git for Windows bash), and prints correct
+  install instructions for macOS (`brew`), Ubuntu (`apt-get`), and Windows
+  (`choco` / `winget`). Path resolution is now robust regardless of which
+  directory the script is called from.
+
+## GlassAdaptiveScope Diagnostics *(experimental)*
+
+- **`GlassAdaptiveDiagnostic` — rich quality change event.** A new immutable
+  data class is emitted whenever `GlassAdaptiveScope` changes quality tier.
+  It carries the full context of *why* the change happened: `from`/`to` quality,
+  `reason` (`warmupComplete`, `thermalDegradation`, `thermalRecovery`,
+  `restoredFromCache`, `staticProbe`), `phase`, and the P75/P95 raster timing
+  that triggered the decision.
+
+- **`GlassAdaptiveScope.onDiagnostic`** — a new optional callback that receives
+  a `GlassAdaptiveDiagnostic` alongside the existing `onQualityChanged`. The old
+  callback is unchanged — this is purely additive.
+
+- **`GlassAdaptiveScope.debugLogDiagnostics: true`** — zero-wiring diagnostic
+  mode. Add this flag to print a structured console block on every quality change
+  in debug builds (no-op in profile/release). Designed to lower the barrier for
+  community threshold calibration reports:
+
+  ```
+  ┌─ 📊 GlassAdaptiveScope ─────────────────────────────────────────
+  │  Change  : premium → standard
+  │  Reason  : warmupComplete
+  │  Phase   : runtime
+  │  P75     : 14.2 ms
+  │  Frames  : 10
+  │
+  │  📬 Post to: github.com/sdegenaar/liquid_glass_widgets/discussions
+  └──────────────────────────────────────────────────────────
+  ```
+
+- **`GlassQualityChangeReason` enum** — exported publicly so analytics pipelines
+  can filter on specific event types (e.g. only log `warmupComplete` and skip
+  `restoredFromCache` noise).
+
+- **Adapter diagnostic tracking** — `GlassQualityAdapter` now records
+  `lastP75Ms`, `lastP95Ms`, `lastFramesMeasured`, and `lastChangeReason` before
+  every quality decision so the scope can snapshot them synchronously before the
+  async `addPostFrameCallback` gap.
+
+## Bug Fixes
+
+- **FIX: Refraction inverted on Android (Pixel 7, Mali GPU, OpenGL ES emulator).** On all
+  devices where Impeller uses the OpenGL ES backend, the liquid glass refraction effect
+  appeared to bend inward rather than outward — content beneath the glass lens distorted
+  toward the centre instead of away from it. The glass bottom bar, segmented control
+  indicator, and all premium-quality glass surfaces were affected.
+
+  **Root cause:** OpenGL ES stores render-to-texture outputs with a bottom-left Y origin
+  (Y increases upward), whereas Flutter's widget coordinate system uses Y-down. The shaders
+  already flip `screenUV.y` and `geometryUV.y` with `1.0 − y` to compensate when _sampling_
+  textures. However, the `displacement` vector (in `liquid_glass_final_render.frag`) and
+  `edgeOffsetLogical` (in `interactive_indicator.frag`) were computed in Flutter's Y-down
+  space and added directly to the Y-up UV without correcting the Y component. A positive Y
+  displacement (outward at the bottom edge) therefore moved the sample _toward_ the centre
+  in UV space — the exact opposite of the intended direction.
+
+  **Fix:** Under `#ifdef IMPELLER_TARGET_OPENGLES`, negate the Y component of the
+  displacement/offset vector before applying it to the sampled UV. This re-aligns the
+  Y-down displacement with the Y-up UV coordinate space.
+
+  The Metal (iOS/macOS) and Vulkan (Samsung S22 / Adreno / AMD Xclipse) code paths are
+  unchanged — the fix is gated entirely by `IMPELLER_TARGET_OPENGLES` and verified against
+  both a Pixel 7 API 35 emulator and a physical Samsung Galaxy S22.
+
+---
+
+
+
+
 # 0.8.3
 
 ## Performance & Bug Fixes
+
 
 - **`GlassBottomBar` / `GlassSearchableBottomBar` — glass lens now correctly refracts active tab icons.** Previously the selected icon layer was rendered *above* the `AnimatedGlassIndicator` in a separate compositor layer, making it invisible to the `BackdropFilter`. The glass pill swept over a blank canvas, producing a flat, unrefracted active icon. Both the selected and unselected icon layers are now combined into a single `RepaintBoundary` placed *behind* the glass lens, so all icon colours are physically sampled and warped by the chromatic aberration as the pill moves — matching iOS 26 behaviour.
 

@@ -567,4 +567,119 @@ void main() {
       expect(GlassQualityAdapter.sessionSettledQuality, GlassQuality.minimal);
     });
   });
+
+  // ── Diagnostic tracking ───────────────────────────────────────────────────
+
+  group('diagnostic tracking', () {
+    setUp(() => GlassQualityAdapter.clearSessionCache());
+    tearDown(() => GlassQualityAdapter.clearSessionCache());
+
+    test('lastChangeReason is warmupComplete after Phase 2 with quality change',
+        () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 15000); // 15 ms → standard
+      expect(adapter.lastChangeReason, GlassQualityChangeReason.warmupComplete);
+    });
+
+    test('lastP75Ms is approximately the measured P75 after warmup', () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 15000); // all frames at 15 ms → P75 = 15 ms
+      expect(adapter.lastP75Ms, isNotNull);
+      // P75 of 10 identical 15 ms frames is 15 ms.
+      expect(adapter.lastP75Ms!, closeTo(15.0, 0.5));
+    });
+
+    test('lastFramesMeasured equals warmupFrames after Phase 2', () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 15000);
+      expect(adapter.lastFramesMeasured, GlassQualityAdapter.warmupFrames);
+    });
+
+    test('lastP75Ms is null before warmup completes', () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      // Only 5 frames delivered — warmup needs 10.
+      adapter.simulateFrameTimings(_frames(5, 15000));
+      expect(adapter.lastP75Ms, isNull);
+    });
+
+    test('lastChangeReason is thermalDegradation after runtime step-down', () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 5000); // fast → premium
+
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000)); // over-budget
+      }
+
+      expect(adapter.lastChangeReason,
+          GlassQualityChangeReason.thermalDegradation);
+    });
+
+    test('lastP95Ms is set after thermal degradation', () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+
+      expect(adapter.lastP95Ms, isNotNull);
+      expect(adapter.lastP95Ms!, greaterThan(0));
+    });
+
+    test('lastP75Ms is null after thermal degradation (P75 only in Phase 2)',
+        () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+
+      // After thermal event the P75 field should be cleared.
+      expect(adapter.lastP75Ms, isNull);
+    });
+
+    test('lastChangeReason is thermalRecovery after runtime step-up', () {
+      final adapter =
+          _makeAdapter(max: GlassQuality.premium, allowStepUp: true);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      // Degrade first.
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      expect(adapter.currentQuality, GlassQuality.standard);
+
+      // Recover.
+      for (int i = 0; i < 10; i++) {
+        adapter.simulateFrameTimings(_frames(5, 2000));
+      }
+
+      expect(
+          adapter.lastChangeReason, GlassQualityChangeReason.thermalRecovery);
+    });
+
+    test('lastChangeReason is restoredFromCache on second adapter', () {
+      // Settle a session cache entry.
+      final adapter1 = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter1, rasterUs: 15000); // → standard
+
+      final adapter2 = _makeAdapter(max: GlassQuality.premium);
+      adapter2.start();
+      expect(adapter2.lastChangeReason,
+          GlassQualityChangeReason.restoredFromCache);
+      adapter2.stop();
+    });
+
+    test('lastFramesMeasured equals windowSize after thermal degradation', () {
+      final adapter = _makeAdapter(max: GlassQuality.premium);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+
+      expect(adapter.lastFramesMeasured, GlassQualityAdapter.windowSize);
+    });
+  });
 }

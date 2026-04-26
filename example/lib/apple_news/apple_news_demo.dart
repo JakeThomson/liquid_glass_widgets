@@ -241,7 +241,8 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     // Android 3-button nav requires us to push the bar above the opaque buttons.
     // On iOS and gesture-nav Android, viewPaddingOf returns 0 so no offset applies.
     final platform = Theme.of(context).platform;
-    final isIOS = platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    final isIOS =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
     final sysBottom = isIOS ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
 
     return Scaffold(
@@ -281,72 +282,72 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
       bottomNavigationBar: Padding(
         padding: EdgeInsets.only(bottom: sysBottom),
         child: GlassSearchableBottomBar(
-        selectedIndex: _selectedTab,
-        isSearchActive: _isSearching,
-        onTabSelected: (index) => setState(() {
-          _selectedTab = index;
-          _isSearching = false;
-        }),
-        selectedIconColor: Color.fromRGBO(255, 90, 130, 1),
-        unselectedIconColor: Colors.white.withValues(alpha: 0.9),
-        labelFontSize: 10,
-        iconSize: 28,
-        iconLabelSpacing: 0,
-        // Neutral frosted-glass pill. AnimatedGlassIndicator now renders
-        // this value directly without any hidden multiplier.
-        indicatorColor: Colors.white.withValues(alpha: 0.20),
-        quality: GlassQuality.premium,
-        interactionBehavior:
-            GlassInteractionBehavior.full, // or .none / .glowOnly / .scaleOnly
-        glassSettings: LiquidGlassSettings(
-          glassColor: const Color(0xAA1C1C1E),
-          thickness: 30,
-          blur: 2,
-          chromaticAberration: .01,
-          lightAngle: GlassDefaults.lightAngle,
-          lightIntensity: .5,
-          ambientStrength: 0,
-          refractiveIndex: 1.2,
-          saturation: 1.2,
-          specularSharpness: GlassSpecularSharpness.medium,
-        ),
-        // ── Search bar config ───────────────────────────────────────────────
-        searchConfig: GlassSearchBarConfig(
-          hintText: 'Apple News',
-          onSearchToggle: (active) => setState(() {
-            _isSearching = active;
-            // Reset focus state when search closes so next open is fresh.
-            if (!active) _searchFieldFocused = false;
+          selectedIndex: _selectedTab,
+          isSearchActive: _isSearching,
+          onTabSelected: (index) => setState(() {
+            _selectedTab = index;
+            _isSearching = false;
           }),
-          onSearchFocusChanged: (focused) =>
-              setState(() => _searchFieldFocused = focused),
-          searchIconColor: Colors.white.withValues(alpha: 0.9),
-          textInputAction: TextInputAction.search,
-          autoFocusOnExpand: false,
-          showsCancelButton: true,
-          onMicTap: () {},
-        ),
-        tabs: [
-          GlassBottomBarTab(
-            label: 'Today',
-            icon: const Icon(CupertinoIcons.house),
-            activeIcon: const Icon(CupertinoIcons.house_fill),
+          selectedIconColor: Color.fromRGBO(255, 90, 130, 1),
+          unselectedIconColor: Colors.white.withValues(alpha: 0.9),
+          labelFontSize: 10,
+          iconSize: 28,
+          iconLabelSpacing: 0,
+          // Neutral frosted-glass pill. AnimatedGlassIndicator now renders
+          // this value directly without any hidden multiplier.
+          indicatorColor: Colors.white.withValues(alpha: 0.20),
+          quality: GlassQuality.premium,
+          interactionBehavior: GlassInteractionBehavior
+              .full, // or .none / .glowOnly / .scaleOnly
+          glassSettings: LiquidGlassSettings(
+            glassColor: const Color(0xAA1C1C1E),
+            thickness: 30,
+            blur: 2,
+            chromaticAberration: .01,
+            lightAngle: GlassDefaults.lightAngle,
+            lightIntensity: .5,
+            ambientStrength: 0,
+            refractiveIndex: 1.2,
+            saturation: 1.2,
+            specularSharpness: GlassSpecularSharpness.medium,
           ),
-          GlassBottomBarTab(
-            label: 'News+',
-            icon: const Icon(CupertinoIcons.news_solid),
-            activeIcon: const Icon(CupertinoIcons.news_solid),
+          // ── Search bar config ───────────────────────────────────────────────
+          searchConfig: GlassSearchBarConfig(
+            hintText: 'Apple News',
+            onSearchToggle: (active) => setState(() {
+              _isSearching = active;
+              // Reset focus state when search closes so next open is fresh.
+              if (!active) _searchFieldFocused = false;
+            }),
+            onSearchFocusChanged: (focused) =>
+                setState(() => _searchFieldFocused = focused),
+            searchIconColor: Colors.white.withValues(alpha: 0.9),
+            textInputAction: TextInputAction.search,
+            autoFocusOnExpand: false,
+            showsCancelButton: true,
+            onMicTap: () {},
           ),
-          GlassBottomBarTab(
-            label: 'Audio',
-            icon: const Icon(CupertinoIcons.headphones),
-          ),
-          GlassBottomBarTab(
-            label: 'Following',
-            icon: const Icon(
-                CupertinoIcons.rectangle_fill_on_rectangle_angled_fill),
-          ),
-        ],
+          tabs: [
+            GlassBottomBarTab(
+              label: 'Today',
+              icon: const Icon(CupertinoIcons.house),
+              activeIcon: const Icon(CupertinoIcons.house_fill),
+            ),
+            GlassBottomBarTab(
+              label: 'News+',
+              icon: const Icon(CupertinoIcons.news_solid),
+              activeIcon: const Icon(CupertinoIcons.news_solid),
+            ),
+            GlassBottomBarTab(
+              label: 'Audio',
+              icon: const Icon(CupertinoIcons.headphones),
+            ),
+            GlassBottomBarTab(
+              label: 'Following',
+              icon: const Icon(
+                  CupertinoIcons.rectangle_fill_on_rectangle_angled_fill),
+            ),
+          ],
         ),
       ), // Padding
     );

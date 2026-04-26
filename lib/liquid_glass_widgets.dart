@@ -28,13 +28,14 @@ export 'theme/glass_theme_settings.dart';
 
 // Types
 export 'types/glass_quality.dart';
+export 'types/glass_quality_change_reason.dart'; // GlassQualityChangeReason enum
 export 'src/types/glass_interaction_behavior.dart'; // GlassInteractionBehavior enum
 
 // Shared widgets
 export 'widgets/shared/adaptive_glass.dart';
 export 'widgets/shared/adaptive_liquid_glass_layer.dart';
 export 'widgets/shared/glass_accessibility_scope.dart'; // GlassAccessibilityScope + GlassAccessibilityData
-export 'widgets/shared/glass_adaptive_scope.dart'; // GlassAdaptiveScope + GlassAdaptiveScopeData
+export 'widgets/shared/glass_adaptive_scope.dart'; // GlassAdaptiveScope + GlassAdaptiveScopeData + GlassAdaptiveDiagnostic
 export 'widgets/shared/glass_backdrop_scope.dart'; // GlassBackdropScope — per-screen backdrop isolation
 export 'widgets/shared/glass_motion_scope.dart';
 export 'widgets/shared/inherited_liquid_glass.dart';

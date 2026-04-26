@@ -215,6 +215,8 @@ class LiquidGlassWidgets {
         targetFrameMs: config.targetFrameMs,
         allowStepUp: config.allowStepUp,
         onQualityChanged: config.onQualityChanged,
+        onDiagnostic: config.onDiagnostic,
+        debugLogDiagnostics: config.debugLogDiagnostics,
         child: result,
       );
     }

@@ -53,6 +53,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../types/glass_quality.dart';
+import '../types/glass_quality_change_reason.dart';
 
 // ---------------------------------------------------------------------------
 // Enums and constants
@@ -106,7 +107,10 @@ class GlassQualityAdapter {
     required this.allowStepUp,
     required void Function(GlassQuality from, GlassQuality to) onQualityChanged,
     this.initialQuality,
+    void Function(GlassQuality settled, double p75Ms, int frames)?
+        onWarmupComplete,
   })  : _onQualityChanged = onQualityChanged,
+        _onWarmupComplete = onWarmupComplete,
         _currentQuality = maxQuality;
 
   // ── Configuration ──────────────────────────────────────────────────────────
@@ -219,12 +223,54 @@ class GlassQualityAdapter {
   int _windowFrameCount = 0; // frames into the current evaluation window
   DateTime? _lastChangeAt;
 
+  // ── Diagnostic tracking (set before every _applyQuality call) ───────────
+
+  /// The P75 raster time (ms) that informed the most recent Phase 2 decision.
+  /// `null` until warmup completes, or after a Phase 3 runtime change.
+  double? _lastP75Ms;
+
+  /// The P95 raster time (ms) from the most recent Phase 3 window evaluation.
+  /// `null` until Phase 3 fires its first quality change.
+  double? _lastP95Ms;
+
+  /// Cached P95 from the current/last window evaluation — used by step-down
+  /// and step-up helpers which don't have direct access to the ring buffer.
+  double? _lastComputedP95Ms;
+
+  /// Number of frames measured when the most recent quality decision was made.
+  int? _lastFramesMeasured;
+
+  /// The reason for the most recent quality change.
+  GlassQualityChangeReason _lastChangeReason =
+      GlassQualityChangeReason.staticProbe;
+
+  /// The P75 raster time (ms) from the most recent Phase 2 warmup decision.
+  double? get lastP75Ms => _lastP75Ms;
+
+  /// The P95 raster time (ms) from the most recent Phase 3 runtime decision.
+  double? get lastP95Ms => _lastP95Ms;
+
+  /// Frames measured when the most recent quality decision was made.
+  int? get lastFramesMeasured => _lastFramesMeasured;
+
+  /// The reason for the most recent quality change.
+  GlassQualityChangeReason get lastChangeReason => _lastChangeReason;
+
   // ── State ──────────────────────────────────────────────────────────────────
 
   AdaptivePhase _phase = AdaptivePhase.probe;
   GlassQuality _currentQuality;
   bool _running = false;
   final void Function(GlassQuality from, GlassQuality to) _onQualityChanged;
+
+  /// Always called at the end of Phase 2, regardless of whether quality
+  /// changed. Receives the settled quality, P75 (ms), and frame count.
+  ///
+  /// Use this in [_GlassAdaptiveScopeState] to emit a diagnostic even on
+  /// fast devices that stay at [maxQuality] through warmup — those devices
+  /// never fire [_onQualityChanged], so their P75 would otherwise be invisible.
+  final void Function(GlassQuality settled, double p75Ms, int frames)?
+      _onWarmupComplete;
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -253,6 +299,10 @@ class GlassQualityAdapter {
     if (!skipStaticProbeForTesting) {
       final forced = _staticProbe();
       if (forced != null) {
+        _lastChangeReason = GlassQualityChangeReason.staticProbe;
+        _lastP75Ms = null;
+        _lastP95Ms = null;
+        _lastFramesMeasured = 0;
         _applyQuality(forced);
         // No frame callback needed — static probe gives us a definitive answer.
         return;
@@ -268,6 +318,10 @@ class GlassQualityAdapter {
       // Keep it within [minQuality, maxQuality] in case the config changed.
       final clamped =
           _floorQuality(_capQuality(maxQuality, cached), minQuality);
+      _lastChangeReason = GlassQualityChangeReason.restoredFromCache;
+      _lastP75Ms = null;
+      _lastP95Ms = null;
+      _lastFramesMeasured = 0;
       _applyQuality(clamped);
       _phase = AdaptivePhase.runtime;
       _usedCachedQuality = true;
@@ -394,11 +448,22 @@ class GlassQualityAdapter {
     // Write to session cache so remounts within this app process skip Phase 2.
     _sessionSettledQuality = effective;
 
+    // Record diagnostic data before applying quality.
+    _lastChangeReason = GlassQualityChangeReason.warmupComplete;
+    _lastP75Ms = p75Ms;
+    _lastP95Ms = null;
+    _lastFramesMeasured = _warmupDurations.length;
+
     _applyQuality(effective);
 
     // Transition to Phase 3.
     _phase = AdaptivePhase.runtime;
     _warmupDurations.clear();
+
+    // Always notify about warmup completion — even when quality didn't change.
+    // This lets the scope surface a diagnostic on fast devices that stay at
+    // maxQuality throughout Phase 2, where _onQualityChanged never fires.
+    _onWarmupComplete?.call(effective, p75Ms, _lastFramesMeasured!);
   }
 
   // ── Phase 3 — runtime hysteresis ──────────────────────────────────────────
@@ -418,6 +483,9 @@ class GlassQualityAdapter {
     final p95 = _percentile(_window.toList(), 95);
     final p95Ms = p95 / 1000.0;
     final budgetMs = targetFrameMs.toDouble();
+
+    // Cache the current P95 so _tryStepDown / _tryStepUp can record it.
+    _lastComputedP95Ms = p95Ms;
 
     if (p95Ms > budgetMs * 1.5) {
       // Over budget
@@ -446,6 +514,10 @@ class GlassQualityAdapter {
     if (!_canChange()) return;
     final next = _stepDown(_currentQuality);
     if (next == _currentQuality) return; // already at minQuality
+    _lastChangeReason = GlassQualityChangeReason.thermalDegradation;
+    _lastP75Ms = null;
+    _lastP95Ms = _lastComputedP95Ms;
+    _lastFramesMeasured = windowSize;
     _applyQuality(next);
   }
 
@@ -453,6 +525,10 @@ class GlassQualityAdapter {
     if (!_canChange()) return;
     final next = _stepUp(_currentQuality);
     if (next == _currentQuality) return; // already at maxQuality
+    _lastChangeReason = GlassQualityChangeReason.thermalRecovery;
+    _lastP75Ms = null;
+    _lastP95Ms = _lastComputedP95Ms;
+    _lastFramesMeasured = windowSize;
     _applyQuality(next);
   }
 

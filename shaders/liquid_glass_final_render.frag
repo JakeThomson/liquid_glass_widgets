@@ -117,6 +117,16 @@ void main() {
     float refractLen  = (height + baseHeight) / max(0.001, abs(baseRefract.z));
     vec2  displacement = baseRefract.xy * refractLen;
 
+    // On OpenGL ES, screenUV.y is already flipped to (1.0 - y) to compensate
+    // for the bottom-left texture-origin convention.  The displacement is
+    // computed in Flutter's native Y-down space (outward normal at the bottom
+    // edge has +Y), but adding a positive Y delta to the flipped UV moves the
+    // sample TOWARD the centre rather than away — inverting the refraction.
+    // Negating displacement.y re-aligns it with the Y-up UV sampling space.
+    #ifdef IMPELLER_TARGET_OPENGLES
+        displacement.y = -displacement.y;
+    #endif
+
     // Apply refraction — with optional chromatic aberration.
     // PP1 optimisation: when the surface normal is flat (pointing straight up,
     // i.e. normalXY ≈ 0), refract() always produces displacement = vec2(0) and

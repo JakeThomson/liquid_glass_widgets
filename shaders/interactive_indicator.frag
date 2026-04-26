@@ -157,8 +157,15 @@ void main() {
   vec2 edgeOffsetLogical = surfaceNormal * edgeInfluence * bendStrength * uSize.y * 0.35;
   vec2 edgeOffsetUV = edgeOffsetLogical / uBackgroundSize;
   
-  // Apply refraction offset (subtract because we bend inward)
-  vec2 localRefracted = posInBg - edgeOffsetLogical;
+  // Apply refraction offset along the surface normal.
+  // On OpenGL ES the background texture is stored with a bottom-left Y origin,
+  // so edgeOffsetLogical.y (computed in Flutter's Y-down space) must be
+  // negated to sample in the correct outward direction in the Y-up UV space.
+  #ifdef IMPELLER_TARGET_OPENGLES
+    vec2 localRefracted = posInBg + vec2(edgeOffsetLogical.x, -edgeOffsetLogical.y);
+  #else
+    vec2 localRefracted = posInBg - edgeOffsetLogical;
+  #endif
   
   // --------------------------------------------------------------------------
   // CHROMATIC ABERRATION

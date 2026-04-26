@@ -320,4 +320,117 @@ void main() {
           ]));
     });
   });
+
+  // ── GlassQualityChangeReason enum ────────────────────────────────────────
+
+  group('GlassQualityChangeReason enum', () {
+    test('all five values exist', () {
+      expect(
+        GlassQualityChangeReason.values,
+        containsAll([
+          GlassQualityChangeReason.staticProbe,
+          GlassQualityChangeReason.restoredFromCache,
+          GlassQualityChangeReason.warmupComplete,
+          GlassQualityChangeReason.thermalDegradation,
+          GlassQualityChangeReason.thermalRecovery,
+        ]),
+      );
+    });
+  });
+
+  // ── GlassAdaptiveDiagnostic value type ───────────────────────────────────
+
+  group('GlassAdaptiveDiagnostic', () {
+    test('toString contains quality, reason, and phase', () {
+      const d = GlassAdaptiveDiagnostic(
+        from: GlassQuality.premium,
+        to: GlassQuality.standard,
+        reason: GlassQualityChangeReason.warmupComplete,
+        phase: AdaptivePhase.runtime,
+        p75Ms: 14.2,
+        framesMeasured: 10,
+      );
+      final s = d.toString();
+      expect(s, contains('premium'));
+      expect(s, contains('standard'));
+      expect(s, contains('warmupComplete'));
+      expect(s, contains('runtime'));
+      expect(s, contains('14.2'));
+      expect(s, contains('10'));
+    });
+
+    test('toString works when optional fields are null', () {
+      const d = GlassAdaptiveDiagnostic(
+        from: GlassQuality.standard,
+        to: GlassQuality.minimal,
+        reason: GlassQualityChangeReason.staticProbe,
+        phase: AdaptivePhase.probe,
+      );
+      // Must not throw.
+      expect(d.toString(), isNotEmpty);
+      expect(d.toString(), contains('staticProbe'));
+    });
+
+    test('p95Ms appears in toString when set', () {
+      const d = GlassAdaptiveDiagnostic(
+        from: GlassQuality.premium,
+        to: GlassQuality.standard,
+        reason: GlassQualityChangeReason.thermalDegradation,
+        phase: AdaptivePhase.runtime,
+        p95Ms: 28.5,
+      );
+      expect(d.toString(), contains('28.5'));
+    });
+  });
+
+  // ── onDiagnostic callback ─────────────────────────────────────────────────
+
+  group('onDiagnostic callback', () {
+    testWidgets('no crash when onDiagnostic is null', (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(child: SizedBox.shrink()),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('no crash when onDiagnostic is provided', (tester) async {
+      final received = <GlassAdaptiveDiagnostic>[];
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          onDiagnostic: received.add,
+          child: const SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── debugLogDiagnostics ───────────────────────────────────────────────────
+
+  group('debugLogDiagnostics', () {
+    testWidgets('does not crash when true', (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          debugLogDiagnostics: true,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('does not crash when false (default)', (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          // ignore: avoid_redundant_argument_values
+          debugLogDiagnostics: false,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
