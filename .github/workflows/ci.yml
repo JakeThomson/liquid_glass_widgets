@@ -81,7 +81,7 @@ jobs:
             -o coverage/lcov_effective.info
 
           TOTAL=$(lcov --summary coverage/lcov_effective.info 2>&1 \
-            | grep 'lines' | grep -oP '[0-9]+\.[0-9]+' | head -1)
+            | grep 'lines' | grep -oE '[0-9]+\.[0-9]+' | head -1)
           echo "Effective line coverage (renderer excluded): ${TOTAL}%"
 
           if (( $(echo "$TOTAL < 90.0" | bc -l) )); then
@@ -114,18 +114,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Download glslangValidator directly from KhronosGroup/glslang GitHub releases.
-      # The Chocolatey 'glslang' package was removed from the registry.
+      # Download glslangValidator from the KhronosGroup main-tot pre-built release.
+      # This rolling tag always has pre-built Windows binaries; the 'latest' release
+      # tag sometimes contains only source archives.
       - name: Install glslang
         shell: pwsh
         run: |
-          $release = Invoke-RestMethod `
-            -Uri "https://api.github.com/repos/KhronosGroup/glslang/releases/latest" `
-            -Headers @{ "User-Agent" = "github-actions" }
-          # Match any Windows asset regardless of naming convention used by that release.
-          $asset = $release.assets | Where-Object { $_.name -like "*windows*" -and $_.name -like "*.zip" } | Select-Object -First 1
-          if (-not $asset) { Write-Error "No Windows glslang asset found"; exit 1 }
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "glslang.zip"
+          $url = "https://github.com/KhronosGroup/glslang/releases/download/main-tot/glslang-main-windows-Release.zip"
+          Invoke-WebRequest -Uri $url -OutFile "glslang.zip"
           Expand-Archive "glslang.zip" -DestinationPath "glslang-bin"
           $exe = Get-ChildItem -Path "glslang-bin" -Recurse -Filter "glslangValidator.exe" | Select-Object -First 1
           if (-not $exe) { Write-Error "glslangValidator.exe not found in archive"; exit 1 }
