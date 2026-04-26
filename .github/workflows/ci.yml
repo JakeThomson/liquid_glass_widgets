@@ -103,39 +103,26 @@ jobs:
           fail_ci_if_error: false
 
   # ─────────────────────────────────────────────────────────────────────────
-  # Job 2: Windows shader validation (SkSL / glslang)
-  # Runs on windows-latest only — this is the exact compiler Flutter uses
-  # on Windows (SPIR-V/glslang path). Failures here = Windows build failure.
+  # Job 2: Shader validation (SkSL / glslang)
+  # glslangValidator is cross-platform — it rejects the same invalid SPIR-V
+  # constructs (dynamic array indices, non-constant loop bounds) regardless of
+  # host OS. Running on Ubuntu where apt install is instant and reliable.
   # ─────────────────────────────────────────────────────────────────────────
   shader-validation:
-    name: Shader Validation (Windows SkSL rules)
-    runs-on: windows-latest
+    name: Shader Validation (SkSL / glslang)
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      # Download glslangValidator from the KhronosGroup main-tot pre-built release.
-      # This rolling tag always has pre-built Windows binaries; the 'latest' release
-      # tag sometimes contains only source archives.
       - name: Install glslang
-        shell: pwsh
-        run: |
-          $url = "https://github.com/KhronosGroup/glslang/releases/download/main-tot/glslang-main-windows-Release.zip"
-          Invoke-WebRequest -Uri $url -OutFile "glslang.zip"
-          Expand-Archive "glslang.zip" -DestinationPath "glslang-bin"
-          $exe = Get-ChildItem -Path "glslang-bin" -Recurse -Filter "glslangValidator.exe" | Select-Object -First 1
-          if (-not $exe) { Write-Error "glslangValidator.exe not found in archive"; exit 1 }
-          Write-Output $exe.DirectoryName >> $env:GITHUB_PATH
+        run: sudo apt-get install -y glslang-tools
 
-      # Verify the tool is on PATH before running the script.
       - name: Verify glslangValidator
         run: glslangValidator --version
-        shell: pwsh
 
-      # Run the existing validation script under bash (Git for Windows provides bash).
       - name: Validate shaders
         run: bash scripts/validate_shaders.sh
-        shell: bash
 
   # ─────────────────────────────────────────────────────────────────────────
   # Job 3: pub.dev publish dry-run
