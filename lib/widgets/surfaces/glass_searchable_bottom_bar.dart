@@ -93,11 +93,16 @@ class GlassSearchableBottomBar extends StatefulWidget {
     // ── Interaction ──────────────────────────────────────────────────────────
     this.interactionBehavior = GlassInteractionBehavior.full,
     this.pressScale = 1.04,
+    this.tabWidth,
   })  : assert(tabs.length > 0,
             'GlassSearchableBottomBar requires at least one tab'),
         assert(
           selectedIndex >= 0 && selectedIndex < tabs.length,
           'selectedIndex must be between 0 and tabs.length - 1',
+        ),
+        assert(
+          tabWidth == null || tabWidth > 0,
+          'tabWidth must be positive, or null to use expand (full-width) mode.',
         );
 
   // ignore: public_member_api_docs
@@ -297,6 +302,35 @@ class GlassSearchableBottomBar extends StatefulWidget {
 
   // Note: interactionBehavior and pressScale fields are declared earlier in the Interaction section.
 
+  // ── Tab sizing ───────────────────────────────────────────────────────────────
+
+  /// Width of each tab slot in the tab pill.
+  ///
+  /// Controls the total width of the tab pill:
+  /// `pill width = tabWidth × tab count`, clamped to the maximum
+  /// available space.
+  ///
+  /// **Default: `88.0`** — matches the iOS 26 compact tab slot that
+  /// comfortably fits an icon + short label. This gives a 2-tab bar a
+  /// 176 px pill and a 3-tab bar a 264 px pill, leaving the rest of the
+  /// available width for the search pill to animate into.
+  ///
+  /// Set to `null` to expand the tab pill across all available space
+  /// (the legacy behaviour). Useful when you always have 4–5 tabs and
+  /// want them to fill the bar.
+  ///
+  /// ```dart
+  /// // Compact (default) — 2 tabs = 176 px pill
+  /// tabWidth: 88.0,
+  ///
+  /// // Wider slots for longer labels ("Following", "Discover")
+  /// tabWidth: 110.0,
+  ///
+  /// // Legacy expand — fills all space left of the search button
+  /// tabWidth: null,
+  /// ```
+  final double? tabWidth;
+
   @override
   State<GlassSearchableBottomBar> createState() =>
       _GlassSearchableBottomBarState();
@@ -308,21 +342,10 @@ class GlassSearchableBottomBar extends StatefulWidget {
 
 class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
     with TickerProviderStateMixin {
-  /// Identical glass defaults to [GlassBottomBar] — ensures both widgets look
-  /// the same when placed on the same screen.
-  static const _defaultGlassColor = Color(0x3DFFFFFF);
-  static const _defaultLightAngle = 0.75 * math.pi;
-  static const _defaultGlassSettings = LiquidGlassSettings(
-    thickness: 30,
-    blur: 3,
-    chromaticAberration: 0.3,
-    lightIntensity: 0.6,
-    refractiveIndex: 1.59,
-    saturation: 0.7,
-    ambientStrength: 1,
-    lightAngle: _defaultLightAngle,
-    glassColor: _defaultGlassColor,
-  );
+  /// Identical to [GlassBottomBar]'s defaults \u2014 centralised in
+  /// [kBottomBarGlassDefaults] (bottom_bar_internal.dart) so both bars are
+  /// guaranteed to produce the same glass when placed on the same screen.
+  static const _defaultGlassSettings = kBottomBarGlassDefaults;
 
   // ── Layout state machine controller ─────────────────────────────────────
   // Owns focus state, spring target cache, and all layout computation.
@@ -493,6 +516,8 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                   extraCollapsesOnSearch: extraCollapsesOnSearch,
                   isKeyboardActive: isKeyboardActive,
                   keyboardH: keyboardH,
+                  tabCount: widget.tabs.length,
+                  perTabWidth: widget.tabWidth,
                 );
 
                 final targetTabW = layout.targetTabW;

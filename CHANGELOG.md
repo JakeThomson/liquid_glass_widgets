@@ -1,4 +1,73 @@
+# 0.9.0
+
+## ✨ New — `tabWidth` on `GlassBottomBar`
+
+**`tabWidth` is now available on both `GlassBottomBar` and `GlassSearchableBottomBar`.**
+Both bar variants share identical compact-sizing semantics and the same default.
+
+### API
+
+```dart
+GlassBottomBar(
+  // Default (no tabWidth): expand — pill fills available space.
+  // tabWidth: 88.0 → iOS 26 compact sizing
+  tabWidth: 88.0,
+  ...
+)
+```
+
+| `tabWidth` | Behaviour | 2 tabs | 3 tabs | 4 tabs |
+|---|---|---|---|---|
+| `null` *(default)* | Expand — fills available space | fills bar | fills bar | fills bar |
+| `88.0` | Compact — iOS 26 style | 176 px | 264 px | 352 px |
+
+The pill is automatically **clamped** so it never overflows its container,
+regardless of how many tabs are present or how narrow the screen is.
+
+### Zero breaking changes
+
+`tabWidth` defaults to `null` (expand) on both `GlassBottomBar` and
+`GlassSearchableBottomBar`. Existing code that does not pass `tabWidth`
+continues to behave exactly as before — the tab pill fills the bar.
+Pass `tabWidth: 88.0` to opt-in to iOS 26 compact sizing.
+
+### Shared infrastructure (internal)
+
+- **`bar_layout_utils.dart`** — new pure-Dart file containing
+  `resolveTabPillWidth`. Both `GlassBottomBar` and
+  `SearchableBottomBarController` delegate to this single function, eliminating
+  two separate inline implementations of the same arithmetic.
+- **`kBottomBarGlassDefaults`** — the 9-field `LiquidGlassSettings` constant
+  that was previously copy-pasted into both bar state classes is now defined
+  once in `bottom_bar_internal.dart` and referenced from both locations.
+
+### Production hardening
+
+- **Extra button pinned to trailing edge in `GlassBottomBar`.**
+  Previously the extra button sat immediately adjacent to the tab pill when
+  using compact `tabWidth` sizing, leaving empty space to its right. It is now
+  always pinned to the far-right edge (using `Expanded` + `Align(centerRight)`)
+  to match the searchable bar's layout. The `maxTabW` arithmetic is unchanged;
+  only the Row structure changed. Works correctly in both compact and expand modes.
+- `resolveTabPillWidth` guards against negative `maxAvailable` values
+  (`math.max(0.0, maxAvailable)` before the `clamp`) to prevent a `RangeError`
+  in unusual layout constraint environments.
+- Both constructors now assert `tabWidth == null || tabWidth > 0` — passing a
+  negative value previously produced a zero-width pill silently.
+- Golden regression sentinel added for `tabWidth: null` (expand mode), so a
+  layout regression in legacy behaviour is caught by the pixel-test suite.
+
+
+### Example
+
+`example/lib/tab_width_demo.dart` — covers both `GlassBottomBar`
+and `GlassSearchableBottomBar` via a **Bar variant** chip, with live metrics
+showing the computed pill width in real time.
+
+---
+
 # 0.8.4
+
 
 ## CI & Tooling
 

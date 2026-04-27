@@ -6,8 +6,6 @@
 // by whynotmake-it team (https://github.com/whynotmake-it/flutter_liquid_glass).
 // Used under MIT License.
 
-import 'dart:math' as math;
-
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -19,7 +17,13 @@ import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/inherited_liquid_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../../src/types/glass_interaction_behavior.dart';
-import 'shared/bottom_bar_internal.dart';
+import 'shared/bottom_bar_internal.dart'
+    show
+        BottomBarExtraBtn,
+        BottomBarTabItem,
+        TabIndicator,
+        kBottomBarGlassDefaults;
+import 'shared/bar_layout_utils.dart';
 
 /// A glass morphism bottom navigation bar following Apple's design patterns.
 ///
@@ -191,6 +195,7 @@ class GlassBottomBar extends StatefulWidget {
     this.innerBlur = 0.0,
     this.maskingQuality = MaskingQuality.high,
     this.backgroundKey,
+    this.tabWidth,
     this.interactionGlowColor,
     this.interactionGlowRadius = 1.5,
     this.interactionBehavior = GlassInteractionBehavior.full,
@@ -199,6 +204,10 @@ class GlassBottomBar extends StatefulWidget {
         assert(
           selectedIndex >= 0 && selectedIndex < tabs.length,
           'selectedIndex must be between 0 and tabs.length - 1',
+        ),
+        assert(
+          tabWidth == null || tabWidth > 0,
+          'tabWidth must be positive, or null to use expand (full-width) mode.',
         );
 
   /// Magnification factor for the content inside the selected indicator.
@@ -273,6 +282,28 @@ class GlassBottomBar extends StatefulWidget {
   // ===========================================================================
   // Tab Configuration
   // ===========================================================================
+
+  /// Width of each tab slot in logical pixels.
+  ///
+  /// Controls the total width of the tab pill via `tabWidth × tabs.length`,
+  /// giving each tab a fixed allocation regardless of the bar's full width.
+  ///
+  /// **Compact sizing (default `88.0`)** — iOS 26 Apple-style proportional tabs:
+  /// - 2 tabs → 176 px pill
+  /// - 3 tabs → 264 px pill
+  /// - 4 tabs → 352 px pill (clamped if wider than available space)
+  ///
+  /// **Expand (`null`)** — legacy fill-all-space behaviour. The tab pill
+  /// stretches to occupy all horizontal space not taken by [extraButton].
+  /// Use this when you explicitly want the bar to span the full available width.
+  ///
+  /// When the natural width (`tabWidth × tabs.length`) exceeds the available
+  /// space the pill is automatically clamped — it will never overflow.
+  ///
+  /// See also:
+  ///   * [GlassSearchableBottomBar.tabWidth], the equivalent parameter on the
+  ///     searchable variant which uses the same default and clamping logic.
+  final double? tabWidth;
 
   /// List of tabs to display in the bottom bar.
   ///
@@ -471,21 +502,9 @@ class GlassBottomBar extends StatefulWidget {
 }
 
 class _GlassBottomBarState extends State<GlassBottomBar> {
-  // Cache default glass color and settings to avoid allocations on every build
-  static const _defaultGlassColor = Color(0x3DFFFFFF); // Colors.white24
-  static const _defaultLightAngle =
-      0.75 * math.pi; // 135° — Apple standard, upper-left
-  static const _defaultGlassSettings = LiquidGlassSettings(
-    thickness: 30,
-    blur: 3,
-    chromaticAberration: 0.3,
-    lightIntensity: 0.6,
-    refractiveIndex: 1.59,
-    saturation: 0.7,
-    ambientStrength: 1,
-    lightAngle: _defaultLightAngle,
-    glassColor: _defaultGlassColor,
-  );
+  // Delegate to the shared const — single source of truth in bottom_bar_internal.dart.
+  // Both bars reference kBottomBarGlassDefaults so their glass is guaranteed identical.
+  static const _defaultGlassSettings = kBottomBarGlassDefaults;
 
   @override
   Widget build(BuildContext context) {
@@ -508,76 +527,104 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
           horizontal: widget.horizontalPadding,
           vertical: widget.verticalPadding,
         ),
-        child: Row(
-          spacing: widget.spacing,
-          children: [
-            // Main tab bar with draggable indicator
-            Expanded(
-              child: TabIndicator(
-                quality: effectiveQuality,
-                visible: widget.showIndicator,
-                tabIndex: widget.selectedIndex,
-                tabCount: widget.tabs.length,
-                indicatorColor: widget.indicatorColor,
-                indicatorSettings: widget.indicatorSettings,
-                onTabChanged: widget.onTabSelected,
-                barHeight: widget.barHeight,
-                barBorderRadius: widget.barBorderRadius,
-                tabPadding: widget.tabPadding,
-                backgroundKey: widget.backgroundKey,
-                maskingQuality: widget.maskingQuality,
-                interactionGlowColor: widget.interactionBehavior.hasGlow
-                    ? widget.interactionGlowColor
-                    : Colors.transparent,
-                interactionGlowRadius: widget.interactionGlowRadius,
-                interactionScale: widget.interactionBehavior.hasScale
-                    ? widget.pressScale
-                    : 1.0,
-                childUnselected: Row(
-                  children: [
-                    for (var i = 0; i < widget.tabs.length; i++)
-                      Expanded(
-                        child: BottomBarTabItem(
-                          tab: widget.tabs[i],
-                          selected: false,
-                          selectedIconColor: widget.selectedIconColor,
-                          unselectedIconColor: widget.unselectedIconColor,
-                          iconSize: widget.iconSize,
-                          labelFontSize: widget.labelFontSize,
-                          textStyle: widget.textStyle,
-                          iconLabelSpacing: widget.iconLabelSpacing,
-                          glowDuration: widget.glowDuration,
-                          glowBlurRadius: widget.glowBlurRadius,
-                          glowSpreadRadius: widget.glowSpreadRadius,
-                          glowOpacity: widget.glowOpacity,
-                          // onTap is null: all tap selection goes through
-                          // TabIndicator.onBarTapDown (prevents double-fire).
-                          onTap: null,
-                        ),
-                      ),
-                  ],
-                ),
-                // Pass selected tabs (foreground/masked layer)
-                selectedTabBuilder: (context, intensity, alignment) =>
-                    _buildSelectedTabs(intensity, alignment),
-                magnification: widget.magnification,
-                innerBlur: widget.innerBlur,
-              ),
-            ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Compute how much width the extra button consumes, if present.
+            final extraBtnW = widget.extraButton != null
+                ? widget.extraButton!.size + widget.spacing
+                : 0.0;
+            // Available width for the tab pill inside the padded row.
+            final maxTabW = constraints.maxWidth - extraBtnW;
+            // Resolve the pill width: compact (tabWidth × count) or fill (null).
+            final tabPillW = resolveTabPillWidth(
+              tabWidth: widget.tabWidth,
+              tabCount: widget.tabs.length,
+              maxAvailable: maxTabW,
+            );
 
-            // Optional extra button
-            if (widget.extraButton != null)
-              BottomBarExtraBtn(
-                config: widget.extraButton!,
-                quality: effectiveQuality,
-                iconColor:
-                    widget.extraButton!.iconColor ?? widget.unselectedIconColor,
-                borderRadius: widget.barBorderRadius ==
-                        GlassBottomBar._defaultBarBorderRadius
-                    ? null
-                    : widget.barBorderRadius,
-              ),
-          ],
+            return Row(
+              children: [
+                // Main tab bar with draggable indicator
+                SizedBox(
+                  width: tabPillW,
+                  child: TabIndicator(
+                    quality: effectiveQuality,
+                    visible: widget.showIndicator,
+                    tabIndex: widget.selectedIndex,
+                    tabCount: widget.tabs.length,
+                    indicatorColor: widget.indicatorColor,
+                    indicatorSettings: widget.indicatorSettings,
+                    onTabChanged: widget.onTabSelected,
+                    barHeight: widget.barHeight,
+                    barBorderRadius: widget.barBorderRadius,
+                    tabPadding: widget.tabPadding,
+                    backgroundKey: widget.backgroundKey,
+                    maskingQuality: widget.maskingQuality,
+                    interactionGlowColor: widget.interactionBehavior.hasGlow
+                        ? widget.interactionGlowColor
+                        : Colors.transparent,
+                    interactionGlowRadius: widget.interactionGlowRadius,
+                    interactionScale: widget.interactionBehavior.hasScale
+                        ? widget.pressScale
+                        : 1.0,
+                    childUnselected: Row(
+                      children: [
+                        for (var i = 0; i < widget.tabs.length; i++)
+                          Expanded(
+                            child: BottomBarTabItem(
+                              tab: widget.tabs[i],
+                              selected: false,
+                              selectedIconColor: widget.selectedIconColor,
+                              unselectedIconColor: widget.unselectedIconColor,
+                              iconSize: widget.iconSize,
+                              labelFontSize: widget.labelFontSize,
+                              textStyle: widget.textStyle,
+                              iconLabelSpacing: widget.iconLabelSpacing,
+                              glowDuration: widget.glowDuration,
+                              glowBlurRadius: widget.glowBlurRadius,
+                              glowSpreadRadius: widget.glowSpreadRadius,
+                              glowOpacity: widget.glowOpacity,
+                              // onTap is null: all tap selection goes through
+                              // TabIndicator.onBarTapDown (prevents double-fire).
+                              onTap: null,
+                            ),
+                          ),
+                      ],
+                    ),
+                    // Pass selected tabs (foreground/masked layer)
+                    selectedTabBuilder: (context, intensity, alignment) =>
+                        _buildSelectedTabs(intensity, alignment),
+                    magnification: widget.magnification,
+                    innerBlur: widget.innerBlur,
+                  ),
+                ),
+
+                // Optional extra button — always pinned to the trailing edge.
+                // Expanded absorbs the gap between the compact pill and the right
+                // edge; Align(right) keeps the button flush with the bar boundary.
+                // This matches the searchable bar's visual pattern where the search
+                // button sits at the far right regardless of pill width.
+                if (widget.extraButton != null) ...[
+                  SizedBox(width: widget.spacing), // fixed gap after pill
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: BottomBarExtraBtn(
+                        config: widget.extraButton!,
+                        quality: effectiveQuality,
+                        iconColor: widget.extraButton!.iconColor ??
+                            widget.unselectedIconColor,
+                        borderRadius: widget.barBorderRadius ==
+                                GlassBottomBar._defaultBarBorderRadius
+                            ? null
+                            : widget.barBorderRadius,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );

@@ -23,6 +23,34 @@ import '../glass_bottom_bar.dart'
         JellyClipper;
 
 // =============================================================================
+// kBottomBarGlassDefaults — shared glass preset
+// =============================================================================
+
+/// Default [LiquidGlassSettings] for both [GlassBottomBar] and
+/// [GlassSearchableBottomBar].
+///
+/// Centralised here so that both bars are guaranteed to produce visually
+/// identical glass when placed on the same screen — there is no risk of
+/// the two copies drifting apart during maintenance.
+///
+/// Values are tuned to the iOS 26 Apple News / Safari tab bar aesthetic:
+/// - `thickness: 30` — deep refraction without over-distorting icons.
+/// - `blur: 3` — subtle frosted back-blur.
+/// - `refractiveIndex: 1.59` — polycarbonate-grade refraction.
+/// - `lightAngle: 0.75π` (135°) — Apple standard upper-left key light.
+const kBottomBarGlassDefaults = LiquidGlassSettings(
+  thickness: 30,
+  blur: 3,
+  chromaticAberration: 0.3,
+  lightIntensity: 0.6,
+  refractiveIndex: 1.59,
+  saturation: 0.7,
+  ambientStrength: 1,
+  lightAngle: 0.75 * math.pi,
+  glassColor: Color(0x3DFFFFFF),
+);
+
+// =============================================================================
 // buildIconShadows — pure utility function (visibleForTesting for unit tests)
 // =============================================================================
 
