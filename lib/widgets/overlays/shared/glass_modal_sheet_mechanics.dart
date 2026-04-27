@@ -76,12 +76,14 @@ class SheetGeometry {
   final double halfSize;
   final double? fullSize;
   final double peekSize;
+  final bool enablePeek;
 
   const SheetGeometry({
     required this.mode,
     required this.halfSize,
     this.fullSize,
     required this.peekSize,
+    this.enablePeek = true,
   });
 
   static double positionFor(
@@ -139,8 +141,7 @@ class SheetGeometry {
     }
   }
 
-  SheetState get minState =>
-      mode == SheetMode.persistent ? SheetState.peek : SheetState.hidden;
+  SheetState get minState => enablePeek ? SheetState.peek : SheetState.hidden;
 
   /// Computes target state based on current position and velocity.
   SheetState resolveTarget(
@@ -150,8 +151,12 @@ class SheetGeometry {
   }) {
     // Build the ordered sequence of available states for the current mode
     final List<SheetState> states = [];
-    if (mode == SheetMode.dismissible) states.add(SheetState.hidden);
-    states.add(SheetState.peek);
+    if (!enablePeek && mode == SheetMode.dismissible) {
+      states.add(SheetState.hidden);
+    }
+    if (enablePeek) {
+      states.add(SheetState.peek);
+    }
     states.add(SheetState.half);
     states.add(SheetState.full);
 
@@ -373,6 +378,9 @@ class _RenderMetrics {
   final double colorOpacity;
   final double glassOpacity;
   final LiquidGlassSettings effectiveSettings;
+  final double interactionScale;
+  final double interactionStretch;
+  final Color effectiveExpandedColor;
 
   const _RenderMetrics({
     required this.stretchT,
@@ -384,5 +392,8 @@ class _RenderMetrics {
     required this.colorOpacity,
     required this.glassOpacity,
     required this.effectiveSettings,
+    required this.interactionScale,
+    required this.interactionStretch,
+    required this.effectiveExpandedColor,
   });
 }

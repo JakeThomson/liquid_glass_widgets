@@ -68,11 +68,19 @@ class GlassModalSheet extends StatefulWidget {
   // Appearance Properties
   // ===========================================================================
 
-  /// Corner radius of the sheet in its floating (half/peek) state.
-  final double borderRadius;
+  /// If null, it will be automatically resolved based on the device's
+  /// physical geometry (adaptive radius).
+  final double? topBorderRadius;
 
-  /// Corner radius of the sheet when fully expanded (full).
-  final double fullBorderRadius;
+  /// If null, it will be automatically resolved based on the device's
+  /// physical geometry (adaptive radius).
+  final double? bottomBorderRadius;
+
+  /// Corner radius of the top edges when fully expanded (full).
+  final double? fullTopBorderRadius;
+
+  /// Corner radius of the bottom edges when fully expanded (full).
+  final double? fullBottomBorderRadius;
 
   /// Horizontal padding between the sheet and the screen edges.
   final double horizontalMargin;
@@ -143,6 +151,12 @@ class GlassModalSheet extends StatefulWidget {
   /// Interaction mode (dismissible vs persistent).
   final SheetMode mode;
 
+  /// Whether the 'peek' state is enabled.
+  ///
+  /// If null, it defaults to false for [SheetMode.dismissible] and true for
+  /// [SheetMode.persistent].
+  final bool? enablePeek;
+
   // ===========================================================================
   // Drag Indicator Properties
   // ===========================================================================
@@ -174,11 +188,13 @@ class GlassModalSheet extends StatefulWidget {
     this.halfSize = 0.45,
     this.fullSize,
     this.initialState = SheetState.half,
-    this.borderRadius = 50.0,
-    this.fullBorderRadius = 32.0,
+    this.topBorderRadius,
+    this.bottomBorderRadius,
+    this.fullTopBorderRadius = 46,
+    this.fullBottomBorderRadius,
     this.horizontalMargin = 8.0,
     this.bottomMargin = 8.0,
-    this.fillThreshold = 0.85,
+    this.fillThreshold = 0.60,
     this.interactionScale = 1.01,
     this.enableInteractionGlow = true,
     this.enableSaturationGlow = true,
@@ -196,7 +212,7 @@ class GlassModalSheet extends StatefulWidget {
     this.onStateChanged,
     this.mode = SheetMode.dismissible,
     this.peekSize = 90.0,
-    this.fillTransition = FillTransition.gradual,
+    this.fillTransition = FillTransition.instant,
     this.showDragIndicator = true,
     this.dragIndicatorColor,
     this.glowColor,
@@ -208,6 +224,7 @@ class GlassModalSheet extends StatefulWidget {
     this.maintainContentGlass = true,
     this.fullStateContentSettings,
     this.forceSpecularRim = true,
+    this.enablePeek,
   });
 
   /// Shows a high-fidelity glass modal sheet.
@@ -217,7 +234,7 @@ class GlassModalSheet extends StatefulWidget {
     double halfSize = 0.45,
     double? fullSize,
     SheetState initialState = SheetState.half,
-    double fillThreshold = 0.85,
+    double fillThreshold = 0.60,
     LiquidGlassSettings? settings,
     Color? expandedColor,
     ValueChanged<SheetState>? onStateChanged,
@@ -235,11 +252,13 @@ class GlassModalSheet extends StatefulWidget {
     LiquidGlassSettings? fullSettings,
     double stretch = 0.5,
     GlassModalSheetController? controller,
-    FillTransition fillTransition = FillTransition.gradual,
+    FillTransition fillTransition = FillTransition.instant,
     bool showDragIndicator = true,
     Color? dragIndicatorColor,
-    double borderRadius = 50.0,
-    double fullBorderRadius = 32.0,
+    double? topBorderRadius,
+    double? bottomBorderRadius,
+    double? fullTopBorderRadius = 46,
+    double? fullBottomBorderRadius,
     double horizontalMargin = 8.0,
     double bottomMargin = 8.0,
     double resistance = 0.08,
@@ -254,6 +273,7 @@ class GlassModalSheet extends StatefulWidget {
     bool maintainContentGlass = true,
     LiquidGlassSettings? fullStateContentSettings,
     bool forceSpecularRim = true,
+    bool? enablePeek,
   }) {
     assert(() {
       if (mode == SheetMode.persistent && barrierColor == Colors.transparent) {
@@ -307,8 +327,10 @@ class GlassModalSheet extends StatefulWidget {
           fillTransition: fillTransition,
           showDragIndicator: showDragIndicator,
           dragIndicatorColor: dragIndicatorColor,
-          borderRadius: borderRadius,
-          fullBorderRadius: fullBorderRadius,
+          topBorderRadius: topBorderRadius,
+          bottomBorderRadius: bottomBorderRadius,
+          fullTopBorderRadius: fullTopBorderRadius,
+          fullBottomBorderRadius: fullBottomBorderRadius,
           horizontalMargin: horizontalMargin,
           bottomMargin: bottomMargin,
           resistance: resistance,
@@ -323,6 +345,7 @@ class GlassModalSheet extends StatefulWidget {
           maintainContentGlass: maintainContentGlass,
           fullStateContentSettings: fullStateContentSettings,
           forceSpecularRim: forceSpecularRim,
+          enablePeek: enablePeek,
           onStateChanged: (state) {
             onStateChanged?.call(state);
             if (state == SheetState.hidden && !isClosing) {

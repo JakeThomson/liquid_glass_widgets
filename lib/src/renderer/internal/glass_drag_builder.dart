@@ -7,14 +7,14 @@ class GlassDragBuilder extends StatefulWidget {
   const GlassDragBuilder({
     required this.builder,
     this.behavior = HitTestBehavior.opaque,
+    this.suppressInteractionOnChildren = true,
     this.child,
     super.key,
   });
 
   final HitTestBehavior behavior;
-
+  final bool suppressInteractionOnChildren;
   final ValueWidgetBuilder<Offset?> builder;
-
   final Widget? child;
 
   @override
@@ -31,13 +31,16 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
   Widget build(BuildContext context) {
     return NotificationListener<InteractionNotification>(
       onNotification: (notification) {
-        _shouldIgnoreCurrentPointer = true;
+        if (widget.suppressInteractionOnChildren) {
+          _shouldIgnoreCurrentPointer = true;
+        }
         return false; // Let it bubble
       },
       child: Listener(
         behavior: widget.behavior,
         onPointerDown: (event) {
-          if (_shouldIgnoreCurrentPointer) {
+          if (widget.suppressInteractionOnChildren &&
+              _shouldIgnoreCurrentPointer) {
             _shouldIgnoreCurrentPointer = false;
             return;
           }
@@ -49,7 +52,8 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
           if (currentDragOffset == null) return;
           if (!mounted) return;
           setState(() {
-            currentDragOffset = (currentDragOffset ?? Offset.zero) + event.delta;
+            currentDragOffset =
+                (currentDragOffset ?? Offset.zero) + event.delta;
           });
         },
         onPointerUp: (event) {

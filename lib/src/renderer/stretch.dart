@@ -23,6 +23,7 @@ class LiquidStretch extends StatelessWidget {
     this.axis,
     this.allowPositive = true,
     this.allowNegative = true,
+    this.suppressInteractionOnChildren = true,
     super.key,
   });
 
@@ -75,6 +76,9 @@ class LiquidStretch extends StatelessWidget {
   /// If [axis] is vertical, negative is up. If horizontal, negative is left.
   final bool allowNegative;
 
+  /// Whether to prevent scaling when interacting with children.
+  final bool suppressInteractionOnChildren;
+
   @override
   Widget build(BuildContext context) {
     if (stretch == 0 && interactionScale == 1.0) {
@@ -83,6 +87,7 @@ class LiquidStretch extends StatelessWidget {
 
     return GlassDragBuilder(
       behavior: hitTestBehavior,
+      suppressInteractionOnChildren: suppressInteractionOnChildren,
       builder: (context, value, child) {
         final scale = value == null ? 1.0 : interactionScale;
         return SpringBuilder(

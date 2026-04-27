@@ -113,7 +113,7 @@ class GlassSheet extends StatefulWidget {
     this.showDragIndicator = true,
     this.dragIndicatorColor,
     this.padding,
-    this.borderRadius = 54,
+    this.borderRadius,
     this.margin = const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     this.isScrollable = true,
     this.interactionScale = 1.01,
@@ -166,8 +166,9 @@ class GlassSheet extends StatefulWidget {
 
   /// Border radius of the sheet corners.
   ///
-  /// Defaults to 54.0.
-  final double borderRadius;
+  /// If null, it will be automatically resolved based on the device's
+  /// physical geometry (adaptive radius).
+  final double? borderRadius;
 
   /// External margin around the sheet.
   ///
@@ -299,7 +300,7 @@ class GlassSheet extends StatefulWidget {
     bool showDragIndicator = true,
     Color? dragIndicatorColor,
     EdgeInsetsGeometry? padding,
-    double borderRadius = 54,
+    double? borderRadius,
     EdgeInsets margin = const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     bool isScrollable = true,
     double interactionScale = 1.01,
@@ -430,15 +431,19 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
 
     final effectiveSettings = GlassThemeHelpers.resolveSettings(
       context,
-      explicit: widget.settings ?? _kDefaultSheetSettings,
+      explicit: widget.settings,
+      fallback: _kDefaultSheetSettings,
     );
+
+    final effectiveRadius =
+        widget.borderRadius ?? GlassThemeHelpers.resolveAdaptiveRadius(context);
 
     return AnimatedBuilder(
       animation: _saturationAnimation,
       builder: (context, child) {
         final t = _saturationAnimation.value;
-        final scaledRadius = widget.borderRadius * 0.98;
-        final currentRadius = lerpDouble(widget.borderRadius, scaledRadius, t)!;
+        final scaledRadius = effectiveRadius * 0.98;
+        final currentRadius = lerpDouble(effectiveRadius, scaledRadius, t)!;
         final shape = LiquidRoundedSuperellipse(borderRadius: currentRadius);
 
         final pulsedSettings = effectiveSettings.copyWith(
@@ -517,6 +522,7 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
             axis: widget.stretchAxis,
             allowPositive: widget.allowPositiveStretch,
             allowNegative: widget.allowNegativeStretch,
+            suppressInteractionOnChildren: widget.suppressInteractionOnChildren,
             child: result,
           ),
         );
@@ -576,13 +582,15 @@ class _GlassDragIndicator extends StatelessWidget {
     this.color,
   });
 
-  // iOS 26: white at 35% opacity — matches UISheetPresentationController grabber
-  static const _defaultColor = Color(0x59FFFFFF); // 35% white
-
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // iOS 26: white at 35% in dark mode, black at 20% in light mode
+    final defaultColor =
+        isDark ? const Color(0x59FFFFFF) : const Color(0x33000000);
+
     return Semantics(
       // VoiceOver on iOS announces the grabber as "Drag to resize, double-tap
       // and hold, then drag up or down." We approximate this.
@@ -592,7 +600,7 @@ class _GlassDragIndicator extends StatelessWidget {
         width: 36,
         height: 4, // iOS 26 spec: 4dp (not 5dp)
         decoration: BoxDecoration(
-          color: color ?? _defaultColor,
+          color: color ?? defaultColor,
           borderRadius: BorderRadius.circular(2),
         ),
       ),

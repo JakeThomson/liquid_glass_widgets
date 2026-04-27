@@ -6,6 +6,7 @@ class _SheetLayout extends StatelessWidget {
   final Color? glowColor;
   final double glowRadius;
   final double stretch;
+  final double interactionStretch;
   final double resistance;
   final double hPad;
   final double effectiveBottom;
@@ -35,7 +36,9 @@ class _SheetLayout extends StatelessWidget {
   final bool enableTopFade;
   final double topFadeHeight;
   final bool forceSpecularRim;
+  final bool enableSaturationGlow;
   final VoidCallback onFocusGained;
+  final bool suppressInteractionOnChildren;
 
   const _SheetLayout({
     required this.interactionScale,
@@ -43,6 +46,7 @@ class _SheetLayout extends StatelessWidget {
     this.glowColor,
     required this.glowRadius,
     required this.stretch,
+    required this.interactionStretch,
     required this.resistance,
     required this.hPad,
     required this.effectiveBottom,
@@ -72,7 +76,9 @@ class _SheetLayout extends StatelessWidget {
     required this.enableTopFade,
     required this.topFadeHeight,
     required this.forceSpecularRim,
+    required this.enableSaturationGlow,
     required this.onFocusGained,
+    required this.suppressInteractionOnChildren,
   });
 
   @override
@@ -139,9 +145,10 @@ class _SheetLayout extends StatelessWidget {
               ),
               child: LiquidStretch(
                 interactionScale: interactionScale,
-                stretch: stretch,
+                stretch: interactionStretch,
                 resistance: resistance,
                 hitTestBehavior: HitTestBehavior.translucent,
+                suppressInteractionOnChildren: suppressInteractionOnChildren,
                 axis: Axis.vertical,
                 allowPositive: false,
                 allowNegative: true,
@@ -197,6 +204,9 @@ class _SheetLayout extends StatelessWidget {
                             : Colors.transparent,
                         glowRadius: glowRadius,
                         hitTestBehavior: HitTestBehavior.translucent,
+                        pulse: enableSaturationGlow
+                            ? saturationAnimation.value
+                            : 0,
                         clipper: _RadiusClipper(
                           topRadius: currentTopRadius,
                           bottomRadius: currentBottomRadius,
@@ -205,23 +215,29 @@ class _SheetLayout extends StatelessWidget {
                           child: AdaptiveLiquidGlassLayer(
                             settings: contentSettings,
                             quality: effectiveQuality,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: child!,
+                            child: ClipPath(
+                              clipper: _RadiusClipper(
+                                topRadius: currentTopRadius,
+                                bottomRadius: currentBottomRadius,
+                              ),
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: child!,
+                                    ),
                                   ),
-                                ),
-                                if (showDragIndicator)
-                                  const Positioned(
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: 44,
-                                    child: handleZone,
-                                  ),
-                              ],
+                                  if (showDragIndicator)
+                                    const Positioned(
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      height: 44,
+                                      child: handleZone,
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -325,9 +341,9 @@ class _GlassDragIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final defaultColor = isGlass
-        ? const Color(0x59FFFFFF)
-        : (isDark ? const Color(0x59FFFFFF) : const Color(0x33000000));
+    // iOS 26: white at 35% in dark mode, black at 20% in light mode
+    final defaultColor =
+        isDark ? const Color(0x59FFFFFF) : const Color(0x33000000);
 
     return Semantics(
       label: 'Drag handle',
@@ -488,11 +504,17 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Height in the 'peek' state. Default: 90.0.
   final double peekSize;
 
-  /// Corner radius of the sheet in its floating state.
-  final double borderRadius;
+  /// Corner radius of the top edges in its floating state.
+  final double? topBorderRadius;
 
-  /// Corner radius of the sheet when fully expanded.
-  final double fullBorderRadius;
+  /// Corner radius of the bottom edges in its floating state.
+  final double? bottomBorderRadius;
+
+  /// Corner radius of the top edges when fully expanded.
+  final double? fullTopBorderRadius;
+
+  /// Corner radius of the bottom edges when fully expanded.
+  final double? fullBottomBorderRadius;
 
   /// Horizontal padding between the sheet and the screen edges.
   final double horizontalMargin;
@@ -583,6 +605,9 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Whether to force the legacy specular rim (Canvas-drawn) on Skia/Web.
   final bool forceSpecularRim;
 
+  /// Whether the 'peek' state is enabled.
+  final bool? enablePeek;
+
   const GlassModalSheetScaffold({
     super.key,
     required this.background,
@@ -590,8 +615,10 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.halfSize = 0.45,
     this.fullSize,
     this.initialState = SheetState.half,
-    this.borderRadius = 50.0,
-    this.fullBorderRadius = 32.0,
+    this.topBorderRadius,
+    this.bottomBorderRadius,
+    this.fullTopBorderRadius,
+    this.fullBottomBorderRadius,
     this.horizontalMargin = 8.0,
     this.bottomMargin = 8.0,
     this.fillThreshold = 0.85,
@@ -624,6 +651,7 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.maintainContentGlass = true,
     this.fullStateContentSettings,
     this.forceSpecularRim = true,
+    this.enablePeek,
   });
 
   @override
@@ -646,8 +674,10 @@ class GlassModalSheetScaffold extends StatelessWidget {
           halfSize: halfSize,
           fullSize: fullSize,
           initialState: initialState,
-          borderRadius: borderRadius,
-          fullBorderRadius: fullBorderRadius,
+          topBorderRadius: topBorderRadius,
+          bottomBorderRadius: bottomBorderRadius,
+          fullTopBorderRadius: fullTopBorderRadius,
+          fullBottomBorderRadius: fullBottomBorderRadius,
           horizontalMargin: horizontalMargin,
           bottomMargin: bottomMargin,
           fillThreshold: fillThreshold,
@@ -679,6 +709,8 @@ class GlassModalSheetScaffold extends StatelessWidget {
           topFadeHeight: topFadeHeight,
           maintainContentGlass: maintainContentGlass,
           fullStateContentSettings: fullStateContentSettings,
+          forceSpecularRim: forceSpecularRim,
+          enablePeek: enablePeek,
           child: sheetChild,
         ),
       ],
