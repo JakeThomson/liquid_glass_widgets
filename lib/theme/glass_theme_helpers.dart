@@ -246,6 +246,7 @@ class GlassThemeHelpers {
   static LiquidGlassSettings resolveSettings(
     BuildContext context, {
     LiquidGlassSettings? explicit,
+    LiquidGlassSettings fallback = const LiquidGlassSettings(),
   }) {
     // 1. Widget-level explicit setting wins unconditionally.
     if (explicit != null) return explicit;
@@ -264,7 +265,6 @@ class GlassThemeHelpers {
     //    start from the zero-alpha default, then overlay any non-null fields
     //    from the theme's brightness-appropriate variant.
     final themeOverride = GlassThemeData.of(context).settingsFor(context);
-    return themeOverride?.applyTo(const LiquidGlassSettings()) ??
-        const LiquidGlassSettings();
+    return themeOverride?.applyTo(fallback) ?? fallback;
   }
 }

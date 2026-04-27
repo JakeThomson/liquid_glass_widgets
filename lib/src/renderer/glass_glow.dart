@@ -150,15 +150,17 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
     initialValue: 1.2,
   );
 
+  final _baseRadius = ValueNotifier<double>(0);
+  final _baseColor = ValueNotifier<Color>(const Color.fromARGB(0, 0, 0, 0));
   bool _dragging = false;
-  double _baseRadius = 0;
-  Color _baseColor = const Color.fromARGB(0, 0, 0, 0);
 
   @override
   void dispose() {
     _offsetController.dispose();
     _alphaController.dispose();
     _radiusController.dispose();
+    _baseRadius.dispose();
+    _baseColor.dispose();
     super.dispose();
   }
 
@@ -167,10 +169,8 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
     required double radius,
     required Color color,
   }) {
-    setState(() {
-      _baseRadius = radius;
-      _baseColor = color;
-    });
+    _baseRadius.value = radius;
+    _baseColor.value = color;
 
     if (!_dragging) {
       _dragging = true;
@@ -203,13 +203,15 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
         _offsetController,
         _alphaController,
         _radiusController,
+        _baseRadius,
+        _baseColor,
       ]),
       builder: (context, child) {
         return _RenderGlassGlowLayerWidget(
           clipper: widget.clipper,
-          glowRadius: _baseRadius * _radiusController.value,
-          glowColor: _baseColor.withValues(
-            alpha: _baseColor.a * _alphaController.value,
+          glowRadius: _baseRadius.value * _radiusController.value,
+          glowColor: _baseColor.value.withValues(
+            alpha: _baseColor.value.a * _alphaController.value,
           ),
           glowOffset: _offsetController.value,
           child: child,
