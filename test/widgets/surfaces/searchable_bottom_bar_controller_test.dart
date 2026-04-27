@@ -169,6 +169,8 @@ void main() {
           extraCollapsesOnSearch: extraCollapsesOnSearch,
           isKeyboardActive: isKeyboardActive,
           keyboardH: keyboardH,
+          tabCount: 3,
+          perTabWidth: null, // expand — preserves legacy semantics
         );
 
     test('tabW fills full zone (maxTabW) when not searching', () {
@@ -248,6 +250,8 @@ void main() {
           extraCollapsesOnSearch: extraCollapsesOnSearch,
           isKeyboardActive: isKeyboardActive,
           keyboardH: keyboardH,
+          tabCount: 3,
+          perTabWidth: null, // expand — preserves legacy semantics
         );
 
     test('tabW = searchBarHeight when collapsedTabWidth is null', () {
@@ -330,6 +334,8 @@ void main() {
         extraCollapsesOnSearch: true,
         isKeyboardActive: true,
         keyboardH: 336,
+        tabCount: 3,
+        perTabWidth: null,
       );
       expect(l.floatY, 336.0);
     });
@@ -352,6 +358,8 @@ void main() {
         extraCollapsesOnSearch: true,
         isKeyboardActive: false,
         keyboardH: 0,
+        tabCount: 3,
+        perTabWidth: null,
       );
       expect(l.floatY, 0.0);
     });
@@ -486,6 +494,136 @@ void main() {
       expect(sim.x(0), closeTo(0, 0.01));
       // After settling, position should approach 100.
       expect(sim.x(5), closeTo(100, 1));
+    });
+  });
+
+  // ── computeLayout — tabWidth (compact sizing) ─────────────────────────────
+
+  group('computeLayout — tabWidth', () {
+    // totalW=390, barH=64, spacing=8
+    // maxTabW = 390 - 64 - 8 = 318  (no extra button)
+    const totalW = 390.0;
+    const barH = 64.0;
+    const searchH = 50.0;
+    const spacing = 8.0;
+
+    SearchablePillLayout compact({
+      required int tabCount,
+      required double? perTabWidth,
+      bool searching = false,
+      double? collapsedTabWidth,
+    }) =>
+        ctrl.computeLayout(
+          totalW: totalW,
+          searching: searching,
+          expandWhenActive: true,
+          barHeight: barH,
+          searchBarHeight: searchH,
+          spacing: spacing,
+          hasDismiss: false,
+          dismissVisible: false,
+          collapsedTabWidth: collapsedTabWidth,
+          tabPillAnchor: GlassTabPillAnchor.start,
+          extraFullW: 0,
+          extraPos: ExtraButtonPosition.beforeSearch,
+          extraCollapsesOnSearch: true,
+          isKeyboardActive: false,
+          keyboardH: 0,
+          tabCount: tabCount,
+          perTabWidth: perTabWidth,
+        );
+
+    // ── Compact width calculation ───────────────────────────────────────────
+
+    test('2 tabs × 88 px → 176 px pill', () {
+      expect(compact(tabCount: 2, perTabWidth: 88).targetTabW, 176.0);
+    });
+
+    test('3 tabs × 88 px → 264 px pill', () {
+      expect(compact(tabCount: 3, perTabWidth: 88).targetTabW, 264.0);
+    });
+
+    test('4 tabs × 88 px → clamped to maxTabW (352 > 318)', () {
+      // 4 × 88 = 352, but maxTabW = 390 - 64 - 8 = 318 → clamped
+      expect(compact(tabCount: 4, perTabWidth: 88).targetTabW, 318.0);
+    });
+
+    test('wider perTabWidth (110) produces correct pill', () {
+      // 3 × 110 = 330 ≤ maxTabW(318)? No, 330 > 318, so clamp to 318.
+      expect(compact(tabCount: 3, perTabWidth: 110).targetTabW, 318.0);
+    });
+
+    test('perTabWidth 72 (icon-only) with 3 tabs → 216 px', () {
+      expect(compact(tabCount: 3, perTabWidth: 72).targetTabW, 216.0);
+    });
+
+    // ── Null = expand (legacy) ────────────────────────────────────────────────
+
+    test('perTabWidth null → fills maxTabW regardless of tab count', () {
+      final two = compact(tabCount: 2, perTabWidth: null);
+      final three = compact(tabCount: 3, perTabWidth: null);
+      // Both should equal maxTabW = 318
+      expect(two.targetTabW, 318.0);
+      expect(three.targetTabW, 318.0);
+    });
+
+    // ── Clamping ──────────────────────────────────────────────────────────────
+
+    test('natural width > maxTabW is clamped to maxTabW', () {
+      // 5 × 88 = 440 > 318 → clamp
+      final l = compact(tabCount: 5, perTabWidth: 88);
+      expect(l.targetTabW, 318.0);
+    });
+
+    test('targetTabW never exceeds totalW', () {
+      final l = compact(tabCount: 10, perTabWidth: 200);
+      expect(l.targetTabW, lessThanOrEqualTo(totalW));
+    });
+
+    // ── Search pill geometry ──────────────────────────────────────────────────
+    //
+    // When not searching, the search pill is a compact circle pinned to the
+    // RIGHT EDGE — its position and size don't change with tabWidth.
+    // The tabWidth benefit is purely that the tab PILL is narrower, leaving
+    // visible glass gap between the pill right edge and the search button.
+
+    test('compact tab pill is narrower than expand for same tab count', () {
+      final cmp = compact(tabCount: 3, perTabWidth: 88);
+      final exp = compact(tabCount: 3, perTabWidth: null);
+      expect(cmp.targetTabW, lessThan(exp.targetTabW));
+    });
+
+    test('search button is pinned to right edge regardless of tabWidth', () {
+      final cmp = compact(tabCount: 2, perTabWidth: 88);
+      final exp = compact(tabCount: 2, perTabWidth: null);
+      // Both land at totalW - barH = 390 - 64 = 326
+      expect(cmp.targetSearchLeft, 326.0);
+      expect(exp.targetSearchLeft, 326.0);
+    });
+
+    test('search button width is barHeight (compact circle) when not searching',
+        () {
+      final l = compact(tabCount: 2, perTabWidth: 88);
+      expect(l.targetSearchW, barH); // 64
+    });
+
+    // ── Collapsed state during search ─────────────────────────────────────────
+
+    test('when searching, collapsedTabWidth overrides perTabWidth', () {
+      final l = compact(
+        tabCount: 3,
+        perTabWidth: 88,
+        searching: true,
+        collapsedTabWidth: 56,
+      );
+      expect(l.targetTabW, 56.0);
+    });
+
+    test(
+        'when searching without collapsedTabWidth, falls back to searchBarHeight',
+        () {
+      final l = compact(tabCount: 3, perTabWidth: 88, searching: true);
+      expect(l.targetTabW, searchH); // 50
     });
   });
 }

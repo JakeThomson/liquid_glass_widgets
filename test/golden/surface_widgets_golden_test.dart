@@ -114,6 +114,34 @@ void main() {
             ),
           ),
         ),
+        // Expand mode (tabWidth: null) — kept as a regression sentinel.
+        // Verifies that the legacy full-width behaviour is not accidentally
+        // broken when the default compact sizing changes.
+        GoldenTestScenario(
+          name: 'three_tabs_expand',
+          child: buildWithGradientBackground(
+            GlassBottomBar(
+              tabs: const [
+                GlassBottomBarTab(
+                  label: 'Home',
+                  icon: Icon(CupertinoIcons.home),
+                ),
+                GlassBottomBarTab(
+                  label: 'Search',
+                  icon: Icon(CupertinoIcons.search),
+                ),
+                GlassBottomBarTab(
+                  label: 'Profile',
+                  icon: Icon(CupertinoIcons.person),
+                ),
+              ],
+              tabWidth: null, // explicit expand — overrides the 88.0 default
+
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+            ),
+          ),
+        ),
       ],
     ),
   );

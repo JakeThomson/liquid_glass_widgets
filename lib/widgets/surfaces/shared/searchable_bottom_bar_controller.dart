@@ -12,6 +12,7 @@ import 'package:flutter/physics.dart';
 
 import '../../surfaces/glass_bottom_bar.dart'
     show ExtraButtonPosition, GlassTabPillAnchor;
+import 'bar_layout_utils.dart';
 
 // =============================================================================
 // SearchablePillLayout — immutable layout result
@@ -251,6 +252,10 @@ class SearchableBottomBarController extends ChangeNotifier {
   /// [extraCollapsesOnSearch] — whether extra button hides when focused.
   /// [isKeyboardActive]     — _searchFocused && keyboardPresent.
   /// [keyboardH]            — current keyboard height (for floatY).
+  /// [perTabWidth]          — width per tab slot when compact sizing is used;
+  ///                           null means the tab pill fills all available space.
+  /// [tabCount]             — number of tabs; used with [perTabWidth] to compute
+  ///                           natural pill width.
   SearchablePillLayout computeLayout({
     required double totalW,
     required bool searching,
@@ -267,6 +272,8 @@ class SearchableBottomBarController extends ChangeNotifier {
     required bool extraCollapsesOnSearch,
     required bool isKeyboardActive,
     required double keyboardH,
+    required int tabCount,
+    required double? perTabWidth,
   }) {
     final targetH = searching ? searchBarHeight : barHeight;
 
@@ -300,12 +307,22 @@ class SearchableBottomBarController extends ChangeNotifier {
     final targetCompactW = targetH;
     final dismissReserve = hasDismiss ? (targetH + spacing) : 0.0;
 
-    // ── Tab pill ───────────────────────────────────────────────────────────
-    // maxTabW uses FULL (non-collapsed) extra widths for stability.
+    // maxTabW: maximum space the tab pill can ever occupy (when fully expanded).
+    // Uses FULL (non-collapsed) extra widths for stability across states.
     final maxTabW =
         totalW - targetCompactW - spacing - extraFullWLeft - extraFullWRight;
 
-    final targetTabW = !searching ? maxTabW : (collapsedTabWidth ?? targetH);
+    // naturalTabW: intrinsic width when perTabWidth is specified.
+    // Delegates to the shared resolveTabPillWidth function, which is also
+    // used by GlassBottomBar — single source of truth for this calculation.
+    final naturalTabW = resolveTabPillWidth(
+      tabWidth: perTabWidth,
+      tabCount: tabCount,
+      maxAvailable: maxTabW,
+    );
+
+    final targetTabW =
+        !searching ? naturalTabW : (collapsedTabWidth ?? targetH);
 
     // ── Search pill ────────────────────────────────────────────────────────
     final centeredTab = tabPillAnchor == GlassTabPillAnchor.center;
