@@ -651,7 +651,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     final baseSettings = GlassThemeHelpers.resolveSettings(
       context,
       explicit: widget.settings,
-      fallback: _kDefaultSheetSettings,
+      fallback: kDefaultSheetSettings,
     );
 
     final focusBridge = Focus(

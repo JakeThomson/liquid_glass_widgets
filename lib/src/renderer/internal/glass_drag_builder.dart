@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
-import '../../../widgets/overlays/glass_sheet.dart';
+import 'interaction_notification.dart';
 
 @internal
 class GlassDragBuilder extends StatefulWidget {
@@ -44,7 +44,6 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
             _shouldIgnoreCurrentPointer = false;
             return;
           }
-          debugPrint('🟢 DRAG_BUILDER DOWN');
           if (!mounted) return;
           setState(() => currentDragOffset = Offset.zero);
         },
@@ -58,7 +57,6 @@ class _GlassDragBuilderState extends State<GlassDragBuilder> {
         },
         onPointerUp: (event) {
           _shouldIgnoreCurrentPointer = false;
-          debugPrint('🔴 DRAG_BUILDER UP');
           if (!mounted) return;
           setState(() => currentDragOffset = null);
         },

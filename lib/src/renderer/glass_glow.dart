@@ -22,21 +22,32 @@ class GlassGlow extends StatelessWidget {
   });
 
   /// The radius of the glow effect relative to the layer's shortest side.
+  ///
+  /// A value of 0.8 means the glow radius will be 80% of the shortest
+  /// dimension (width or height) of the [GlassGlowLayer].
+  ///
+  /// Defaults to 1.
   final double glowRadius;
 
   /// The color of the glow effect.
+  ///
+  /// The glow will have this colors opacity at the center, and will fade out
+  /// to fully transparent at the edge of the glow.
   final Color glowColor;
 
   /// Global pulse intensity (0.0 to 1.0) for a full-window glow effect.
   final double pulse;
 
   /// The hit test behavior of this gesture listener.
+  ///
+  /// Defaults to [HitTestBehavior.opaque].
   final HitTestBehavior hitTestBehavior;
 
   /// The child that will be painted above the glow effect.
   final Widget child;
 
   /// The shape to clip the glow to.
+  /// Only clips the additive glow effect, not the child widget.
   final CustomClipper<Path>? clipper;
 
   @override
@@ -61,6 +72,10 @@ class GlassGlow extends StatelessWidget {
     final layerState = GlassGlowLayer.maybeOf(context);
     if (layerState == null) return;
 
+    // GlassGlowLayer may be at a different level than GlassGlow — e.g. a
+    // toolbar GlassGlowLayer wrapping three buttons, each with their own
+    // GlassGlow. event.localPosition is relative to this GlassGlow widget,
+    // not relative to the GlassGlowLayer. We must convert via global space.
     final myBox = context.findRenderObject() as RenderBox?;
     final layerBox = layerState.context.findRenderObject() as RenderBox?;
 
@@ -69,8 +84,10 @@ class GlassGlow extends StatelessWidget {
         layerBox != null &&
         myBox.attached &&
         layerBox.attached) {
+      // local-in-GlassGlow → global screen → local-in-GlassGlowLayer
       pos = layerBox.globalToLocal(myBox.localToGlobal(event.localPosition));
     } else {
+      // Fallback for tests or during layout (same-level case is also correct).
       pos = event.localPosition;
     }
 
@@ -84,6 +101,11 @@ class GlassGlow extends StatelessWidget {
 
 /// {@template glass_glow}
 /// Represents a layer that can paint a glowing effect below its child.
+///
+/// Any child [GlassGlow] will send touch updates to this layer to
+/// update the glow effect.
+///
+/// This is similar to how an `InkWell` works with a `Material` widget.
 /// {@endtemplate}
 class GlassGlowLayer extends StatefulWidget {
   /// {@macro glass_glow}
@@ -98,6 +120,7 @@ class GlassGlowLayer extends StatefulWidget {
   final Widget child;
 
   /// The shape to clip the glow to.
+  /// Only clips the additive glow effect, not the child widget.
   final CustomClipper<Path>? clipper;
 
   /// Global pulse intensity (0.0 to 1.0) for a full-window glow effect.
@@ -107,6 +130,7 @@ class GlassGlowLayer extends StatefulWidget {
   State<GlassGlowLayer> createState() => GlassGlowLayerState();
 
   @internal
+  // ignore: public_member_api_docs
   static GlassGlowLayerState? maybeOf(BuildContext context) {
     if (!context.mounted) return null;
     return context.findAncestorStateOfType<GlassGlowLayerState>();
@@ -160,6 +184,9 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
 
     if (!_dragging) {
       _dragging = true;
+      // Snap to the exact touch point immediately so the glow appears right
+      // where the finger lands — not at Offset.zero drifting over. Alpha then
+      // fades in at the correct position instead of mid-spring.
       _offsetController.value = offset;
       _alphaController.spring = GlassSpring.interactive();
       _radiusController.spring = GlassSpring.interactive();
@@ -300,7 +327,7 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    // 1. Paint the children (glass)
+    // 1. Paint the children (which includes AdaptiveGlass taking its backdrop snapshot)
     super.paint(context, offset);
 
     final canvas = context.canvas;
@@ -324,8 +351,13 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
     // 3. Local Interactive Glow (Finger glare)
     if (_glowColor.a > 0 && _glowRadius > 0) {
       final glowPosition = offset + _glowOffset;
+    // Use the shortest side so that wide pills don't generate massive glow
+    // spilling vertically off the surface.
       final radius = _glowRadius * math.min(size.width, size.height);
 
+      // RadialGradient.createShader() bakes the center position into the shader
+      // via the Rect passed to it — caching across position changes is incorrect.
+      // Per-frame creation is cheap for a simple radial gradient (uniform-only).
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [_glowColor, _glowColor.withValues(alpha: 0)],

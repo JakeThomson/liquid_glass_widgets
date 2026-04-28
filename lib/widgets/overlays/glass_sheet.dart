@@ -1,11 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../src/renderer/internal/interaction_notification.dart';
 
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
 import 'package:flutter/services.dart';
+import 'shared/glass_sheet_defaults.dart';
 
 /// A glass morphism bottom sheet following Apple's iOS 26 design patterns.
 ///
@@ -89,17 +91,6 @@ import 'package:flutter/services.dart';
 ///   builder: (context) => const Text('Solid Background'),
 /// );
 /// ```
-/// Default glass settings for sheets (Apple News Style)
-const _kDefaultSheetSettings = LiquidGlassSettings(
-  glassColor: Color(0xAA1C1C1E),
-  thickness: 30.0,
-  blur: 2.0,
-  lightIntensity: 0.5,
-  chromaticAberration: 0.01,
-  refractiveIndex: 1.2,
-  saturation: 1.2,
-  ambientStrength: 0.0,
-);
 
 class GlassSheet extends StatefulWidget {
   /// Creates a glass sheet widget.
@@ -432,7 +423,7 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
     final effectiveSettings = GlassThemeHelpers.resolveSettings(
       context,
       explicit: widget.settings,
-      fallback: _kDefaultSheetSettings,
+      fallback: kDefaultSheetSettings,
     );
 
     final effectiveRadius =
@@ -608,17 +599,6 @@ class _GlassDragIndicator extends StatelessWidget {
   }
 }
 
-/// A notification that informs parent widgets that an interaction has started.
-///
-/// Used by [GlassSheet] to suppress its own scaling/glow when a child
-/// widget is being touched.
-class InteractionNotification extends Notification {
-  /// The pointer event that triggered this notification.
-  final PointerDownEvent event;
-
-  /// Creates an [InteractionNotification].
-  InteractionNotification(this.event);
-}
 
 /// A universal wrapper that silences [GlassSheet] interactions for its child.
 ///

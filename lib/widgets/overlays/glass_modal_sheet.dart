@@ -11,23 +11,13 @@ import '../../theme/glass_theme_helpers.dart';
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_glass.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
-import 'glass_sheet.dart'; // For InteractionNotification
+import '../../src/renderer/internal/interaction_notification.dart';
+import 'shared/glass_sheet_defaults.dart';
 
 part 'shared/glass_modal_sheet_mechanics.dart';
 part 'shared/glass_modal_sheet_internal.dart';
 part 'shared/glass_modal_sheet_state.dart';
 
-/// Default glass settings for sheets (Apple News Style)
-const _kDefaultSheetSettings = LiquidGlassSettings(
-  glassColor: Color(0xAA1C1C1E),
-  thickness: 30.0,
-  blur: 2.0,
-  lightIntensity: 0.5,
-  chromaticAberration: 0.01,
-  refractiveIndex: 1.2,
-  saturation: 1.2,
-  ambientStrength: 0.0,
-);
 
 /// A high-fidelity, liquid glass modal sheet inspired by iOS 18+ design patterns.
 ///
