@@ -369,12 +369,13 @@ class GlassThemeData {
     if (colors.primary != null) return colors;
 
     final isDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
-    // 0x59 = ~35% opacity in light mode; 0x38 = ~22% opacity in dark mode.
-    // Pure neutral white (0xFFFFFF) — iOS 26 highlights are bright and grey-white,
-    // not warm or tinted. The BlendMode.plus compositing in GlassGlowLayer keeps
-    // this from blowing out even at higher opacity values.
+    // 0x3D = ~24% opacity in light mode (matches the pre-0.9.1 Colors.white24
+    // default that GlassButton used before theme propagation was introduced).
+    // 0x2A = ~16% opacity in dark mode — dark glass surfaces are already
+    // luminous, so a slightly dimmer highlight looks more natural.
+    // BlendMode.plus compositing keeps both from blowing out.
     final adaptivePrimary =
-        isDark ? const Color(0x38FFFFFF) : const Color(0x59FFFFFF);
+        isDark ? const Color(0x2AFFFFFF) : const Color(0x3DFFFFFF);
 
     return colors.copyWith(primary: adaptivePrimary);
   }

@@ -242,9 +242,9 @@ final variant = GlassThemeData.of(context).variantFor(context);
 GlassThemeVariant(
   glowColors: GlassGlowColors(
     primary: Colors.blue,   // tab indicator & search pill glow
-    blurRadius: 12,         // glow softness (default: 8)
-    spreadRadius: 2,        // glow spread beyond the widget edge (default: 0)
-    opacity: 0.6,           // overall glow intensity (default: 0.8)
+    blurRadius: 12,         // glow softness (default: 0 = crisp edge)
+    spreadRadius: 0.2,      // glow spread beyond the widget edge (default: 0)
+    opacity: 0.8,           // overall glow intensity (default: 1.0)
   ),
 )
 ```
