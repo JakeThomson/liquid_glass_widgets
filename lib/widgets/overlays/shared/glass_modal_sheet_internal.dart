@@ -313,15 +313,13 @@ class _SheetHandleZone extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = GlassModalSheetStateProvider.of(context);
     final isGlass = state != null ? state.progress < 0.9 : true;
-    final dragColor =
-        state != null ? null : null; // Injected via context or theme later?
 
     return RepaintBoundary(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
-          _GlassDragIndicator(isGlass: isGlass, color: dragColor),
+          _GlassDragIndicator(isGlass: isGlass),
           const SizedBox(height: 8),
         ],
       ),

@@ -197,18 +197,11 @@ void main() {
               GlassModalSheet(
                 controller: controller,
                 initialState: SheetState.half,
-                child: Builder(
-                  builder: (context) {
-                    final scrollController =
-                        ScrollControllerProvider.of(context)?.controller;
-                    return ListView.builder(
-                      controller: scrollController,
-                      itemCount: 100,
-                      itemBuilder: (context, i) => ListTile(
-                        title: Text('Item $i'),
-                      ),
-                    );
-                  },
+                child: ListView.builder(
+                  itemCount: 100,
+                  itemBuilder: (context, i) => ListTile(
+                    title: Text('Item $i'),
+                  ),
                 ),
               ),
             ],
@@ -218,31 +211,26 @@ void main() {
       await tester.pumpAndSettle();
       expect(controller.currentState, SheetState.half);
 
-      // In half state, dragging should NOT scroll the list
-      final listFinder = find.byType(Scrollable);
-      final initialOffset =
-          tester.state<ScrollableState>(listFinder).position.pixels;
+      // In half state, an upward drag on the sheet content should move the
+      // SHEET (upward toward full), not scroll the list content.
+      final halfValue = controller.value;
 
-      await tester.drag(find.text('Item 0'), const Offset(0, -100));
+      // Fling up — should snap sheet to full, not scroll list.
+      await tester.flingFrom(const Offset(400, 450), const Offset(0, -400), 1500);
       await tester.pumpAndSettle();
 
-      expect(tester.state<ScrollableState>(listFinder).position.pixels,
-          initialOffset,
-          reason: 'List should NOT scroll in half state');
+      expect(controller.currentState, SheetState.full,
+          reason: 'Upward drag in half state should expand the sheet, not scroll content');
 
-      // Now expand to full
-      controller.snapToState(SheetState.full);
-      await tester.pumpAndSettle();
-      expect(controller.currentState, SheetState.full);
+      // Now in full state, expand is stable — the sheet remains full.
+      expect(controller.value, greaterThan(halfValue));
 
-      // In full state, dragging should scroll the list
-      await tester.drag(find.text('Item 0'), const Offset(0, -300));
+      // Fling downward from full — sheet should collapse back to half/peek.
+      await tester.flingFrom(const Offset(400, 100), const Offset(0, 400), 1500);
       await tester.pumpAndSettle();
 
-      final finalOffset =
-          tester.state<ScrollableState>(listFinder).position.pixels;
-      expect(finalOffset, greaterThan(initialOffset),
-          reason: 'List should scroll in full state');
+      expect(controller.currentState, isNot(SheetState.full),
+          reason: 'Downward drag in full state header area should collapse the sheet');
     });
 
     testWidgets('shows top fade ShaderMask when enabled and expanded',

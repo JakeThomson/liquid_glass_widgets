@@ -226,6 +226,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     if (widget.suppressInteractionOnChildren && _isInteractingWithChild) {
       _suppressScalingForSession = true;
       _isInteractingWithChild = false;
+      // Do NOT fire haptic or saturation — this touch is silenced.
       return;
     }
 
@@ -233,6 +234,8 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     _isInteractingWithChild = false;
     _suppressScalingForSession = false;
 
+    // Haptic and saturation only fire for genuine sheet-level touches
+    // (not for touches on child buttons that were suppressed above).
     if (widget.enableInteractionGlow) {
       HapticFeedback.selectionClick();
     }
