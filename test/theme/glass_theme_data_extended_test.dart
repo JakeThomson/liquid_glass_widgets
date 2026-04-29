@@ -315,9 +315,9 @@ void main() {
         ),
       );
 
-      // Light mode → 0x59FFFFFF (35% white)
+      // Light mode → 0x3DFFFFFF (24% white)
       expect(injected, isNotNull);
-      expect(injected, const Color(0x59FFFFFF));
+      expect(injected, const Color(0x3DFFFFFF));
     });
 
     testWidgets('injects dimmer primary in dark mode (primary was null)',
@@ -344,9 +344,9 @@ void main() {
         ),
       );
 
-      // Dark mode → 0x38FFFFFF (22% white)
+      // Dark mode → 0x2AFFFFFF (16% white)
       expect(injected, isNotNull);
-      expect(injected, const Color(0x38FFFFFF));
+      expect(injected, const Color(0x2AFFFFFF));
     });
 
     testWidgets('does NOT inject when caller already set primary',
@@ -739,7 +739,7 @@ void main() {
         );
 
         expect(resolved, isNotNull);
-        expect(resolved!.primary, const Color(0x59FFFFFF)); // injected
+        expect(resolved!.primary, const Color(0x3DFFFFFF)); // injected
         expect(resolved!.glowBlurRadius, 10);
         expect(resolved!.glowSpreadRadius, 0.2);
         expect(resolved!.glowOpacity, 0.75);
@@ -774,7 +774,7 @@ void main() {
           ),
         );
 
-        expect(resolved!.primary, const Color(0x38FFFFFF)); // dark injection
+        expect(resolved!.primary, const Color(0x2AFFFFFF)); // dark injection
         expect(resolved!.glowBlurRadius, 8);
         expect(resolved!.glowSpreadRadius, 0.15);
         expect(resolved!.glowOpacity, 0.6);
