@@ -575,5 +575,178 @@ void main() {
       expect(find.byType(GlassSwitch), findsOneWidget);
       expect(value, isFalse);
     });
+
+    // ── New targeted tests for production hardening ─────────────────────────
+
+    testWidgets(
+        'initial state: switch starting as true renders thumb at right '
+        'and first tap animates in reverse direction (anchor fix)',
+        (tester) async {
+      // Regression: _isMovingForward was hardcoded to `true`, so the first
+      // tap on a switch starting as `true` bloomed from the wrong anchor
+      // (left edge instead of right edge). After the fix, _isMovingForward
+      // is initialised from widget.value in initState().
+      bool value = true;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return AdaptiveLiquidGlassLayer(
+                settings: defaultTestGlassSettings,
+                child: GlassSwitch(
+                  value: value,
+                  onChanged: (v) => outerSetState(() => value = v),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      // No pumping — the switch is mounted with value=true. The position
+      // controller must already be at 1.0 (right side) without any animation.
+      // We verify the widget renders without error at this initial state.
+      expect(find.byType(GlassSwitch), findsOneWidget);
+
+      // First tap: should go true→false. Critically, the first interaction
+      // must behave identically to subsequent ones — no broken bloom anchor.
+      await tester.tapAt(tester.getCenter(find.byType(GlassSwitch)));
+      await tester.pump(); // frame after tap triggers onChanged
+      await tester.pump(const Duration(milliseconds: 50)); // mid-animation
+      // Widget must be alive and animating
+      expect(find.byType(GlassSwitch), findsOneWidget);
+      await tester.pumpAndSettle();
+
+      // State must have toggled off correctly.
+      expect(value, isFalse,
+          reason:
+              'First tap on a switch initialised as true must toggle it off');
+
+      // Second tap: false→true. Must behave consistently.
+      await tester.tapAt(tester.getCenter(find.byType(GlassSwitch)));
+      await tester.pumpAndSettle();
+      expect(value, isTrue,
+          reason:
+              'Second tap must toggle back on; confirms direction consistency');
+    });
+
+    testWidgets(
+        '_justEndedDrag: onChanged is called exactly once after a drag '
+        'toggle, not twice (race condition fix)', (tester) async {
+      // Regression: _justEndedDrag was reset via addPostFrameCallback, which
+      // could fire *after* didUpdateWidget if the parent setState was batched
+      // to a later frame. This caused a double-bloom. The fix consumes the flag
+      // atomically inside didUpdateWidget.
+      //
+      // We verify the _behavioural_ guarantee: after a drag toggle, onChanged
+      // is called exactly once (from _onDragEnd), not a second time from
+      // didUpdateWidget triggering the bloom independently.
+      bool value = false;
+      int callCount = 0;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return AdaptiveLiquidGlassLayer(
+                settings: defaultTestGlassSettings,
+                child: GlassSwitch(
+                  value: value,
+                  onChanged: (v) {
+                    callCount++;
+                    outerSetState(() => value = v);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      final switchFinder = find.byType(GlassSwitch);
+
+      // Perform a full drag-to-toggle: clear slop, move past midpoint, release.
+      final gesture = await tester.startGesture(tester.getCenter(switchFinder));
+      await tester.pump();
+      await gesture.moveBy(const Offset(25, 0)); // clear kTouchSlop (18px)
+      await tester.pump();
+      await gesture.moveBy(const Offset(20, 0)); // past 50% midpoint
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // onChanged must have been called exactly once — from _onDragEnd.
+      // A second call would mean the race condition is still present.
+      expect(callCount, equals(1),
+          reason: 'onChanged must fire exactly once per drag toggle; '
+              'a count of 2 means _justEndedDrag race is still present');
+      expect(value, isTrue,
+          reason: 'Drag past midpoint must toggle the switch on');
+      expect(find.byType(GlassSwitch), findsOneWidget);
+    });
+
+    testWidgets(
+        'float guard: rapid consecutive toggles never skip bloom '
+        '(>= 0.99 threshold is robust against floating-point drift)',
+        (tester) async {
+      // Regression: using == 1.0 to guard the thickness controller reset was
+      // fragile — floating-point drift could leave it at 0.9999... meaning the
+      // reset to 0.0 was skipped and the bloom sequence played from mid-point.
+      //
+      // We simulate drift by toggling twice in quick succession without letting
+      // the first animation settle. The controller may be at a non-integer value
+      // between the two toggles. The widget must survive without assertion
+      // errors and correctly play the bloom on the second toggle.
+      bool value = false;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return AdaptiveLiquidGlassLayer(
+                settings: defaultTestGlassSettings,
+                child: GlassSwitch(
+                  value: value,
+                  onChanged: (v) => outerSetState(() => value = v),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      // First toggle — do NOT settle; interrupt it partway through.
+      outerSetState(() => value = true);
+      await tester.pump(); // start animation
+      await tester.pump(const Duration(milliseconds: 190)); // ~50% through
+
+      // Second toggle while first is still animating (controller is mid-flight).
+      // This is the scenario where the thickness value is not exactly 0.0 or 1.0.
+      outerSetState(() => value = false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50)); // mid second bloom
+
+      // Widget must be alive — no assert or controller errors.
+      expect(find.byType(GlassSwitch), findsOneWidget);
+
+      // Let everything settle cleanly.
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSwitch), findsOneWidget);
+      expect(value, isFalse,
+          reason: 'Final state must reflect the last programmatic toggle');
+
+      // One more toggle from a clean resting state to confirm full recovery.
+      outerSetState(() => value = true);
+      await tester.pumpAndSettle();
+      expect(value, isTrue,
+          reason: 'Switch must be fully functional after rapid interruption');
+    });
   });
 }

@@ -1,3 +1,33 @@
+# 0.9.2
+
+## 🐛 Fix — `GlassSwitch` initial-state bloom anchor & polish
+
+- **First-click bloom anchored correctly.** A switch initialised with `value: true`
+  now anchors the bloom to the right edge on the very first tap, matching all
+  subsequent interactions. Previously `_isMovingForward` was hardcoded to `true`
+  at construction regardless of `widget.value`.
+
+- **`_justEndedDrag` race condition eliminated.** The flag is now consumed
+  atomically inside `didUpdateWidget` rather than being reset one frame later via
+  `addPostFrameCallback`, preventing a rare double-bloom after a drag toggle.
+
+- **Floating-point guard hardened.** Animation controller resets now use `>= 0.99`
+  instead of `== 1.0`, making the bloom sequence robust against sub-epsilon drift
+  during rapid consecutive toggles.
+
+- **Dead code removed** (`glassOverlay` no-op widget).
+
+- **Haptic feedback added.** `GlassSwitch` now emits `HapticFeedback.lightImpact()`
+  on tap-toggle, when the thumb crosses the 50 % midpoint during a drag, and on
+  drag-release snap (when the midpoint was never crossed, e.g. a fast flick).
+  Opt out with `enableHaptics: false`.
+
+- **3 new regression tests** added; `GlassSwitch` test count now 24.
+
+Zero breaking changes.
+
+---
+
 # 0.9.1
 
 ## 🐛 Fix — Adaptive quality system calibration

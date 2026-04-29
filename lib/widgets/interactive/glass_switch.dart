@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
@@ -76,6 +77,7 @@ class GlassSwitch extends StatefulWidget {
     this.settings,
     this.useOwnLayer = false,
     this.quality,
+    this.enableHaptics = true,
   });
 
   // ===========================================================================
@@ -109,12 +111,12 @@ class GlassSwitch extends StatefulWidget {
 
   /// Width of the switch.
   ///
-  /// Defaults to 62.0 (iOS 26 wide pill runway).
+  /// Defaults to 58.0.
   final double width;
 
   /// Height of the switch.
   ///
-  /// Defaults to 28.0.
+  /// Defaults to 26.0.
   final double height;
 
   // ===========================================================================
@@ -133,6 +135,18 @@ class GlassSwitch extends StatefulWidget {
   /// Use [GlassQuality.premium] for shader-based glass in static layouts only.
   final GlassQuality? quality;
 
+  /// Whether to emit haptic feedback on toggle.
+  ///
+  /// When `true` (the default), a [HapticFeedback.lightImpact] fires:
+  /// - immediately when the switch is tapped,
+  /// - when the thumb crosses the 50 % midpoint during a drag, and
+  /// - on drag release if the thumb snaps to a new state and the midpoint
+  ///   was never crossed (e.g. a fast flick).
+  ///
+  /// Set to `false` to suppress all haptics — useful when the parent widget
+  /// already manages its own haptic layer.
+  final bool enableHaptics;
+
   @override
   State<GlassSwitch> createState() => _GlassSwitchState();
 }
@@ -147,7 +161,7 @@ class _GlassSwitchState extends State<GlassSwitch>
   late AnimationController _thicknessController;
   late Animation<double> _positionAnimation;
   late Animation<double> _thicknessAnimation;
-  bool _isMovingForward = true; // Track direction of animation
+  late bool _isMovingForward; // Track direction of animation
 
   // ---------------------------------------------------------------------------
   // Gesture state
@@ -158,8 +172,15 @@ class _GlassSwitchState extends State<GlassSwitch>
   bool _dragAbandonedExternally = false;
   bool _justEndedDrag = false;
 
-  // Cache effectiveQuality at state level to make it accessible in _buildThumb
-  GlassQuality? _effectiveQuality;
+  // ---------------------------------------------------------------------------
+  // Haptic state
+  // ---------------------------------------------------------------------------
+  // Tracks whether the thumb crossed the 50% midpoint during the current drag.
+  // Prevents a double-fire on drag release when the midpoint was already felt.
+  bool _dragMidpointHapticFired = false;
+  // The side of the midpoint the thumb was on at the last _onDragUpdate call.
+  // Used to detect a crossing without comparing raw floats.
+  bool _dragWasAboveMidpoint = false;
 
   @override
   void initState() {
@@ -198,6 +219,7 @@ class _GlassSwitchState extends State<GlassSwitch>
     ]).animate(_thicknessController);
 
     // Set initial state
+    _isMovingForward = widget.value;
     if (widget.value) {
       _positionController.value = 1.0;
     }
@@ -225,12 +247,35 @@ class _GlassSwitchState extends State<GlassSwitch>
       }
 
       // Trigger the liquid pulse bloom (Grow up and then down)
-      if (!_justEndedDrag) {
-        if (_thicknessController.value == 1.0) {
+      final bool justEndedDrag = _justEndedDrag;
+      _justEndedDrag = false;
+
+      if (!justEndedDrag) {
+        if (_thicknessController.value >= 0.99) {
           _thicknessController.value = 0.0;
         }
-        unawaited(
-            _thicknessController.forward(from: _thicknessController.value));
+
+        // Sync the jump duration exactly to the remaining travel time so that
+        // if the user held the switch (full bloom), it stays bloomed and deflates
+        // cleanly across the entire horizontal movement.
+        final double posDist = widget.value
+            ? (1.0 - _positionController.value)
+            : _positionController.value;
+        final int ms = (380 * posDist).round();
+
+        if (ms > 0) {
+          unawaited(_thicknessController.animateTo(
+            1.0,
+            duration: Duration(milliseconds: ms),
+            // Use an ease-in curve so that if the thumb is fully bloomed (held down),
+            // it maintains its stretched shape for the majority of the travel,
+            // and only deflates back to a circle as it lands on the other side.
+            // This prevents the "jerky" deflation mid-flight.
+            curve: Curves.easeIn,
+          ));
+        } else {
+          _thicknessController.value = 1.0;
+        }
       }
     }
   }
@@ -263,20 +308,22 @@ class _GlassSwitchState extends State<GlassSwitch>
 
   void _onTapDown(TapDownDetails details) {
     // Finger is down: start the bloom immediately for instant feedback.
-    if (_thicknessController.value == 1.0) {
+    if (_thicknessController.value >= 0.99) {
       _thicknessController.value = 0.0;
     }
     _dragAbandonedExternally = false;
-    _thicknessController.animateTo(
+    unawaited(_thicknessController.animateTo(
       0.45,
       duration: const Duration(milliseconds: 120),
       curve: Curves.easeOut,
-    );
+    ));
   }
 
   void _onTapUp(TapUpDetails details) {
     // A tap is confirmed only when no horizontal drag was registered.
     if (!_isDragging) {
+      // Fire haptic immediately — user feels the click the instant they lift.
+      if (widget.enableHaptics) unawaited(HapticFeedback.lightImpact());
       // Deflate the bloom — the tap animation in didUpdateWidget will
       // re-trigger it correctly with the full directional stretch.
       _handleTap();
@@ -302,19 +349,23 @@ class _GlassSwitchState extends State<GlassSwitch>
     _thicknessController.stop();
 
     // Ensure bloom is at peak.
-    if (_thicknessController.value == 1.0) {
+    if (_thicknessController.value >= 0.99) {
       _thicknessController.value = 0.0;
     }
 
     // If we're not at perfect plump (e.g., started deflating), animate back to 0.45
     if ((_thicknessController.value - 0.45).abs() > 0.01) {
-      _thicknessController.animateTo(
+      unawaited(_thicknessController.animateTo(
         0.45,
         duration: const Duration(milliseconds: 80),
-      );
+      ));
     } else {
       _thicknessController.value = 0.45;
     }
+
+    // Reset midpoint-haptic tracking for this new drag.
+    _dragMidpointHapticFired = false;
+    _dragWasAboveMidpoint = _positionController.value >= 0.5;
   }
 
   void _onDragCancel() {
@@ -331,6 +382,17 @@ class _GlassSwitchState extends State<GlassSwitch>
     final dragDelta = details.localPosition.dx - _dragStartX;
     _positionController.value =
         (_dragStartPosition + dragDelta / travel).clamp(0.0, 1.0);
+
+    // Detect midpoint crossing and fire a single haptic tick.
+    // iOS fires at the 50 % mark regardless of drag direction.
+    if (widget.enableHaptics && !_dragMidpointHapticFired) {
+      final nowAbove = _positionController.value >= 0.5;
+      if (nowAbove != _dragWasAboveMidpoint) {
+        unawaited(HapticFeedback.lightImpact());
+        _dragMidpointHapticFired = true;
+      }
+      _dragWasAboveMidpoint = nowAbove;
+    }
   }
 
   void _onDragEnd(DragEndDetails details) {
@@ -361,23 +423,26 @@ class _GlassSwitchState extends State<GlassSwitch>
     // Continue the settle bloom down to 0 so the landing feels weighty.
     unawaited(_thicknessController.forward(from: _thicknessController.value));
 
+    // Haptic on snap — only if the state is changing AND the midpoint
+    // crossing haptic didn't already fire (avoids a double-tap feel on
+    // slow deliberate drags that naturally crossed the midpoint).
+    if (widget.enableHaptics &&
+        !_dragMidpointHapticFired &&
+        shouldBeOn != widget.value) {
+      unawaited(HapticFeedback.lightImpact());
+    }
+    _dragMidpointHapticFired = false;
+
     // Notify parent only when the value actually changed.
     if (shouldBeOn != widget.value) {
       widget.onChanged(shouldBeOn);
     }
-
-    // Reset flag in next frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _justEndedDrag = false;
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer or theme if not explicitly set
-    _effectiveQuality = GlassThemeHelpers.resolveQuality(
+    final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,
       widgetQuality: widget.quality,
     );
@@ -486,11 +551,9 @@ class _GlassSwitchState extends State<GlassSwitch>
                 // Combined scale: Squash for jump + slight Grow for the liquid bloom
                 scale: scale * (1.0 + thickness * 0.1),
                 child: _buildThumb(thumbSize, thickness, scale, vExpand,
-                    leadStretch, anchorOffset),
+                    leadStretch, anchorOffset, effectiveQuality),
               ),
             );
-
-            const glassOverlay = SizedBox.shrink();
 
             return Semantics(
               label: 'Switch',
@@ -505,7 +568,6 @@ class _GlassSwitchState extends State<GlassSwitch>
                   children: [
                     track,
                     thumb,
-                    glassOverlay, // Glass overlay appears ABOVE thumb
                   ],
                 ),
               ),
@@ -516,8 +578,14 @@ class _GlassSwitchState extends State<GlassSwitch>
     );
   }
 
-  Widget _buildThumb(double size, double transition, double scale,
-      double vExpand, double leadStretch, double anchorOffset) {
+  Widget _buildThumb(
+      double size,
+      double transition,
+      double scale,
+      double vExpand,
+      double leadStretch,
+      double anchorOffset,
+      GlassQuality? effectiveQuality) {
     // iOS 26: Unified Material Melt with Directional Anchoring
     final thumbWidth = size * 1.6;
     final thumbHeight = size;
@@ -555,7 +623,7 @@ class _GlassSwitchState extends State<GlassSwitch>
       height: totalHeight,
       child: GlassEffect(
         shape: thumbShape,
-        settings: (_effectiveQuality ?? GlassQuality.standard)
+        settings: (effectiveQuality ?? GlassQuality.standard)
                 .usesLightweightShader
             ? const LiquidGlassSettings(
                 glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
@@ -573,7 +641,7 @@ class _GlassSwitchState extends State<GlassSwitch>
                 blur: 0,
                 lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
               ),
-        quality: _effectiveQuality ?? GlassQuality.standard,
+        quality: effectiveQuality ?? GlassQuality.standard,
         interactionIntensity: transition,
         child: Stack(
           alignment: Alignment.center,
