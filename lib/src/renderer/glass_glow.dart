@@ -18,6 +18,7 @@ class GlassGlow extends StatelessWidget {
     this.glowBlurRadius = 0,
     this.glowSpreadRadius = 0,
     this.glowOpacity = 1,
+    this.pulse = 0,
     this.clipper,
     this.hitTestBehavior = HitTestBehavior.opaque,
     super.key,
@@ -66,6 +67,13 @@ class GlassGlow extends StatelessWidget {
   /// Corresponds to [GlassGlowColors.glowOpacity].
   final double glowOpacity;
 
+  /// Global pulse intensity (0.0 to 1.0) for a full-window saturation/brightness
+  /// highlight. Used by [GlassModalSheet] to synchronise a whole-surface pulse
+  /// during high-velocity drag interactions.
+  ///
+  /// Defaults to 0 (no pulse).
+  final double pulse;
+
   /// The hit test behavior of this gesture listener.
   ///
   /// Defaults to [HitTestBehavior.opaque].
@@ -82,6 +90,7 @@ class GlassGlow extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassGlowLayer(
       clipper: clipper,
+      pulse: pulse,
       child: Builder(
         builder: (innerContext) => Listener(
           behavior: hitTestBehavior,
@@ -146,6 +155,7 @@ class GlassGlowLayer extends StatefulWidget {
   const GlassGlowLayer({
     required this.child,
     this.clipper,
+    this.pulse = 0,
     super.key,
   });
 
@@ -154,6 +164,9 @@ class GlassGlowLayer extends StatefulWidget {
 
   /// The shape to clip the glow to.
   final CustomClipper<Path>? clipper;
+
+  /// Global pulse intensity (0.0 to 1.0) for a full-window glow effect.
+  final double pulse;
 
   @override
   State<GlassGlowLayer> createState() => GlassGlowLayerState();
@@ -271,6 +284,7 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
         final animatedAlpha = _baseColor.a * _alphaController.value;
         return _RenderGlassGlowLayerWidget(
           clipper: widget.clipper,
+          pulse: widget.pulse,
           glowRadius: _baseRadius * _radiusController.value,
           glowColor: _baseColor.withValues(
             alpha: animatedAlpha * _baseOpacity,
@@ -289,6 +303,7 @@ class GlassGlowLayerState extends State<GlassGlowLayer>
 class _RenderGlassGlowLayerWidget extends SingleChildRenderObjectWidget {
   const _RenderGlassGlowLayerWidget({
     required this.clipper,
+    required this.pulse,
     required this.glowRadius,
     required this.glowColor,
     required this.glowOffset,
@@ -298,6 +313,7 @@ class _RenderGlassGlowLayerWidget extends SingleChildRenderObjectWidget {
   });
 
   final CustomClipper<Path>? clipper;
+  final double pulse;
   final double glowRadius;
   final Color glowColor;
   final Offset glowOffset;
@@ -308,6 +324,7 @@ class _RenderGlassGlowLayerWidget extends SingleChildRenderObjectWidget {
   RenderObject createRenderObject(BuildContext context) {
     return _RenderGlassGlowLayer(
       clipper: clipper,
+      pulse: pulse,
       glowRadius: glowRadius,
       glowColor: glowColor,
       glowOffset: glowOffset,
@@ -323,6 +340,7 @@ class _RenderGlassGlowLayerWidget extends SingleChildRenderObjectWidget {
   ) {
     renderObject
       ..clipper = clipper
+      ..pulse = pulse
       ..glowRadius = glowRadius
       ..glowColor = glowColor
       ..glowOffset = glowOffset
@@ -338,12 +356,14 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
     required Offset glowOffset,
     required double glowBlurRadius,
     required double glowSpreadRadius,
+    required double pulse,
     CustomClipper<Path>? clipper,
   })  : _glowRadius = glowRadius,
         _glowColor = glowColor,
         _glowOffset = glowOffset,
         _glowBlurRadius = glowBlurRadius,
         _glowSpreadRadius = glowSpreadRadius,
+        _pulse = pulse,
         _clipper = clipper;
 
   CustomClipper<Path>? _clipper;
@@ -351,6 +371,14 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
   set clipper(CustomClipper<Path>? value) {
     if (_clipper == value) return;
     _clipper = value;
+    markNeedsPaint();
+  }
+
+  double _pulse;
+  double get pulse => _pulse;
+  set pulse(double value) {
+    if (_pulse == value) return;
+    _pulse = value;
     markNeedsPaint();
   }
 
@@ -396,44 +424,61 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    if (_glowColor.a == 0 || _glowRadius <= 0) {
-      super.paint(context, offset);
-      return;
-    }
-
-    final glowPosition = offset + _glowOffset;
-    // Use the shortest side so that wide pills don't generate massive glow
-    // spilling vertically off the surface.
-    final shortSide = math.min(size.width, size.height);
-    final radius = _glowRadius * shortSide + _glowSpreadRadius * shortSide;
-
-    // RadialGradient.createShader() bakes the center position into the shader
-    // via the Rect passed to it — caching across position changes is incorrect.
-    // Per-frame creation is cheap for a simple radial gradient (uniform-only).
-    final paint = Paint()
-      ..shader = RadialGradient(
-        colors: [_glowColor, _glowColor.withValues(alpha: 0)],
-        stops: const [0.0, 1.0],
-      ).createShader(Rect.fromCircle(center: glowPosition, radius: radius))
-      ..blendMode = BlendMode.plus;
-
-    // Optional Gaussian blur to soften the glow halo. Only create the
-    // MaskFilter when non-zero to avoid a no-op allocation every frame.
-    if (_glowBlurRadius > 0) {
-      paint.maskFilter = MaskFilter.blur(BlurStyle.normal, _glowBlurRadius);
-    }
-
     // 1. Paint the children (which includes AdaptiveGlass taking its backdrop snapshot)
     super.paint(context, offset);
 
-    // 2. Additive light over geometry boundary only
-    if (_clipper != null) {
-      context.canvas.save();
-      context.canvas.clipPath(_clipper!.getClip(size).shift(offset));
-      context.canvas.drawCircle(glowPosition, radius, paint);
-      context.canvas.restore();
-    } else {
-      context.canvas.drawCircle(glowPosition, radius, paint);
+    final canvas = context.canvas;
+
+    // 2. Global Specular Pulse (full-window additive highlight, driven by GlassModalSheet
+    //    saturation controller during high-velocity drag interactions).
+    if (_pulse > 0) {
+      final pulsePaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.08 * _pulse)
+        ..blendMode = BlendMode.plus;
+
+      if (_clipper != null) {
+        canvas.save();
+        canvas.clipPath(_clipper!.getClip(size).shift(offset));
+        canvas.drawRect(offset & size, pulsePaint);
+        canvas.restore();
+      } else {
+        canvas.drawRect(offset & size, pulsePaint);
+      }
+    }
+
+    // 3. Local Interactive Glow (finger glare — radial gradient following the touch point)
+    if (_glowColor.a > 0 && _glowRadius > 0) {
+      final glowPosition = offset + _glowOffset;
+      // Use the shortest side so that wide pills don't generate massive glow
+      // spilling vertically off the surface.
+      final shortSide = math.min(size.width, size.height);
+      final radius = _glowRadius * shortSide + _glowSpreadRadius * shortSide;
+
+      // RadialGradient.createShader() bakes the center position into the shader
+      // via the Rect passed to it — caching across position changes is incorrect.
+      // Per-frame creation is cheap for a simple radial gradient (uniform-only).
+      final paint = Paint()
+        ..shader = RadialGradient(
+          colors: [_glowColor, _glowColor.withValues(alpha: 0)],
+          stops: const [0.0, 1.0],
+        ).createShader(Rect.fromCircle(center: glowPosition, radius: radius))
+        ..blendMode = BlendMode.plus;
+
+      // Optional Gaussian blur to soften the glow halo. Only create the
+      // MaskFilter when non-zero to avoid a no-op allocation every frame.
+      if (_glowBlurRadius > 0) {
+        paint.maskFilter = MaskFilter.blur(BlurStyle.normal, _glowBlurRadius);
+      }
+
+      // 2. Additive light over geometry boundary only
+      if (_clipper != null) {
+        canvas.save();
+        canvas.clipPath(_clipper!.getClip(size).shift(offset));
+        canvas.drawCircle(glowPosition, radius, paint);
+        canvas.restore();
+      } else {
+        canvas.drawCircle(glowPosition, radius, paint);
+      }
     }
   }
 }
