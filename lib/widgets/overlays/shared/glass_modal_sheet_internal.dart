@@ -602,6 +602,21 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Whether the 'peek' state is enabled.
   final bool? enablePeek;
 
+  /// Horizontal padding specifically for the 'peek' state.
+  final double? peekHorizontalMargin;
+
+  /// Bottom padding specifically for the 'peek' state.
+  final double? peekBottomMargin;
+
+  /// Fixed width for the 'peek' state.
+  final double? peekWidth;
+
+  /// Corner radius for 'peek' state.
+  final double? peekTopBorderRadius;
+
+  /// Corner radius for 'peek' state.
+  final double? peekBottomRadius;
+
   const GlassModalSheetScaffold({
     super.key,
     required this.background,
@@ -646,6 +661,11 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.fullStateContentSettings,
     this.forceSpecularRim = true,
     this.enablePeek,
+    this.peekHorizontalMargin,
+    this.peekBottomMargin,
+    this.peekWidth,
+    this.peekTopBorderRadius,
+    this.peekBottomRadius,
   });
 
   @override
@@ -705,6 +725,11 @@ class GlassModalSheetScaffold extends StatelessWidget {
           fullStateContentSettings: fullStateContentSettings,
           forceSpecularRim: forceSpecularRim,
           enablePeek: enablePeek,
+          peekHorizontalMargin: peekHorizontalMargin,
+          peekBottomMargin: peekBottomMargin,
+          peekWidth: peekWidth,
+          peekTopBorderRadius: peekTopBorderRadius,
+          peekBottomRadius: peekBottomRadius,
           child: sheetChild,
         ),
       ],
