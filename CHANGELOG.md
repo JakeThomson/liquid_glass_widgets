@@ -1,4 +1,81 @@
+# 0.9.3
+
+## 🐛 Fix — `GlassSheet` specular rim artifact & washed-out inner elements
+
+Massive credit to [@yukinoaruu](https://github.com/yukinoaruu) whose
+[PR #33](https://github.com/sdegenaar/liquid_glass_widgets/pull/33) introduced the
+`forceSpecularRim` flag and first surfaced this class of visual fidelity issue with
+the lightweight glass renderer. Their work directly inspired and guided this fix.
+
+---
+
+### The problem
+
+On the Skia/Web (lightweight) rendering path, the shader computes rim opacity as:
+
+```
+rimAlpha = kRimAlphaBase (0.8) × refractiveIndex
+```
+
+When `refractiveIndex` was set to `0.7` (the standard overlay value) on a large
+`GlassSheet`, the resulting rim opacity of `0.56` produced a hard, visible border
+around the sheet — a bright "line" that looked like an artifact rather than a
+premium glass surface.
+
+Lowering `refractiveIndex` globally to fix the sheets caused a separate regression:
+`GlassButton` and `GlassCard` components **inside** the sheet lost their specular
+highlights and became washed out, since they also inherited the weaker settings.
+
+### The fix — semantic preset separation
+
+Two distinct `RecommendedGlassSettings` presets now exist in the example app
+constants, clearly documenting the correct values for each use case:
+
+| Preset | `refractiveIndex` | Intended use |
+|---|---|---|
+| `RecommendedGlassSettings.overlay` | `0.7` | Cards, buttons, small interactive widgets |
+| `RecommendedGlassSettings.sheet` | `0.15` | Large bottom sheets and modal overlays |
+
+All `GlassSheet.show()` calls in the demo app now use the `sheet` preset, while
+every `GlassButton.custom` and `GlassCard` **inside** a sheet explicitly passes
+`settings: RecommendedGlassSettings.overlay`, bypassing the sheet's inherited
+context and restoring crisp, iOS 26-style specular rims on inner elements.
+
+### `glass_sheet_defaults.dart` updated
+
+The package-level default for `GlassSheet` has been updated to use a lower
+`refractiveIndex` (`0.15`) to provide a better out-of-the-box experience for
+large sheet surfaces. Widgets nested inside a sheet should pass
+`RecommendedGlassSettings.overlay` (or any settings with a higher
+`refractiveIndex`) explicitly if they require visible edge definition.
+
+### Zero breaking changes
+
+All existing `GlassSheet` usages that do not pass explicit `settings:` continue
+to work. The visual change is a refinement — the hard rim border is gone,
+giving sheets a cleaner, more premium appearance.
+
+---
+
 # 0.9.2
+
+## 🐛 Fix — Selected icon colour washed out by glass indicator
+
+Big thanks to [@jfhair](https://github.com/jfhair) for spotting this and putting
+together [PR #29](https://github.com/sdegenaar/liquid_glass_widgets/pull/29) —
+great catch, and exactly the right instinct on the fix.
+
+The active-tab icon was visually muted ("dull") at rest because the
+`AnimatedGlassIndicator` glass lens was painting *over* the icon layer. Simply
+moving the indicator behind the icons restores vibrancy but kills the refraction
+effect — the glass shader needs icons beneath it to warp them as the pill moves.
+
+The fix uses a split-pass sandwich: the pill's solid background renders *below*
+the icons (full vibrancy at rest), while the glass shader renders *above* them
+(refraction preserved during animation). Both `GlassBottomBar` and
+`GlassSearchableBottomBar` are updated. Zero breaking changes.
+
+---
 
 ## 🐛 Fix — `GlassSwitch` initial-state bloom anchor & polish
 

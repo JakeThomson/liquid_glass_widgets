@@ -328,13 +328,9 @@ class _SheetHandleZone extends StatelessWidget {
 }
 
 class _GlassDragIndicator extends StatelessWidget {
-  const _GlassDragIndicator({
-    required this.isGlass,
-    this.color,
-  });
+  const _GlassDragIndicator({required this.isGlass});
 
   final bool isGlass;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -350,7 +346,7 @@ class _GlassDragIndicator extends StatelessWidget {
         width: 36,
         height: 4,
         decoration: BoxDecoration(
-          color: color ?? defaultColor,
+          color: defaultColor,
           borderRadius: BorderRadius.circular(2),
         ),
       ),

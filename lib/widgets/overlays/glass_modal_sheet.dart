@@ -213,7 +213,7 @@ class GlassModalSheet extends StatefulWidget {
     this.topFadeHeight = 40.0,
     this.maintainContentGlass = true,
     this.fullStateContentSettings,
-    this.forceSpecularRim = true,
+    this.forceSpecularRim = false,
     this.enablePeek,
   });
 
@@ -262,7 +262,7 @@ class GlassModalSheet extends StatefulWidget {
     double topFadeHeight = 40.0,
     bool maintainContentGlass = true,
     LiquidGlassSettings? fullStateContentSettings,
-    bool forceSpecularRim = true,
+    bool forceSpecularRim = false,
     bool? enablePeek,
   }) {
     assert(() {

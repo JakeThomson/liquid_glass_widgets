@@ -118,7 +118,7 @@ class GlassSheet extends StatefulWidget {
     this.glowRadius = 1.5,
     this.enableSaturationGlow = true,
     this.suppressInteractionOnChildren = false,
-    this.forceSpecularRim = true,
+    this.forceSpecularRim = false,
   });
 
   // ===========================================================================
@@ -316,7 +316,7 @@ class GlassSheet extends StatefulWidget {
     bool useRootNavigator = false,
     bool useSafeArea = true,
     bool enableSaturationGlow = true,
-    bool forceSpecularRim = true,
+    bool forceSpecularRim = false,
   }) {
     return showModalBottomSheet<T>(
       context: context,

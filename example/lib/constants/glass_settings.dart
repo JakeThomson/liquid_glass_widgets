@@ -115,11 +115,12 @@ class RecommendedGlassSettings {
     chromaticAberration: 0.0,
   );
 
-  /// Settings for overlays and sheets.
+  /// Settings for overlay page layers, cards, and buttons.
   ///
-  /// Balanced for modal dialogs and bottom sheets.
+  /// Use this for [AdaptiveLiquidGlassLayer] and [GlassCard]/[GlassButton]
+  /// within an overlays page context.
   ///
-  /// - refractiveIndex: 0.7 = thin delicate rim (iOS 26 aesthetic)
+  /// - refractiveIndex: 0.7 = thin delicate rim (iOS 26 aesthetic for small widgets)
   static const overlay = LiquidGlassSettings(
     blur: 10,
     thickness: 10,
@@ -128,7 +129,28 @@ class RecommendedGlassSettings {
     lightIntensity: 0.7,
     ambientStrength: 0.4,
     saturation: 1.2,
-    refractiveIndex: 0.7, // Thin rim (standard) / subtle refraction (premium)
+    refractiveIndex: 0.7, // Thin rim for cards/buttons (standard / subtle refraction premium)
+    chromaticAberration: 0.0,
+  );
+
+  /// Settings specifically for large bottom sheets and modal overlays.
+  ///
+  /// Use this as the [settings] parameter in [GlassSheet.show] and
+  /// [GlassModalSheet.show] to avoid the hard "line" artifact on large
+  /// surfaces that use the lightweight shader.
+  ///
+  /// The lightweight shader's rim opacity = kRimAlphaBase(0.8) × refractiveIndex.
+  /// - At 0.7 (overlay preset): rim = 0.56 opacity → visible hard border on sheets
+  /// - At 0.15 (this preset):   rim = 0.12 opacity → barely-perceptible glassy edge
+  static const sheet = LiquidGlassSettings(
+    blur: 10,
+    thickness: 10,
+    glassColor: Color.fromRGBO(255, 255, 255, 0.12),
+    lightAngle: 0.75 * math.pi, // 135° — upper-left, matches iOS 26
+    lightIntensity: 0.7,
+    ambientStrength: 0.4,
+    saturation: 1.2,
+    refractiveIndex: 0.15, // Near-invisible rim — correct for large sheet surfaces
     chromaticAberration: 0.0,
   );
 
