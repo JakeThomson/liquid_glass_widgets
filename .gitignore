@@ -121,3 +121,12 @@ example/EVALUATION_CHECKLIST.md
 example/showcase/IMAGE_GUIDE.md
 example/showcase/QUICKSTART.md
 example/showcase/SHOWCASE_SUMMARY.md
+
+# Root-level scratch/debug scripts and output (not for repo)
+test_output.txt
+test_output.log
+test_output2.log
+update_demo.py
+update_glow.py
+test/widgets/surfaces/debug_searchable_test.dart
+test/widgets/surfaces/indicator_z_order_test.dart

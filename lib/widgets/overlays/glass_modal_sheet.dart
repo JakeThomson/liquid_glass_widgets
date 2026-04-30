@@ -18,7 +18,6 @@ part 'shared/glass_modal_sheet_mechanics.dart';
 part 'shared/glass_modal_sheet_internal.dart';
 part 'shared/glass_modal_sheet_state.dart';
 
-
 /// A high-fidelity, liquid glass modal sheet inspired by iOS 18+ design patterns.
 ///
 /// [GlassModalSheet] provides a fluid, multi-state modal experience (peek, half, full)

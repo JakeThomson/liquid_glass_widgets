@@ -216,21 +216,25 @@ void main() {
       final halfValue = controller.value;
 
       // Fling up — should snap sheet to full, not scroll list.
-      await tester.flingFrom(const Offset(400, 450), const Offset(0, -400), 1500);
+      await tester.flingFrom(
+          const Offset(400, 450), const Offset(0, -400), 1500);
       await tester.pumpAndSettle();
 
       expect(controller.currentState, SheetState.full,
-          reason: 'Upward drag in half state should expand the sheet, not scroll content');
+          reason:
+              'Upward drag in half state should expand the sheet, not scroll content');
 
       // Now in full state, expand is stable — the sheet remains full.
       expect(controller.value, greaterThan(halfValue));
 
       // Fling downward from full — sheet should collapse back to half/peek.
-      await tester.flingFrom(const Offset(400, 100), const Offset(0, 400), 1500);
+      await tester.flingFrom(
+          const Offset(400, 100), const Offset(0, 400), 1500);
       await tester.pumpAndSettle();
 
       expect(controller.currentState, isNot(SheetState.full),
-          reason: 'Downward drag in full state header area should collapse the sheet');
+          reason:
+              'Downward drag in full state header area should collapse the sheet');
     });
 
     testWidgets('shows top fade ShaderMask when enabled and expanded',
@@ -886,7 +890,8 @@ void main() {
       await tester.pump();
 
       expect(notified, isTrue,
-          reason: 'GlassInteractionSilence should dispatch a notification on tap');
+          reason:
+              'GlassInteractionSilence should dispatch a notification on tap');
     });
 
     testWidgets(
@@ -915,7 +920,8 @@ void main() {
       expect(find.byType(GlassInteractionSilence), findsOneWidget);
     });
 
-    testWidgets('nested GlassInteractionSilence does not throw', (tester) async {
+    testWidgets('nested GlassInteractionSilence does not throw',
+        (tester) async {
       await tester.pumpWidget(
         createTestApp(
           child: GlassInteractionSilence(

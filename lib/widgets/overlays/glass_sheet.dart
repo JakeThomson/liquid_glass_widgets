@@ -599,7 +599,6 @@ class _GlassDragIndicator extends StatelessWidget {
   }
 }
 
-
 /// A universal wrapper that silences [GlassSheet] interactions for its child.
 ///
 /// Wrap any interactive widget (buttons, switches, list tiles) in this

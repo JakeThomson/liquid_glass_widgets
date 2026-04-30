@@ -129,7 +129,8 @@ class RecommendedGlassSettings {
     lightIntensity: 0.7,
     ambientStrength: 0.4,
     saturation: 1.2,
-    refractiveIndex: 0.7, // Thin rim for cards/buttons (standard / subtle refraction premium)
+    refractiveIndex:
+        0.7, // Thin rim for cards/buttons (standard / subtle refraction premium)
     chromaticAberration: 0.0,
   );
 
@@ -150,7 +151,8 @@ class RecommendedGlassSettings {
     lightIntensity: 0.7,
     ambientStrength: 0.4,
     saturation: 1.2,
-    refractiveIndex: 0.15, // Near-invisible rim — correct for large sheet surfaces
+    refractiveIndex:
+        0.15, // Near-invisible rim — correct for large sheet surfaces
     chromaticAberration: 0.0,
   );
 

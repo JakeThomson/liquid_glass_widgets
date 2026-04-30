@@ -33,3 +33,10 @@ example/assets/news_images/
 
 # Tools (internal sync scripts)
 tools/
+
+# Root-level scratch/debug output and scripts (not for package consumers)
+test_output.txt
+test_output2.log
+update_demo.py
+update_glow.py
+ARCHITECTURE.md
