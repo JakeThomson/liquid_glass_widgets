@@ -594,7 +594,7 @@ class _HomePageState extends State<HomePage> {
       child: GlassBottomBar(
         verticalPadding: 0,
         horizontalPadding: 8,
-        indicatorColor: Colors.black38,
+        indicatorColor: Colors.black26,
         glassSettings: LiquidGlassSettings(
           thickness: 30,
           blur: 3,

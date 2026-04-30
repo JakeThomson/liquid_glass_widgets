@@ -294,6 +294,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                       case MaskingQuality.off:
                         return _buildSimple(
                           alignment: alignment,
+                          targetAlignment: Alignment(targetAlignment, 0),
                           thickness: thickness,
                           velocity: velocity,
                           backgroundRadius: backgroundRadius,
@@ -340,6 +341,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
 
   Widget _buildSimple({
     required Alignment alignment,
+    required Alignment targetAlignment,
     required double thickness,
     required double velocity,
     required double backgroundRadius,
@@ -363,7 +365,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                 ),
               ),
 
-              // Unselected icons above background
+              // Unselected icons — all tabs in unselected style (for refraction).
               Positioned.fill(
                 child: Container(
                   padding: widget.tabPadding,
@@ -384,6 +386,24 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                   expansion: 14,
                   glassSettings: widget.indicatorSettings,
                   backgroundKey: widget.backgroundKey,
+                ),
+
+              // Persistent selected-icon overlay — always at TARGET position
+              // so the selected icon stays vibrant (selected style) at rest.
+              if (widget.visible)
+                Positioned.fill(
+                  child: Align(
+                    alignment: targetAlignment,
+                    child: FractionallySizedBox(
+                      widthFactor: 1 / widget.tabCount,
+                      child: Container(
+                        padding: widget.tabPadding,
+                        height: widget.barHeight,
+                        child: widget.selectedTabBuilder(
+                            context, 1.0, targetAlignment),
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -415,6 +435,24 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                     child: const SizedBox.expand(),
                   ),
                 ),
+              ),
+
+              // 1.5. Solid Indicator Background (drawn below icons so selected icons are vibrant)
+              AnimatedGlassIndicator(
+                velocity: velocity,
+                itemCount: widget.tabCount,
+                alignment: alignment,
+                thickness: thickness,
+                quality: widget.quality,
+                indicatorColor: indicatorColor,
+                isBackgroundIndicator: false,
+                paintBackground: true,
+                paintGlass: false,
+                borderRadius: effRadius,
+                padding: const EdgeInsets.all(4),
+                expansion: 14,
+                glassSettings: widget.indicatorSettings,
+                backgroundKey: widget.backgroundKey,
               ),
 
               // 2. Icon Content Layer (Unselected + Selected combined for refraction)
@@ -458,6 +496,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                   ),
                 ),
               ),
+
+              // 3. Moving Glass Indicator Layer — on top so it refracts
+              // the merged icon RepaintBoundary beneath it.
               AnimatedGlassIndicator(
                 velocity: velocity,
                 itemCount: widget.tabCount,
@@ -466,6 +507,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                 quality: widget.quality,
                 indicatorColor: indicatorColor,
                 isBackgroundIndicator: false,
+                paintBackground: false,
+                paintGlass: true,
                 borderRadius: effRadius,
                 padding: const EdgeInsets.all(4),
                 expansion: 14,

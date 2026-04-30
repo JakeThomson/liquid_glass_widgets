@@ -95,7 +95,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.text('Following'));
+      await tester.tap(find.text('Following').first);
       await tester.pumpAndSettle();
 
       expect(selected, equals(1));

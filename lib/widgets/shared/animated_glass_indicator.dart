@@ -29,6 +29,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
     this.expansion = 8.0,
     this.useSuperellipse = true,
     this.backgroundKey,
+    this.paintBackground = true,
+    this.paintGlass = true,
   });
 
   /// Optional background key for Skia/Web refraction
@@ -53,8 +55,14 @@ class AnimatedGlassIndicator extends StatelessWidget {
   /// Base color for the indicator (used for background mode).
   final Color indicatorColor;
 
-  /// Whether this is the background (non-glass) pass.
+  /// Whether this is the background (non-glass) pass. (Deprecated, use paintBackground/paintGlass instead).
   final bool isBackgroundIndicator;
+
+  /// Whether to render the solid background color pass.
+  final bool paintBackground;
+
+  /// Whether to render the glass effect shader pass.
+  final bool paintGlass;
 
   /// Border radius of the indicator.
   final double borderRadius;
@@ -179,8 +187,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
     // Unified indicator child
     final indicatorChild = Stack(
       children: [
-        if (backgroundOpacity > 0) backgroundIndicator,
-        if (fade > 0.05) interactiveIndicator,
+        if (paintBackground && backgroundOpacity > 0) backgroundIndicator,
+        if (paintGlass && fade > 0.05) interactiveIndicator,
       ],
     );
 

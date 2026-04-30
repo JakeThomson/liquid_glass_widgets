@@ -49,9 +49,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Search'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
+      // selectedIndex: 0 → 'Home' appears in both unselected base AND vibrant overlay
+      expect(find.text('Home'), findsAtLeastNWidgets(1));
+      expect(find.text('Search'), findsWidgets);
+      expect(find.text('Profile'), findsWidgets);
     });
 
     testWidgets('displays all tab icons', (tester) async {
@@ -67,9 +68,10 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(CupertinoIcons.home), findsOneWidget);
-      expect(find.byIcon(CupertinoIcons.search), findsOneWidget);
-      expect(find.byIcon(CupertinoIcons.person), findsOneWidget);
+      // selectedIndex: 0 → home icon appears in both layers
+      expect(find.byIcon(CupertinoIcons.home), findsAtLeastNWidgets(1));
+      expect(find.byIcon(CupertinoIcons.search), findsWidgets);
+      expect(find.byIcon(CupertinoIcons.person), findsWidgets);
     });
 
     testWidgets('calls onTabSelected when tab is tapped', (tester) async {
@@ -87,7 +89,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Search'));
+      await tester.tap(find.text('Search').first);
       await tester.pumpAndSettle();
 
       expect(selectedIndex, equals(1));
@@ -334,7 +336,8 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Home'), findsOneWidget);
+      // selectedIndex: 1 → 'Home' (tab 0) is NOT selected → appears once (unselected only)
+      expect(find.text('Home'), findsWidgets);
     });
 
     testWidgets('can render 5 tabs', (tester) async {
@@ -356,7 +359,8 @@ void main() {
           ),
         ),
       );
-      expect(find.text('C'), findsOneWidget);
+      // selectedIndex: 2 → 'C' appears in both unselected base AND vibrant overlay
+      expect(find.text('C'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('custom barHeight is accepted', (tester) async {

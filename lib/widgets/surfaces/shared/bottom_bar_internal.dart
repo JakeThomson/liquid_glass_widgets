@@ -489,6 +489,7 @@ class TabIndicatorState extends State<TabIndicator>
                       case MaskingQuality.off:
                         return _buildSimpleMode(
                           alignment: alignment,
+                          targetAlignment: Alignment(targetAlignment, 0),
                           thickness: thickness,
                           velocity: velocity,
                           backgroundRadius: backgroundRadius,
@@ -539,6 +540,7 @@ class TabIndicatorState extends State<TabIndicator>
   /// Only renders tabs once without dual-layer masking. Maximum performance.
   Widget _buildSimpleMode({
     required Alignment alignment,
+    required Alignment targetAlignment,
     required double thickness,
     required double velocity,
     required double backgroundRadius,
@@ -562,7 +564,8 @@ class TabIndicatorState extends State<TabIndicator>
               ),
             ),
 
-            // Unselected icons above background
+            // Unselected icons — always visible, all tabs in unselected style.
+            // The glass indicator refracts this layer as the pill moves over it.
             Positioned.fill(
               child: Container(
                 padding: widget.tabPadding,
@@ -570,7 +573,7 @@ class TabIndicatorState extends State<TabIndicator>
               ),
             ),
 
-            // Glass indicator
+            // Glass indicator — on top so it refracts the icon layer beneath.
             if (widget.visible && thickness > 0.05)
               AnimatedGlassIndicator(
                 velocity: velocity,
@@ -585,6 +588,26 @@ class TabIndicatorState extends State<TabIndicator>
                 expansion: 14,
                 glassSettings: widget.indicatorSettings,
                 backgroundKey: widget.backgroundKey,
+              ),
+
+            // Persistent selected-icon overlay — always rendered at the TARGET
+            // (settled) tab position regardless of spring thickness. This ensures
+            // the selected icon stays vibrant (selected style) at rest, not washed
+            // out by the unselected-style icons in the layer below.
+            if (widget.visible)
+              Positioned.fill(
+                child: Align(
+                  alignment: targetAlignment,
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / widget.tabCount,
+                    child: Container(
+                      padding: widget.tabPadding,
+                      height: widget.barHeight,
+                      child: widget.selectedTabBuilder(
+                          context, 1.0, targetAlignment),
+                    ),
+                  ),
+                ),
               ),
           ],
         ),
@@ -621,14 +644,33 @@ class TabIndicatorState extends State<TabIndicator>
               ),
             ),
 
+            // 1.5. Solid Indicator Background (drawn below icons so selected icons are vibrant)
+            AnimatedGlassIndicator(
+              velocity: velocity,
+              itemCount: widget.tabCount,
+              alignment: alignment,
+              thickness: thickness,
+              quality: widget.quality,
+              indicatorColor: indicatorColor,
+              isBackgroundIndicator: false,
+              paintBackground: true,
+              paintGlass: false,
+              borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
+              padding: const EdgeInsets.all(4),
+              expansion: 14,
+              glassSettings: widget.indicatorSettings,
+              backgroundKey: widget.backgroundKey,
+            ),
+
             // 2. Icon Content Layer (Unselected + Selected combined for refraction)
-            // Put both layers into a single RepaintBoundary BEFORE the glass indicator
-            // so that the glass lens correctly refracts both layers.
+            // Both layers merged into a single RepaintBoundary BEFORE the glass
+            // indicator so the glass lens correctly refracts both icon states
+            // without white bleed-through.
             Positioned.fill(
               child: RepaintBoundary(
                 child: Stack(
                   children: [
-                    // Unselected (inverse clipped)
+                    // Unselected (inverse clipped — visible OUTSIDE pill)
                     ClipPath(
                       clipper: JellyClipper(
                         itemCount: widget.tabCount,
@@ -646,7 +688,7 @@ class TabIndicatorState extends State<TabIndicator>
                         child: widget.childUnselected,
                       ),
                     ),
-                    // Selected (forward clipped)
+                    // Selected (forward clipped — visible INSIDE pill)
                     ClipPath(
                       clipper: JellyClipper(
                         itemCount: widget.tabCount,
@@ -669,7 +711,8 @@ class TabIndicatorState extends State<TabIndicator>
               ),
             ),
 
-            // 3. Moving Glass Indicator Layer
+            // 3. Moving Glass Indicator Layer — on top so it refracts
+            // the merged icon RepaintBoundary beneath it.
             AnimatedGlassIndicator(
               velocity: velocity,
               itemCount: widget.tabCount,
@@ -678,6 +721,8 @@ class TabIndicatorState extends State<TabIndicator>
               quality: widget.quality,
               indicatorColor: indicatorColor,
               isBackgroundIndicator: false,
+              paintBackground: false,
+              paintGlass: true,
               borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
               padding: const EdgeInsets.all(4),
               expansion: 14,

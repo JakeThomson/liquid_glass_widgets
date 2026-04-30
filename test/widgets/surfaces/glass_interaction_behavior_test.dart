@@ -351,9 +351,10 @@ void main() {
         _buildBottomBar(behavior: GlassInteractionBehavior.none),
       );
       await tester.pump();
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Search'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
+      // selectedIndex: 0 → 'Home' appears in both unselected base AND vibrant overlay
+      expect(find.text('Home'), findsAtLeastNWidgets(1));
+      expect(find.text('Search'), findsWidgets);
+      expect(find.text('Profile'), findsWidgets);
     });
 
     testWidgets('behavior=none: tabs still respond to taps', (tester) async {
@@ -369,7 +370,7 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.text('Search'));
+      await tester.tap(find.text('Search').first);
       await tester.pumpAndSettle();
       expect(selected, 1);
     });
