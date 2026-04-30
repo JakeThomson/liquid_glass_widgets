@@ -17,6 +17,8 @@ uniform vec4 uData2; // 8..11 (thickness, lightDir.x, lightDir.y, lightIntensity
 uniform vec4 uData3; // 12..15 (ambientStrength, saturation, refractiveIndex, chromaticAberration)
 uniform vec4 uData4; // 16..19 (cornerRadius, scale.x, scale.y, glowIntensity)
 uniform vec4 uData5; // 20..23 (densityFactor, indicatorWeight, specularSharpnessF, backdropLuma)
+// cornerRadius < 0 → asymmetric mode; per-corner radii come from uData6.
+uniform vec4 uData6; // 24..27 (topLeft, topRight, bottomRight, bottomLeft) — asymmetric only
 // Slot 22 (uData5.z): specular sharpness level — passed as float 0.0/1.0/2.0, cast to int.
 // Flutter's FragmentShader API only supports setFloat — no setInt exists.
 // Passing as a float and rounding in GLSL gives an exact integer; the GPU
@@ -131,11 +133,32 @@ void main() {
   // The vector maxQ generated for the SDF exactly defines the surface gradient!
   vec2 halfSize = uSize * 0.5;
   vec2 p = localLogical - halfSize;
-  vec2 q = abs(p) - halfSize + uCornerRadius;
+
+  // Asymmetric mode: uCornerRadius < 0 means per-corner radii are in uData6.
+  // Quadrant selection: p.x<0 && p.y<0 → topLeft, p.x≥0 && p.y<0 → topRight,
+  //                     p.x≥0 && p.y≥0 → bottomRight, p.x<0 && p.y≥0 → bottomLeft.
+  // (Y increases downward in logical coords; top = negative p.y half.)
+  float r;
+  if (uCornerRadius < 0.0) {
+    // Select per-corner radius based on fragment quadrant
+    if (p.x < 0.0 && p.y < 0.0) {
+      r = uData6.x; // topLeft
+    } else if (p.x >= 0.0 && p.y < 0.0) {
+      r = uData6.y; // topRight
+    } else if (p.x >= 0.0 && p.y >= 0.0) {
+      r = uData6.z; // bottomRight
+    } else {
+      r = uData6.w; // bottomLeft
+    }
+  } else {
+    r = uCornerRadius;
+  }
+
+  vec2 q = abs(p) - halfSize + r;
   
   vec2 maxQ = max(q, 0.0);
   float maxQLen = length(maxQ);
-  float dist = maxQLen + min(max(q.x, q.y), 0.0) - uCornerRadius;
+  float dist = maxQLen + min(max(q.x, q.y), 0.0) - r;
   float smoothing = 1.0 / uScale.x;
   float mask = 1.0 - smoothstep(-smoothing, smoothing, dist);
 
