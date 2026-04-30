@@ -1,81 +1,75 @@
 # 0.9.3
 
-## 🐛 Fix — `GlassSheet` specular rim artifact & washed-out inner elements
+## ✨ Feature — `GlassModalSheet` system & rendering performance refinement
 
-Massive credit to [@yukinoaruu](https://github.com/yukinoaruu) whose
-[PR #33](https://github.com/sdegenaar/liquid_glass_widgets/pull/33) introduced the
-`forceSpecularRim` flag and first surfaced this class of visual fidelity issue with
-the lightweight glass renderer. Their work directly inspired and guided this fix.
+Big thanks to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #33](https://github.com/sdegenaar/liquid_glass_widgets/pull/33) — a comprehensive and beautifully engineered contribution that brings a whole new class of interactive modal sheet to the library.
+
+### 1. `GlassModalSheet` system
+
+A new, comprehensive modal sheet implementation supporting three interactive states: `peek`, `half`, and `full`.
+
+- **Physics-Driven Transitions:** Spring physics for fluid, organic state changes.
+- **Asymmetric Geometry:** Morphs from a rounded floating pill to a sharp-bottomed full-screen container using the new `LiquidVerticalRoundedSuperellipse`.
+- **Isolated Mechanics:** Logic separated into a robust state machine (`glass_modal_sheet_state.dart`) and physics handler (`glass_modal_sheet_mechanics.dart`) — a clean architectural blueprint for future complex components.
+
+### 2. Device-Aware Adaptive Radius
+
+An intelligent radius resolution algorithm that infers the ideal corner curvature from the device's physical safe area — Dynamic Island vs. Notch vs. Android Home Bar — automatically matching glass curvature to device hardware without manual updates.
+
+### 3. Advanced Visual Feedback — Pulse System
+
+A global pulse synchronisation system in the rendering layer allows `GlassModalSheet` to trigger coordinated saturation and lighting pulses during high-velocity interactions, giving the glass surface a "living", organic feel.
+
+### 4. Smart Silence — `suppressInteractionOnChildren`
+
+`InteractionNotification` support prevents the "double-reacting" artifact where both a button **and** the sheet scale simultaneously on a single tap. Child buttons/switches can seamlessly suppress the parent sheet's scaling and glow effects when tapped.
+
+### 5. New shapes & `LiquidStretch` constraints
+
+- **`LiquidVerticalRoundedSuperellipse`**: Enables asymmetric corner radii (top-rounded, bottom-flat) essential for the modal sheet's full-screen morphing animation.
+- **Axis constraints**: `allowPositive` / `allowNegative` pivot support prevents the sheet from "collapsing" downward when dragged — it only stretches upward as a tactile response.
+
+### Documentation & Testing
+
+- `docs/assets/GLASS_MODAL_SHEETS_GUIDE.md` — comprehensive developer guide covering the full parameter surface and state behaviours.
+- `test/widgets/overlays/glass_modal_sheet_test.dart` — 679 lines of rigorous unit and widget tests covering state transitions, gesture arena logic, and physics edge cases.
+
+Zero breaking changes. `GlassModalSheet` is additive — all existing `GlassSheet` usages are unaffected.
 
 ---
 
-### The problem
+## 🐛 Fix — Selected icon colour washed out by glass indicator
 
-On the Skia/Web (lightweight) rendering path, the shader computes rim opacity as:
+A huge shoutout and thanks to [@jfhair](https://github.com/jfhair) for spotting this issue and putting together [PR #29](https://github.com/sdegenaar/liquid_glass_widgets/pull/29) — it was a fantastic catch, and you had exactly the right instinct on the fix!
 
-```
-rimAlpha = kRimAlphaBase (0.8) × refractiveIndex
-```
+The active-tab icon was visually muted ("dull") at rest because the `AnimatedGlassIndicator` glass lens was painting *over* the icon layer. Simply moving the indicator behind the icons restores vibrancy but kills the refraction effect — the glass shader needs icons beneath it to warp them as the pill moves.
 
-When `refractiveIndex` was set to `0.7` (the standard overlay value) on a large
-`GlassSheet`, the resulting rim opacity of `0.56` produced a hard, visible border
-around the sheet — a bright "line" that looked like an artifact rather than a
-premium glass surface.
+The fix uses a split-pass sandwich: the pill's solid background renders *below* the icons (full vibrancy at rest), while the glass shader renders *above* them (refraction preserved during animation). Both `GlassBottomBar` and `GlassSearchableBottomBar` are updated. Zero breaking changes.
 
-Lowering `refractiveIndex` globally to fix the sheets caused a separate regression:
-`GlassButton` and `GlassCard` components **inside** the sheet lost their specular
-highlights and became washed out, since they also inherited the weaker settings.
+---
 
-### The fix — semantic preset separation
+## 🐛 Fix — `GlassSheet` specular rim artifact & washed-out inner elements
 
-Two distinct `RecommendedGlassSettings` presets now exist in the example app
-constants, clearly documenting the correct values for each use case:
+Inspired by [@yukinoaruu](https://github.com/yukinoaruu)'s work in PR #33, who introduced the `forceSpecularRim` flag and first surfaced this class of visual fidelity issue with the lightweight glass renderer.
 
-| Preset | `refractiveIndex` | Intended use |
-|---|---|---|
-| `RecommendedGlassSettings.overlay` | `0.7` | Cards, buttons, small interactive widgets |
-| `RecommendedGlassSettings.sheet` | `0.15` | Large bottom sheets and modal overlays |
+### The problem & fix
 
-All `GlassSheet.show()` calls in the demo app now use the `sheet` preset, while
-every `GlassButton.custom` and `GlassCard` **inside** a sheet explicitly passes
-`settings: RecommendedGlassSettings.overlay`, bypassing the sheet's inherited
-context and restoring crisp, iOS 26-style specular rims on inner elements.
+On the Skia/Web (lightweight) rendering path, a `refractiveIndex` of `0.7` on a large `GlassSheet` produced a hard, visible border around the sheet — a bright "line" that looked like an artifact rather than a premium glass surface. 
 
-### `glass_sheet_defaults.dart` updated
+Lowering it globally to fix the sheets caused components **inside** the sheet to lose their specular highlights and become washed out.
 
-The package-level default for `GlassSheet` has been updated to use a lower
-`refractiveIndex` (`0.15`) to provide a better out-of-the-box experience for
-large sheet surfaces. Widgets nested inside a sheet should pass
-`RecommendedGlassSettings.overlay` (or any settings with a higher
-`refractiveIndex`) explicitly if they require visible edge definition.
+We've introduced semantic preset separation via two distinct `RecommendedGlassSettings` presets to solve this:
+- **`RecommendedGlassSettings.overlay`** (`refractiveIndex: 0.7`): For cards, buttons, and small interactive widgets.
+- **`RecommendedGlassSettings.sheet`** (`refractiveIndex: 0.15`): For large bottom sheets and modal overlays.
 
-### Zero breaking changes
+All `GlassSheet.show()` calls in the demo app now use the `sheet` preset, while every `GlassButton.custom` and `GlassCard` **inside** a sheet explicitly passes `settings: RecommendedGlassSettings.overlay`. The package-level default for `GlassSheet` (`glass_sheet_defaults.dart`) has also been updated to use `refractiveIndex: 0.15` for a better out-of-the-box experience.
 
-All existing `GlassSheet` usages that do not pass explicit `settings:` continue
-to work. The visual change is a refinement — the hard rim border is gone,
-giving sheets a cleaner, more premium appearance.
+Zero breaking changes.
 
 ---
 
 # 0.9.2
 
-## 🐛 Fix — Selected icon colour washed out by glass indicator
-
-Big thanks to [@jfhair](https://github.com/jfhair) for spotting this and putting
-together [PR #29](https://github.com/sdegenaar/liquid_glass_widgets/pull/29) —
-great catch, and exactly the right instinct on the fix.
-
-The active-tab icon was visually muted ("dull") at rest because the
-`AnimatedGlassIndicator` glass lens was painting *over* the icon layer. Simply
-moving the indicator behind the icons restores vibrancy but kills the refraction
-effect — the glass shader needs icons beneath it to warp them as the pill moves.
-
-The fix uses a split-pass sandwich: the pill's solid background renders *below*
-the icons (full vibrancy at rest), while the glass shader renders *above* them
-(refraction preserved during animation). Both `GlassBottomBar` and
-`GlassSearchableBottomBar` are updated. Zero breaking changes.
-
----
 
 ## 🐛 Fix — `GlassSwitch` initial-state bloom anchor & polish
 
