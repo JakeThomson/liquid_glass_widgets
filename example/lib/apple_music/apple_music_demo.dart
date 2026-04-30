@@ -100,6 +100,8 @@ class AppleMusicHomeScreen extends StatefulWidget {
 
 class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _radioScrollController = ScrollController();
+  final ScrollController _libraryScrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
 
   bool _isMiniMode = false;
@@ -107,19 +109,26 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
   bool _searchFieldFocused = false;
   int _selectedTab = 0;
 
+  ScrollController get _activeScrollController => switch (_selectedTab) {
+        1 => _radioScrollController,
+        2 => _libraryScrollController,
+        _ => _scrollController,
+      };
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _radioScrollController.addListener(_onScroll);
+    _libraryScrollController.addListener(_onScroll);
     _searchFocusNode.addListener(_onFocusChange);
   }
 
   void _onScroll() {
-    final mini = _scrollController.offset > 50;
+    final ctrl = _activeScrollController;
+    final mini = ctrl.hasClients && ctrl.offset > 50;
     if (mini == _isMiniMode) return;
-    setState(() {
-      _isMiniMode = mini;
-    });
+    setState(() => _isMiniMode = mini);
   }
 
   void _onFocusChange() {
@@ -129,6 +138,12 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
   @override
   void dispose() {
     _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    _radioScrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    _libraryScrollController
       ..removeListener(_onScroll)
       ..dispose();
     _searchFocusNode
@@ -194,10 +209,11 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
     // contentPad: extra bottom space so the last sliver scrolls above all bars.
     final double contentPad = aboveBarBottom + 50.0 + 8.0;
 
-    // The play pill slides horizontally to fit between the collapsed Home and
-    // Search pills in mini mode. Each side pill is `_kBarH` wide + `_kSpacing`.
-    final double miniPlayLeft = _kPaddingH + _kBarH + _kSpacing;
-    final double miniPlayRight = _kPaddingH + _kBarH + _kSpacing;
+    // The collapsed home/search pills render at searchBarHeight (50), not _kBarH (64).
+    // Using _kBarH here causes an ~18px gap; 50+4 gives the tight ~4px Apple uses.
+    const double _kCollapsedPillW = 50.0;
+    final double miniPlayLeft = _kPaddingH + _kCollapsedPillW + 6.0;
+    final double miniPlayRight = _kPaddingH + _kCollapsedPillW + 6.0;
 
     return Scaffold(
       backgroundColor: _kBackground,
@@ -217,8 +233,15 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
               transitionBuilder: (child, animation) =>
                   FadeTransition(opacity: animation, child: child),
               child: !_isSearching
-                  ? _buildHomeView(
-                      key: const ValueKey('home'), contentPad: contentPad)
+                  ? switch (_selectedTab) {
+                      1 => _buildRadioView(
+                          key: const ValueKey('radio'), contentPad: contentPad),
+                      2 => _buildLibraryView(
+                          key: const ValueKey('library'),
+                          contentPad: contentPad),
+                      _ => _buildHomeView(
+                          key: const ValueKey('home'), contentPad: contentPad),
+                    }
                   : _searchFieldFocused
                       ? _buildNoRecentSearches(key: const ValueKey('no-recent'))
                       : _buildSearchBrowseView(
@@ -273,9 +296,17 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                 if (index == _selectedTab && _isMiniMode) {
                   _dismissMiniMode();
                 } else {
+                  final ctrl = switch (index) {
+                    1 => _radioScrollController,
+                    2 => _libraryScrollController,
+                    _ => _scrollController,
+                  };
+                  // Mini mode is driven by the new tab's scroll position.
+                  final newMini = ctrl.hasClients && ctrl.offset > 50;
                   setState(() {
                     _selectedTab = index;
                     _isSearching = false;
+                    _isMiniMode = newMini;
                   });
                 }
               },
@@ -347,7 +378,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
   Widget _buildHomeView({Key? key, required double contentPad}) {
     return CustomScrollView(
       key: key,
-      controller: _selectedTab == 0 ? _scrollController : null,
+      controller: _scrollController,
       slivers: [
         SliverToBoxAdapter(
           child: SizedBox(height: MediaQuery.paddingOf(context).top + 8),
@@ -377,6 +408,157 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
           ),
         ),
         SliverToBoxAdapter(child: SizedBox(height: contentPad)),
+      ],
+    );
+  }
+
+  Widget _buildRadioView({Key? key, required double contentPad}) {
+    final stations = [
+      ('Apple Music 1', 'Global Pop', CupertinoIcons.dot_radiowaves_left_right),
+      ('Apple Music Country', 'Country Hits', CupertinoIcons.music_note_2),
+      ('Apple Music Hits', 'All-Time Favourites', CupertinoIcons.star_fill),
+      ('Beats 1 Classics', 'Throwbacks', CupertinoIcons.clock_fill),
+      ('Chill Mix', 'Lo-fi & Ambient', CupertinoIcons.moon_fill),
+      ('Workout Mix', 'High Energy', CupertinoIcons.bolt_fill),
+      ('Late Night', 'R&B & Soul', CupertinoIcons.moon_stars_fill),
+      ('Discover', 'New Artists', CupertinoIcons.wand_stars),
+    ];
+    return CustomScrollView(
+      key: key,
+      controller: _radioScrollController,
+      slivers: [
+        SliverToBoxAdapter(
+          child: SizedBox(height: MediaQuery.paddingOf(context).top + 8),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 16, 20),
+            child: const Text(
+              'Radio',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, contentPad),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) {
+                final s = stations[i % stations.length];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: _kCardGray,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: _kMusicRed.withValues(alpha: 0.8),
+                          borderRadius: const BorderRadius.horizontal(
+                              left: Radius.circular(14)),
+                        ),
+                        child: Icon(s.$3, color: Colors.white, size: 28),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(s.$1,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15)),
+                            Text(s.$2,
+                                style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.55),
+                                    fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              childCount: stations.length * 3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLibraryView({Key? key, required double contentPad}) {
+    const sections = [
+      'Recently Added',
+      'Artists',
+      'Albums',
+      'Songs',
+      'Playlists',
+      'Music Videos',
+      'Compilations',
+      'Downloaded',
+    ];
+    return CustomScrollView(
+      key: key,
+      controller: _libraryScrollController,
+      slivers: [
+        SliverToBoxAdapter(
+          child: SizedBox(height: MediaQuery.paddingOf(context).top + 8),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 16, 8),
+            child: const Text(
+              'Library',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(0, 0, 0, contentPad),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) => Column(
+                children: [
+                  ListTile(
+                    leading: Icon(
+                      CupertinoIcons.music_albums_fill,
+                      color: _kMusicRed,
+                    ),
+                    title: Text(
+                      sections[i % sections.length],
+                      style: const TextStyle(color: Colors.white, fontSize: 17),
+                    ),
+                    trailing: const Icon(CupertinoIcons.chevron_forward,
+                        color: Colors.white38, size: 16),
+                  ),
+                  Divider(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: 0.1),
+                      indent: 56),
+                ],
+              ),
+              childCount: sections.length * 4,
+            ),
+          ),
+        ),
       ],
     );
   }

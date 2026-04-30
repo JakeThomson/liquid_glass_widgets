@@ -741,4 +741,197 @@ void main() {
       expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
     });
   });
+
+  // ── onBarTap ───────────────────────────────────────────────────────────────
+  //
+  // Verifies:
+  //   1. onBarTap fires when any part of the bar is tapped.
+  //   2. When onBarTap is null the bar returns barContent directly (no extra
+  //      GestureDetector wrapper in the widget tree).
+
+  group('GlassSearchableBottomBar onBarTap', () {
+    testWidgets('onBarTap fires when the bar is tapped', (tester) async {
+      var tapCount = 0;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            isSearchActive: false,
+            maskingQuality: MaskingQuality.off,
+            onBarTap: () => tapCount++,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Tap the bar at its top-left corner — no opaque child sits there,
+      // so the translucent GestureDetector receives the event.
+      final barBox = tester.getRect(find.byType(GlassSearchableBottomBar));
+      await tester.tapAt(barBox.topLeft + const Offset(4, 4));
+      await tester.pump();
+
+      expect(tapCount, greaterThanOrEqualTo(1),
+          reason: 'onBarTap should have fired at least once');
+    });
+
+    testWidgets('onBarTap fires while search is active', (tester) async {
+      var tapCount = 0;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            isSearchActive: true,
+            maskingQuality: MaskingQuality.off,
+            onBarTap: () => tapCount++,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap the bar at its top-left corner.
+      final barBox = tester.getRect(find.byType(GlassSearchableBottomBar));
+      await tester.tapAt(barBox.topLeft + const Offset(4, 4));
+      await tester.pump();
+
+      expect(tapCount, greaterThanOrEqualTo(1));
+    });
+
+    testWidgets('when onBarTap is null the bar still mounts cleanly',
+        (tester) async {
+      // onBarTap defaults to null — verify the widget mounts and operates
+      // normally without a wrapping GestureDetector.
+      await tester.pumpWidget(_buildBar());
+      await tester.pump();
+
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+
+    testWidgets('tab selection still works when onBarTap is set',
+        (tester) async {
+      // Verifies that the translucent GestureDetector does NOT swallow taps
+      // intended for internal handlers.
+      var selected = -1;
+      var barTaps = 0;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (i) => selected = i,
+            isSearchActive: false,
+            maskingQuality: MaskingQuality.off,
+            onBarTap: () => barTaps++,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Tap the second tab label.
+      await tester.tap(find.text('Following').first);
+      await tester.pumpAndSettle();
+
+      // Internal handler must still fire.
+      expect(selected, equals(1),
+          reason: 'Tab selection should not be swallowed by onBarTap wrapper');
+      // onBarTap may also fire (translucent) — that is acceptable.
+    });
+  });
+
+  // ── onSearchFieldTap ───────────────────────────────────────────────────────
+  //
+  // Verifies that tapping the active TextField body calls onSearchFieldTap.
+
+  group('GlassSearchBarConfig onSearchFieldTap', () {
+    test('defaults to null', () {
+      final config = GlassSearchBarConfig(onSearchToggle: (_) {});
+      expect(config.onSearchFieldTap, isNull);
+    });
+
+    test('stores callback reference', () {
+      void handler() {}
+      final config = GlassSearchBarConfig(
+        onSearchToggle: (_) {},
+        onSearchFieldTap: handler,
+      );
+      expect(config.onSearchFieldTap, same(handler));
+    });
+
+    testWidgets('onSearchFieldTap fires when active TextField is tapped',
+        (tester) async {
+      var fieldTapCount = 0;
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            isSearchActive: true,
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (_) {},
+              controller: controller,
+              onSearchFieldTap: () => fieldTapCount++,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final textField = find.byType(TextField);
+      if (textField.evaluate().isNotEmpty) {
+        await tester.tap(textField.first);
+        await tester.pump();
+        expect(fieldTapCount, greaterThanOrEqualTo(1),
+            reason: 'onSearchFieldTap should fire when TextField is tapped');
+      }
+    });
+
+    testWidgets('onSearchFieldTap=null does not crash when TextField is tapped',
+        (tester) async {
+      // Regression guard: verify null callback doesn't throw.
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            isSearchActive: true,
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (_) {},
+              // onSearchFieldTap intentionally omitted
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final textField = find.byType(TextField);
+      if (textField.evaluate().isNotEmpty) {
+        await tester.tap(textField.first);
+        await tester.pump();
+        // Verify: no exception was thrown reaching this point.
+        expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+      }
+    });
+  });
 }

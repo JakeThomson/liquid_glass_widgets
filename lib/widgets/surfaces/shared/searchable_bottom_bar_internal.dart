@@ -818,6 +818,7 @@ class SearchPillState extends State<SearchPill> {
               controller: _controller,
               focusNode: _focusNode,
               autofocus: false,
+              onTap: config.onSearchFieldTap,
               onChanged: config.onChanged,
               onSubmitted: config.onSubmitted,
               onTapOutside: config.onTapOutside,

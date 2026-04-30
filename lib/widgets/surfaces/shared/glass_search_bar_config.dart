@@ -48,6 +48,7 @@ class GlassSearchBarConfig {
     this.cancelButtonText = 'Cancel',
     this.cancelButtonColor,
     this.onSearchFocusChanged,
+    this.onSearchFieldTap,
   });
 
   /// Called with `true` when search is activated, `false` when dismissed.
@@ -229,4 +230,15 @@ class GlassSearchBarConfig {
   /// (e.g. "No Recent Searches") and an unfocused search state (e.g. a topic
   /// browse grid), without fully closing the search bar.
   final ValueChanged<bool>? onSearchFocusChanged;
+
+  /// Called when the user taps the body of the active (expanded) search field.
+  ///
+  /// Passed directly to [TextField.onTap]. Useful for navigating to a
+  /// dedicated search screen, showing a suggestion overlay, or logging an
+  /// analytics event on search interaction — without needing to own the
+  /// [FocusNode] yourself.
+  ///
+  /// Note: this fires on every tap of the field, including taps that
+  /// merely restore focus after the keyboard was dismissed.
+  final VoidCallback? onSearchFieldTap;
 }

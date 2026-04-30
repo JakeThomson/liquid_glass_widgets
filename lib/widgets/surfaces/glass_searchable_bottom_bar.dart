@@ -95,6 +95,7 @@ class GlassSearchableBottomBar extends StatefulWidget {
     this.interactionBehavior = GlassInteractionBehavior.full,
     this.pressScale = 1.04,
     this.tabWidth,
+    this.onBarTap,
   })  : assert(tabs.length > 0,
             'GlassSearchableBottomBar requires at least one tab'),
         assert(
@@ -331,6 +332,21 @@ class GlassSearchableBottomBar extends StatefulWidget {
   /// tabWidth: null,
   /// ```
   final double? tabWidth;
+
+  /// Called when the user taps anywhere on the bar.
+  ///
+  /// Fires via a translucent [GestureDetector] that wraps the entire bar,
+  /// so internal tap handlers (tab selection, search toggle, indicator drag)
+  /// all continue to work normally.
+  ///
+  /// **Primary use-case — tap-to-restore after scroll-to-hide:**
+  /// ```dart
+  /// GlassSearchableBottomBar(
+  ///   onBarTap: () => setState(() => _barVisible = true),
+  ///   ...
+  /// )
+  /// ```
+  final VoidCallback? onBarTap;
 
   @override
   State<GlassSearchableBottomBar> createState() =>
@@ -848,7 +864,14 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
       },
     );
 
-    return barContent;
+    // Wrap with a translucent GestureDetector so onBarTap fires on any tap
+    // of the bar (including on internal pills) without swallowing those taps.
+    if (widget.onBarTap == null) return barContent;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: widget.onBarTap,
+      child: barContent,
+    );
   } // build()
 
   Widget _buildTabRow({

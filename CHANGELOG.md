@@ -1,3 +1,44 @@
+# 0.9.4
+
+## ✨ Feature — `GlassSearchableBottomBar` programmatic interaction callbacks
+
+Addresses two community-requested quality-of-life gaps for `GlassSearchableBottomBar`.
+
+### 1. `onBarTap` — tap-to-restore after scroll-to-hide
+
+A new `onBarTap: VoidCallback?` parameter on `GlassSearchableBottomBar` fires whenever the user taps anywhere on the bar. The callback is wired through a **translucent** `GestureDetector` wrapper, so all internal handlers (tab selection, search toggle, indicator drag) continue to work normally — there is zero interference.
+
+Primary use-case is restoring the bar after a scroll-to-hide animation that is managed in the caller's code:
+
+```dart
+GlassSearchableBottomBar(
+  onBarTap: () => setState(() => _barVisible = true),
+  ...
+)
+```
+
+When `onBarTap` is `null` (the default) no extra widget is inserted into the tree — zero overhead.
+
+### 2. `onSearchFieldTap` — detect taps on the active search field
+
+A new `onSearchFieldTap: VoidCallback?` parameter on `GlassSearchBarConfig`, passed directly to `TextField.onTap`. Fires on every tap of the expanded search field body, including re-focus taps after the keyboard was dismissed.
+
+Useful for navigating to a dedicated search screen, showing a suggestion overlay, or logging an analytics event without needing to own the `FocusNode`:
+
+```dart
+GlassSearchBarConfig(
+  onSearchToggle: ...,
+  onSearchFieldTap: () {
+    showSuggestions();
+    analytics.log('search_field_tapped');
+  },
+)
+```
+
+Zero breaking changes. Both parameters are optional with `null` defaults.
+
+---
+
 # 0.9.3
 
 ## ✨ Feature — `GlassModalSheet` system & rendering performance refinement
