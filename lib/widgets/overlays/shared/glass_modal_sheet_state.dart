@@ -236,11 +236,13 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
     // Haptic and saturation only fire for genuine sheet-level touches
     // (not for touches on child buttons that were suppressed above).
-    if (widget.enableInteractionGlow) {
+    final isFull = _currentState == SheetState.full;
+
+    if (widget.enableInteractionGlow && !isFull) {
       HapticFeedback.selectionClick();
     }
 
-    if (widget.enableSaturationGlow) {
+    if (widget.enableSaturationGlow && !isFull) {
       _saturationController.forward();
     }
 

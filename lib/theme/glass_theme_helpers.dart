@@ -292,13 +292,13 @@ class GlassThemeHelpers {
 
     if (isIOS) {
       // 2. iPhone Pro Max / Plus with Dynamic Island (e.g. 17 Pro Max: height 956)
-      if (height >= 900 || top >= 59) return 64.0;
+      if (height >= 900 || top >= 59) return 54.0;
 
       // 3. iPhone Pro / Base with Dynamic Island (e.g. 15 Pro: height 852)
-      if (height >= 800 || top >= 54) return 50.0;
+      if (height >= 800 || top >= 54) return 46.0;
 
       // 4. iPhone with Notch (typically top padding between 44 and 50)
-      return 44.0;
+      return 46.0;
     } else {
       // 4. Android devices with gesture navigation (bottom > 0)
       // Android flags often have softer, smaller curves than Apple.
