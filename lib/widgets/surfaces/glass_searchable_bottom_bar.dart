@@ -844,7 +844,17 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                           width: animH,
                           height: animH,
                           child: DismissPill(
-                            onTap: () => FocusScope.of(context).unfocus(),
+                            onTap: () {
+                              // onCancelTap fires first so callers can react
+                              // before focus is released (e.g. clear results).
+                              widget.searchConfig.onCancelTap?.call();
+                              // Dismiss keyboard only. The search bar stays
+                              // visible (unfocused) — this is the correct
+                              // "search ready" state. The caller collapses
+                              // the search via onSearchToggle when they choose
+                              // (e.g. tapping the home pill or switching tabs).
+                              FocusManager.instance.primaryFocus?.unfocus();
+                            },
                             pillSize: animH,
                             barBorderRadius: widget.barBorderRadius,
                             quality: effectiveQuality,

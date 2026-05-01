@@ -262,7 +262,9 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
       body: GestureDetector(
         onTap: () {
           if (_searchFieldFocused) {
-            FocusScope.of(context).unfocus();
+            // Match the DismissPill fix: use primaryFocus?.unfocus() so the
+            // FocusNode is fully released, not just moved to the scope parent.
+            FocusManager.instance.primaryFocus?.unfocus();
           }
         },
         child: Stack(

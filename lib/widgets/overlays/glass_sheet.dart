@@ -118,7 +118,6 @@ class GlassSheet extends StatefulWidget {
     this.glowRadius = 1.5,
     this.enableSaturationGlow = true,
     this.suppressInteractionOnChildren = false,
-    this.forceSpecularRim = false,
   });
 
   // ===========================================================================
@@ -150,10 +149,6 @@ class GlassSheet extends StatefulWidget {
   /// [GlassQuality.premium] (shader-based) is not recommended for animated
   /// sheets but can be used for static sheets.
   final GlassQuality? quality;
-
-  /// Whether to force the legacy specular rim (Canvas-drawn) on Skia/Web.
-  /// Defaults to true for sheets to maintain edge definition.
-  final bool forceSpecularRim;
 
   /// Border radius of the sheet corners.
   ///
@@ -316,7 +311,6 @@ class GlassSheet extends StatefulWidget {
     bool useRootNavigator = false,
     bool useSafeArea = true,
     bool enableSaturationGlow = true,
-    bool forceSpecularRim = false,
   }) {
     return showModalBottomSheet<T>(
       context: context,
@@ -350,7 +344,6 @@ class GlassSheet extends StatefulWidget {
           glowRadius: glowRadius,
           enableSaturationGlow: enableSaturationGlow,
           suppressInteractionOnChildren: suppressInteractionOnChildren,
-          forceSpecularRim: forceSpecularRim,
           child: builder(context),
         );
       },
@@ -488,7 +481,6 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
           settings: pulsedSettings,
           quality: effectiveQuality,
           glowIntensity: 0.0,
-          forceSpecularRim: widget.forceSpecularRim,
           child: RepaintBoundary(child: innerContent),
         );
 

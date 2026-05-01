@@ -35,7 +35,6 @@ class _SheetLayout extends StatelessWidget {
   final LiquidGlassSettings? fullStateContentSettings;
   final bool enableTopFade;
   final double topFadeHeight;
-  final bool forceSpecularRim;
   final bool enableSaturationGlow;
   final VoidCallback onFocusGained;
   final bool suppressInteractionOnChildren;
@@ -75,7 +74,6 @@ class _SheetLayout extends StatelessWidget {
     this.fullStateContentSettings,
     required this.enableTopFade,
     required this.topFadeHeight,
-    required this.forceSpecularRim,
     required this.enableSaturationGlow,
     required this.onFocusGained,
     required this.suppressInteractionOnChildren,
@@ -189,7 +187,6 @@ class _SheetLayout extends StatelessWidget {
                           quality: effectiveQuality,
                           useOwnLayer: true,
                           glowIntensity: 0.0,
-                          forceSpecularRim: forceSpecularRim,
                           child: const SizedBox.expand(),
                         ),
                       ),
@@ -596,9 +593,6 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Custom glass settings for content specifically for the 'full' state.
   final LiquidGlassSettings? fullStateContentSettings;
 
-  /// Whether to force the legacy specular rim (Canvas-drawn) on Skia/Web.
-  final bool forceSpecularRim;
-
   /// Whether the 'peek' state is enabled.
   final bool? enablePeek;
 
@@ -659,7 +653,6 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.topFadeHeight = 40.0,
     this.maintainContentGlass = true,
     this.fullStateContentSettings,
-    this.forceSpecularRim = true,
     this.enablePeek,
     this.peekHorizontalMargin,
     this.peekBottomMargin,
@@ -723,7 +716,6 @@ class GlassModalSheetScaffold extends StatelessWidget {
           topFadeHeight: topFadeHeight,
           maintainContentGlass: maintainContentGlass,
           fullStateContentSettings: fullStateContentSettings,
-          forceSpecularRim: forceSpecularRim,
           enablePeek: enablePeek,
           peekHorizontalMargin: peekHorizontalMargin,
           peekBottomMargin: peekBottomMargin,

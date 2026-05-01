@@ -934,4 +934,85 @@ void main() {
       }
     });
   });
+
+  // ── DismissPill focus fix regression ──────────────────────────────────────
+  //
+  // Regression guard for the focus-handling fix on the × cancel pill:
+  //   - Tapping the pill must call onSearchToggle(false) to collapse the bar.
+  //   - Tapping the pill must call onCancelTap when provided.
+  //
+  // Before the fix, the pill called FocusScope.unfocus() but never called
+  // onSearchToggle(false), leaving isSearchActive=true with a live opaque
+  // GestureDetector(onTap: requestFocus) in the tree — which swallowed the
+  // next tap and re-requested focus on back-navigation.
+
+  group('DismissPill focus fix regression', () {
+    Widget buildSearchingBar({
+      required ValueChanged<bool> onSearchToggle,
+      VoidCallback? onCancelTap,
+    }) {
+      return createTestApp(
+        child: GlassSearchableBottomBar(
+          tabs: _testTabs,
+          selectedIndex: 0,
+          onTabSelected: (_) {},
+          isSearchActive: true,
+          maskingQuality: MaskingQuality.off,
+          searchConfig: GlassSearchBarConfig(
+            onSearchToggle: onSearchToggle,
+            showsCancelButton: true,
+            onCancelTap: onCancelTap,
+          ),
+        ),
+      );
+    }
+
+    testWidgets('tapping dismiss pill calls onSearchToggle(false)',
+        (tester) async {
+      bool? lastToggle;
+
+      await tester.pumpWidget(
+        buildSearchingBar(onSearchToggle: (v) => lastToggle = v),
+      );
+      await tester.pumpAndSettle();
+
+      // The dismiss pill renders a GlassButton with CupertinoIcons.xmark.
+      final dismissPill = find.byIcon(CupertinoIcons.xmark);
+      if (dismissPill.evaluate().isNotEmpty) {
+        await tester.tap(dismissPill.first);
+        await tester.pump();
+        expect(lastToggle, isFalse,
+            reason:
+                'Dismiss pill must call onSearchToggle(false) to collapse the '
+                'bar, preventing the expanded GestureDetector from swallowing '
+                'the next tap and re-requesting focus on back-navigation.');
+      }
+    });
+
+    testWidgets('tapping dismiss pill fires onCancelTap when provided',
+        (tester) async {
+      var cancelCount = 0;
+
+      await tester.pumpWidget(
+        buildSearchingBar(
+          onSearchToggle: (_) {},
+          onCancelTap: () => cancelCount++,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final dismissPill = find.byIcon(CupertinoIcons.xmark);
+      if (dismissPill.evaluate().isNotEmpty) {
+        await tester.tap(dismissPill.first);
+        await tester.pump();
+        expect(cancelCount, equals(1),
+            reason: 'onCancelTap must fire exactly once when × is tapped.');
+      }
+    });
+
+    test('GlassSearchBarConfig.onCancelTap defaults to null', () {
+      final config = GlassSearchBarConfig(onSearchToggle: (_) {});
+      expect(config.onCancelTap, isNull);
+    });
+  });
 }

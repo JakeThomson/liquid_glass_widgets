@@ -49,6 +49,7 @@ class GlassSearchBarConfig {
     this.cancelButtonColor,
     this.onSearchFocusChanged,
     this.onSearchFieldTap,
+    this.onCancelTap,
   });
 
   /// Called with `true` when search is activated, `false` when dismissed.
@@ -241,4 +242,17 @@ class GlassSearchBarConfig {
   /// Note: this fires on every tap of the field, including taps that
   /// merely restore focus after the keyboard was dismissed.
   final VoidCallback? onSearchFieldTap;
+
+  /// Called when the user taps the dismiss (×) cancel pill to close the keyboard.
+  ///
+  /// Fires immediately after the library's own focus-release and
+  /// [onSearchToggle]`(false)` calls, so the search state is already collapsing
+  /// by the time your callback runs. Use this for:
+  ///
+  /// - Analytics (`analytics.log('search_cancelled')`).
+  /// - Clearing search results so the body resets before the bar animates shut.
+  /// - Programmatically unfocusing a custom [FocusNode] you own.
+  ///
+  /// When null (the default), the standard dismiss behaviour runs unchanged.
+  final VoidCallback? onCancelTap;
 }

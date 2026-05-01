@@ -1,4 +1,41 @@
+# 0.9.5
+
+## ✨ Feature — Asymmetric corner radii & floating peek geometry for `GlassModalSheet`
+
+Thanks to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #37](https://github.com/sdegenaar/liquid_glass_widgets/pull/37).
+
+- **Shader fix:** `lightweight_glass.frag` now supports per-quadrant corner radii via a new `uData6` uniform (slots 24–27). A sentinel of `uCornerRadius = -1.0` enables asymmetric mode; all existing symmetric shapes fall through unchanged.
+- **Clip gap fix:** `ClipPath` geometry on the Skia/Web path is now aligned to `RoundedRectangleBorder` (circular arc) to match the shader SDF — eliminates the sub-pixel transparent notch at sheet corners.
+- **Peek geometry:** Five new optional params on `GlassModalSheet` / `GlassModalSheetScaffold` — `peekWidth`, `peekHorizontalMargin`, `peekBottomMargin`, `peekTopBorderRadius`, `peekBottomRadius` — for Apple Maps-style floating pill peek states.
+- **Cleanup:** `forceSpecularRim` removed from `AdaptiveGlass`, `GlassSheet`, `GlassModalSheet`, and `GlassModalSheetScaffold`. The shader renders the specular rim natively; no migration needed.
+
+## 🐛 Fix — `GlassSearchableBottomBar` dismiss pill focus & keyboard restoration
+
+The dismiss (×) pill was calling `FocusScope.of(context).unfocus()` which left the `FocusNode` in a "previously focused" state. This caused Flutter to restore the keyboard on back-navigation, and made the first post-dismiss tap get swallowed by focus routing.
+
+**Fixed by:**
+- Replacing `FocusScope.unfocus()` with `FocusManager.instance.primaryFocus?.unfocus()` in the DismissPill, fully clearing focus state.
+- The × button now **only dismisses the keyboard** — it does not collapse the search state. This matches the real Apple Music / Apple News behaviour where the search bar remains visible (unfocused/ready) after tapping ×. The caller explicitly collapses search by tapping the home pill or switching tabs.
+- `onCancelTap` fires first (before the unfocus) so callers can react (clear results, analytics, etc.) before focus is released.
+
+A new `onCancelTap: VoidCallback?` on `GlassSearchBarConfig` gives callers a hook into the × tap.
+
+## ✨ Demo — Apple Music mini-player refinements
+
+High-fidelity improvements to the Apple Music demo to match the real Apple Music app:
+
+- **Play pill visibility:** The floating play pill now stays visible when the search bar is in the "search ready" state (keyboard dismissed). It only hides when the keyboard is actively up (`_searchFieldFocused`), matching real Apple Music behaviour.
+- **Dynamic icon colour:** `collapsedLogoBuilder` now shows the selected (red) icon in scroll-collapse mini mode and the unselected (white) icon when search is active, via a static `_kTabs` field so tab definitions aren't duplicated.
+- **Play pill positioning:** `aboveBarBottom` is now responsive to the bar's current height — switching to `collapsedNavBarH` when search is active so the pill doesn't drop excessively when the bar shrinks.
+- **Play pill animates on search from mini mode:** When search is activated from the scroll-collapsed mini state, the play pill animates from the mini gap position back to its full-width position above the expanded search bar, matching real Apple Music.
+- **Home pill restores full bar from any state:** Tapping the home pill now always calls `_dismissMiniMode()` when in mini mode — whether arriving from scroll-collapse or from search — scrolling to top and restoring the full 3-tab bar.
+- **Library default preserved:** `collapsedLogoBuilder` in the library remains `unselectedIconColor` — the Apple Music colour logic is isolated to the demo's `GlassSearchBarConfig`.
+- **Multi-tab scroll fix:** `_dismissMiniMode` now uses `_activeScrollController` (per active tab) instead of hardcoding the home tab's controller, fixing a bug where tapping Radio/Library in mini mode would leave the bar stuck.
+
+---
+
 # 0.9.4
+
 
 ## ✨ Feature — `GlassSearchableBottomBar` programmatic interaction callbacks
 

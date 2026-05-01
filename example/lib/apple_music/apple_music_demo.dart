@@ -109,6 +109,23 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
   bool _searchFieldFocused = false;
   int _selectedTab = 0;
 
+  static const _kTabs = [
+    GlassBottomBarTab(
+      label: 'Home',
+      icon: Icon(CupertinoIcons.house),
+      activeIcon: Icon(CupertinoIcons.house_fill),
+    ),
+    GlassBottomBarTab(
+      label: 'Radio',
+      icon: Icon(CupertinoIcons.antenna_radiowaves_left_right),
+    ),
+    GlassBottomBarTab(
+      label: 'Library',
+      icon: Icon(CupertinoIcons.music_albums),
+      activeIcon: Icon(CupertinoIcons.music_albums_fill),
+    ),
+  ];
+
   ScrollController get _activeScrollController => switch (_selectedTab) {
         1 => _radioScrollController,
         2 => _libraryScrollController,
@@ -169,14 +186,21 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
 
   /// Called when user taps the collapsed home-tab pill in mini mode.
   void _dismissMiniMode() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
+    // Scroll whichever tab is currently active back to top.
+    // Previously this hardcoded _scrollController (home tab), so tapping
+    // Radio/Library in mini mode animated the wrong controller and _onScroll
+    // never saw offset drop below 50 → mini mode stayed stuck.
+    final ctrl = _activeScrollController;
+    if (ctrl.hasClients) {
+      ctrl.animateTo(
         0,
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutQuart,
       );
     }
     setState(() {
+      _isMiniMode =
+          false; // reset immediately; _onScroll confirms on next frame
       _isSearching = false;
       _searchFieldFocused = false;
     });
@@ -199,9 +223,16 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
     final bottomOffset = sysBottom;
 
     const double expandedNavBarH = 40 + 2 * _kPaddingV; // 72.0
+    const double collapsedNavBarH = 60.0; // searchBarHeight
 
-    // aboveBarBottom: how far the floating play pill sits above the nav bar.
-    final double aboveBarBottom = expandedNavBarH + 16.0 + bottomOffset;
+    // Gap b
+    const double pillGap = 14.0;
+
+    // aboveBarBottom: shifts down when search is active because the bar is
+    // shorter (50px vs 72px), so we anchor to whichever height is current.
+    final double activeNavBarH =
+        _isSearching ? collapsedNavBarH : expandedNavBarH;
+    final double aboveBarBottom = activeNavBarH + pillGap + bottomOffset;
 
     // miniBarBottom: position of the pill row inside the body Stack.
     final double miniBarBottom = _kPaddingV + bottomOffset;
@@ -226,7 +257,9 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
           // ── Scrollable content ─────────────────────────────────────────────
           GestureDetector(
             onTap: () {
-              if (_searchFieldFocused) FocusScope.of(context).unfocus();
+              if (_searchFieldFocused) {
+                FocusManager.instance.primaryFocus?.unfocus();
+              }
             },
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
@@ -257,17 +290,23 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
           AnimatedPositioned(
             duration: const Duration(milliseconds: 420),
             curve: Curves.easeInOutCubic,
-            bottom: _isMiniMode ? miniBarBottom : aboveBarBottom,
-            left: _isMiniMode ? miniPlayLeft : _kPaddingH,
-            right: _isMiniMode ? miniPlayRight : _kPaddingH,
+            // When search activates from mini mode, animate the play bar back
+            // to its full-width position above the expanded search field —
+            // matching real Apple Music (screenshot 2). Only use mini
+            // positioning when mini AND not searching.
+            bottom:
+                (_isMiniMode && !_isSearching) ? miniBarBottom : aboveBarBottom,
+            left: (_isMiniMode && !_isSearching) ? miniPlayLeft : _kPaddingH,
+            right: (_isMiniMode && !_isSearching) ? miniPlayRight : _kPaddingH,
             height: 50.0,
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeInOut,
-              // Only hide when the search UI overtakes the whole screen
-              opacity: _isSearching ? 0.0 : 1.0,
+              // Real Apple Music: play pill stays visible in search-ready state
+              // (keyboard dismissed). Only hide when keyboard is actively up.
+              opacity: _searchFieldFocused ? 0.0 : 1.0,
               child: IgnorePointer(
-                ignoring: _isSearching,
+                ignoring: _searchFieldFocused,
                 child: _PlayBarPill(
                   onTap: () {
                     if (_isMiniMode) {
@@ -335,37 +374,37 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                   if (active) {
                     setState(() => _isSearching = true);
                   } else {
-                    final wasSearching = _isSearching;
                     setState(() {
                       _isSearching = false;
                       _searchFieldFocused = false;
                     });
-                    // Collapsed home-tab tapped in mini mode → scroll to top.
-                    if (!wasSearching && _isMiniMode) _dismissMiniMode();
+                    // Home pill tapped in mini mode → always restore full bar,
+                    // whether coming from search or scroll-collapse state.
+                    if (_isMiniMode) _dismissMiniMode();
                   }
                 },
                 onSearchFocusChanged: (focused) =>
                     setState(() => _searchFieldFocused = focused),
                 searchIconColor: Colors.white.withValues(alpha: 0.9),
                 textInputAction: TextInputAction.search,
+                // Apple Music specific: show selected (red) icon in scroll-collapse
+                // mini mode, but white when search is actively expanded.
+                // The library default uses unselectedIconColor which is correct
+                // for the search state — we only override for mini mode.
+                collapsedLogoBuilder: (context) {
+                  final tab = _kTabs[_selectedTab];
+                  final iconColor = _isMiniMode && !_isSearching
+                      ? _kMusicRed
+                      : Colors.white.withValues(alpha: 0.9);
+                  return Center(
+                    child: IconTheme(
+                      data: IconThemeData(color: iconColor, size: 28),
+                      child: tab.activeIcon ?? tab.icon,
+                    ),
+                  );
+                },
               ),
-              tabs: [
-                GlassBottomBarTab(
-                  label: 'Home',
-                  icon: const Icon(CupertinoIcons.house),
-                  activeIcon: const Icon(CupertinoIcons.house_fill),
-                ),
-                GlassBottomBarTab(
-                  label: 'Radio',
-                  icon:
-                      const Icon(CupertinoIcons.antenna_radiowaves_left_right),
-                ),
-                GlassBottomBarTab(
-                  label: 'Library',
-                  icon: const Icon(CupertinoIcons.music_albums),
-                  activeIcon: const Icon(CupertinoIcons.music_albums_fill),
-                ),
-              ],
+              tabs: _kTabs,
             ),
           ),
         ],

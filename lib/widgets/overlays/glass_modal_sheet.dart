@@ -186,9 +186,6 @@ class GlassModalSheet extends StatefulWidget {
   /// Custom glass settings for content specifically for the 'full' state.
   final LiquidGlassSettings? fullStateContentSettings;
 
-  /// Whether to force the legacy specular rim (Canvas-drawn) on Skia/Web.
-  final bool forceSpecularRim;
-
   const GlassModalSheet({
     super.key,
     required this.child,
@@ -230,7 +227,6 @@ class GlassModalSheet extends StatefulWidget {
     this.topFadeHeight = 40.0,
     this.maintainContentGlass = true,
     this.fullStateContentSettings,
-    this.forceSpecularRim = false,
     this.enablePeek,
     this.peekHorizontalMargin,
     this.peekBottomMargin,
@@ -284,7 +280,6 @@ class GlassModalSheet extends StatefulWidget {
     double topFadeHeight = 40.0,
     bool maintainContentGlass = true,
     LiquidGlassSettings? fullStateContentSettings,
-    bool forceSpecularRim = false,
     bool? enablePeek,
     double? peekHorizontalMargin,
     double? peekBottomMargin,
@@ -361,7 +356,6 @@ class GlassModalSheet extends StatefulWidget {
           topFadeHeight: topFadeHeight,
           maintainContentGlass: maintainContentGlass,
           fullStateContentSettings: fullStateContentSettings,
-          forceSpecularRim: forceSpecularRim,
           enablePeek: enablePeek,
           peekHorizontalMargin: peekHorizontalMargin,
           peekBottomMargin: peekBottomMargin,
