@@ -505,36 +505,56 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       );
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // Peek to Half Morphing
+    // ════════════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
+    // Peek to Half Morphing
+    // ════════════════════════════════════════════════════════════════════════
     if (pos < halfPos) {
-      if (widget.mode == SheetMode.persistent) {
-        effectiveBottom = widget.bottomMargin;
-        if (_frozenState != null) {
-          final pivotRadiusTop = topRadiusBase * _frozenState!.bottomScale;
-          final pivotRadiusBottom =
-              bottomRadiusBase * _frozenState!.bottomScale;
+      final range = halfPos - peekPos;
+      final tProgressRaw =
+          range > 0.0001 ? ((pos - peekPos) / range).clamp(0.0, 1.0) : 1.0;
+      
+      // Calibrate for Apple Maps behavior: 
+      // Morphing should be almost instant (complete within first 15% of movement)
+      final tMorph = (tProgressRaw / 0.15).clamp(0.0, 1.0);
+      final tProgress = Curves.easeOut.transform(tMorph);
 
-          topRadius = lerpDouble(
-              topRadiusBase, pivotRadiusTop, _saturationAnimation.value)!;
-          bottomRadius = lerpDouble(
-              bottomRadiusBase, pivotRadiusBottom, _saturationAnimation.value)!;
+      // 1. Resolve Peek-specific geometry
+      final peekHMargin = widget.peekHorizontalMargin ?? widget.horizontalMargin;
+      final peekBMargin = widget.peekBottomMargin ?? widget.bottomMargin;
+      final peekTRadius = widget.peekTopBorderRadius ?? topRadiusBase;
+      final peekBRadius = widget.peekBottomRadius ?? bottomRadiusBase;
+
+      // 2. Resolve Peek-specific width (hPad)
+      double peekHPad = peekHMargin;
+      if (widget.peekWidth != null && mqHeight > 0) {
+        peekHPad = ((_screenSize.width - widget.peekWidth!) / 2.0).clamp(0.0, _screenSize.width / 2.0);
+      }
+
+      if (widget.mode == SheetMode.persistent) {
+        // Morph from peek metrics to half metrics
+        effectiveBottom = lerpDouble(peekBMargin, widget.bottomMargin, tProgress)!;
+        hPad = lerpDouble(peekHPad, widget.horizontalMargin, tProgress)!;
+        
+        // Morph corner radii
+        final targetTRadius = lerpDouble(peekTRadius, topRadiusBase, tProgress)!;
+        final targetBRadius = lerpDouble(peekBRadius, bottomRadiusBase, tProgress)!;
+
+        if (_frozenState != null) {
+          final pivotScale = _frozenState!.bottomScale;
+          topRadius = lerpDouble(targetTRadius, targetTRadius * pivotScale, _saturationAnimation.value)!;
+          bottomRadius = lerpDouble(targetBRadius, targetBRadius * pivotScale, _saturationAnimation.value)!;
         } else {
-          topRadius = lerpDouble(
-              topRadiusBase,
-              topRadiusBase * effectiveInteractionScale,
-              _saturationAnimation.value)!;
-          bottomRadius = lerpDouble(
-              bottomRadiusBase,
-              bottomRadiusBase * effectiveInteractionScale,
-              _saturationAnimation.value)!;
+          topRadius = lerpDouble(targetTRadius, targetTRadius * effectiveInteractionScale, _saturationAnimation.value)!;
+          bottomRadius = lerpDouble(targetBRadius, targetBRadius * effectiveInteractionScale, _saturationAnimation.value)!;
         }
-        hPad = widget.horizontalMargin;
 
         // Window changes height visually
         effectiveHeight = targetVisualHeight - effectiveBottom;
       } else {
         // Dismissible mode: hiding downwards
-        // If peek is enabled, we pivot at peekPos.
-        // If peek is disabled, we pivot at halfPos for a direct slide down.
         final pivotPos = _geometry.enablePeek
             ? _geometry.positionForState(SheetState.peek, mqHeight)
             : halfPos;
@@ -546,17 +566,19 @@ class _GlassModalSheetState extends State<GlassModalSheet>
           final slideProgress = (pos / pivotPos).clamp(0.0, 1.0);
           final offscreenBottom = -(pivotVisualHeight + 100.0);
           effectiveBottom =
-              lerpDouble(offscreenBottom, widget.bottomMargin, slideProgress)!;
-          effectiveHeight = pivotVisualHeight - widget.bottomMargin;
+              lerpDouble(offscreenBottom, peekBMargin, slideProgress)!;
+          effectiveHeight = pivotVisualHeight - peekBMargin;
+          hPad = peekHPad;
+          topRadius = peekTRadius;
+          bottomRadius = peekBRadius;
         } else {
-          // Between pivot and half: fixed bottom, growing height
-          effectiveBottom = widget.bottomMargin;
+          // Morphing between pivot (peek) and half
+          effectiveBottom = lerpDouble(peekBMargin, widget.bottomMargin, tProgress)!;
+          hPad = lerpDouble(peekHPad, widget.horizontalMargin, tProgress)!;
           effectiveHeight = targetVisualHeight - effectiveBottom;
+          topRadius = lerpDouble(peekTRadius, topRadiusBase, tProgress)!;
+          bottomRadius = lerpDouble(peekBRadius, bottomRadiusBase, tProgress)!;
         }
-
-        topRadius = topRadiusBase;
-        bottomRadius = bottomRadiusBase;
-        hPad = widget.horizontalMargin;
       }
     } else {
       // From half to full

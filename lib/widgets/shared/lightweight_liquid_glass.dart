@@ -219,8 +219,32 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass> {
     }
 
     // GlassGlowLayer is now automatically provided by GlassGlow internally.
+    //
+    // ClipPath geometry matches the shader SDF (circular-arc rounded rect):
+    // Superellipse shapes use RoundedRectangleBorder so the ClipPath boundary
+    // aligns with the shader's SDF boundary, eliminating the gap that appears
+    // when a superellipse ClipPath is used with a circular-arc SDF
+    // (superellipse extends further into corners than a circular arc).
+    final ShapeBorder clipShape;
+    if (widget.shape is LiquidVerticalRoundedSuperellipse) {
+      final s = widget.shape as LiquidVerticalRoundedSuperellipse;
+      clipShape = RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(s.topRadius),
+          bottom: Radius.circular(s.bottomRadius),
+        ),
+      );
+    } else if (widget.shape is LiquidRoundedSuperellipse) {
+      final s = widget.shape as LiquidRoundedSuperellipse;
+      clipShape = RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(s.borderRadius)),
+      );
+    } else {
+      clipShape = widget.shape;
+    }
+
     return ClipPath(
-      clipper: ShapeBorderClipper(shape: widget.shape),
+      clipper: ShapeBorderClipper(shape: clipShape),
       child: _LightweightGlassEffect(
         shader: shader,
         settings: settings,
@@ -497,45 +521,66 @@ class _RenderLightweightGlass extends RenderProxyBox {
     _shader.setFloat(index++, (_settings.chromaticAberration).clamp(0.0, 1.0));
 
     // 16: uCornerRadius (float) - Logical
+    // For LiquidVerticalRoundedSuperellipse: write -1.0 to signal asymmetric mode.
+    // Slots 24-27 (uData6) will carry the four per-corner radii in that case.
     double? cornerRadius;
-    final dynamic dynShape = _shape;
-    final shapeStr = _shape.runtimeType.toString().toLowerCase();
+    double topLeftR = 0.0;
+    double topRightR = 0.0;
+    double bottomRightR = 0.0;
+    double bottomLeftR = 0.0;
+    bool isAsymmetric = false;
 
-    // 1. Try dynamic property extraction (Highest Accuracy)
-    try {
-      if (dynShape.borderRadius is num) {
-        cornerRadius = (dynShape.borderRadius as num).toDouble();
-      } else if (dynShape.borderRadius is BorderRadius) {
-        cornerRadius = (dynShape.borderRadius as BorderRadius).topLeft.x;
-      } else if (dynShape.borderRadius is BorderRadiusGeometry) {
-        final resolved = (dynShape.borderRadius as BorderRadiusGeometry)
-            .resolve(TextDirection.ltr);
-        cornerRadius = resolved.topLeft.x;
-      } else if (dynShape.radius is num) {
-        cornerRadius = (dynShape.radius as num).toDouble();
-      } else if (dynShape.radius is Radius) {
-        cornerRadius = (dynShape.radius as Radius).x;
-      }
-    } catch (_) {}
+    if (_shape is LiquidVerticalRoundedSuperellipse) {
+      // Asymmetric mode: each pair of corners has a different radius.
+      // topLeft == topRight == topRadius; bottomLeft == bottomRight == bottomRadius.
+      final s = _shape as LiquidVerticalRoundedSuperellipse;
+      final maxTop = math.min(size.width, size.height) / 2.0;
+      final maxBot = math.min(size.width, size.height) / 2.0;
+      topLeftR = s.topRadius.clamp(0.0, maxTop);
+      topRightR = s.topRadius.clamp(0.0, maxTop);
+      bottomRightR = s.bottomRadius.clamp(0.0, maxBot);
+      bottomLeftR = s.bottomRadius.clamp(0.0, maxBot);
+      isAsymmetric = true;
+    } else {
+      final dynamic dynShape = _shape;
+      final shapeStr = _shape.runtimeType.toString().toLowerCase();
 
-    // 2. Class Name Heuristics (Robustness fallback)
-    // Only apply if the property extraction failed completely
-    if (cornerRadius == null) {
-      if (shapeStr.contains('rounded') || shapeStr.contains('superellipse')) {
-        cornerRadius = 16.0; // Standard pill/card radius
-      } else if (shapeStr.contains('oval') ||
-          shapeStr.contains('circle') ||
-          shapeStr.contains('stadium')) {
-        cornerRadius = math.min(size.width, size.height) / 2.0;
-      } else {
-        cornerRadius = 0.0;
+      // 1. Try dynamic property extraction (Highest Accuracy)
+      try {
+        if (dynShape.borderRadius is num) {
+          cornerRadius = (dynShape.borderRadius as num).toDouble();
+        } else if (dynShape.borderRadius is BorderRadius) {
+          cornerRadius = (dynShape.borderRadius as BorderRadius).topLeft.x;
+        } else if (dynShape.borderRadius is BorderRadiusGeometry) {
+          final resolved = (dynShape.borderRadius as BorderRadiusGeometry)
+              .resolve(TextDirection.ltr);
+          cornerRadius = resolved.topLeft.x;
+        } else if (dynShape.radius is num) {
+          cornerRadius = (dynShape.radius as num).toDouble();
+        } else if (dynShape.radius is Radius) {
+          cornerRadius = (dynShape.radius as Radius).x;
+        }
+      } catch (_) {}
+
+      // 2. Class Name Heuristics (Robustness fallback)
+      // Only apply if the property extraction failed completely
+      if (cornerRadius == null) {
+        if (shapeStr.contains('rounded') || shapeStr.contains('superellipse')) {
+          cornerRadius = 16.0; // Standard pill/card radius
+        } else if (shapeStr.contains('oval') ||
+            shapeStr.contains('circle') ||
+            shapeStr.contains('stadium')) {
+          cornerRadius = math.min(size.width, size.height) / 2.0;
+        } else {
+          cornerRadius = 0.0;
+        }
       }
+
+      final maxRadius = math.min(size.width, size.height) / 2.0;
+      cornerRadius = cornerRadius.clamp(0.0, maxRadius);
     }
 
-    final maxRadius = math.min(size.width, size.height) / 2.0;
-    cornerRadius = cornerRadius.clamp(0.0, maxRadius);
-
-    _shader.setFloat(index++, cornerRadius);
+    _shader.setFloat(index++, isAsymmetric ? -1.0 : cornerRadius!);
 
     // 17, 18: uScale (vec2) - Physical Scale (Includes DPR + Transforms)
     _shader.setFloat(index++, physicalScale.dx);
@@ -563,5 +608,13 @@ class _RenderLightweightGlass extends RenderProxyBox {
     // 23 (uData5.w): backdropLuma — VQ4 content-adaptive strength
     // 0.15 = dark platform (richer glass), 0.85 = light platform (subtler glass)
     _shader.setFloat(index++, _backdropLuma.clamp(0.0, 1.0));
+
+    // 24..27 (uData6): per-corner radii for asymmetric shapes (GlassModalSheet).
+    // Only populated when isAsymmetric is true (LiquidVerticalRoundedSuperellipse).
+    // Symmetric shapes pass zeros; the shader ignores uData6 when uCornerRadius >= 0.
+    _shader.setFloat(index++, topLeftR);
+    _shader.setFloat(index++, topRightR);
+    _shader.setFloat(index++, bottomRightR);
+    _shader.setFloat(index++, bottomLeftR);
   }
 }

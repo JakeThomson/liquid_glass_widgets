@@ -71,11 +71,29 @@ class GlassModalSheet extends StatefulWidget {
   /// Corner radius of the bottom edges when fully expanded (full).
   final double? fullBottomBorderRadius;
 
+  /// Corner radius specifically for the 'peek' state.
+  final double? peekTopBorderRadius;
+
+  /// Corner radius specifically for the 'peek' state.
+  final double? peekBottomRadius;
+
   /// Horizontal padding between the sheet and the screen edges.
   final double horizontalMargin;
 
+  /// Horizontal padding specifically for the 'peek' state.
+  /// If null, [horizontalMargin] is used.
+  final double? peekHorizontalMargin;
+
   /// Bottom padding from the screen edge.
   final double bottomMargin;
+
+  /// Bottom padding specifically for the 'peek' state.
+  /// If null, [bottomMargin] is used.
+  final double? peekBottomMargin;
+
+  /// Fixed width for the 'peek' state.
+  /// If provided, the sheet will morph from this width to full width.
+  final double? peekWidth;
 
   /// Color/Saturation transition mode when expanding to full state.
   final FillTransition fillTransition;
@@ -214,6 +232,11 @@ class GlassModalSheet extends StatefulWidget {
     this.fullStateContentSettings,
     this.forceSpecularRim = false,
     this.enablePeek,
+    this.peekHorizontalMargin,
+    this.peekBottomMargin,
+    this.peekWidth,
+    this.peekTopBorderRadius,
+    this.peekBottomRadius,
   });
 
   /// Shows a high-fidelity glass modal sheet.
@@ -263,6 +286,11 @@ class GlassModalSheet extends StatefulWidget {
     LiquidGlassSettings? fullStateContentSettings,
     bool forceSpecularRim = false,
     bool? enablePeek,
+    double? peekHorizontalMargin,
+    double? peekBottomMargin,
+    double? peekWidth,
+    double? peekTopBorderRadius,
+    double? peekBottomRadius,
   }) {
     assert(() {
       if (mode == SheetMode.persistent && barrierColor == Colors.transparent) {
@@ -335,6 +363,11 @@ class GlassModalSheet extends StatefulWidget {
           fullStateContentSettings: fullStateContentSettings,
           forceSpecularRim: forceSpecularRim,
           enablePeek: enablePeek,
+          peekHorizontalMargin: peekHorizontalMargin,
+          peekBottomMargin: peekBottomMargin,
+          peekWidth: peekWidth,
+          peekTopBorderRadius: peekTopBorderRadius,
+          peekBottomRadius: peekBottomRadius,
           onStateChanged: (state) {
             onStateChanged?.call(state);
             if (state == SheetState.hidden && !isClosing) {
