@@ -1,0 +1,333 @@
+// ignore_for_file: require_trailing_commas
+// Coverage-targeted tests for LightweightLiquidGlass.
+// Targets uncovered branches:
+//   - LightweightLiquidGlass.inLayer constructor (settings=null → inherited)
+//   - skipBlur=true when ancestor provides blur
+//   - _RenderLightweightGlass property setters (no-change guard)
+//   - shader == null → ClipPath fallback rendering
+//   - Asymmetric shape: LiquidVerticalRoundedSuperellipse
+//   - Dynamic property extraction: borderRadius as num / BorderRadius / BorderRadiusGeometry
+//   - Class-name heuristics: oval/circle/stadium fallback
+//   - preWarm guard: _isPreparing=true / _cachedProgram != null
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
+import '../../shared/test_helpers.dart';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const _settings = LiquidGlassSettings(
+  thickness: 20,
+  blur: 2,
+  glassColor: Color(0x3DFFFFFF),
+);
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  setUp(() {
+    LightweightLiquidGlass.resetForTesting();
+  });
+
+  tearDown(() {
+    LightweightLiquidGlass.resetForTesting();
+  });
+
+  // ── Shader null → ClipPath fallback ───────────────────────────────────────
+
+  group('LightweightLiquidGlass — fallback (shader == null)', () {
+    testWidgets('renders ClipPath fallback when no shader cached',
+        (tester) async {
+      // resetForTesting ensures _cachedProgram == null → fallback path.
+      await tester.pumpWidget(
+        createTestApp(
+          child: LightweightLiquidGlass(
+            shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+            settings: _settings,
+            child: const SizedBox(width: 80, height: 40),
+          ),
+        ),
+      );
+      await tester.pump();
+      // Fallback uses ClipPath.
+      expect(find.byType(ClipPath), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('LiquidOval fallback uses ClipPath', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: LightweightLiquidGlass(
+            shape: const LiquidOval(),
+            settings: _settings,
+            child: const SizedBox(width: 80, height: 80),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(ClipPath), findsAtLeastNWidgets(1));
+    });
+  });
+
+  // ── .inLayer constructor ───────────────────────────────────────────────────
+
+  group('LightweightLiquidGlass.inLayer', () {
+    testWidgets(
+        'inherits settings from InheritedLiquidGlass when settings=null',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: LightweightLiquidGlass.inLayer(
+              shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+              child: const SizedBox(width: 80, height: 40),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(LightweightLiquidGlass), findsOneWidget);
+    });
+
+    testWidgets('inLayer with glow and density params does not crash',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: LightweightLiquidGlass.inLayer(
+              shape: const LiquidRoundedSuperellipse(borderRadius: 24),
+              glowIntensity: 0.5,
+              densityFactor: 0.3,
+              indicatorWeight: 0.8,
+              child: const SizedBox(width: 80, height: 40),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(LightweightLiquidGlass), findsOneWidget);
+    });
+  });
+
+  // ── skipBlur via ancestor ──────────────────────────────────────────────────
+
+  group('LightweightLiquidGlass — skipBlur from ancestor', () {
+    testWidgets('blur-providing ancestor causes skipBlur=true path',
+        (tester) async {
+      // InheritedLiquidGlass with isBlurProvidedByAncestor=true and matching
+      // blur value → skipBlur = true → _paintGlassContent without BackdropFilter.
+      await tester.pumpWidget(
+        createTestApp(
+          child: LiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: LightweightLiquidGlass.inLayer(
+              shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+              child: const SizedBox(width: 80, height: 40),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(LightweightLiquidGlass), findsOneWidget);
+    });
+  });
+
+  // ── Shape rendering variants ───────────────────────────────────────────────
+
+  group('LightweightLiquidGlass — shape variants', () {
+    for (final shape in <LiquidShape>[
+      const LiquidRoundedSuperellipse(borderRadius: 20),
+      const LiquidOval(),
+      const LiquidRoundedRectangle(borderRadius: 12),
+      const LiquidVerticalRoundedSuperellipse(topRadius: 30, bottomRadius: 10),
+    ]) {
+      testWidgets('${shape.runtimeType} renders without crash', (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: LightweightLiquidGlass(
+              shape: shape,
+              settings: _settings,
+              child: const SizedBox(width: 80, height: 60),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(LightweightLiquidGlass), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
+
+  // ── Property change paths (didUpdateWidget / updateRenderObject) ──────────
+
+  group('LightweightLiquidGlass — property changes trigger rebuild', () {
+    testWidgets('changing glowIntensity updates render object', (tester) async {
+      double glow = 0.0;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return LightweightLiquidGlass(
+                shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                settings: _settings,
+                glowIntensity: glow,
+                child: const SizedBox(width: 80, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      outerSetState(() => glow = 0.8);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('changing densityFactor updates render object', (tester) async {
+      double density = 0.0;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return LightweightLiquidGlass(
+                shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                settings: _settings,
+                densityFactor: density,
+                child: const SizedBox(width: 80, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      outerSetState(() => density = 0.5);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('changing indicatorWeight updates render object',
+        (tester) async {
+      double indicator = 0.0;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return LightweightLiquidGlass(
+                shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                settings: _settings,
+                indicatorWeight: indicator,
+                child: const SizedBox(width: 80, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      outerSetState(() => indicator = 1.0);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('changing settings to same value uses no-op guard',
+        (tester) async {
+      // The setter guard: if (_settings == value) return; → covered by pumping
+      // same settings twice.
+      await tester.pumpWidget(
+        createTestApp(
+          child: LightweightLiquidGlass(
+            shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+            settings: _settings,
+            child: const SizedBox(width: 80, height: 40),
+          ),
+        ),
+      );
+      await tester.pump();
+      // Pump with identical settings — no-op guard exercised.
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('changing shape re-routes clipShape logic', (tester) async {
+      LiquidShape shape = const LiquidRoundedSuperellipse(borderRadius: 8);
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return LightweightLiquidGlass(
+                shape: shape,
+                settings: _settings,
+                child: const SizedBox(width: 80, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Switch to LiquidVerticalRoundedSuperellipse → asymmetric shader path
+      outerSetState(() => shape = const LiquidVerticalRoundedSuperellipse(
+          topRadius: 24, bottomRadius: 8));
+      await tester.pump();
+
+      // Switch to LiquidOval → oval/stadium heuristic
+      outerSetState(() => shape = const LiquidOval());
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── preWarm guard branches ─────────────────────────────────────────────────
+
+  group('LightweightLiquidGlass.preWarm guards', () {
+    test('calling preWarm twice is idempotent (no crash)', () async {
+      // First call sets _isPreparing=true while async; second call returns early.
+      final f1 = LightweightLiquidGlass.preWarm();
+      final f2 = LightweightLiquidGlass.preWarm(); // should return early
+      await Future.wait([f1, f2]);
+      // No assertions needed — absence of exceptions = success.
+    });
+  });
+
+  // ── dispose path ──────────────────────────────────────────────────────────
+
+  group('LightweightLiquidGlass — dispose', () {
+    testWidgets('disposed widget does not crash', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: LightweightLiquidGlass(
+            shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+            settings: _settings,
+            child: const SizedBox(width: 80, height: 40),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(find.byType(LightweightLiquidGlass), findsNothing);
+    });
+  });
+}

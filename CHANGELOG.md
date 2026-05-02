@@ -1,3 +1,36 @@
+# 0.9.6
+
+## 🐛 Fix — `GlassModalSheet` interaction glow in full state
+
+Thanks to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #38](https://github.com/sdegenaar/liquid_glass_widgets/pull/38).
+
+- **Haptic & glow suppression in full state:** `HapticFeedback.selectionClick()` and
+  `_saturationController.forward()` were firing on every touch when the sheet was in
+  `SheetState.full` — where the glass surface is fully opaque and neither effect is visible.
+  Both are now gated on `!isFull`, eliminating spurious haptic feedback and redundant
+  animation ticks.
+- **Background glass hides when content glass is active:** Added an `Opacity(0.0)` on the
+  background `AdaptiveGlass` layer when `expandProgress > 0.98` and `maintainContentGlass`
+  is enabled. Prevents "glass on glass" shader conflicts in Premium mode at full expansion.
+- **Interaction glow threshold tightened:** `GlassGlow` pulse guard lowered from
+  `expandProgress < 0.98` to `< 0.9` to match the existing saturation gate — consistent
+  behaviour across all glow signals.
+- **`GlassModalSheet` geometry defaults refined:** `topBorderRadius` defaults to `56`
+  (was `null`), `horizontalMargin` to `5.0` (was `8.0`), `bottomMargin` to `6.0`
+  (was `8.0`) for tighter, more native-feeling geometry.
+- **`InteractionNotification` exported:** `InteractionNotification` is now part of the
+  public API surface, enabling consumers to dispatch Smart Silence events from their own
+  widgets.
+- **Corner radius tuning:** `GlassThemeHelpers.resolveAdaptiveRadius` values updated to
+  54 / 46 / 46 (Pro Max / Pro / Notch) for a more conservative, closer-to-system look.
+
+## 🧪 Tests — Coverage improvements (1,573 tests)
+
+Extended branch coverage across five previously under-tested subsystems.
+Full test count grew from 1,491 → 1,573 (+82 tests).
+
+---
+
 # 0.9.5
 
 ## ✨ Feature — Asymmetric corner radii & floating peek geometry for `GlassModalSheet`

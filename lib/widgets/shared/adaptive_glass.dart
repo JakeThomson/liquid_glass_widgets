@@ -11,8 +11,8 @@ import 'glass_accessibility_scope.dart';
 import 'lightweight_liquid_glass.dart';
 import 'inherited_liquid_glass.dart';
 
-/// Adaptive glass widget that intelligently chooses between premium and
-/// lightweight shaders based on renderer capabilities.
+/// A renderer-agnostic glass surface that intelligently selects the best
+/// rendering path based on [GlassQuality] and the active Flutter renderer.
 ///
 /// **Fallback chain:**
 /// 1. Premium quality + Impeller available → Full shader (best quality)
@@ -20,7 +20,17 @@ import 'inherited_liquid_glass.dart';
 /// 3. Standard quality → Always lightweight shader
 /// 4. If lightweight shader fails → FakeGlass (final fallback)
 ///
-/// This ensures users never see FakeGlass unless absolutely necessary.
+/// Prefer this over [LiquidGlass] directly: [LiquidGlass] is Impeller-only
+/// and silently renders nothing on Skia/Web.
+///
+/// Example:
+/// ```dart
+/// AdaptiveGlass(
+///   shape: LiquidRoundedSuperellipse(borderRadius: 20),
+///   settings: LiquidGlassSettings(blur: 8),
+///   child: Text('Hello glass'),
+/// )
+/// ```
 class AdaptiveGlass extends StatelessWidget {
   const AdaptiveGlass({
     required this.shape,
@@ -35,12 +45,36 @@ class AdaptiveGlass extends StatelessWidget {
     super.key,
   });
 
+  /// The shape that defines the outline and clipping path of the glass surface.
   final LiquidShape shape;
+
+  /// Visual parameters for the glass effect (blur radius, tint, specular etc.).
   final LiquidGlassSettings settings;
+
+  /// The widget displayed inside the glass surface.
   final Widget child;
+
+  /// Controls render fidelity. Defaults to [GlassQuality.standard].
+  ///
+  /// [GlassQuality.premium] enables the full shader pipeline with specular
+  /// reflections and dynamic refraction.
+  /// [GlassQuality.minimal] always renders the frosted fallback, avoiding the
+  /// shader entirely (useful during animations or on low-end devices).
   final GlassQuality quality;
+
+  /// If `true`, wraps the glass layer in a [RepaintBoundary] (own compositing
+  /// layer). This can improve performance when the glass surface moves
+  /// independently of the rest of the widget tree, at the cost of extra GPU
+  /// memory. Defaults to `true`.
   final bool useOwnLayer;
+
+  /// How to clip the child widget to the [shape] boundary.
+  /// Defaults to [Clip.antiAlias].
   final Clip clipBehavior;
+
+  /// When `true`, optimises the frosted fallback for surfaces that update their
+  /// layout bounds frequently (e.g. spring-animated buttons). Omits the
+  /// [BackdropFilter] on [GlassQuality.minimal] to avoid compositor flicker.
   final bool isInteractive;
 
   /// Whether to allow "Specular Elevation" when in a grouped context.

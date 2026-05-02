@@ -127,11 +127,11 @@ class _SheetLayout extends StatelessWidget {
             final contentSettings =
                 (maintainContentGlass && expandProgressValue > 0.9)
                     ? (fullStateContentSettings ??
-                        fadedSettings.copyWith(
+                        pulsedSettings.copyWith(
                           lightIntensity:
-                              fadedSettings.lightIntensity.clamp(0.4, 1.0),
-                          saturation: fadedSettings.saturation.clamp(1.5, 3.0),
-                          blur: fadedSettings.blur.clamp(15.0, 40.0),
+                              pulsedSettings.lightIntensity.clamp(0.4, 1.0),
+                          saturation: pulsedSettings.saturation.clamp(1.5, 3.0),
+                          blur: pulsedSettings.blur.clamp(15.0, 40.0),
                         ))
                     : pulsedSettings;
 
@@ -187,7 +187,15 @@ class _SheetLayout extends StatelessWidget {
                           quality: effectiveQuality,
                           useOwnLayer: true,
                           glowIntensity: 0.0,
-                          child: const SizedBox.expand(),
+                          // Optimization: hide background glass when content glass is fully active
+                          // to prevent "glass on glass" shader conflicts in Premium mode.
+                          child: Opacity(
+                            opacity: (maintainContentGlass &&
+                                    expandProgressValue > 0.98)
+                                ? 0.0
+                                : 1.0,
+                            child: const SizedBox.expand(),
+                          ),
                         ),
                       ),
                     ),
@@ -195,13 +203,13 @@ class _SheetLayout extends StatelessWidget {
                       child: GlassGlow(
                         glowColor: (enableInteractionGlow &&
                                 glassOpacity > 0.05 &&
-                                expandProgress < 0.98)
+                                expandProgress < 0.9)
                             ? (glowColor ??
                                 Colors.white.withValues(alpha: 0.15))
                             : Colors.transparent,
                         glowRadius: glowRadius,
                         hitTestBehavior: HitTestBehavior.translucent,
-                        pulse: enableSaturationGlow
+                        pulse: (enableSaturationGlow && expandProgress < 0.9)
                             ? saturationAnimation.value
                             : 0,
                         clipper: _RadiusClipper(
@@ -209,14 +217,19 @@ class _SheetLayout extends StatelessWidget {
                           bottomRadius: currentBottomRadius,
                         ),
                         child: RepaintBoundary(
-                          child: AdaptiveLiquidGlassLayer(
-                            settings: contentSettings,
-                            quality: effectiveQuality,
-                            child: ClipPath(
-                              clipper: _RadiusClipper(
+                          child: ClipPath(
+                            clipper: _RadiusClipper(
+                              topRadius: currentTopRadius,
+                              bottomRadius: currentBottomRadius,
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: AdaptiveLiquidGlassLayer(
+                              shape: LiquidVerticalRoundedSuperellipse(
                                 topRadius: currentTopRadius,
                                 bottomRadius: currentBottomRadius,
                               ),
+                              settings: contentSettings,
+                              quality: effectiveQuality,
                               child: Stack(
                                 children: [
                                   Positioned.fill(

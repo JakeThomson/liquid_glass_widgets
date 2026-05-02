@@ -20,27 +20,14 @@ example/android/
 example/windows/
 example/linux/
 
-# Example app — exclude everything except lib/main.dart and pubspec.yaml.
-# main.dart is kept so pub.dev shows the Example tab and awards the points.
-# A proper standalone example.dart will ship in the next version.
+# Example app — exclude the full app (demos, repros, assets) from the package.
+# Only example/example.dart (standalone) and example/pubspec.yaml are published.
+# example/example.dart is the highest-priority file for the pub.dev Example tab.
+# The full showcase app lives in example/lib/ and is available on GitHub.
 example/showcase/
 example/assets/
 example/**/*.md
-example/lib/apple_music/
-example/lib/apple_news/
-example/lib/apple_podcasts/
-example/lib/pages/
-example/lib/constants/
-example/lib/bug_repro.dart
-example/lib/backdrop_scope_repro.dart
-example/lib/repro_darkness.dart
-example/lib/repro_issue.dart
-example/lib/searchable_bar_repro.dart
-example/lib/g3mf0r.dart
-example/lib/inspect_settings.dart
-example/lib/tab_width_demo.dart
-example/lib/glass_bottom_bar_demo.dart
-example/lib/glass_modal_sheet_demo.dart
+example/lib/
 
 # Tools (internal sync scripts)
 tools/

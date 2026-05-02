@@ -667,6 +667,49 @@ void main() {
       await tester.pumpAndSettle(); // Snap back
       expect(controller.value, peekValue);
     });
+
+    testWidgets('disables interaction glow and pulse in full state',
+        (tester) async {
+      final controller = GlassModalSheetController();
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                initialState: SheetState.full,
+                enableInteractionGlow: true,
+                enableSaturationGlow: true,
+                child: const SizedBox.expand(),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find GlassGlow widget
+      final glassGlowFinder = find.byType(GlassGlow);
+      expect(glassGlowFinder, findsOneWidget);
+
+      final glassGlow = tester.widget<GlassGlow>(glassGlowFinder);
+
+      // In full state (expandProgress = 1.0 > 0.9), glowColor should be transparent
+      // and pulse should be 0.0.
+      expect(glassGlow.glowColor, Colors.transparent);
+      expect(glassGlow.pulse, 0.0);
+
+      // Now snap back to half and verify they are enabled
+      controller.snapToState(SheetState.half, animate: false);
+      await tester.pump();
+
+      final glassGlowHalf = tester.widget<GlassGlow>(glassGlowFinder);
+      expect(glassGlowHalf.glowColor, isNot(Colors.transparent));
+      // In half state, _saturationAnimation might still be 0.0 initially,
+      // but it's *wired* to the animation.
+      // Actually, since we didn't trigger any pointer events, it's 0.0.
+      // But the *conditional* should be true.
+    });
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
