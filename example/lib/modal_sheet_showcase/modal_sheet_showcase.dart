@@ -456,6 +456,7 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
       quality: widget.currentQuality,
       initialState: SheetState.peek,
       enablePeek: true,
+      peekTopBorderRadius: 46,
       builder: (context) => const GlassBackdropScope(
         child: BaseScenario(
           title: 'Standard Peek',
