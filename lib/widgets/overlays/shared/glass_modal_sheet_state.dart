@@ -612,13 +612,15 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       // Phase 2: Final sink (t: 0.92 -> 1.0) - the sheet submerges only when it's fully expanded.
       const transitionEnd = 0.92;
       final marginProgress = (t / transitionEnd).clamp(0.0, 1.0);
-      final sinkProgress = ((t - transitionEnd) / (1.0 - transitionEnd)).clamp(0.0, 1.0);
+      final sinkProgress =
+          ((t - transitionEnd) / (1.0 - transitionEnd)).clamp(0.0, 1.0);
 
       if (_frozenState != null) {
         final baseBottom = lerpDouble(frozenBottom, 0.0, marginProgress)!;
         effectiveBottom = lerpDouble(baseBottom, -extraHeight, sinkProgress)!;
       } else {
-        final baseBottom = lerpDouble(widget.bottomMargin, 0.0, marginProgress)!;
+        final baseBottom =
+            lerpDouble(widget.bottomMargin, 0.0, marginProgress)!;
         effectiveBottom = lerpDouble(baseBottom, -extraHeight, sinkProgress)!;
       }
 
