@@ -706,7 +706,15 @@ class SearchPillState extends State<SearchPill> {
             children: [
               GlassButton(
                 key: const ValueKey('pill-collapsed'),
-                icon: Icon(CupertinoIcons.search, color: iconColor),
+                // Use caller-supplied search icon when provided;
+                // otherwise fall back to the upstream default
+                // CupertinoIcons.search glyph. Letting callers
+                // override here lets apps that need a higher-fidelity
+                // glyph (real SF Symbols, Material Symbols at a
+                // specific weight, etc.) supply their own without
+                // forking — see GlassSearchBarConfig.searchIcon.
+                icon: widget.config.searchIcon ??
+                    Icon(CupertinoIcons.search, color: iconColor),
                 // No-op while mid-animation to avoid double-toggling, EXCEPT
                 // if expandWhenActive is false, which means this is a persistent
                 // collapsed search button that needs to be tappable to activate search.
