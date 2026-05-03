@@ -87,7 +87,7 @@ class _SheetLayout extends StatelessWidget {
       scrollController: scrollController,
       isFullScreen: expandProgressValue > 0.95,
       padding: padding,
-      child: RepaintBoundary(child: child),
+      child: child,
     );
 
     return Positioned(
@@ -122,8 +122,8 @@ class _SheetLayout extends StatelessWidget {
             final currentTopRadius = topRadius;
             final currentBottomRadius = bottomRadius;
 
-            // Content settings: if maintainContentGlass is true, we keep the
-            // glass settings vibrant even in full state.
+            // Content settings: vibrant glass settings when maintainContentGlass
+            // is true and the sheet is nearly full.
             final contentSettings =
                 (maintainContentGlass && expandProgressValue > 0.9)
                     ? (fullStateContentSettings ??
@@ -134,6 +134,26 @@ class _SheetLayout extends StatelessWidget {
                           blur: pulsedSettings.blur.clamp(15.0, 40.0),
                         ))
                     : pulsedSettings;
+
+            // Compute dynamic glass visibility for current expansion state.
+            final bool isFullyExpanded = expandProgressValue > 0.98;
+            final double glassVisibility = isFullyExpanded
+                ? (maintainContentGlass ? 1.0 : 0.0)
+                : (glassOpacity * 5.0).clamp(0.0, 1.0);
+
+            // Fade glass uniformly via settings rather than an Opacity widget.
+            final currentSettings = contentSettings.copyWith(
+              glassColor: contentSettings.glassColor.withValues(
+                alpha: contentSettings.glassColor.a * glassVisibility,
+              ),
+              blur: contentSettings.blur * glassVisibility,
+              thickness: contentSettings.thickness * glassVisibility,
+            );
+
+            final shape = LiquidVerticalRoundedSuperellipse(
+              topRadius: currentTopRadius,
+              bottomRadius: currentBottomRadius,
+            );
 
             return GlassModalSheetStateProvider(
               info: SheetStateInfo(
@@ -153,11 +173,12 @@ class _SheetLayout extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
+                    // 1. Shape outline + drop shadow (transparent fill —
+                    //    actual fill lives inside AdaptiveGlass below).
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: ShapeDecoration(
-                          color: effectiveExpandedColor.withValues(
-                              alpha: colorOpacity),
+                          color: Colors.transparent,
                           shape: RoundedSuperellipseBorder(
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(currentTopRadius),
@@ -175,81 +196,68 @@ class _SheetLayout extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // 2. Single unified glass surface — owns the SDF clip,
+                    //    solid fill, glow, and content. Consolidating into one
+                    //    AdaptiveGlass prevents the dual-stencil fragmentation
+                    //    that caused ghosting in Impeller Premium mode.
                     Positioned.fill(
-                      child: Opacity(
-                        opacity: (glassOpacity * 5.0).clamp(0.0, 1.0),
-                        child: AdaptiveGlass(
-                          shape: LiquidVerticalRoundedSuperellipse(
-                            topRadius: currentTopRadius,
-                            bottomRadius: currentBottomRadius,
-                          ),
-                          settings: pulsedSettings,
-                          quality: effectiveQuality,
-                          useOwnLayer: true,
-                          glowIntensity: 0.0,
-                          // Optimization: hide background glass when content glass is fully active
-                          // to prevent "glass on glass" shader conflicts in Premium mode.
-                          child: Opacity(
-                            opacity: (maintainContentGlass &&
-                                    expandProgressValue > 0.98)
-                                ? 0.0
-                                : 1.0,
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned.fill(
-                      child: GlassGlow(
-                        glowColor: (enableInteractionGlow &&
-                                glassOpacity > 0.05 &&
-                                expandProgress < 0.9)
-                            ? (glowColor ??
-                                Colors.white.withValues(alpha: 0.15))
-                            : Colors.transparent,
-                        glowRadius: glowRadius,
-                        hitTestBehavior: HitTestBehavior.translucent,
-                        pulse: (enableSaturationGlow && expandProgress < 0.9)
-                            ? saturationAnimation.value
-                            : 0,
-                        clipper: _RadiusClipper(
-                          topRadius: currentTopRadius,
-                          bottomRadius: currentBottomRadius,
-                        ),
-                        child: RepaintBoundary(
-                          child: ClipPath(
-                            clipper: _RadiusClipper(
-                              topRadius: currentTopRadius,
-                              bottomRadius: currentBottomRadius,
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: AdaptiveLiquidGlassLayer(
-                              shape: LiquidVerticalRoundedSuperellipse(
-                                topRadius: currentTopRadius,
-                                bottomRadius: currentBottomRadius,
-                              ),
-                              settings: contentSettings,
-                              quality: effectiveQuality,
-                              child: Stack(
-                                children: [
-                                  Positioned.fill(
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: child!,
+                      child: AdaptiveGlass(
+                        shape: shape,
+                        settings: currentSettings,
+                        quality: effectiveQuality,
+                        useOwnLayer: true,
+                        clipBehavior: Clip.antiAlias,
+                        child: Stack(
+                          children: [
+                            // 3. Solid fill — inside AdaptiveGlass so it shares
+                            //    the same SDF mask and clip path.
+                            if (colorOpacity > 0.001)
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  key: const Key('glass_modal_sheet_fill'),
+                                  decoration: BoxDecoration(
+                                    color: effectiveExpandedColor.withValues(
+                                      alpha: colorOpacity,
                                     ),
                                   ),
-                                  if (showDragIndicator)
-                                    const Positioned(
-                                      top: 0,
-                                      left: 0,
-                                      right: 0,
-                                      height: 44,
-                                      child: handleZone,
+                                ),
+                              ),
+                            // 4. Glow overlay + content.
+                            Positioned.fill(
+                              child: GlassGlow(
+                                glowColor: (enableInteractionGlow &&
+                                        glassOpacity > 0.05 &&
+                                        expandProgress < 0.9)
+                                    ? (glowColor ??
+                                        Colors.white.withValues(alpha: 0.15))
+                                    : Colors.transparent,
+                                glowRadius: glowRadius,
+                                hitTestBehavior: HitTestBehavior.translucent,
+                                pulse: (enableSaturationGlow &&
+                                        expandProgress < 0.9)
+                                    ? saturationAnimation.value
+                                    : 0,
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: child!,
+                                      ),
                                     ),
-                                ],
+                                    if (showDragIndicator)
+                                      const Positioned(
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 44,
+                                        child: handleZone,
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ),
@@ -295,26 +303,6 @@ class _SheetLayout extends StatelessWidget {
 // Internal UI Support
 // ===========================================================================
 
-class _RadiusClipper extends CustomClipper<Path> {
-  final double topRadius;
-  final double bottomRadius;
-
-  const _RadiusClipper({required this.topRadius, required this.bottomRadius});
-
-  @override
-  Path getClip(Size size) {
-    return RoundedSuperellipseBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(topRadius),
-        bottom: Radius.circular(bottomRadius),
-      ),
-    ).getOuterPath(Offset.zero & size);
-  }
-
-  @override
-  bool shouldReclip(_RadiusClipper old) =>
-      old.topRadius != topRadius || old.bottomRadius != bottomRadius;
-}
 
 class _SheetHandleZone extends StatelessWidget {
   const _SheetHandleZone();
