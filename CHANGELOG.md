@@ -1,3 +1,15 @@
+# 0.10.1
+
+Big thanks to @yukinoaruu for three excellent contributions this release. 🙏
+
+## Fixes
+
+- **GlassModalSheet — child State preservation** · Removed `GlobalObjectKey` from the internal `Focus` bridge. The key was changing every rebuild, quietly tearing down child `State` (scroll positions, controllers, etc.) on each expand/collapse. (#44)
+- **GlassModalSheet — `onStateChanged` skipped on slow drag** · Introduced `_settledState` to track the last published state separately from the in-flight animation target. Side-effects (haptics, callbacks, scroll-to-top) now fire reliably after a drag that crosses a snap threshold mid-gesture. (#45)
+- **GlassModalSheet — ghosting and jitter** · Fixed visual artefacts during sheet transitions. (#43)
+- **GlassModalSheet — element subtree stability** · `LiquidStretch` now always returns a consistent widget type regardless of `interactionScale`/`stretch` values, preventing a full subtree teardown on the frame the sheet reaches full expansion.
+- **LightweightLiquidGlass — null-shader passthrough** · The widget tree shape is now stable while the fragment shader loads asynchronously; a tinted passthrough is painted instead of switching widget types.
+
 # 0.10.0
 
 ## ⚠️ Breaking — Pre-v1 API Cleanup
