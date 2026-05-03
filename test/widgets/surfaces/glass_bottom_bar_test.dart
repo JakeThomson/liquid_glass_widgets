@@ -789,4 +789,72 @@ void main() {
       expect(find.byType(GlassBottomBar), findsOneWidget);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // indicatorExpansion (PR #40 — jfhair)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('GlassBottomBar.indicatorExpansion', () {
+    final tabs = [
+      const GlassBottomBarTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+      const GlassBottomBarTab(label: 'B', icon: Icon(CupertinoIcons.search)),
+      const GlassBottomBarTab(label: 'C', icon: Icon(CupertinoIcons.person)),
+    ];
+
+    test('default indicatorExpansion is 14', () {
+      final bar = GlassBottomBar(
+        tabs: tabs,
+        selectedIndex: 0,
+        onTabSelected: (_) {},
+      );
+      expect(bar.indicatorExpansion, 14);
+    });
+
+    testWidgets('accepts custom indicatorExpansion', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: tabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            indicatorExpansion: 5,
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      );
+      final bar =
+          tester.widget<GlassBottomBar>(find.byType(GlassBottomBar).first);
+      expect(bar.indicatorExpansion, 5);
+    });
+
+    testWidgets('accepts zero indicatorExpansion', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: tabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            indicatorExpansion: 0,
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      );
+      expect(find.byType(GlassBottomBar), findsOneWidget);
+    });
+
+    testWidgets('large indicatorExpansion does not crash', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: tabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            indicatorExpansion: 40,
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      );
+      expect(find.byType(GlassBottomBar), findsOneWidget);
+    });
+  });
 }

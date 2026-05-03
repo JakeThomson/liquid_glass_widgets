@@ -61,6 +61,75 @@ LiquidGlassWidgets.wrap(
 )
 ```
 
+## ✨ New — Community contributions
+
+### `GlassSearchBarConfig.searchIcon` — custom search icon (PR #41)
+
+Thanks to [@jfhair](https://github.com/jfhair) for [PR #41](https://github.com/sdegenaar/liquid_glass_widgets/pull/41).
+
+The search pill now accepts a fully custom `Widget` in place of the default `CupertinoIcons.search` glyph:
+
+```dart
+GlassSearchBarConfig(
+  onSearchToggle: (active) { … },
+  searchIcon: const Icon(CupertinoIcons.sparkles, color: Colors.white),
+)
+```
+
+When `searchIcon` is `null` (default) the behaviour is unchanged.
+
+### `indicatorExpansion` — tunable jelly-stretch on bottom bars (PR #40)
+
+Thanks to [@jfhair](https://github.com/jfhair) for [PR #40](https://github.com/sdegenaar/liquid_glass_widgets/pull/40).
+
+Both `GlassBottomBar` and `GlassSearchableBottomBar` now expose `indicatorExpansion`
+to control how far the active-tab pill stretches during a drag gesture:
+
+```dart
+GlassBottomBar(
+  tabs: myTabs,
+  selectedIndex: _index,
+  onTabSelected: _onTab,
+  indicatorExpansion: 8,   // default 14; lower = tighter morph
+)
+```
+
+### `GlassModalSheet` — two-phase organic interpolation (PR #39)
+
+Thanks to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #39](https://github.com/sdegenaar/liquid_glass_widgets/pull/39).
+
+The sheet's corner-radius animation now uses a two-phase curve that separates the
+rapid initial expansion from the final settle, eliminating the snapping artifacts
+that were visible at the `half → full` transition on some devices.
+
+The fix also corrects `resolveAdaptiveRadius` to use **logical screen height**
+(`MediaQuery.size.height`) instead of `viewPadding.top` as the primary Pro Max
+detector, preventing false-positive 54 dp radii on some non-Pro-Max iPhones with
+unusually high status-bar padding.
+
+### Asymmetric top/bottom corner radii in premium pipeline (PR #42)
+
+Thanks to [@jfhair](https://github.com/jfhair) for [PR #42](https://github.com/sdegenaar/liquid_glass_widgets/pull/42).
+
+`LiquidVerticalRoundedSuperellipse` now feeds independent top/bottom corner radii
+into the premium SDF shader via a 7-float-per-shape stride, enabling sheets that
+hug the device chassis curve at the bottom while keeping a tighter radius at the
+top — matching the Apple Music / Apple Maps card style:
+
+```dart
+LiquidGlass(
+  shape: const LiquidVerticalRoundedSuperellipse(
+    topRadius: 20,
+    bottomRadius: 54, // tracks iPhone 15 Pro Max chassis
+  ),
+  child: myContent,
+)
+```
+
+> **Shader note**: all shaders continue to pass `glslangValidator` SPIR-V
+> validation. The new stride-7 path is gated on `type == 3` in `sdf.glsl`
+> and leaves the existing stride-6 path untouched.
+
 ---
 
 # 0.9.6

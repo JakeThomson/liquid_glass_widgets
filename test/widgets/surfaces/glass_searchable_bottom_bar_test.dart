@@ -1015,4 +1015,130 @@ void main() {
       expect(config.onCancelTap, isNull);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // indicatorExpansion (PR #40 — jfhair)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('GlassSearchableBottomBar.indicatorExpansion', () {
+    test('default indicatorExpansion is 14', () {
+      final bar = GlassSearchableBottomBar(
+        tabs: _testTabs,
+        selectedIndex: 0,
+        onTabSelected: (_) {},
+        searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+      );
+      expect(bar.indicatorExpansion, 14);
+    });
+
+    testWidgets('accepts custom indicatorExpansion', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            indicatorExpansion: 6,
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+          ),
+        ),
+      );
+      final bar = tester.widget<GlassSearchableBottomBar>(
+          find.byType(GlassSearchableBottomBar).first);
+      expect(bar.indicatorExpansion, 6);
+    });
+
+    testWidgets('accepts zero indicatorExpansion', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            indicatorExpansion: 0,
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+          ),
+        ),
+      );
+      expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GlassSearchBarConfig.searchIcon (PR #41 — jfhair)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('GlassSearchBarConfig.searchIcon', () {
+    test('defaults to null', () {
+      final config = GlassSearchBarConfig(onSearchToggle: (_) {});
+      expect(config.searchIcon, isNull);
+    });
+
+    test('stores custom searchIcon', () {
+      const icon = Icon(CupertinoIcons.star);
+      final config =
+          GlassSearchBarConfig(onSearchToggle: (_) {}, searchIcon: icon);
+      expect(config.searchIcon, same(icon));
+    });
+
+    testWidgets('null searchIcon renders default CupertinoIcons.search',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            searchConfig:
+                GlassSearchBarConfig(onSearchToggle: (_) {}, searchIcon: null),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byIcon(CupertinoIcons.search), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('custom searchIcon is rendered in search pill', (tester) async {
+      const customIcon =
+          Icon(CupertinoIcons.star_fill, key: Key('custom_search_icon'));
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(
+                onSearchToggle: (_) {}, searchIcon: customIcon),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byKey(const Key('custom_search_icon')), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.star_fill), findsOneWidget);
+    });
+
+    testWidgets('custom searchIcon is rendered alongside any other bar icons',
+        (tester) async {
+      const customIcon = Icon(CupertinoIcons.star_fill);
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSearchableBottomBar(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            searchConfig: GlassSearchBarConfig(
+                onSearchToggle: (_) {}, searchIcon: customIcon),
+          ),
+        ),
+      );
+      await tester.pump();
+      // The custom star icon must appear in the tree.
+      expect(find.byIcon(CupertinoIcons.star_fill), findsOneWidget);
+    });
+  });
 }

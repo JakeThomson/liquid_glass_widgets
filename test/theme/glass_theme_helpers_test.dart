@@ -373,6 +373,162 @@ void main() {
       expect(resultC, GlassQuality.minimal); // minimal explicit → unchanged
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GlassThemeHelpers.resolveAdaptiveRadius (PR #39 — yukinoaruu)
+  //
+  // Validates height-based Pro Max detection: top padding alone must NOT
+  // trigger the 54.0 radius. Height >= 900 is the single authoritative
+  // signal for Pro Max / Plus tier (regression added in PR #39).
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('GlassThemeHelpers.resolveAdaptiveRadius', () {
+    Widget buildWithMedia(Widget Function(BuildContext) probe,
+        {Size size = const Size(390, 844),
+        EdgeInsets viewPadding = const EdgeInsets.only(top: 44, bottom: 34),
+        TargetPlatform platform = TargetPlatform.iOS}) {
+      return MaterialApp(
+        theme: ThemeData(platform: platform),
+        home: Builder(builder: (context) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              size: size,
+              viewPadding: viewPadding,
+              padding: viewPadding,
+            ),
+            child: Builder(builder: probe),
+          );
+        }),
+      );
+    }
+
+    testWidgets('Pro Max height (>= 900) → 54.0', (tester) async {
+      double? result;
+      await tester.pumpWidget(
+        buildWithMedia(
+          (ctx) {
+            result = GlassThemeHelpers.resolveAdaptiveRadius(ctx);
+            return const SizedBox.shrink();
+          },
+          size: const Size(430, 932), // 15 Pro Max
+          viewPadding: const EdgeInsets.only(top: 44, bottom: 34),
+        ),
+      );
+      expect(result, 54.0);
+    });
+
+    testWidgets('Pro height (>= 800, < 900) → 46.0', (tester) async {
+      double? result;
+      await tester.pumpWidget(
+        buildWithMedia(
+          (ctx) {
+            result = GlassThemeHelpers.resolveAdaptiveRadius(ctx);
+            return const SizedBox.shrink();
+          },
+          size: const Size(393, 852), // 15 Pro
+          viewPadding: const EdgeInsets.only(top: 54, bottom: 34),
+        ),
+      );
+      expect(result, 46.0);
+    });
+
+    testWidgets(
+        'regression: high top padding on Pro height must NOT return Pro Max radius',
+        (tester) async {
+      // Before PR #39, top >= 59 triggered 54.0 on any device — including Pro.
+      // After the fix, height < 900 always returns 46.0.
+      double? result;
+      await tester.pumpWidget(
+        buildWithMedia(
+          (ctx) {
+            result = GlassThemeHelpers.resolveAdaptiveRadius(ctx);
+            return const SizedBox.shrink();
+          },
+          size: const Size(393, 852), // Pro height, NOT Pro Max
+          viewPadding: const EdgeInsets.only(top: 62, bottom: 34),
+        ),
+      );
+      expect(result, 46.0); // must be Pro, NOT Pro Max
+      expect(result, isNot(54.0));
+    });
+
+    testWidgets('Android with bottom safe area → 28.0', (tester) async {
+      double? result;
+      await tester.pumpWidget(
+        buildWithMedia(
+          (ctx) {
+            result = GlassThemeHelpers.resolveAdaptiveRadius(ctx);
+            return const SizedBox.shrink();
+          },
+          size: const Size(412, 892),
+          viewPadding: const EdgeInsets.only(top: 28, bottom: 24),
+          platform: TargetPlatform.android,
+        ),
+      );
+      expect(result, 28.0);
+    });
+
+    testWidgets('device without bottom safe area → 0.0 (home button)',
+        (tester) async {
+      double? result;
+      await tester.pumpWidget(
+        buildWithMedia(
+          (ctx) {
+            result = GlassThemeHelpers.resolveAdaptiveRadius(ctx);
+            return const SizedBox.shrink();
+          },
+          size: const Size(375, 667), // iPhone SE (home button)
+          viewPadding: const EdgeInsets.only(top: 20, bottom: 0),
+        ),
+      );
+      expect(result, 0.0);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LiquidVerticalRoundedSuperellipse asymmetric radii (PR #42 — jfhair)
+  //
+  // Verifies the Dart-side shape API that feeds rawBottomCornerRadius into
+  // the premium geometry shader stride-7 pipeline.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('LiquidVerticalRoundedSuperellipse asymmetric radii', () {
+    test('stores distinct top and bottom radii', () {
+      const shape =
+          LiquidVerticalRoundedSuperellipse(topRadius: 36, bottomRadius: 60);
+      expect(shape.topRadius, 36.0);
+      expect(shape.bottomRadius, 60.0);
+      expect(shape.topRadius, isNot(shape.bottomRadius));
+    });
+
+    test('symmetric shape has equal top and bottom radii', () {
+      const shape =
+          LiquidVerticalRoundedSuperellipse(topRadius: 36, bottomRadius: 36);
+      expect(shape.topRadius, shape.bottomRadius);
+    });
+
+    test('zero bottom radius is valid (flush bottom edge)', () {
+      const shape =
+          LiquidVerticalRoundedSuperellipse(topRadius: 24, bottomRadius: 0);
+      expect(shape.bottomRadius, 0.0);
+    });
+
+    test('scale() reduces both radii proportionally', () {
+      const shape =
+          LiquidVerticalRoundedSuperellipse(topRadius: 40, bottomRadius: 60);
+      final scaled = shape.scale(0.5) as LiquidVerticalRoundedSuperellipse;
+      expect(scaled.topRadius, closeTo(20.0, 0.01));
+      expect(scaled.bottomRadius, closeTo(30.0, 0.01));
+    });
+
+    test('copyWith overrides only the specified radius', () {
+      const original =
+          LiquidVerticalRoundedSuperellipse(topRadius: 20, bottomRadius: 40);
+      final copied = original.copyWith(bottomRadius: 55);
+      expect(copied.topRadius, 20.0); // unchanged
+      expect(copied.bottomRadius, 55.0); // overridden
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------

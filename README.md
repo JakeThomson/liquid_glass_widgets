@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
 - **Adaptive quality** *(experimental)* — `GlassAdaptiveScope` benchmarks the device at startup and adjusts quality in real time: `minimal` on slow hardware, `standard` on mid-range, `premium` on fast devices. Degrades on thermal throttle, recovers when cool
 - **Zero dependencies** — no third-party runtime libraries, just the Flutter SDK
-- **One-line setup** — `LiquidGlassWidgets.wrap(myApp)` handles shader prewarming, accessibility bridging, and root backdrop sharing; add `GlassBackdropScope` per screen to prevent ghost artifacts on navigation (see [Backdrop Isolation](#backdrop-isolation--preventing-ghost-artifacts))
+- **One-line setup** — `LiquidGlassWidgets.wrap(child: myApp)` handles shader prewarming, accessibility bridging, and root backdrop sharing; add `GlassBackdropScope` per screen to prevent ghost artifacts on navigation (see [Backdrop Isolation](#backdrop-isolation--preventing-ghost-artifacts))
 - **Gyroscope lighting** — `GlassMotionScope` drives specular highlights from any `Stream<double>`
 - **WCAG-compliant by default** — Reduce Motion and Reduce Transparency are respected automatically; no setup required
 
@@ -93,7 +93,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.9.6
+  liquid_glass_widgets: ^0.10.0
 ```
 
 ```bash
@@ -120,7 +120,7 @@ void main() async {
   // Widget-tree composition: installs GlassBackdropScope (required).
   // Enable adaptiveQuality to automatically tune glass quality per device.
   runApp(LiquidGlassWidgets.wrap(
-    const MyApp(),
+    child: const MyApp(),
     adaptiveQuality: true,
   ));
 }
@@ -316,7 +316,7 @@ benchmarks the device at startup and adjusts quality in real time:
 
 ```dart
 // Minimal — let the library decide the best quality for the device:
-runApp(LiquidGlassWidgets.wrap(const MyApp(), adaptiveQuality: true));
+runApp(LiquidGlassWidgets.wrap(child: const MyApp(), adaptiveQuality: true));
 
 // Per-screen — fine-grained control on specific routes:
 GlassAdaptiveScope(
@@ -355,7 +355,7 @@ void main() async {
   await LiquidGlassWidgets.initialize();
 
   runApp(LiquidGlassWidgets.wrap(
-    const MyApp(),
+    child: const MyApp(),
     adaptiveQuality: true,
     adaptiveConfig: GlassAdaptiveScopeConfig(
       initialQuality: initial,       // restore immediately — no warmup window
@@ -538,9 +538,9 @@ GlassAccessibilityScope(
 For experiences where full glass fidelity is intentional (games, creative tools):
 
 ```dart
-// 0.8.0+: pass via wrap(), not initialize()
+// 0.10.0+: child is a required named parameter
 runApp(LiquidGlassWidgets.wrap(
-  const MyApp(),
+  child: const MyApp(),
   respectSystemAccessibility: false,
 ));
 ```
