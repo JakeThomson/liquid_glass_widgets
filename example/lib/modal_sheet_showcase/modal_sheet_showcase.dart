@@ -12,7 +12,8 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LiquidGlassWidgets.initialize();
-  runApp(LiquidGlassWidgets.wrap(const ShowcaseApp(), adaptiveQuality: true));
+  runApp(LiquidGlassWidgets.wrap(
+      child: const ShowcaseApp(), adaptiveQuality: true));
 }
 
 class ShowcaseApp extends StatefulWidget {
@@ -741,7 +742,7 @@ class MapsExperienceScreen extends StatelessWidget {
           glassColor: Colors.blueGrey.withValues(alpha: 0.8),
         ),
         quality: currentQuality,
-        background: Stack(
+        body: Stack(
           children: [
             InteractiveViewer(
               maxScale: 5.0,
@@ -780,7 +781,7 @@ class MapsExperienceScreen extends StatelessWidget {
             ),
           ],
         ),
-        sheetChild: BaseScenario(
+        sheet: BaseScenario(
           title: 'San Francisco',
           subtitle: 'Explore locations and transit in the bay area.',
         ),
