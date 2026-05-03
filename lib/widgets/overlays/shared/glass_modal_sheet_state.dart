@@ -12,6 +12,24 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   SheetState get _currentState => _currentStateNotifier.value;
   set _currentState(SheetState v) => _currentStateNotifier.value = v;
 
+  /// The state most recently published to consumers via
+  /// [GlassModalSheet.onStateChanged] (and from which haptics and
+  /// scroll-to-top side effects fired).
+  ///
+  /// Distinct from [_currentState]: that value is mutated mid-gesture
+  /// by [_applyDrag] and [_jumpTo] to drive in-flight visual
+  /// interpolation (radii, expand-progress, glass settings) toward the
+  /// resolved snap target. Comparing the snap target against
+  /// [_currentState] in [_snapToState] therefore silently skips the
+  /// side-effects branch whenever the drag itself had already crossed
+  /// a snap threshold — by the time the user releases, [_currentState]
+  /// already equals the target.
+  ///
+  /// [_settledState] is updated only inside the side-effects branch,
+  /// so the equality check correctly answers "did the state change
+  /// since the last time we told consumers about it".
+  late SheetState _settledState;
+
   double _currentPosition = 0.0;
   double _currentEffectiveHeight = 0.0;
 
@@ -35,6 +53,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     WidgetsBinding.instance.addObserver(this);
 
     _currentStateNotifier = ValueNotifier(widget.initialState);
+    _settledState = widget.initialState;
     _geometry = _buildGeometry();
 
     _animationController = AnimationController.unbounded(vsync: this);
@@ -145,7 +164,15 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       _animationController.value = targetPosition;
     }
 
-    if (state != _currentState) {
+    // Compare against `_settledState`, not `_currentState` — see the
+    // doc comment on `_settledState` for why. Briefly: `_currentState`
+    // tracks the in-flight snap target during drag (mutated silently
+    // by `_applyDrag` and `_jumpTo`), so checking it here would skip
+    // side effects whenever the drag itself had already updated the
+    // target mid-gesture. `_settledState` only updates inside this
+    // branch, ensuring side effects fire on every consumer-visible
+    // state transition.
+    if (state != _settledState) {
       if (state == SheetState.peek || state == SheetState.hidden) {
         HapticFeedback.lightImpact();
       } else {
@@ -153,6 +180,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       }
 
       _currentState = state;
+      _settledState = state;
       widget.onStateChanged?.call(state);
 
       if (state != SheetState.full && _scrollController.hasClients) {
@@ -693,8 +721,20 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       fallback: kDefaultSheetSettings,
     );
 
+    // Focus listener that snaps the sheet to full whenever a focusable
+    // descendant gains focus (e.g. tapping a TextField inside the sheet).
+    //
+    // IMPORTANT: this Focus widget intentionally carries NO key.
+    // Any key derived from `widget.child` (e.g. `GlobalObjectKey(widget.child)`)
+    // changes every time the parent rebuilds — because the parent passes a
+    // fresh `child` widget instance each frame — and Flutter responds to a
+    // changed key by tearing down the entire child Element subtree and
+    // rebuilding it. That destroys child State (calling `dispose` and
+    // re-running `initState`) on every sheet expand/collapse, which surfaces
+    // as scroll position resets, re-initialised controllers, re-fired fetches,
+    // etc. The FocusNode is owned internally by the Focus widget's Element and
+    // persists correctly without an external key.
     final focusBridge = Focus(
-      key: GlobalObjectKey(widget.child),
       onFocusChange: (hasFocus) {
         if (hasFocus && _currentState != SheetState.full) {
           _snapToState(SheetState.full);

@@ -62,6 +62,51 @@ void main() {
       expect(controller.currentState, SheetState.full);
     });
 
+    testWidgets(
+        'child State is preserved across half↔full transitions (no GlobalObjectKey)',
+        (tester) async {
+      // Regression test for: GlobalObjectKey(widget.child) on the internal
+      // Focus widget caused Flutter to tear down the child's Element subtree
+      // on every sheet expand/collapse, firing dispose+initState each time.
+      int initStateCount = 0;
+
+      final controller = GlassModalSheetController();
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                initialState: SheetState.half,
+                child: _CountingWidget(
+                  onInitState: () => initStateCount++,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1 initState on first mount — expected.
+      expect(initStateCount, 1);
+
+      // Expand to full — child State must NOT be torn down.
+      controller.snapToState(SheetState.full, animate: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(initStateCount, 1,
+          reason: 'Child initState must not fire again on sheet expansion');
+
+      // Collapse back to half — still must not rebuild.
+      controller.snapToState(SheetState.half, animate: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(initStateCount, 1,
+          reason: 'Child initState must not fire again on sheet collapse');
+    });
+
     testWidgets('static show() method displays the sheet', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -305,23 +350,24 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // At half (0.45), colorOpacity is still 0 so the fill widget is absent.
-      expect(find.byKey(const Key('glass_modal_sheet_fill')), findsNothing);
+      // At half (0.45), colorOpacity is ~0 — fill present but transparent.
+      BoxDecoration getFillDecoration() => tester
+          .widget<DecoratedBox>(
+              find.byKey(const Key('glass_modal_sheet_fill')))
+          .decoration as BoxDecoration;
+      expect(getFillDecoration().color?.a ?? 0, lessThan(0.05));
 
-      // Move slightly above half but below fill threshold
+      // Move slightly above half but still below fill threshold
       controller.value = 0.60;
       await tester.pump();
-      expect(find.byKey(const Key('glass_modal_sheet_fill')), findsNothing);
+      expect(getFillDecoration().color?.a ?? 0, lessThan(0.05));
 
       // Move above fill threshold (tProgress = (0.7 - 0.45) / 0.4 = 0.625)
       controller.value = 0.7;
       await tester.pump();
 
-      // In instant mode the fill widget should now be present with the expandedColor
-      final fillDecoration = tester
-          .widget<DecoratedBox>(
-              find.byKey(const Key('glass_modal_sheet_fill')))
-          .decoration as BoxDecoration;
+      // In instant mode the fill should now have the expandedColor with opacity > 0
+      final fillDecoration = getFillDecoration();
       expect(fillDecoration.color?.a, greaterThan(0.0));
       expect(
         fillDecoration.color?.withValues(alpha: 1.0),
@@ -386,19 +432,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // In half state, colorOpacity is ~0 so the fill widget is absent.
-      expect(find.byKey(const Key('glass_modal_sheet_fill')), findsNothing);
+      // In half state, colorOpacity is ~0 — fill present but transparent.
+      BoxDecoration getFillDecoration() => tester
+          .widget<DecoratedBox>(
+              find.byKey(const Key('glass_modal_sheet_fill')))
+          .decoration as BoxDecoration;
+      expect(getFillDecoration().color?.a ?? 0, lessThan(0.05));
 
       // Expand to full (blur=0 => solid color fill should appear)
       controller.snapToState(SheetState.full, animate: false);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // In full state, blur is 0 so colorOpacity > 0 and the fill widget is present.
-      final fillDecoration = tester
-          .widget<DecoratedBox>(
-              find.byKey(const Key('glass_modal_sheet_fill')))
-          .decoration as BoxDecoration;
+      // In full state, blur is 0 so colorOpacity > 0 and the fill is visible.
+      final fillDecoration = getFillDecoration();
       expect(
         fillDecoration.color?.withValues(alpha: 1.0),
         Colors.red.withValues(alpha: 1.0),
@@ -789,6 +836,55 @@ void main() {
       expect(states, contains(SheetState.full));
     });
 
+    testWidgets(
+      'onStateChanged fires after slow drag past snap threshold',
+      (tester) async {
+        // Regression: a slow drag whose path crosses a snap threshold
+        // mid-gesture used to silently mutate `_currentState` to the
+        // resolved target via `_applyDrag`. By the time the user released,
+        // `_snapToState` found `_currentState == target` and skipped the
+        // side-effects branch (haptics, onStateChanged, scroll-to-top).
+        final controller = GlassModalSheetController();
+        final states = <SheetState>[];
+
+        await tester.pumpWidget(
+          createTestApp(
+            child: GlassModalSheetScaffold(
+              controller: controller,
+              initialState: SheetState.full,
+              onStateChanged: states.add,
+              body: const SizedBox.expand(),
+              sheet: const SizedBox.expand(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Slow drag from inside the sheet down through the half-state
+        // position. Multiple small moveBy calls with pumps between them
+        // simulate a finger that lingers — enough frames for _applyDrag
+        // to resolve and commit the intermediate snap target.
+        final start =
+            tester.getCenter(find.byType(GlassModalSheetScaffold));
+        final gesture = await tester.startGesture(start);
+        for (var i = 0; i < 20; i++) {
+          await gesture.moveBy(const Offset(0, 15));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // The final transition to half MUST be reported regardless of
+        // how many times _applyDrag updated _currentState mid-gesture.
+        expect(states, contains(SheetState.half),
+            reason:
+                'onStateChanged was not fired for the slow-drag-to-half '
+                'transition — _snapToState skipped its side-effects branch '
+                'because _applyDrag had already updated _currentState to '
+                'the resolved target mid-drag.');
+      },
+    );
+
     testWidgets('persistent mode prevents dismissal below peek',
         (tester) async {
       final controller = GlassModalSheetController();
@@ -1012,4 +1108,31 @@ void main() {
           reason: 'Second silence tap should produce a second notification');
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// Test helpers
+// ---------------------------------------------------------------------------
+
+/// A minimal StatefulWidget that calls [onInitState] each time its
+/// [State.initState] runs. Used to detect spurious Element teardowns caused
+/// by incorrect keys on ancestor widgets (e.g. GlobalObjectKey on the Focus
+/// bridge in GlassModalSheet).
+class _CountingWidget extends StatefulWidget {
+  const _CountingWidget({required this.onInitState});
+  final VoidCallback onInitState;
+
+  @override
+  State<_CountingWidget> createState() => _CountingWidgetState();
+}
+
+class _CountingWidgetState extends State<_CountingWidget> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onInitState();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.expand();
 }

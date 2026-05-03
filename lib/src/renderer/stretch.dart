@@ -81,9 +81,16 @@ class LiquidStretch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (stretch == 0 && interactionScale == 1.0) {
-      return child;
-    }
+    // NOTE: Do NOT add a fast-path that returns `child` directly when
+    // `stretch == 0 && interactionScale == 1.0`.  The GlassModalSheet lerps
+    // these values through 0 / 1.0 as the sheet expands, so a fast-path
+    // causes the widget type at this slot to switch between the bare child
+    // widget and `GlassDragBuilder` on the frame where the lerp crosses the
+    // threshold.  That type change forces Flutter to deactivate the entire
+    // existing element subtree (firing `initState` on all descendants) and
+    // mount a fresh one — which is exactly the regression we fixed in
+    // lightweight_liquid_glass.dart.  Always returning `GlassDragBuilder`
+    // keeps the tree structure stable throughout the animation.
 
     return GlassDragBuilder(
       behavior: hitTestBehavior,

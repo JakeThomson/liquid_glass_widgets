@@ -142,11 +142,22 @@ class _SheetLayout extends StatelessWidget {
                 : (glassOpacity * 5.0).clamp(0.0, 1.0);
 
             // Fade glass uniformly via settings rather than an Opacity widget.
+            //
+            // IMPORTANT: blur is clamped to a minimum of 0.001 rather than
+            // allowing it to reach exactly 0. When `AdaptiveGlass` receives
+            // `settings.effectiveBlur == 0` it switches its return type from
+            // the normal glass widget to `_FrostedFallback`. A type change at
+            // the same slot causes Flutter to tear down the existing element
+            // subtree and rebuild it from scratch — firing `initState` on all
+            // child `State` objects and destroying scroll positions, controllers,
+            // etc. A 0.001 blur is visually imperceptible but keeps the tree
+            // structure (and therefore the element identity) stable.
             final currentSettings = contentSettings.copyWith(
               glassColor: contentSettings.glassColor.withValues(
                 alpha: contentSettings.glassColor.a * glassVisibility,
               ),
-              blur: contentSettings.blur * glassVisibility,
+              blur: (contentSettings.blur * glassVisibility)
+                  .clamp(0.001, double.infinity),
               thickness: contentSettings.thickness * glassVisibility,
             );
 
@@ -210,18 +221,22 @@ class _SheetLayout extends StatelessWidget {
                         child: Stack(
                           children: [
                             // 3. Solid fill — inside AdaptiveGlass so it shares
-                            //    the same SDF mask and clip path.
-                            if (colorOpacity > 0.001)
-                              Positioned.fill(
-                                child: DecoratedBox(
-                                  key: const Key('glass_modal_sheet_fill'),
-                                  decoration: BoxDecoration(
-                                    color: effectiveExpandedColor.withValues(
-                                      alpha: colorOpacity,
-                                    ),
+                            //    the same SDF mask and clip path. Always rendered
+                            //    (transparent when colorOpacity≈0) to keep the
+                            //    Stack structure stable — inserting/removing this
+                            //    child would shift GlassGlow's slot index, causing
+                            //    Flutter to tear down its subtree and fire
+                            //    initState on all child State objects.
+                            Positioned.fill(
+                              child: DecoratedBox(
+                                key: const Key('glass_modal_sheet_fill'),
+                                decoration: BoxDecoration(
+                                  color: effectiveExpandedColor.withValues(
+                                    alpha: colorOpacity,
                                   ),
                                 ),
                               ),
+                            ),
                             // 4. Glow overlay + content.
                             Positioned.fill(
                               child: GlassGlow(
