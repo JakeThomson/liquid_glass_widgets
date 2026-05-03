@@ -1,6 +1,6 @@
 # 0.10.1
 
-Big thanks to @yukinoaruu for three excellent contributions this release. 🙏
+Big thanks to @yukinoaruu (#43) and @jfhair (#44, #45) for three excellent contributions this release. 🙏
 
 ## Fixes
 
