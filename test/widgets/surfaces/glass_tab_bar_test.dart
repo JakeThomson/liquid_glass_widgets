@@ -652,4 +652,217 @@ void main() {
       expect(find.byType(GlassTabBar), findsOneWidget);
     });
   });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Scrollable mode — new behaviors added in the clipping-fix session
+  // ───────────────────────────────────────────────────────────────────────────
+  group('GlassTabBar scrollable mode — interaction correctness', () {
+    /// Builds a scrollable GlassTabBar with [tabCount] tabs and returns it
+    /// inside a fixed-width container so tabs overflow and the scroll view
+    /// actually has content wider than the viewport.
+    Widget buildScrollableTabBar({
+      required int tabCount,
+      required int selectedIndex,
+      required ValueChanged<int> onTabSelected,
+    }) {
+      return createTestApp(
+        child: AdaptiveLiquidGlassLayer(
+          settings: settingsWithoutLighting,
+          child: SizedBox(
+            width: 320, // narrow enough that 8+ tabs overflow
+            child: GlassTabBar(
+              isScrollable: true,
+              tabs:
+                  List.generate(tabCount, (i) => GlassTab(label: 'T${i + 1}')),
+              selectedIndex: selectedIndex,
+              onTabSelected: onTabSelected,
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets(
+        'scrolling the tab bar does NOT fire onTabSelected (no tap-on-scroll)',
+        (tester) async {
+      int callCount = 0;
+      int selectedIndex = 0;
+
+      await tester.pumpWidget(
+        buildScrollableTabBar(
+          tabCount: 10,
+          selectedIndex: selectedIndex,
+          onTabSelected: (_) => callCount++,
+        ),
+      );
+      await tester.pump();
+
+      // Horizontal drag on the scroll view — should scroll content, not select
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(-150, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(callCount, 0, reason: 'Scrolling must not fire onTabSelected');
+    });
+
+    testWidgets(
+        'tapping a tab in scrollable mode fires onTabSelected exactly once',
+        (tester) async {
+      int callCount = 0;
+      int selectedIndex = 0;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                return SizedBox(
+                  width: 320,
+                  child: GlassTabBar(
+                    isScrollable: true,
+                    tabs: const [
+                      GlassTab(label: 'Alpha'),
+                      GlassTab(label: 'Beta'),
+                      GlassTab(label: 'Gamma'),
+                    ],
+                    selectedIndex: selectedIndex,
+                    onTabSelected: (index) {
+                      callCount++;
+                      setState(() => selectedIndex = index);
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Beta'));
+      await tester.pumpAndSettle();
+
+      expect(callCount, 1,
+          reason: 'onTabSelected must fire exactly once per tap');
+      expect(selectedIndex, 1);
+    });
+
+    testWidgets(
+        'tapping already-selected tab in scrollable mode does NOT fire onTabSelected',
+        (tester) async {
+      int callCount = 0;
+
+      await tester.pumpWidget(
+        buildScrollableTabBar(
+          tabCount: 5,
+          selectedIndex: 0,
+          onTabSelected: (_) => callCount++,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('T1').first);
+      await tester.pumpAndSettle();
+
+      expect(callCount, 0,
+          reason: 'Tapping the already-selected tab must be a no-op');
+    });
+
+    testWidgets(
+        'programmatic selectedIndex change in scrollable mode updates widget without crash',
+        (tester) async {
+      int selectedIndex = 0;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                return Column(
+                  children: [
+                    SizedBox(
+                      width: 320,
+                      child: GlassTabBar(
+                        isScrollable: true,
+                        tabs: List.generate(
+                            8, (i) => GlassTab(label: 'Tab ${i + 1}')),
+                        selectedIndex: selectedIndex,
+                        onTabSelected: (i) => setState(() => selectedIndex = i),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => setState(() => selectedIndex = 6),
+                      child: const Text('Jump'),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Programmatic jump to tab 7 (index 6) via button
+      await tester.tap(find.text('Jump'));
+      await tester.pumpAndSettle();
+
+      expect(selectedIndex, 6);
+    });
+
+    testWidgets(
+        'didUpdateWidget tab-count change resets measurements and keeps indicator stable',
+        (tester) async {
+      int selectedIndex = 0;
+      int tabCount = 4;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                return Column(
+                  children: [
+                    SizedBox(
+                      width: 320,
+                      child: GlassTabBar(
+                        isScrollable: true,
+                        tabs: List.generate(
+                            tabCount, (i) => GlassTab(label: 'X${i + 1}')),
+                        selectedIndex: selectedIndex,
+                        onTabSelected: (i) => setState(() => selectedIndex = i),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => setState(() {
+                        tabCount = 8; // Add more tabs
+                        selectedIndex = 0;
+                      }),
+                      child: const Text('Add tabs'),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Add tabs — exercises didUpdateWidget tab-count change path
+      await tester.tap(find.text('Add tabs'));
+      await tester.pumpAndSettle();
+
+      // All tabs should render and tap should still work
+      expect(find.text('X1'), findsOneWidget);
+      await tester.tap(find.text('X2').first);
+      await tester.pumpAndSettle();
+      expect(selectedIndex, 1);
+    });
+  });
 }

@@ -14,25 +14,6 @@ import 'glass_effect.dart';
 /// - Thickness-based crossfade between background and glass
 /// - Positioning and expansion
 class AnimatedGlassIndicator extends StatelessWidget {
-  const AnimatedGlassIndicator({
-    super.key,
-    required this.velocity,
-    required this.itemCount,
-    required this.alignment,
-    required this.thickness,
-    required this.quality,
-    required this.indicatorColor,
-    required this.isBackgroundIndicator,
-    required this.borderRadius,
-    this.glassSettings,
-    this.padding = EdgeInsets.zero,
-    this.expansion = 8.0,
-    this.useSuperellipse = true,
-    this.backgroundKey,
-    this.paintBackground = true,
-    this.paintGlass = true,
-  });
-
   /// Optional background key for Skia/Web refraction
   final GlobalKey? backgroundKey;
 
@@ -55,7 +36,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
   /// Base color for the indicator (used for background mode).
   final Color indicatorColor;
 
-  /// Whether this is the background (non-glass) pass. (Deprecated, use paintBackground/paintGlass instead).
+  /// Whether this is the background (non-glass) pass.
   final bool isBackgroundIndicator;
 
   /// Whether to render the solid background color pass.
@@ -79,6 +60,35 @@ class AnimatedGlassIndicator extends StatelessWidget {
   /// Whether to use LiquidRoundedSuperellipse (Apple style) or standard RoundedRectangle.
   final bool useSuperellipse;
 
+  /// Optional exact width for varying tab sizes (bypasses widthFactor).
+  /// Used in scrollable mode where tabs have different widths.
+  final double? exactWidth;
+
+  /// Optional exact offset from the left (bypasses alignment).
+  /// Used in scrollable mode where tabs have different widths.
+  final double? exactOffset;
+
+  const AnimatedGlassIndicator({
+    super.key,
+    required this.velocity,
+    required this.itemCount,
+    required this.alignment,
+    required this.thickness,
+    required this.quality,
+    required this.indicatorColor,
+    required this.isBackgroundIndicator,
+    required this.borderRadius,
+    this.glassSettings,
+    this.padding = EdgeInsets.zero,
+    this.expansion = 8.0,
+    this.useSuperellipse = true,
+    this.backgroundKey,
+    this.paintBackground = true,
+    this.paintGlass = true,
+    this.exactWidth,
+    this.exactOffset,
+  });
+
   static const _baseGlassSettings = LiquidGlassSettings(
     glassColor: Color.from(
       alpha: 0.15,
@@ -99,7 +109,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
   /// the proportional approach changes [clipExpansion] every frame, which
   /// triggers [markNeedsPaint] every frame via the setter's change detection,
   /// causing constant geometry rebuilds and showing stale geometry during fast
-  /// drags.  A constant value lets the setter's equality check short-circuit
+  /// drags. A constant value lets the setter's equality check short-circuit
   /// with no repaint.
   ///
   ///  - Horizontal 20 px: covers glass shader antialiased edge rendering.
@@ -125,8 +135,6 @@ class AnimatedGlassIndicator extends StatelessWidget {
 
     // 1. Background Indicator (Resting state)
     // Fade out as the drag spring thickness increases toward 0.15.
-    // The caller is responsible for setting indicatorColor to the desired
-    // final opacity — there is no hidden multiplier applied here.
     final backgroundOpacity = (1.0 - (thickness / 0.15)).clamp(0.0, 1.0);
     final backgroundIndicator = IgnorePointer(
       child: Opacity(
@@ -142,16 +150,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
     );
 
     // 2. Glass Indicator (Active/Dragging state)
-    //
     // We fade the glass in/out by setting `visibility` on the settings rather
-    // than wrapping the widget in `Opacity`. This approach:
-    //   • Avoids the BackdropFilter-inside-Opacity offscreen-buffer bug that
-    //     causes blur > 0 to pop in at full size instead of fading smoothly.
-    //   • Keeps one unified code path for all blur values — no special cases.
-    //   • Re-uses the existing `effective*` getters in LiquidGlassSettings:
-    //     effectiveBlur = blur * visibility → when visibility = 0, effectiveBlur
-    //     = 0, so the renderer's `if (effectiveBlur > 0)` guard never creates a
-    //     BackdropFilter, eliminating the offscreen buffer entirely.
+    // than wrapping the widget in `Opacity`.
     final fade = thickness.clamp(0.0, 1.0);
     final base = glassSettings ?? _baseGlassSettings;
     final effectiveSettings = base.copyWith(visibility: fade);
@@ -160,8 +160,6 @@ class AnimatedGlassIndicator extends StatelessWidget {
         ? LiquidRoundedSuperellipse(borderRadius: borderRadius * 2)
         : LiquidRoundedRectangle(borderRadius: borderRadius);
 
-    // Use specialized interactive glass for better performance and "wow" factor
-    // on all platforms. On Skia/web, it uses magnification effects.
     final glassWidget = GlassEffect(
       shape: shape,
       settings: effectiveSettings,
@@ -171,7 +169,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
       clipExpansion: _jellyClipExpansion,
       child: const GlassGlow(
         glowColor: Colors
-            .transparent, //caused grey rectangle flicker if clicking multiple times
+            .transparent, // caused grey rectangle flicker if clicking multiple times
         child: SizedBox.expand(),
       ),
     );
@@ -179,7 +177,6 @@ class AnimatedGlassIndicator extends StatelessWidget {
     final bool isMinimal = quality == GlassQuality.minimal;
     // Mount early (0.01) so geometry is built before the indicator is visible,
     // preventing a 1-frame flicker at the edges on fast drags.
-    // No Opacity wrapper needed — fading is handled by effectiveSettings above.
     final interactiveIndicator = thickness > 0.01
         ? (isMinimal ? glassWidget : RepaintBoundary(child: glassWidget))
         : const SizedBox.expand();
@@ -192,39 +189,53 @@ class AnimatedGlassIndicator extends StatelessWidget {
       ],
     );
 
+    final indicatorBody = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.fromRelativeRect(
+          rect: rect!,
+          child: RepaintBoundary(
+            child: Transform(
+              alignment: Alignment.center,
+              transform: DraggableIndicatorPhysics.buildJellyTransform(
+                velocity: Offset(velocity, 0),
+                maxDistortion: 0.8,
+                velocityScale: 10,
+              ),
+              child: indicatorChild,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    Widget positioning;
+    if (exactWidth != null && exactOffset != null) {
+      // Exact pixel positioning for scrollable mode with variable-width tabs
+      positioning = Positioned(
+        left: exactOffset,
+        top: 0,
+        bottom: 0,
+        width: exactWidth,
+        child: indicatorBody,
+      );
+    } else {
+      // Fractional positioning for fixed-width tabs
+      positioning = Positioned.fill(
+        child: FractionallySizedBox(
+          widthFactor: 1 / itemCount,
+          alignment: alignment,
+          child: indicatorBody,
+        ),
+      );
+    }
+
     return Positioned.fill(
       child: Padding(
         padding: padding,
         child: Stack(
           clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(
-              child: FractionallySizedBox(
-                widthFactor: 1 / itemCount,
-                alignment: alignment,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned.fromRelativeRect(
-                      rect: rect!,
-                      child: RepaintBoundary(
-                        child: Transform(
-                          alignment: Alignment.center,
-                          transform:
-                              DraggableIndicatorPhysics.buildJellyTransform(
-                            velocity: Offset(velocity, 0),
-                            maxDistortion: 0.8,
-                            velocityScale: 10,
-                          ),
-                          child: indicatorChild,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          children: [positioning],
         ),
       ),
     );

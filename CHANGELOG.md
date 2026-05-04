@@ -1,3 +1,26 @@
+# 0.10.2
+
+## Fixes
+
+- **GlassTabBar (scrollable) — indicator clipping** · Migrated the selected-tab indicator to an overlay architecture outside `SingleChildScrollView`, eliminating clip artifacts during scrolling and preserving the full iOS 26 glass bloom expansion.
+- **GlassTabBar (scrollable) — tap fires on scroll** · `onTabSelected` no longer fires when the user scrolls the tab bar; selection is now only triggered on confirmed taps.
+- **GlassTabBar (scrollable) — bloom activates on scroll** · The pressed indicator bloom no longer activates when scrolling the tab bar content.
+- **GlassTabBar (scrollable) — indicator pulsates on transition** · Fixed a threshold bug that caused the bloom to flicker during tab-switch animations.
+- **GlassTabBar (scrollable) — scroll into view** · Tapping or programmatically selecting a partially-visible tab now smoothly scrolls it fully into view.
+- **GlassAdaptiveScope — Android false-negative quality downgrade** · Mid-range Android devices with Impeller/Vulkan can report inflated warmup P75 values (17–18 ms) due to GPU clock-scaling and JIT shader cache warm-up — not actual slowness. The previous `premium` threshold of `< 16 ms` (the raw 60-fps frame budget) was too strict and incorrectly demoted capable hardware to `standard` or `minimal`. Thanks @hank205 for the detailed diagnostic log. 🙏
+- **GlassModalSheet / `.show()` / `GlassModalSheetScaffold` — `dragIndicatorWidth`** · The drag handle pill width was previously hardcoded at 36 (iOS native). A new `dragIndicatorWidth` parameter lets you customise it — e.g. `64` for sheets where a more prominent handle better suits the layout. Defaults to `36`, no breaking change. Thanks @jfhair (#46). 🙏
+
+## Changes
+
+- **`GlassQualityAdapter` / `GlassAdaptiveScopeConfig` / `GlassAdaptiveScope` — configurable warmup thresholds** · Two new parameters let you tune (and help us calibrate) the Phase 2 warmup classification thresholds:
+  - `warmupPremiumThresholdMs` — P75 below this → `premium`. Default raised from `16.0` to **`20.0`** to account for Android GPU warm-up inflation. *(Calibration status: 1 device report — please share yours!)*
+  - `warmupStandardThresholdMs` — P75 at or below this (and above premium) → `standard`. Default **`28.0`**. *(Calibration status: provisional — no real-device data for this band yet.)*
+  - `skipInitialFrames` raised from **60 → 90** (≈1.5 s at 60 Hz) to give Android more time for GPU clocks and shader caches to settle before the benchmark begins.
+
+> **Phase 3 hysteresis remains the safety net.** If a device cannot sustain its warmup-assigned quality, it steps down automatically within ~6 seconds — the new thresholds only affect the initial classification, not runtime correction.
+
+> ⚠ **Community calibration needed** — especially for `warmupStandardThresholdMs`. If your device produces a warmup P75 in the 20–28 ms range, please enable `debugLogDiagnostics: true` and post your P75 + device model to the [Threshold Calibration Discussion](https://github.com/sdegenaar/liquid_glass_widgets/discussions).
+
 # 0.10.1
 
 Big thanks to @yukinoaruu (#43) and @jfhair (#44, #45) for three excellent contributions this release. 🙏

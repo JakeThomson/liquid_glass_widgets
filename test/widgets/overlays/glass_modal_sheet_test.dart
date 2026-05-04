@@ -192,6 +192,78 @@ void main() {
       expect(widget.dragIndicatorWidth, customWidth);
     });
 
+    testWidgets(
+        'dragIndicatorWidth is rendered — Container inside _GlassDragIndicator '
+        'has the specified width', (tester) async {
+      const customWidth = 72.0;
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                dragIndicatorWidth: customWidth,
+                showDragIndicator: true,
+                child: const SizedBox(height: 100),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // _GlassDragIndicator is private — find via runtimeType predicate.
+      final indicatorFinder = find.byElementPredicate(
+        (e) => e.widget.runtimeType.toString() == '_GlassDragIndicator',
+      );
+      expect(indicatorFinder, findsOneWidget,
+          reason:
+              'Drag indicator should be present when showDragIndicator=true');
+
+      // The Container with the exact width must be a descendant of the indicator.
+      final containerFinder = find.descendant(
+        of: indicatorFinder,
+        matching: find.byWidgetPredicate(
+          (w) => w is Container && w.constraints?.maxWidth == customWidth,
+        ),
+      );
+      expect(containerFinder, findsOneWidget,
+          reason:
+              'Container inside _GlassDragIndicator should render at dragIndicatorWidth ($customWidth)');
+    });
+
+    testWidgets(
+        'dragIndicatorWidth defaults render — Container inside _GlassDragIndicator '
+        'has default 36 width', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                showDragIndicator: true,
+                child: const SizedBox(height: 100),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final indicatorFinder = find.byElementPredicate(
+        (e) => e.widget.runtimeType.toString() == '_GlassDragIndicator',
+      );
+      expect(indicatorFinder, findsOneWidget);
+
+      final containerFinder = find.descendant(
+        of: indicatorFinder,
+        matching: find.byWidgetPredicate(
+          (w) => w is Container && w.constraints?.maxWidth == 36.0,
+        ),
+      );
+      expect(containerFinder, findsOneWidget,
+          reason:
+              'Default Container width inside _GlassDragIndicator should be 36');
+    });
+
     testWidgets('GlassInteractionSilence can be used in content',
         (tester) async {
       await tester.pumpWidget(

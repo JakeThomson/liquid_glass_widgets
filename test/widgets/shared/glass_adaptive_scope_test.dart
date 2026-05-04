@@ -433,4 +433,107 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  // ── Warmup threshold wiring (widget-level) ────────────────────────────────
+
+  group('warmup threshold wiring', () {
+    testWidgets('warmupPremiumThresholdMs is accepted and stored without crash',
+        (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          warmupPremiumThresholdMs: 24.0,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      final scope = tester.widget<GlassAdaptiveScope>(
+        find.byType(GlassAdaptiveScope),
+      );
+      expect(scope.warmupPremiumThresholdMs, 24.0);
+    });
+
+    testWidgets(
+        'warmupStandardThresholdMs is accepted and stored without crash',
+        (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          warmupStandardThresholdMs: 32.0,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      final scope = tester.widget<GlassAdaptiveScope>(
+        find.byType(GlassAdaptiveScope),
+      );
+      expect(scope.warmupStandardThresholdMs, 32.0);
+    });
+
+    testWidgets(
+        'changing warmupPremiumThresholdMs via didUpdateWidget recreates '
+        'adapter without crash', (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          warmupPremiumThresholdMs: 20.0,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          warmupPremiumThresholdMs: 24.0,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'changing warmupStandardThresholdMs via didUpdateWidget recreates '
+        'adapter without crash', (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          warmupStandardThresholdMs: 28.0,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          warmupStandardThresholdMs: 32.0,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'both thresholds together — custom values stored and adapter stable',
+        (tester) async {
+      await tester.pumpWidget(_app(
+        const GlassAdaptiveScope(
+          warmupPremiumThresholdMs: 22.0,
+          warmupStandardThresholdMs: 30.0,
+          child: SizedBox.shrink(),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      final scope = tester.widget<GlassAdaptiveScope>(
+        find.byType(GlassAdaptiveScope),
+      );
+      expect(scope.warmupPremiumThresholdMs, 22.0);
+      expect(scope.warmupStandardThresholdMs, 30.0);
+    });
+  });
 }

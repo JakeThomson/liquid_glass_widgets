@@ -212,29 +212,6 @@ class _GlassTabBarState extends State<GlassTabBar> {
   @override
   void didUpdateWidget(GlassTabBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    if (widget.isScrollable &&
-        oldWidget.selectedIndex != widget.selectedIndex) {
-      _scrollToIndex(widget.selectedIndex);
-    }
-  }
-
-  void _scrollToIndex(int index) {
-    if (!_scrollController.hasClients) return;
-
-    final estimatedTabWidth = widget.isScrollable ? 120.0 : 100.0;
-    final targetScroll = index * estimatedTabWidth;
-    final viewportWidth = _scrollController.position.viewportDimension;
-    final currentScroll = _scrollController.offset;
-
-    if (targetScroll < currentScroll ||
-        targetScroll > currentScroll + viewportWidth - estimatedTabWidth) {
-      _scrollController.animateTo(
-        targetScroll - (viewportWidth - estimatedTabWidth) / 2,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   // Cache default glass settings to avoid allocations on every build
@@ -265,6 +242,9 @@ class _GlassTabBarState extends State<GlassTabBar> {
 
     final content = Container(
       height: widget.height,
+      // No clipBehavior: the glass indicator's 8px expansion must not be
+      // clipped. Scroll content is already clipped by SingleChildScrollView's
+      // own Clip.hardEdge viewport — the Container clip is not needed for that.
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: borderRadius,

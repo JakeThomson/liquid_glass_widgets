@@ -93,7 +93,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.10.1
+  liquid_glass_widgets: ^0.10.2
 ```
 
 ```bash
@@ -287,8 +287,14 @@ Each value maps to a fixed power-of-2 exponent. The GPU uses a zero-transcendent
 > ### 📊 Help us tune the thresholds — takes 2 minutes
 >
 > `GlassAdaptiveScope` is `@experimental` because its Phase 2 timing thresholds
-> (P75 < 12 ms → `premium`, 12–20 ms → `standard`, > 20 ms → `minimal`) are based
-> on reasoning, not yet validated across the full Android device landscape.
+> are based on limited community data, not yet validated across the full Android
+> device landscape. Current defaults (v0.10.2):
+>
+> | P75 warmup | Quality assigned |
+> |---|---|
+> | < 20 ms | `premium` *(based on 1 report — please share yours)* |
+> | 20–28 ms | `standard` *(provisional — no real-device data yet)* |
+> | > 28 ms | `minimal` |
 >
 > **If you use `adaptiveQuality: true`, please post your results to our
 > [Threshold Calibration Discussion](https://github.com/sdegenaar/liquid_glass_widgets/discussions)
@@ -322,6 +328,10 @@ runApp(LiquidGlassWidgets.wrap(child: const MyApp(), adaptiveQuality: true));
 GlassAdaptiveScope(
   initialQuality: GlassQuality.standard, // conservative start
   allowStepUp: true,
+  // Android calibration — raise if your device is incorrectly demoted to standard.
+  // Post your P75 + device model to the Threshold Calibration Discussion!
+  // warmupPremiumThresholdMs: 24.0,  // default 20.0
+  // warmupStandardThresholdMs: 32.0, // default 28.0
   child: Scaffold(...),
 )
 ```

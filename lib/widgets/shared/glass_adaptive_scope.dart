@@ -13,9 +13,9 @@
 //
 // Phase 2 — Warm-up benchmark (first 180 frames ≈ 3 s at 60 fps):
 //   Collects raster durations and computes P75 to estimate the device baseline.
-//   P75 < 12 ms  → start at maxQuality (premium by default)
-//   P75 12–20 ms → step to standard
-//   P75 > 20 ms  → step to minimal
+//   P75 < 20 ms  → start at maxQuality (premium by default)
+//   P75 20-28 ms → step to standard
+//   P75 > 28 ms  → step to minimal
 //
 // Phase 3 — Runtime hysteresis (ongoing, very low overhead):
 //   Degrades quality when P95 > targetFrameMs × 1.5 for 3 consecutive windows.
@@ -268,6 +268,8 @@ class GlassAdaptiveScopeConfig {
     this.initialQuality,
     this.targetFrameMs = 16,
     this.allowStepUp = true,
+    this.warmupPremiumThresholdMs = 20.0,
+    this.warmupStandardThresholdMs = 28.0,
     this.onQualityChanged,
     this.onDiagnostic,
     this.debugLogDiagnostics = false,
@@ -294,6 +296,22 @@ class GlassAdaptiveScopeConfig {
   /// warmup decision. Step-up requires 10 consecutive under-budget windows
   /// (≈ 20 seconds) plus an 8-second cooldown, so the transition is invisible.
   final bool allowStepUp;
+
+  /// The P75 warmup threshold (ms) below which the device is classified as
+  /// capable of [GlassQuality.premium]. Defaults to `20.0`.
+  ///
+  /// **Community calibration param** — if the default causes incorrect
+  /// degradation on your hardware, try raising this (e.g. to `24.0`) and
+  /// post your P75 from [GlassAdaptiveDiagnostic.p75Ms] along with your device
+  /// model to the [discussions](https://github.com/sdegenaar/liquid_glass_widgets/discussions).
+  final double warmupPremiumThresholdMs;
+
+  /// The P75 warmup threshold (ms) at or below which the device is classified
+  /// as capable of [GlassQuality.standard] (when above [warmupPremiumThresholdMs]).
+  /// Defaults to `28.0`.
+  ///
+  /// Devices with P75 above this value are classified as [GlassQuality.minimal].
+  final double warmupStandardThresholdMs;
 
   /// Called whenever the effective quality tier changes.
   final void Function(GlassQuality from, GlassQuality to)? onQualityChanged;
@@ -361,10 +379,12 @@ class GlassAdaptiveScopeConfig {
 /// documentation for the complete architecture description.
 ///
 /// **Experimental** — available in 0.8.0 for community feedback. The Phase 2
-/// timing thresholds (P75 < 12 ms → premium, 12–20 ms → standard, > 20 ms →
-/// minimal) have been validated by reasoning but not yet by broad real-device
-/// data across the Android fragmentation landscape. If you observe unexpected
-/// behaviour, please file an issue with your device model and raster timings.
+/// timing thresholds (P75 < 20 ms → premium, 20–28 ms → standard, > 28 ms →
+/// minimal) were updated in 0.9.6 based on real-device community data showing
+/// that Android GPU clock-scaling and shader-cache inflation can raise P75 by
+/// 4–6 ms on capable mid-range devices during the warmup window. If you
+/// observe unexpected behaviour, please file an issue with your device model
+/// and raster timings.
 ///
 /// ```dart
 /// GlassAdaptiveScope(
@@ -383,6 +403,8 @@ class GlassAdaptiveScope extends StatefulWidget {
     this.initialQuality,
     this.targetFrameMs = 16,
     this.allowStepUp = true,
+    this.warmupPremiumThresholdMs = 20.0,
+    this.warmupStandardThresholdMs = 28.0,
     this.onQualityChanged,
     this.onDiagnostic,
     this.debugLogDiagnostics = false,
@@ -457,6 +479,22 @@ class GlassAdaptiveScope extends StatefulWidget {
   /// decided for the entire session.
   final bool allowStepUp;
 
+  /// The P75 warmup threshold (ms) below which the device is classified as
+  /// capable of [GlassQuality.premium]. Defaults to `20.0`.
+  ///
+  /// **Community calibration param** — if the default causes incorrect
+  /// degradation on your hardware, try raising this (e.g. to `24.0`) and
+  /// post your P75 from [GlassAdaptiveDiagnostic.p75Ms] along with your device
+  /// model to the [discussions](https://github.com/sdegenaar/liquid_glass_widgets/discussions).
+  final double warmupPremiumThresholdMs;
+
+  /// The P75 warmup threshold (ms) at or below which the device is classified
+  /// as capable of [GlassQuality.standard] (when above [warmupPremiumThresholdMs]).
+  /// Defaults to `28.0`.
+  ///
+  /// Devices with P75 above this value are classified as [GlassQuality.minimal].
+  final double warmupStandardThresholdMs;
+
   /// Called on the main thread whenever the effective quality changes.
   ///
   /// Receives `(GlassQuality from, GlassQuality to)`. Use [onDiagnostic] for
@@ -519,7 +557,10 @@ class _GlassAdaptiveScopeState extends State<GlassAdaptiveScope>
     if (oldWidget.minQuality != widget.minQuality ||
         oldWidget.maxQuality != widget.maxQuality ||
         oldWidget.targetFrameMs != widget.targetFrameMs ||
-        oldWidget.allowStepUp != widget.allowStepUp) {
+        oldWidget.allowStepUp != widget.allowStepUp ||
+        oldWidget.warmupPremiumThresholdMs != widget.warmupPremiumThresholdMs ||
+        oldWidget.warmupStandardThresholdMs !=
+            widget.warmupStandardThresholdMs) {
       _adapter.stop();
       // Mirror the same seeding logic as initState to avoid a one-frame flash.
       _effectiveQuality = widget.initialQuality ??
@@ -554,6 +595,8 @@ class _GlassAdaptiveScopeState extends State<GlassAdaptiveScope>
       targetFrameMs: widget.targetFrameMs,
       allowStepUp: widget.allowStepUp,
       initialQuality: widget.initialQuality,
+      warmupPremiumThresholdMs: widget.warmupPremiumThresholdMs,
+      warmupStandardThresholdMs: widget.warmupStandardThresholdMs,
       onQualityChanged: _onQualityChanged,
       onWarmupComplete: _onWarmupComplete,
     );

@@ -79,7 +79,7 @@ void main() {
 
   tearDown(() {
     GlassQualityAdapter.skipStaticProbeForTesting = false;
-    GlassQualityAdapter.skipInitialFrames = 60; // restore production default
+    GlassQualityAdapter.skipInitialFrames = 90; // restore production default
     GlassQualityAdapter
         .clearSessionCache(); // prevent cache leakage between tests
   });
@@ -107,42 +107,47 @@ void main() {
   // ── Phase 2 — warm-up benchmark ───────────────────────────────────────────
 
   group('Phase 2 — warm-up benchmark', () {
-    test('P75 < 16 ms → stays at maxQuality (premium)', () {
+    test('P75 < 20 ms → stays at maxQuality (premium)', () {
       final changes = <(GlassQuality, GlassQuality)>[];
       final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
-      _runWarmup(adapter, rasterUs: 8000); // 8 ms — well within 60 fps budget
+      _runWarmup(adapter,
+          rasterUs: 8000); // 8 ms — well within premium threshold
 
       expect(adapter.currentQuality, GlassQuality.premium);
       expect(changes, isEmpty);
     });
 
-    test('P75 in [16, 20] ms → steps down to standard', () {
+    test('P75 in [20, 28] ms → steps down to standard', () {
       final changes = <(GlassQuality, GlassQuality)>[];
       final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
-      _runWarmup(adapter, rasterUs: 18000); // 18 ms — between 16 ms and 20 ms
+      _runWarmup(adapter,
+          rasterUs: 22000); // 22 ms — in the 20–28 ms standard band
 
       expect(adapter.currentQuality, GlassQuality.standard);
       expect(changes.length, 1);
       expect(changes.first, (GlassQuality.premium, GlassQuality.standard));
     });
 
-    test('P75 exactly 15 ms stays premium (just below 16 ms threshold)', () {
+    test('P75 exactly 18 ms stays premium (well within 20 ms threshold)', () {
       final changes = <(GlassQuality, GlassQuality)>[];
       final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
-      _runWarmup(adapter, rasterUs: 15000); // 15 ms — under new 16 ms threshold
+      // 18 ms — the value that triggered hank205\'s false-negative downgrade
+      // on Android before the 0.9.6 threshold fix.
+      _runWarmup(adapter, rasterUs: 18000);
 
-      // Old threshold (12 ms) would have demoted this to standard.
-      // New threshold (16 ms) keeps it at premium.
+      // New threshold (20 ms) keeps this at premium — Android GPU warm-up
+      // inflation can raise P75 by 4–6 ms on capable mid-range hardware.
       expect(adapter.currentQuality, GlassQuality.premium,
           reason:
-              '15 ms P75 is within the 60 fps budget and should stay premium');
+              '18 ms P75 is within the Android warm-up tolerance and should stay premium');
       expect(changes, isEmpty);
     });
 
-    test('P75 > 20 ms → steps down to minimal', () {
+    test('P75 > 28 ms → steps down to minimal', () {
       final changes = <(GlassQuality, GlassQuality)>[];
       final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
-      _runWarmup(adapter, rasterUs: 25000); // 25 ms — slow device
+      _runWarmup(adapter,
+          rasterUs: 35000); // 35 ms — confirmed slow device/driver
 
       expect(adapter.currentQuality, GlassQuality.minimal);
     });
@@ -182,6 +187,95 @@ void main() {
 
       expect(adapter.phase, AdaptivePhase.warmup);
       expect(changes, isEmpty); // still collecting
+    });
+  });
+
+  // ── Custom warmup thresholds ──────────────────────────────────────────────
+  //
+  // These tests verify that warmupPremiumThresholdMs and warmupStandardThresholdMs
+  // are actually wired through and used — not just that the defaults work.
+  // The defaults themselves (20 ms / 28 ms) are tested in the group above.
+
+  group('custom warmup thresholds', () {
+    test(
+        'custom warmupPremiumThresholdMs is respected — lower gate demotes sooner',
+        () {
+      // With a tight premium threshold of 12 ms, 15 ms should fall to standard.
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = GlassQualityAdapter(
+        minQuality: GlassQuality.minimal,
+        maxQuality: GlassQuality.premium,
+        targetFrameMs: 16,
+        allowStepUp: false,
+        warmupPremiumThresholdMs: 12.0, // custom: tighter than default 20 ms
+        warmupStandardThresholdMs: 28.0,
+        onQualityChanged: (from, to) => changes.add((from, to)),
+      );
+      _runWarmup(adapter, rasterUs: 15000); // 15 ms — above 12 ms custom gate
+
+      expect(adapter.currentQuality, GlassQuality.standard,
+          reason: '15 ms P75 exceeds custom premium threshold of 12 ms');
+      expect(changes, [(GlassQuality.premium, GlassQuality.standard)]);
+    });
+
+    test(
+        'custom warmupPremiumThresholdMs is respected — raised gate keeps premium',
+        () {
+      // With a raised premium threshold of 25 ms, even 22 ms stays premium.
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = GlassQualityAdapter(
+        minQuality: GlassQuality.minimal,
+        maxQuality: GlassQuality.premium,
+        targetFrameMs: 16,
+        allowStepUp: false,
+        warmupPremiumThresholdMs:
+            25.0, // custom: more lenient than default 20 ms
+        warmupStandardThresholdMs: 28.0,
+        onQualityChanged: (from, to) => changes.add((from, to)),
+      );
+      _runWarmup(adapter,
+          rasterUs: 22000); // 22 ms — under the custom 25 ms gate
+
+      expect(adapter.currentQuality, GlassQuality.premium,
+          reason: '22 ms P75 is within the custom premium threshold of 25 ms');
+      expect(changes, isEmpty);
+    });
+
+    test(
+        'custom warmupStandardThresholdMs is respected — lower gate reaches minimal sooner',
+        () {
+      // With a tight standard threshold of 22 ms, 25 ms should reach minimal.
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = GlassQualityAdapter(
+        minQuality: GlassQuality.minimal,
+        maxQuality: GlassQuality.premium,
+        targetFrameMs: 16,
+        allowStepUp: false,
+        warmupPremiumThresholdMs: 20.0,
+        warmupStandardThresholdMs: 22.0, // custom: tighter than default 28 ms
+        onQualityChanged: (from, to) => changes.add((from, to)),
+      );
+      _runWarmup(adapter,
+          rasterUs: 25000); // 25 ms — above 22 ms custom standard gate
+
+      expect(adapter.currentQuality, GlassQuality.minimal,
+          reason: '25 ms P75 exceeds custom standard threshold of 22 ms');
+    });
+
+    test('both custom thresholds work together', () {
+      // Tight thresholds: premium < 10 ms, standard ≤ 15 ms, minimal > 15 ms
+      final adapter = GlassQualityAdapter(
+        minQuality: GlassQuality.minimal,
+        maxQuality: GlassQuality.premium,
+        targetFrameMs: 16,
+        allowStepUp: false,
+        warmupPremiumThresholdMs: 10.0,
+        warmupStandardThresholdMs: 15.0,
+        onQualityChanged: (_, __) {},
+      );
+      // 12 ms — between the two custom thresholds → standard
+      _runWarmup(adapter, rasterUs: 12000);
+      expect(adapter.currentQuality, GlassQuality.standard);
     });
   });
 
@@ -425,7 +519,7 @@ void main() {
       GlassQualityAdapter.windowSize = 4;
     });
 
-    test('P75 of [10, 12, 20, 25] ms → 20 ms → standard boundary', () {
+    test('P75 of [10, 12, 20, 25] ms → 20 ms → standard band [20, 28]', () {
       final changes = <(GlassQuality, GlassQuality)>[];
       final adapter = _makeAdapter(max: GlassQuality.premium, changes: changes);
 
@@ -435,7 +529,7 @@ void main() {
         _frameTiming(20000), // 20 ms
         _frameTiming(25000), // 25 ms
         // P75 of sorted[10,12,20,25]: rank=ceil(0.75*4)=3 → index 2 → 20 ms
-        // 20 ms is within [12,20] → standard
+        // 20 ms hits the standard band (>= 20 ms and <= 28 ms)
       ]);
 
       expect(adapter.currentQuality, GlassQuality.standard);
@@ -450,7 +544,7 @@ void main() {
         _frameTiming(6000),
         _frameTiming(8000),
         _frameTiming(10000),
-        // P75: rank=ceil(0.75*4)=3 → index 2 → 8 ms < 16 ms → premium
+        // P75: rank=ceil(0.75*4)=3 → index 2 → 8 ms < 20 ms → premium
       ]);
 
       expect(adapter.currentQuality, GlassQuality.premium);
@@ -467,9 +561,9 @@ void main() {
     test('Phase 2 writes settled quality to session cache', () {
       final adapter = _makeAdapter(max: GlassQuality.premium);
 
-      // Simulate 10 slow frames (25 ms each) → P75 > 20 ms → minimal.
+      // Simulate 10 slow frames (35 ms each) → P75 > 28 ms → minimal.
       adapter.simulateFrameTimings(
-        List.generate(10, (_) => _frameTiming(25000)),
+        List.generate(10, (_) => _frameTiming(35000)),
       );
 
       expect(adapter.currentQuality, GlassQuality.minimal);
@@ -485,10 +579,10 @@ void main() {
     });
 
     test('second adapter goes directly to runtime phase via session cache', () {
-      // Settle cache to standard via Phase 2 (18 ms > 16 ms threshold).
+      // Settle cache to standard via Phase 2 (22 ms is in the 20–28 ms band).
       final adapter1 = _makeAdapter(max: GlassQuality.premium);
       adapter1.simulateFrameTimings(
-        List.generate(10, (_) => _frameTiming(18000)), // 18 ms → standard
+        List.generate(10, (_) => _frameTiming(22000)), // 22 ms → standard
       );
       expect(adapter1.currentQuality, GlassQuality.standard);
 
@@ -504,7 +598,8 @@ void main() {
       // Settle cache.
       final adapter1 = _makeAdapter(max: GlassQuality.premium);
       adapter1.simulateFrameTimings(
-        List.generate(10, (_) => _frameTiming(25000)),
+        List.generate(
+            10, (_) => _frameTiming(35000)), // 35 ms > 28 ms → minimal
       );
       expect(adapter1.currentQuality, GlassQuality.minimal);
 
@@ -557,10 +652,10 @@ void main() {
     });
 
     test('initialQuality takes priority over session cache', () {
-      // First: write standard to the session cache (18 ms > 16 ms threshold).
+      // First: write standard to the session cache (22 ms is in the 20–28 ms band).
       final adapter1 = _makeAdapter(max: GlassQuality.premium);
       adapter1.simulateFrameTimings(
-        List.generate(10, (_) => _frameTiming(18000)), // 18 ms → standard
+        List.generate(10, (_) => _frameTiming(22000)), // 22 ms → standard
       );
       expect(adapter1.currentQuality, GlassQuality.standard);
 
@@ -582,7 +677,8 @@ void main() {
       // Settle cache to minimal.
       final adapter1 = _makeAdapter(max: GlassQuality.premium);
       adapter1.simulateFrameTimings(
-        List.generate(10, (_) => _frameTiming(25000)), // → minimal
+        List.generate(
+            10, (_) => _frameTiming(35000)), // 35 ms > 28 ms → minimal
       );
       expect(adapter1.currentQuality, GlassQuality.minimal);
 
@@ -622,7 +718,8 @@ void main() {
         () {
       final adapter = _makeAdapter(max: GlassQuality.premium);
       adapter.simulateFrameTimings(
-        List.generate(10, (_) => _frameTiming(25000)), // → minimal
+        List.generate(
+            10, (_) => _frameTiming(35000)), // 35 ms > 28 ms → minimal
       );
       expect(GlassQualityAdapter.sessionSettledQuality, GlassQuality.minimal);
     });
@@ -637,21 +734,22 @@ void main() {
     test('lastChangeReason is warmupComplete after Phase 2 with quality change',
         () {
       final adapter = _makeAdapter(max: GlassQuality.premium);
-      _runWarmup(adapter, rasterUs: 15000); // 15 ms → standard
+      _runWarmup(adapter,
+          rasterUs: 22000); // 22 ms → standard (in 20–28 ms band)
       expect(adapter.lastChangeReason, GlassQualityChangeReason.warmupComplete);
     });
 
     test('lastP75Ms is approximately the measured P75 after warmup', () {
       final adapter = _makeAdapter(max: GlassQuality.premium);
-      _runWarmup(adapter, rasterUs: 15000); // all frames at 15 ms → P75 = 15 ms
+      _runWarmup(adapter, rasterUs: 22000); // all frames at 22 ms → P75 = 22 ms
       expect(adapter.lastP75Ms, isNotNull);
-      // P75 of 10 identical 15 ms frames is 15 ms.
-      expect(adapter.lastP75Ms!, closeTo(15.0, 0.5));
+      // P75 of 10 identical 22 ms frames is 22 ms.
+      expect(adapter.lastP75Ms!, closeTo(22.0, 0.5));
     });
 
     test('lastFramesMeasured equals warmupFrames after Phase 2', () {
       final adapter = _makeAdapter(max: GlassQuality.premium);
-      _runWarmup(adapter, rasterUs: 15000);
+      _runWarmup(adapter, rasterUs: 22000);
       expect(adapter.lastFramesMeasured, GlassQualityAdapter.warmupFrames);
     });
 
@@ -720,9 +818,9 @@ void main() {
     });
 
     test('lastChangeReason is restoredFromCache on second adapter', () {
-      // Settle a session cache entry.
+      // Settle a session cache entry to standard (22 ms is in the 20–28 ms band).
       final adapter1 = _makeAdapter(max: GlassQuality.premium);
-      _runWarmup(adapter1, rasterUs: 15000); // → standard
+      _runWarmup(adapter1, rasterUs: 22000); // → standard
 
       final adapter2 = _makeAdapter(max: GlassQuality.premium);
       adapter2.start();

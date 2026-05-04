@@ -65,7 +65,7 @@ void main() {
   });
 
   tearDown(() {
-    GlassQualityAdapter.skipInitialFrames = 60;
+    GlassQualityAdapter.skipInitialFrames = 90;
     GlassQualityAdapter.warmupFrames = 180;
     GlassQualityAdapter.windowSize = 120;
     GlassQualityAdapter.degradeWindowCount = 3;
@@ -98,14 +98,16 @@ void main() {
     test('fires with standard on medium device', () {
       GlassQuality? cbQuality;
       final adapter = _make(onWarmup: (q, _, __) => cbQuality = q);
-      adapter.simulateFrameTimings(_frames(10, 18000));
+      adapter.simulateFrameTimings(
+          _frames(10, 22000)); // 22 ms → standard (20–28 ms band)
       expect(cbQuality, GlassQuality.standard);
     });
 
     test('fires with minimal on slow device', () {
       GlassQuality? cbQuality;
       final adapter = _make(onWarmup: (q, _, __) => cbQuality = q);
-      adapter.simulateFrameTimings(_frames(10, 25000));
+      adapter
+          .simulateFrameTimings(_frames(10, 35000)); // 35 ms > 28 ms threshold
       expect(cbQuality, GlassQuality.minimal);
     });
 
@@ -191,7 +193,7 @@ void main() {
 
     test('cached minimal is raised to min=standard on second adapter', () {
       final first = _make();
-      first.simulateFrameTimings(_frames(10, 25000));
+      first.simulateFrameTimings(_frames(10, 35000)); // 35 ms > 28 ms → minimal
       expect(GlassQualityAdapter.sessionSettledQuality, GlassQuality.minimal);
 
       final second = _make(min: GlassQuality.standard);
@@ -282,9 +284,9 @@ void main() {
           anyOf(isNull, GlassQualityChangeReason.staticProbe));
     });
 
-    test('warmupComplete after Phase 2', () {
+    test('warmupComplete after Phase 2 (with quality change)', () {
       final adapter = _make();
-      adapter.simulateFrameTimings(_frames(10, 18000));
+      adapter.simulateFrameTimings(_frames(10, 22000)); // 22 ms → standard
       expect(adapter.lastChangeReason, GlassQualityChangeReason.warmupComplete);
     });
 
@@ -308,7 +310,8 @@ void main() {
 
     test('restoredFromCache on second adapter start', () {
       final first = _make();
-      first.simulateFrameTimings(_frames(10, 18000)); // write cache
+      first.simulateFrameTimings(
+          _frames(10, 22000)); // 22 ms → standard → write cache
       final second = _make();
       second.start();
       expect(
@@ -349,21 +352,23 @@ void main() {
   // ── Percentile boundary values ────────────────────────────────────────────
 
   group('percentile boundary values', () {
-    test('P75 just under 16 ms stays premium', () {
+    test('P75 just under 20 ms stays premium', () {
       final adapter = _make();
-      adapter.simulateFrameTimings(_frames(10, 15999)); // 15.999 ms
+      adapter.simulateFrameTimings(_frames(10, 19999)); // 19.999 ms < 20 ms
       expect(adapter.currentQuality, GlassQuality.premium);
     });
 
-    test('P75 at exactly 16 ms steps to standard', () {
+    test('P75 at exactly 20 ms steps to standard', () {
       final adapter = _make();
-      adapter.simulateFrameTimings(_frames(10, 16000)); // 16 ms
+      adapter
+          .simulateFrameTimings(_frames(10, 20000)); // 20 ms ≥ 20 ms threshold
       expect(adapter.currentQuality, GlassQuality.standard);
     });
 
-    test('P75 just over 20 ms steps to minimal', () {
+    test('P75 just over 28 ms steps to minimal', () {
       final adapter = _make();
-      adapter.simulateFrameTimings(_frames(10, 21000)); // 21 ms
+      adapter
+          .simulateFrameTimings(_frames(10, 29000)); // 29 ms > 28 ms threshold
       expect(adapter.currentQuality, GlassQuality.minimal);
     });
   });

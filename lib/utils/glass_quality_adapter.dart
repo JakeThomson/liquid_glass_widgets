@@ -14,9 +14,9 @@
 ///     60 ≈ 1 s) to let shader compilation and first-route transitions settle.
 ///   - Collects `rasterDuration` via [SchedulerBinding.addTimingsCallback]
 ///   - Computes the P75 raster time across the collected frames
-///   - P75 < 16 ms  → remain at [GlassQuality.premium] (within 60 fps budget)
-///   - P75 16–20 ms → step to [GlassQuality.standard]
-///   - P75 > 20 ms  → step to [GlassQuality.minimal]
+///   - P75 < 20 ms  → remain at [GlassQuality.premium] (handles Android GPU warm-up inflation)
+///   - P75 20–28 ms → step to [GlassQuality.standard]
+///   - P75 > 28 ms  → step to [GlassQuality.minimal]
 ///   - Transitions to Phase 3 once `skipInitialFrames + warmupFrames` have been seen
 ///
 ///   **Phase 3 — Runtime hysteresis** (ongoing, very low overhead):
@@ -109,6 +109,8 @@ class GlassQualityAdapter {
     required this.allowStepUp,
     required void Function(GlassQuality from, GlassQuality to) onQualityChanged,
     this.initialQuality,
+    this.warmupPremiumThresholdMs = 20.0,
+    this.warmupStandardThresholdMs = 28.0,
     void Function(GlassQuality settled, double p75Ms, int frames)?
         onWarmupComplete,
   })  : _onQualityChanged = onQualityChanged,
@@ -146,6 +148,37 @@ class GlassQualityAdapter {
   ///   if this field is null, so scopes remounted within the same app process
   ///   skip Phase 2 without any extra code.
   final GlassQuality? initialQuality;
+
+  /// The P75 warmup threshold (ms) **below which** the device is classified as
+  /// capable of [GlassQuality.premium].
+  ///
+  /// Defaults to `20.0`, raised from the original `16.0` (the 60-fps frame
+  /// budget) based on a community report (P75 ≈ 17.6 ms) showing Android GPU
+  /// clock-scaling inflates warmup timings even on capable hardware.
+  ///
+  /// **⚠ Calibration status: limited data (1 device report).** If this causes
+  /// wrong classification on your hardware, please post your P75 and device
+  /// model to the discussions. Phase 3 hysteresis acts as a safety net: if a
+  /// device cannot sustain premium after warmup, it steps down within ~6 s.
+  ///
+  /// Values ≥ this threshold (and ≤ [warmupStandardThresholdMs]) result in
+  /// [GlassQuality.standard]; values above [warmupStandardThresholdMs] result
+  /// in [GlassQuality.minimal].
+  final double warmupPremiumThresholdMs;
+
+  /// The P75 warmup threshold (ms) **at or below which** the device is
+  /// classified as capable of [GlassQuality.standard] (when P75 ≥
+  /// [warmupPremiumThresholdMs]).
+  ///
+  /// Defaults to `28.0`. Devices with P75 above this value are classified as
+  /// [GlassQuality.minimal].
+  ///
+  /// **⚠ Calibration status: provisional — no real-device data yet.** The
+  /// `28.0` default was set to provide a band above the updated `20.0` premium
+  /// threshold, but no community P75 reports exist for the 20–28 ms range on
+  /// actual hardware. If your device produces a P75 in this band and quality
+  /// feels wrong, please share your device model and P75 reading.
+  final double warmupStandardThresholdMs;
 
   // ── Session cache ──────────────────────────────────────────────────────────
 
@@ -187,8 +220,12 @@ class GlassQualityAdapter {
   /// data. This lets shader compilation, first-route transitions, and provider
   /// initialisation settle so they don't pollute the warmup benchmark.
   ///
-  /// Default: 60 ≈ 1 second at 60 Hz.
-  static int skipInitialFrames = 60;
+  /// Raised to 90 (≈ 1.5 s at 60 Hz) to give Android GPU clock-scaling and
+  /// shader-cache warm-up enough time to settle before benchmarking starts.
+  /// Community data (P75 ≈ 17–18 ms on capable mid-range Android devices)
+  /// showed that the original 60-frame skip was not long enough to clear
+  /// shader-compile inflation on the Android/Vulkan/Impeller path.
+  static int skipInitialFrames = 90;
 
   /// Frames to collect in Phase 2 (warm-up) before making the initial quality
   /// decision. Default: 180 ≈ 3 seconds at 60 Hz.
@@ -456,12 +493,25 @@ class GlassQualityAdapter {
     final p75Ms = p75 / 1000.0;
 
     final GlassQuality decided;
-    // 16 ms = one full 60 fps frame budget. Warmup uses a fixed reference
-    // to objectively assess device capability, independent of targetFrameMs
-    // (which governs runtime adaptation, not initial capability measurement).
-    if (p75Ms < 16.0) {
+    // Warmup thresholds are intentionally more lenient than the 60-fps frame
+    // budget (16 ms). Even after skipping the first 90 frames, Android GPU
+    // clock-scaling and JIT warm-up can inflate P75 by 4–6 ms on otherwise
+    // capable hardware — community data showed P75 ≈ 17–18 ms on mid-range
+    // Android devices that sustain full premium quality at steady state.
+    //
+    //   P75 < warmupPremiumThresholdMs  → premium
+    //   P75 ≤ warmupStandardThresholdMs → standard
+    //   P75 > warmupStandardThresholdMs → minimal
+    //
+    // Both thresholds are user-configurable via GlassAdaptiveScopeConfig so
+    // community members can experiment and report optimal values for their
+    // hardware.
+    //
+    // Phase 3 runtime hysteresis will still step down quickly (3 windows,
+    // ~6 s) if the device cannot actually sustain premium after warmup.
+    if (p75Ms < warmupPremiumThresholdMs) {
       decided = _capQuality(maxQuality, maxQuality); // stay at ceiling
-    } else if (p75Ms <= 20.0) {
+    } else if (p75Ms <= warmupStandardThresholdMs) {
       decided = _capQuality(maxQuality, GlassQuality.standard);
     } else {
       decided = _capQuality(maxQuality, GlassQuality.minimal);
