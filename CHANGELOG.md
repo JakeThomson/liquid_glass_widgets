@@ -1,3 +1,39 @@
+# 0.10.4
+
+A huge, heartfelt thank-you to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #49](https://github.com/sdegenaar/liquid_glass_widgets/pull/49). 🙏
+
+We made a mess of the original 0.10.3 merge of his work — introducing regressions that broke the very things he had so carefully built. He came straight back, fixed every issue, and did it with incredible patience and generosity. This release is entirely his. If you are enjoying `GlassMenu`, it is because of him.
+
+## 🐛 Fixes (regressions from 0.10.3 merge)
+
+- **GlassMenu — full-list rebuilds on every pointer event** · Restored the `_cachedWrappedItems` mechanism that was accidentally dropped. The previous merge caused the entire wrapped-item list to be recreated on each pointer move, resetting pressed/hover states mid-gesture and tanking performance on menus with many items.
+- **GlassMenu — selection and hover state precision** · Migrated to a `ValueNotifier` system (`_hoveredIndexNotifier`, `_isDraggingNotifier`). Individual menu items now rebuild in isolation instead of triggering a full `setState` on the entire menu tree, keeping animations at a steady 60 fps.
+- **GlassMenu — ghosting on selection pill** · Fixed a double-background artifact where the selected `GlassMenuItem` painted its own hover fill on top of the sliding pill, producing a faint ghost ring. Selected items now transition to `Colors.transparent` instantly.
+- **GlassMenu — disabled items could be tapped** · Tapping a disabled item no longer calls `onTap` or closes the menu. The pill highlight correctly skips disabled items during pointer tracking.
+- **GlassMenu — double `onTap` firing** · Removed a redundant `onTap` callback in the internal wrapped-item builder that was causing every selection to fire twice.
+- **GlassMenu — `RangeError` when item list shrinks while open** · `didUpdateWidget` now clears `_hoveredIndex` when `items.length` decreases, preventing an out-of-bounds crash when the pill tried to measure a deleted item.
+- **GlassMenuItem — disabled opacity** · Disabled items now render at `Opacity(0.4)` to match the design spec and test expectations.
+- **GlassMenuLabel — hybrid `title`/`child` API** · `GlassMenuLabel` now accepts either a `title` String (rendered as stylised uppercase) or an arbitrary `child` Widget, enabling diverse non-interactive content beyond simple section headers.
+- **GlassMenuLabel — `height` default** · Default `height` set to `30.0` so the selection pill cannot drift when items with non-standard font sizes are mixed in.
+- **GlassMenu — `glowIntensity` parameter** · Added `glowIntensity` and wired it through to `GlassContainer`, completing the full interaction-glow parameter surface.
+- **GlassMenu — `glowOnTapOnly` default corrected** · Default changed to `true` to prevent a permanently stuck glow artefact during scroll and drag gestures.
+- **GlassMenu — stretch parameter rename** · Renamed `allowPositiveXStretch` / `allowNegativeXStretch` / `allowPositiveYStretch` / `allowNegativeYStretch` to `allowPositiveX` / `allowNegativeX` / `allowPositiveY` / `allowNegativeY` to align with the `LiquidStretch` API surface.
+- **GlassMenu — compositing architecture** · Removed redundant `RepaintBoundary` nodes that were leaving descendant glass layers DETACHED from the compositor scene, and moved `GlassGlow` inside `GlassContainer`'s clip subtree to prevent glow bleed onto the background.
+
+## ⚠️ Breaking — `GlassMenu` stretch parameter renames
+
+The four optional stretch-axis override parameters introduced in 0.10.3 have been renamed:
+
+| 0.10.3 name | 0.10.4 name |
+|---|---|
+| `allowPositiveXStretch` | `allowPositiveX` |
+| `allowNegativeXStretch` | `allowNegativeX` |
+| `allowPositiveYStretch` | `allowPositiveY` |
+| `allowNegativeYStretch` | `allowNegativeY` |
+
+All four remain optional with `null` defaults (auto-inferred from menu position). Only code explicitly passing the old names needs updating.
+
+
 # 0.10.3
 
 Big thanks to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #47](https://github.com/sdegenaar/liquid_glass_widgets/pull/47) — a comprehensive interaction engine upgrade for `GlassMenu` that brings it more in line with iOS 26 context menu behaviour. 🙏

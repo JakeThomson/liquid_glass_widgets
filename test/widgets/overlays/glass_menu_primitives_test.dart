@@ -40,7 +40,8 @@ void main() {
     });
 
     testWidgets('renders child when provided', (tester) async {
-      await tester.pumpWidget(_app(const GlassMenuLabel(child: Text('CUSTOM'))));
+      await tester
+          .pumpWidget(_app(const GlassMenuLabel(child: Text('CUSTOM'))));
       expect(find.text('CUSTOM'), findsOneWidget);
     });
 
@@ -333,8 +334,8 @@ void main() {
             home: Scaffold(
               body: Center(
                 child: GlassMenu(
-                  trigger:
-                      const SizedBox(width: 60, height: 40, child: Text('Open')),
+                  trigger: const SizedBox(
+                      width: 60, height: 40, child: Text('Open')),
                   items: [
                     GlassMenuItem(title: 'A', onTap: () {}),
                     if (showExtra) GlassMenuItem(title: 'B', onTap: () {}),
