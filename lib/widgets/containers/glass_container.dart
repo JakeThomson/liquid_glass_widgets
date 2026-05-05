@@ -89,6 +89,7 @@ class GlassContainer extends StatelessWidget {
     this.clipBehavior = Clip.none,
     this.alignment,
     this.allowElevation = false,
+    this.glowIntensity = 0.0,
   });
 
   // ===========================================================================
@@ -199,6 +200,12 @@ class GlassContainer extends StatelessWidget {
   /// Defaults to false.
   final bool allowElevation;
 
+  /// Interactive glow intensity for Skia/Web (0.0–1.0).
+  ///
+  /// On Impeller, [GlassGlow] is the preferred mechanism. On Skia/Web this
+  /// drives a shader-based highlight layer. Defaults to 0.0 (no glow).
+  final double glowIntensity;
+
   @override
   Widget build(BuildContext context) {
     // Inherit quality from parent layer if not explicitly set
@@ -240,6 +247,7 @@ class GlassContainer extends StatelessWidget {
       useOwnLayer: useOwnLayer,
       clipBehavior: clipBehavior,
       allowElevation: allowElevation, // Configurable elevation behavior
+      glowIntensity: glowIntensity,
       child: InheritedLiquidGlass(
         settings: effectiveSettings,
         quality: effectiveQuality,

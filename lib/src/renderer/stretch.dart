@@ -23,6 +23,10 @@ class LiquidStretch extends StatelessWidget {
     this.axis,
     this.allowPositive = true,
     this.allowNegative = true,
+    this.allowPositiveX,
+    this.allowNegativeX,
+    this.allowPositiveY,
+    this.allowNegativeY,
     this.suppressInteractionOnChildren = true,
     super.key,
   });
@@ -76,6 +80,22 @@ class LiquidStretch extends StatelessWidget {
   /// If [axis] is vertical, negative is up. If horizontal, negative is left.
   final bool allowNegative;
 
+  /// Per-axis overrides for [allowPositive]. When non-null, overrides
+  /// [allowPositive] for that specific axis only.
+  final bool? allowPositiveX;
+
+  /// Per-axis overrides for [allowNegative]. When non-null, overrides
+  /// [allowNegative] for that specific axis only.
+  final bool? allowNegativeX;
+
+  /// Per-axis overrides for [allowPositive]. When non-null, overrides
+  /// [allowPositive] for the Y axis only.
+  final bool? allowPositiveY;
+
+  /// Per-axis overrides for [allowNegative]. When non-null, overrides
+  /// [allowNegative] for the Y axis only.
+  final bool? allowNegativeY;
+
   /// Whether to prevent scaling when interacting with children.
   final bool suppressInteractionOnChildren;
 
@@ -115,18 +135,23 @@ class LiquidStretch extends StatelessWidget {
               } else if (axis == Axis.vertical) {
                 o = Offset(0, o.dy);
               }
-              if (!allowPositive) {
-                o = Offset(
-                  o.dx > 0 ? 0 : o.dx,
-                  o.dy > 0 ? 0 : o.dy,
-                );
-              }
-              if (!allowNegative) {
-                o = Offset(
-                  o.dx < 0 ? 0 : o.dx,
-                  o.dy < 0 ? 0 : o.dy,
-                );
-              }
+              // Apply per-axis overrides, falling back to the shared flags.
+              final effectiveAllowPositiveX = allowPositiveX ?? allowPositive;
+              final effectiveAllowNegativeX = allowNegativeX ?? allowNegative;
+              final effectiveAllowPositiveY = allowPositiveY ?? allowPositive;
+              final effectiveAllowNegativeY = allowNegativeY ?? allowNegative;
+              o = Offset(
+                (!effectiveAllowPositiveX && o.dx > 0)
+                    ? 0
+                    : (!effectiveAllowNegativeX && o.dx < 0)
+                        ? 0
+                        : o.dx,
+                (!effectiveAllowPositiveY && o.dy > 0)
+                    ? 0
+                    : (!effectiveAllowNegativeY && o.dy < 0)
+                        ? 0
+                        : o.dy,
+              );
               return o;
             }(),
             spring: value == null
@@ -250,9 +275,18 @@ class RenderRawLiquidStretch extends RenderProxyBox {
       return;
     }
 
-    // Check if the matrix is singular
+    // Check if the matrix is singular or produces near-zero scale.
+    // A determinant of 0 or NaN signals a degenerate transform; painting
+    // through it causes Impeller glyph-bounds crashes on extreme stretch.
     final det = transform.determinant();
     if (det == 0 || !det.isFinite) {
+      layer = null;
+      return;
+    }
+
+    // Guard against extreme squash that produces sub-pixel glyph rects.
+    final scale = getScale(stretchPixels: _stretchPixels, size: size);
+    if (scale.dx < 0.0001 || scale.dy < 0.0001) {
       layer = null;
       return;
     }
@@ -354,6 +388,12 @@ class RenderRawLiquidStretch extends RenderProxyBox {
     } else if (_axis == Axis.horizontal) {
       finalScaleY = 1.0;
     }
+
+    // Clamp to a safe minimum so the transform never becomes degenerate.
+    // Values below 0.01 produce near-singular matrices that cause
+    // Impeller glyph-bounds assertions on extreme stretch.
+    finalScaleX = finalScaleX.clamp(0.01, double.infinity);
+    finalScaleY = finalScaleY.clamp(0.01, double.infinity);
 
     return Offset(finalScaleX, finalScaleY);
   }

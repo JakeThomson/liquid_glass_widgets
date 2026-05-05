@@ -9,7 +9,7 @@ import '../../utils/glass_spring.dart';
 /// If placed as a descendant of a [GlassGlowLayer], this widget will
 /// send touch updates to that layer to create a glow effect.
 /// {@endtemplate}
-class GlassGlow extends StatelessWidget {
+class GlassGlow extends StatefulWidget {
   /// {@macro glass_glow}
   const GlassGlow({
     required this.child,
@@ -21,6 +21,8 @@ class GlassGlow extends StatelessWidget {
     this.pulse = 0,
     this.clipper,
     this.hitTestBehavior = HitTestBehavior.opaque,
+    this.enabled = true,
+    this.glowOnTapOnly = false,
     super.key,
   });
 
@@ -86,19 +88,75 @@ class GlassGlow extends StatelessWidget {
   /// Only clips the additive glow effect, not the child widget.
   final CustomClipper<Path>? clipper;
 
+  /// Whether the glow is active at all.
+  ///
+  /// When false, the widget renders as a plain passthrough to [child] with
+  /// zero overhead. Useful for disabling glow in specific states without
+  /// restructuring the widget tree.
+  ///
+  /// Defaults to true.
+  final bool enabled;
+
+  /// When true, the glow fires on touch-down but is suppressed after the
+  /// finger travels more than 10 logical pixels (i.e. a drag or scroll).
+  ///
+  /// This prevents the "stuck glow" artefact during scrollable menus or
+  /// lists where a drag gesture should not leave a persistent glare behind.
+  /// The glow is re-enabled automatically on the next touch-down.
+  ///
+  /// Defaults to false (glow always follows the pointer).
+  final bool glowOnTapOnly;
+
+  @override
+  State<GlassGlow> createState() => _GlassGlowState();
+}
+
+class _GlassGlowState extends State<GlassGlow> {
+  Offset? _initialPointerDown;
+  bool _glowSuppressed = false;
+
+  // BUG 3 FIX: Reset suppression flag when glowOnTapOnly is toggled off at
+  // runtime (e.g. animation-driven state changes). Without this, the glow
+  // remains permanently muted until the next pointer-down.
+  @override
+  void didUpdateWidget(GlassGlow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.glowOnTapOnly && !widget.glowOnTapOnly) {
+      _glowSuppressed = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Fast-path: no overhead if glow is disabled entirely.
+    if (!widget.enabled) return widget.child;
+
     return GlassGlowLayer(
-      clipper: clipper,
-      pulse: pulse,
+      clipper: widget.clipper,
+      pulse: widget.pulse,
       child: Builder(
         builder: (innerContext) => Listener(
-          behavior: hitTestBehavior,
-          onPointerDown: (event) => _handlePointer(innerContext, event),
-          onPointerMove: (event) => _handlePointer(innerContext, event),
+          behavior: widget.hitTestBehavior,
+          onPointerDown: (event) {
+            _initialPointerDown = event.localPosition;
+            _glowSuppressed = false;
+            _handlePointer(innerContext, event);
+          },
+          onPointerMove: (event) {
+            if (widget.glowOnTapOnly && !_glowSuppressed) {
+              final delta =
+                  event.localPosition - (_initialPointerDown ?? Offset.zero);
+              if (delta.distance > 10.0) {
+                _glowSuppressed = true;
+                _removeTouch(innerContext);
+                return;
+              }
+            }
+            if (!_glowSuppressed) _handlePointer(innerContext, event);
+          },
           onPointerUp: (event) => _removeTouch(innerContext),
           onPointerCancel: (event) => _removeTouch(innerContext),
-          child: child,
+          child: widget.child,
         ),
       ),
     );
@@ -129,11 +187,11 @@ class GlassGlow extends StatelessWidget {
 
     layerState.updateTouch(
       pos,
-      radius: glowRadius,
-      color: glowColor,
-      blurRadius: glowBlurRadius,
-      spreadRadius: glowSpreadRadius,
-      opacity: glowOpacity,
+      radius: widget.glowRadius,
+      color: widget.glowColor,
+      blurRadius: widget.glowBlurRadius,
+      spreadRadius: widget.glowSpreadRadius,
+      opacity: widget.glowOpacity,
     );
   }
 

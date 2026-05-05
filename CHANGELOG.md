@@ -1,4 +1,65 @@
+# 0.10.3
+
+Big thanks to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #47](https://github.com/sdegenaar/liquid_glass_widgets/pull/47) — a comprehensive interaction engine upgrade for `GlassMenu` that brings it more in line with iOS 26 context menu behaviour. 🙏
+
+## ✨ Features
+
+### Heterogeneous menu items — `GlassMenuDivider` and `GlassMenuLabel`
+
+Menus now accept any `Widget`, enabling iOS 26-style section grouping:
+
+```dart
+GlassMenu(items: [
+  const GlassMenuLabel(title: 'Actions'),    // renders as 'ACTIONS'
+  GlassMenuItem(title: 'Save', onTap: () {}),
+  const GlassMenuDivider(),
+  GlassMenuItem(title: 'Delete', isDestructive: true, onTap: () {}),
+])
+```
+
+`GlassMenuLabel` exposes a `height` parameter (default `30.0`) so custom font sizes don't drift the selection-pill position.
+
+### `GlassMenuItem` — rich content
+
+Six new parameters: `subtitle`, `enabled`, `titleStyle`, `subtitleStyle`, `iconColor`, `iconSize`.
+
+### Scroll-aware selection pill
+
+A sliding highlight follows the pointer and disappears automatically when the user starts scrolling (10 px drag-slop guard + `ScrollNotification` listener).
+
+### Elastic stretch and scroll-safe glow
+
+`GlassMenu` now wraps in `LiquidStretch` for spring physics on drag. `glowOnTapOnly: true` (the new default) suppresses the glass glare after a drag, preventing a stuck-glow artefact during list scrolling. Full parameter surface: `interactionScale`, `stretch`, `stretchResistance`, `stretchAxis`, `allowPositiveX/NegativeX/Y`.
+
+### New primitives on `GlassGlow` and `GlassContainer`
+
+`GlassGlow.enabled`, `GlassGlow.glowOnTapOnly`, and `GlassContainer.glowIntensity` are now available for custom integrations.
+
+## 🐛 Fixes
+
+- **GlassMenu — double `BackdropFilter`** · Removed an extra blur layer above `GlassContainer` that doubled the blur sigma and created an over-frosted ring.
+- **GlassMenu — DETACHED compositing layers** · Removed the outer `RepaintBoundary` wrapping `_buildMorphingContainer`. When `GlassContainer(useOwnLayer: true)` installs a `BackdropFilter` layer it forces compositing on the entire subtree; a `RepaintBoundary` above it fought the compositor for `OffsetLayer` ownership, leaving descendant `RepaintBoundary` nodes (i.e. each `GlassMenuItem`'s glass layer) DETACHED from the scene. `GlassGlow` and `GlassContainer` already own their compositing layers — no extra boundary is needed. Separately, `Opacity` widgets at `>= 1.0` are now skipped entirely so no gratuitous `OpacityLayer` is inserted when compositing is already being forced by a `BackdropFilter` descendant.
+- **GlassMenu — layout overflow during open animation** · `GlassContainer(height: currentHeight)` propagated tight height constraints through its entire subtree during the morph. When menu items became visible (previously at `value > 0.65`), the container was only ~114 px tall while 3 items needed 132 px, causing the `Column` inside `Positioned.fill` to overflow by 18 px. Fixed by deferring content rendering until `value ≥ 0.85`, exactly when `currentHeight` becomes `null` and the container sizes naturally — no tight-constraint cascade possible.
+- **GlassMenu — interaction glow bleeds onto background** · `GlassGlow` previously wrapped `GlassContainer` from the outside. `_RenderGlassGlowLayer.paint()` called `canvas.drawCircle()` over the full overlay canvas with no shape boundary, causing the radial gradient to paint beyond the menu's glass shape onto the background. Fixed by moving `GlassGlow` inside `GlassContainer`'s `clipBehavior: Clip.antiAlias` subtree — matching the architecture used by `GlassButton`.
+- **GlassMenuItem — `AnimatedScale` layout overflow on press** · `AnimatedScale` (backed by `RenderTransform`) retains the pre-scale layout size during a 0.98-scale press animation, causing a spurious overflow against the menu's bounded `Positioned.fill`. Fixed by wrapping `AnimatedScale` in `SizedBox(height: effectiveHeight)` to isolate the transform's layout footprint.
+- **GlassMenu — selection pill layout exception** · `AnimatedPositioned` is now inside a bounded `SizedBox(height: totalH) → Stack`, preventing a debug-mode layout exception and an out-of-bounds pill position when scrolled.
+- **GlassMenu — `RangeError` on item removal** · `didUpdateWidget` clears `_hoveredIndex` when `items.length` shrinks while the menu is open.
+- **GlassMenu — `GlassMenuItem` state flicker** · Wrapped items cached; only rebuilt when `widget.items` changes, preventing pressed/hover resets during the 60 fps spring ticker.
+- **GlassGlow — permanently muted glow** · `didUpdateWidget` resets `_glowSuppressed` when `glowOnTapOnly` is toggled off.
+- **GlassMenuItem — desktop hover state leak** · `dispose()` clears `_isHovered`.
+- **Impeller — extreme-stretch glyph-bounds crash** · Scale determinant clamped before reaching the shader.
+- **Android — negative safe-area assertion** · `sysBottom > 25` guard added.
+
+## ⚠️ Semi-Breaking
+
+`GlassMenu.items` changed from `List<GlassMenuItem>` to `List<Widget>`. Existing code compiles unchanged — only typed `List<GlassMenuItem>` variable declarations need widening.
+
+## 🧪 Tests — 1,648 passing
+
+---
+
 # 0.10.2
+
 
 ## Fixes
 
