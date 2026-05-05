@@ -357,7 +357,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                 Clip.none, // Prevent double-clip artifacts during stretch
             children: [
               // Menu content - waits for container to be nearly full width
-              if (value > 0.65)
+              if (value > 0.85)
                 Opacity(
                   opacity: menuOpacity,
                   child: Stack(
@@ -367,7 +367,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                       ValueListenableBuilder<int?>(
                         valueListenable: _hoveredIndexNotifier,
                         builder: (context, hoveredIndex, _) {
-                          if (hoveredIndex == null) return const SizedBox.shrink();
+                          if (hoveredIndex == null)
+                            return const SizedBox.shrink();
                           return AnimatedPositioned(
                             duration: const Duration(milliseconds: 150),
                             curve: Curves.easeOutCubic,
@@ -520,7 +521,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               iconSize: item.iconSize,
               isSelected: isSelected,
               isPressed: isPressed,
-              onTap: () {}, // Provide empty callback to enable GestureDetector feedback
+              onTap:
+                  () {}, // Provide empty callback to enable GestureDetector feedback
             );
           },
         );
