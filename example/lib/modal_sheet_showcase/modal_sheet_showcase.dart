@@ -347,7 +347,7 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
               color: Colors.green,
             ),
             const SizedBox(height: 24),
-            const GlassMenuLabel(child: Text('MENU CONFIGURATIONS')),
+            const GlassMenuLabel(title: 'MENU CONFIGURATIONS'),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -417,7 +417,7 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
                         color: Colors.white),
                   ),
                   items: [
-                    const GlassMenuLabel(child: Text('PRIMARY ACTIONS')),
+                    const GlassMenuLabel(title: 'PRIMARY ACTIONS'),
                     GlassMenuItem(
                       title: 'New Project',
                       subtitle: 'Create from template',
@@ -431,14 +431,14 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
                       onTap: () {},
                     ),
                     const GlassMenuDivider(),
-                    const GlassMenuLabel(child: Text('MANAGEMENT')),
+                    const GlassMenuLabel(title: 'MANAGEMENT'),
                     GlassMenuItem(
                       title: 'Settings',
                       icon: const Icon(CupertinoIcons.settings),
                       onTap: () {},
                     ),
                     const GlassMenuDivider(),
-                    const GlassMenuLabel(child: Text('DANGER ZONE')),
+                    const GlassMenuLabel(title: 'DANGER ZONE'),
                     GlassMenuItem(
                       title: 'Delete Forever',
                       isDestructive: true,

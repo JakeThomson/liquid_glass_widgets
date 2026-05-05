@@ -34,9 +34,14 @@ void main() {
   // GlassMenuLabel
   // ==========================================================================
   group('GlassMenuLabel', () {
-    testWidgets('uppercases title', (tester) async {
-      await tester.pumpWidget(_app(const GlassMenuLabel(child: Text('SECTION'))));
+    testWidgets('uppercases title when using title param', (tester) async {
+      await tester.pumpWidget(_app(const GlassMenuLabel(title: 'section')));
       expect(find.text('SECTION'), findsOneWidget);
+    });
+
+    testWidgets('renders child when provided', (tester) async {
+      await tester.pumpWidget(_app(const GlassMenuLabel(child: Text('CUSTOM'))));
+      expect(find.text('CUSTOM'), findsOneWidget);
     });
 
     testWidgets('applies custom style', (tester) async {
@@ -52,10 +57,10 @@ void main() {
     });
 
     // QUALITY 3: height param is accepted and has correct default.
-    testWidgets('exposes height param with default 32.0', (tester) async {
-      const label = GlassMenuLabel(child: Text('test'));
-      expect(label.height, 32.0);
-      const custom = GlassMenuLabel(height: 48.0, child: Text('big'));
+    testWidgets('exposes height param with default 30.0', (tester) async {
+      const label = GlassMenuLabel(title: 'test');
+      expect(label.height, 30.0);
+      const custom = GlassMenuLabel(height: 48.0, title: 'big');
       expect(custom.height, 48.0);
     });
   });

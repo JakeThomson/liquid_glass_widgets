@@ -114,24 +114,33 @@ class GlassMenuDivider extends StatelessWidget {
 /// Use this for headers, section labels, or purely decorative content.
 /// It does not respond to hover/press and is ignored by the selection pill.
 class GlassMenuLabel extends StatelessWidget {
-  /// The content to display.
-  final Widget child;
+  /// The label text. If provided, renders stylized uppercase text.
+  final String? title;
+
+  /// The custom widget to display. Use this if [title] is null.
+  final Widget? child;
 
   /// The height of the item.
   ///
-  /// Defaults to 32.0 (slightly shorter than a standard menu item).
+  /// Defaults to 30.0 (aligned with author's fix to prevent pill-position drift).
   final double height;
 
-  /// Horizontal padding for the content.
+  /// Override for the default caption text style. Only used if [title] is provided.
+  final TextStyle? style;
+
+  /// Horizontal padding for the content. Only used if [child] is provided.
   final double horizontalPadding;
 
   /// Creates a glass menu label.
   const GlassMenuLabel({
-    required this.child,
-    super.key,
-    this.height = 32.0,
+    this.title,
+    this.child,
+    this.style,
+    this.height = 30.0,
     this.horizontalPadding = 16.0,
-  });
+    super.key,
+  }) : assert(title != null || child != null,
+            'Either title or child must be provided');
 
   @override
   Widget build(BuildContext context) {
@@ -139,21 +148,17 @@ class GlassMenuLabel extends StatelessWidget {
       height: height,
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       alignment: Alignment.centerLeft,
-      child: DefaultTextStyle(
-        style: const TextStyle(
-          color: Color(0x99FFFFFF), // 60% white default
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          letterSpacing: -0.1,
-        ),
-        child: IconTheme(
-          data: const IconThemeData(
-            color: Color(0x99FFFFFF),
-            size: 16,
+      child: child ??
+          Text(
+            title!.toUpperCase(),
+            style: style ??
+                TextStyle(
+                  color: Colors.white.withValues(alpha: 0.45),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                ),
           ),
-          child: child,
-        ),
-      ),
     );
   }
 }
@@ -235,63 +240,63 @@ class _GlassMenuItemState extends State<GlassMenuItem> {
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(24),
               ),
-                child: Opacity(
-                  opacity: widget.enabled ? 1.0 : 0.4,
-                  child: Row(
-                    children: [
-                      // Icon
-                      if (widget.icon != null) ...[
-                        IconTheme(
-                          data: IconThemeData(
-                            color: iconColor,
-                            size: widget.iconSize,
-                          ),
-                          child: widget.icon!,
+              child: Opacity(
+                opacity: widget.enabled ? 1.0 : 0.4,
+                child: Row(
+                  children: [
+                    // Icon
+                    if (widget.icon != null) ...[
+                      IconTheme(
+                        data: IconThemeData(
+                          color: iconColor,
+                          size: widget.iconSize,
                         ),
-                        const SizedBox(width: 12),
-                      ],
-  
-                      // Text Content (Title & Subtitle)
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                        child: widget.icon!,
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+
+                    // Text Content (Title & Subtitle)
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: widget.titleStyle ??
+                                TextStyle(
+                                  color: textColor,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                          ),
+                          if (widget.subtitle != null)
                             Text(
-                              widget.title,
+                              widget.subtitle!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: widget.titleStyle ??
+                              style: widget.subtitleStyle ??
                                   TextStyle(
-                                    color: textColor,
-                                    fontSize: 17,
+                                    color: textColor.withValues(alpha: 0.6),
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w400,
                                   ),
                             ),
-                            if (widget.subtitle != null)
-                              Text(
-                                widget.subtitle!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: widget.subtitleStyle ??
-                                    TextStyle(
-                                      color: textColor.withValues(alpha: 0.6),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
-  
-                      // Trailing
-                      if (widget.trailing != null) widget.trailing!,
-                    ],
-                  ),
+                    ),
+
+                    // Trailing
+                    if (widget.trailing != null) widget.trailing!,
+                  ],
                 ),
               ),
             ),
           ),
+        ),
       ),
     );
   }
