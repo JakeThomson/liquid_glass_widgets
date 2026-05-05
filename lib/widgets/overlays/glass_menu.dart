@@ -90,19 +90,19 @@ class GlassMenu extends StatefulWidget {
 
   /// Whether to allow stretch in the positive X direction (Right).
   /// If null, automatically determined by menu position.
-  final bool? allowPositiveXStretch;
+  final bool? allowPositiveX;
 
   /// Whether to allow stretch in the negative X direction (Left).
   /// If null, automatically determined by menu position.
-  final bool? allowNegativeXStretch;
+  final bool? allowNegativeX;
 
   /// Whether to allow stretch in the positive Y direction (Down).
   /// If null, automatically determined by menu position.
-  final bool? allowPositiveYStretch;
+  final bool? allowPositiveY;
 
   /// Whether to allow stretch in the negative Y direction (Up).
   /// If null, automatically determined by menu position.
-  final bool? allowNegativeYStretch;
+  final bool? allowNegativeY;
 
   /// Whether to show glow/glare on touch for tactile feedback. Default: true.
   final bool enableInteractionGlow;
@@ -111,7 +111,7 @@ class GlassMenu extends StatefulWidget {
   ///
   /// If true, the glow will appear on tap but will automatically fade out
   /// if the user starts dragging. It will not reappear until a new tap starts.
-  /// Default: false.
+  /// Default: true.
   final bool glowOnTapOnly;
 
   /// Custom color for the touch interaction glow.
@@ -119,6 +119,11 @@ class GlassMenu extends StatefulWidget {
 
   /// Radius of the touch interaction glow. Default: 0.6.
   final double glowRadius;
+
+  /// The intensity of the interactive glow.
+  ///
+  /// Defaults to 0.0.
+  final double glowIntensity;
 
   /// Custom color for the menu selection background.
   final Color selectionColor;
@@ -143,16 +148,17 @@ class GlassMenu extends StatefulWidget {
     this.interactionScale = 1.02,
     this.stretchResistance = 0.08,
     this.stretchAxis,
-    this.allowPositiveXStretch,
-    this.allowNegativeXStretch,
-    this.allowPositiveYStretch,
-    this.allowNegativeYStretch,
+    this.allowPositiveX,
+    this.allowNegativeX,
+    this.allowPositiveY,
+    this.allowNegativeY,
     this.menuHeight,
     this.selectionColor = const Color(0x3DFFFFFF),
     this.enableInteractionGlow = true,
-    this.glowOnTapOnly = false,
+    this.glowOnTapOnly = true,
     this.glowColor,
     this.glowRadius = 0.6,
+    this.glowIntensity = 0.0,
   }) : assert(trigger != null || triggerBuilder != null,
             'Either trigger or triggerBuilder must be provided');
 

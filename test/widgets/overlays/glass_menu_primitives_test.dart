@@ -394,10 +394,10 @@ void main() {
         stretch: 0.3,
         stretchResistance: 0.1,
         stretchAxis: Axis.vertical,
-        allowPositiveXStretch: false,
-        allowNegativeXStretch: false,
-        allowPositiveYStretch: true,
-        allowNegativeYStretch: false,
+        allowPositiveX: false,
+        allowNegativeX: false,
+        allowPositiveY: true,
+        allowNegativeY: false,
         items: [GlassMenuItem(title: 'Item', onTap: () {})],
       )));
       await _openMenu(tester, 'Open');

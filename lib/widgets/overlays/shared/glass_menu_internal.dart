@@ -326,10 +326,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       suppressInteractionOnChildren: false,
       // Constrain stretch to 'Down' and 'Away from screen edge' by default,
       // but allow explicit user overrides.
-      allowPositiveX: widget.allowPositiveXStretch ?? (_morphAlignment.x < 0),
-      allowNegativeX: widget.allowNegativeXStretch ?? (_morphAlignment.x > 0),
-      allowPositiveY: widget.allowPositiveYStretch ?? (_morphAlignment.y < 0),
-      allowNegativeY: widget.allowNegativeYStretch ?? (_morphAlignment.y > 0),
+      allowPositiveX: widget.allowPositiveX ?? (_morphAlignment.x < 0),
+      allowNegativeX: widget.allowNegativeX ?? (_morphAlignment.x > 0),
+      allowPositiveY: widget.allowPositiveY ?? (_morphAlignment.y < 0),
+      allowNegativeY: widget.allowNegativeY ?? (_morphAlignment.y > 0),
       child: GlassContainer(
         useOwnLayer: true,
         settings: effectiveSettings,
@@ -341,6 +341,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         shape: LiquidRoundedSuperellipse(borderRadius: currentBorderRadius),
         clipBehavior:
             Clip.antiAlias, // Clip items at the edges for edge-to-edge feel
+        glowIntensity: widget.glowIntensity,
         child: GlassGlow(
           enabled: widget.enableInteractionGlow,
           glowOnTapOnly: widget.glowOnTapOnly,
