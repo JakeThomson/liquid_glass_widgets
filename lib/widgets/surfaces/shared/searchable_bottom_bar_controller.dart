@@ -154,10 +154,14 @@ class SpringRetarget {
 /// )
 /// ```
 ///
-/// Open/close search programmatically:
+/// Open/close search programmatically via the controller:
 /// ```dart
-/// _searchController.onSearchActiveChanged(wasActive: false, isActive: true);
+/// _searchController.openSearch();  // expands search bar
+/// _searchController.closeSearch(); // collapses back to tabs
 /// ```
+///
+/// Or by driving [GlassSearchableBottomBar.isSearchActive] directly from
+/// your own state — both approaches work and are interchangeable.
 class SearchableBottomBarController extends ChangeNotifier {
   // ── Focus state ──────────────────────────────────────────────────────────
 
@@ -176,6 +180,54 @@ class SearchableBottomBarController extends ChangeNotifier {
 
   /// True while an init post-frame callback is pending.
   bool get pillsInitScheduled => _pillsInitScheduled;
+
+  // ── Programmatic search open/close ──────────────────────────────────────
+
+  bool _isSearchOpen = false;
+
+  /// Whether the search bar is currently open (expanded).
+  ///
+  /// Set programmatically via [openSearch] / [closeSearch], or kept in sync
+  /// with [GlassSearchableBottomBar.isSearchActive] via [syncSearchActive].
+  bool get isSearchOpen => _isSearchOpen;
+
+  /// Expands the search bar.
+  ///
+  /// Equivalent to setting `isSearchActive: true` on the widget. Notifies
+  /// listeners so any parent widget bound to this controller can rebuild.
+  ///
+  /// ```dart
+  /// ElevatedButton(
+  ///   onPressed: _searchController.openSearch,
+  ///   child: const Text('Search'),
+  /// )
+  /// ```
+  void openSearch() {
+    if (_isSearchOpen) return; // idempotent
+    _isSearchOpen = true;
+    notifyListeners();
+  }
+
+  /// Collapses the search bar back to the tab view.
+  ///
+  /// Equivalent to setting `isSearchActive: false` on the widget. Also
+  /// clears [searchFocused] if the keyboard was visible.
+  void closeSearch() {
+    if (!_isSearchOpen) return; // idempotent
+    _isSearchOpen = false;
+    if (_searchFocused) _searchFocused = false;
+    notifyListeners();
+  }
+
+  /// Synchronises [isSearchOpen] with the parent widget's `isSearchActive` prop.
+  ///
+  /// Called from `didUpdateWidget` when the prop changes externally so that
+  /// [isSearchOpen] always reflects the actual widget state.
+  void syncSearchActive(bool isActive) {
+    if (_isSearchOpen == isActive) return;
+    _isSearchOpen = isActive;
+    // No notifyListeners — the parent widget is already handling the rebuild.
+  }
 
   // ── Spring target cache ──────────────────────────────────────────────────
 

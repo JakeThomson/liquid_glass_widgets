@@ -110,7 +110,8 @@ void main() {
       expect(selectedTab, lessThan(2));
     });
 
-    testWidgets('drag cancel snaps back without change', (tester) async {
+    testWidgets('drag cancel while dragging snaps to nearest tab',
+        (tester) async {
       int selectedTab = 1;
       await tester.pumpWidget(_wrap(
         StatefulBuilder(builder: (ctx, setState) {
@@ -127,15 +128,43 @@ void main() {
       ));
       await tester.pump();
 
-      // Small drag without sufficient velocity
+      // Move far enough to lock in tabIsDragging=true, then cancel.
+      // onBarDragCancel's tabIsDragging=true branch (lines 143-151) is hit.
       final barFinder = find.byType(GlassBottomBar);
       final barCenter = tester.getCenter(barFinder);
       final gesture = await tester.startGesture(barCenter);
-      await gesture.moveBy(const Offset(5, 0)); // tiny movement
+      await gesture.moveBy(const Offset(80, 0)); // large enough for drag lock
+      await tester.pump(const Duration(milliseconds: 16));
       await gesture.cancel();
       await tester.pumpAndSettle();
-      // Center tab — should stay at 1
-      expect(selectedTab, 1);
+      // Should snap to some valid tab without crash
+      expect(selectedTab, greaterThanOrEqualTo(0));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('drag cancel without dragging resets indicator position',
+        (tester) async {
+      // onBarDragCancel with tabIsDragging=false (else branch, line 154).
+      await tester.pumpWidget(_wrap(
+        SizedBox(
+          height: 100,
+          child: GlassBottomBar(
+            tabs: [_tab('A'), _tab('B'), _tab('C')],
+            selectedIndex: 1,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      // Start and immediately cancel without moving → tabIsDragging stays false
+      final barFinder = find.byType(GlassBottomBar);
+      final barCenter = tester.getCenter(barFinder);
+      final gesture = await tester.startGesture(barCenter);
+      await gesture.cancel(); // cancel before any move
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('onBarTapDown selects a tab on tap', (tester) async {

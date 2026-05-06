@@ -44,6 +44,27 @@ import 'shared/bar_layout_utils.dart';
 /// - **Seamless Glass Blending**: Uses [LiquidGlassBlendGroup] for smooth
 /// transitions
 ///
+/// ## Placement
+///
+/// **Always use [GlassBottomBar] as [Scaffold.bottomNavigationBar].** The
+/// Scaffold sizes and anchors that slot to the bottom of the screen. Placing
+/// the bar inside `body:`, `Center()`, or a `Column` without explicit
+/// bottom-pinning will cause it to float or appear centered rather than
+/// staying fixed at the screen's bottom edge.
+///
+/// ```dart
+/// // ✅ Correct
+/// Scaffold(
+///   body: ...,
+///   bottomNavigationBar: GlassBottomBar(...),
+/// )
+///
+/// // ❌ Wrong — bar will float / center
+/// Scaffold(
+///   body: Center(child: GlassBottomBar(...)),
+/// )
+/// ```
+///
 /// ## Usage
 ///
 /// ### Basic Usage
@@ -631,6 +652,18 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                 // edge; Align(right) keeps the button flush with the bar boundary.
                 // This matches the searchable bar's visual pattern where the search
                 // button sits at the far right regardless of pill width.
+                //
+                // Layout contract:
+                // The Row cross-axis height is bounded to barHeight by the first
+                // child (TabIndicator), which always roots its build tree with a
+                // SizedBox(height: barHeight). Row measures non-Expanded children
+                // first, so Expanded's maxHeight is clamped to barHeight before
+                // Align is laid out — no unbounded height propagation.
+                //
+                // NOTE: GlassBottomBar is designed for Scaffold.bottomNavigationBar.
+                // Placing it inside Center(), Column(), or body: directly (without
+                // a layout parent that anchors it to the screen bottom) will cause
+                // it to appear centered/floating rather than pinned to the bottom.
                 if (widget.extraButton != null) ...[
                   SizedBox(width: widget.spacing), // fixed gap after pill
                   Expanded(

@@ -5,6 +5,7 @@ import '../../types/glass_quality.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/inherited_liquid_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
+import 'glass_bottom_bar.dart' show MaskingQuality;
 import 'shared/tab_bar_internal.dart';
 
 /// A glass morphism tab bar following Apple's iOS design patterns.
@@ -118,6 +119,7 @@ class GlassTabBar extends StatefulWidget {
     this.indicatorBorderRadius,
     this.indicatorSettings,
     this.backgroundKey,
+    this.maskingQuality = MaskingQuality.high,
   })  : assert(tabs.length >= 2, 'GlassTabBar requires at least 2 tabs'),
         assert(
           selectedIndex >= 0 && selectedIndex < tabs.length,
@@ -180,6 +182,17 @@ class GlassTabBar extends StatefulWidget {
   /// If null, inherits from parent [InheritedLiquidGlass] or defaults to
   /// [GlassQuality.standard].
   final GlassQuality? quality;
+
+  /// Controls indicator clipping quality.
+  ///
+  /// - [MaskingQuality.high] (default): Full jelly-bloom physics — the
+  ///   indicator expands 8 px beyond its pill bounds for the iOS 26 spring
+  ///   effect. Uses a dual-layer [GlassBottomBarClipper] path.
+  /// - [MaskingQuality.off]: Simple clipping with no jelly expansion.
+  ///   Cheaper on GPU; useful for low-end devices or accessibility modes.
+  ///
+  /// Mirrors the same parameter on [GlassBottomBar] for a consistent API.
+  final MaskingQuality maskingQuality;
 
   /// BorderRadius of the tab bar.
   final BorderRadius? borderRadius;
@@ -267,6 +280,8 @@ class _GlassTabBarState extends State<GlassTabBar> {
         indicatorBorderRadius: widget.indicatorBorderRadius,
         indicatorSettings: widget.indicatorSettings,
         backgroundKey: widget.backgroundKey,
+        maskingQuality: widget.maskingQuality,
+        tabBarBorderRadius: borderRadius,
       ),
     );
 

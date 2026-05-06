@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../src/types/glass_interaction_behavior.dart';
 import '../../utils/glass_spring.dart';
 
 import '../../constants/glass_defaults.dart';
@@ -129,6 +131,10 @@ class GlassSegmentedControl extends StatefulWidget {
     this.useOwnLayer = false,
     this.quality,
     this.backgroundKey,
+    // ── iOS 26 interaction ────────────────────────────────────────────────────
+    this.interactionBehavior = GlassInteractionBehavior.full,
+    this.glowColor,
+    this.glowRadius = 1.5,
   })  : assert(
           segments.length >= 2,
           'GlassSegmentedControl requires at least 2 segments',
@@ -250,6 +256,31 @@ class GlassSegmentedControl extends StatefulWidget {
   /// Optional background key for Skia/Web refraction.
   final GlobalKey? backgroundKey;
 
+  // ── iOS 26 interaction ────────────────────────────────────────────────────
+
+  /// Controls which iOS 26 interaction effects are active on the indicator.
+  ///
+  /// | Value | Glow on press/drag |
+  /// |---|---|
+  /// | `none` | ✗ |
+  /// | `glowOnly` | ✓ |
+  /// | `scaleOnly` | ✗ |
+  /// | `full` *(default)* | ✓ |
+  ///
+  /// Set to [GlassInteractionBehavior.none] to suppress the glow entirely.
+  final GlassInteractionBehavior interactionBehavior;
+
+  /// Colour of the press/drag glow on the indicator pill.
+  ///
+  /// Only active when [interactionBehavior] includes glow. Defaults to a
+  /// soft white (~12% opacity) — same as [GlassTextField].
+  final Color? glowColor;
+
+  /// Spread radius of the glow relative to the indicator’s shorter dimension.
+  ///
+  /// Defaults to `1.5` (150%), matching [GlassTextField].
+  final double glowRadius;
+
   @override
   State<GlassSegmentedControl> createState() => _GlassSegmentedControlState();
 }
@@ -297,6 +328,9 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
         borderRadius: widget.borderRadius,
         quality: effectiveQuality,
         backgroundKey: widget.backgroundKey,
+        interactionBehavior: widget.interactionBehavior,
+        glowColor: widget.glowColor,
+        glowRadius: widget.glowRadius,
       ),
     );
 
@@ -334,6 +368,9 @@ class _SegmentedControlContent extends StatefulWidget {
     required this.quality,
     this.indicatorSettings,
     this.backgroundKey,
+    this.interactionBehavior = GlassInteractionBehavior.full,
+    this.glowColor,
+    this.glowRadius = 1.5,
   });
 
   final List<String> segments;
@@ -346,6 +383,9 @@ class _SegmentedControlContent extends StatefulWidget {
   final double borderRadius;
   final GlassQuality quality;
   final GlobalKey? backgroundKey;
+  final GlassInteractionBehavior interactionBehavior;
+  final Color? glowColor;
+  final double glowRadius;
 
   @override
   State<_SegmentedControlContent> createState() =>
@@ -567,8 +607,7 @@ class _SegmentedControlContentState extends State<_SegmentedControlContent> {
                         thickness: thickness,
                         quality: widget.quality,
                         indicatorColor: indicatorColor,
-                        isBackgroundIndicator:
-                            false, // Internal logic now handles both
+                        isBackgroundIndicator: false,
                         borderRadius: indicatorRadius,
                         glassSettings: widget.indicatorSettings,
                         backgroundKey: widget.backgroundKey,

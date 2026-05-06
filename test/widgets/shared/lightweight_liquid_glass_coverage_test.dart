@@ -330,4 +330,108 @@ void main() {
       expect(find.byType(LightweightLiquidGlass), findsNothing);
     });
   });
+
+  // ── Remaining setter paths (skipBlur, backdropLuma, shape no-op) ──────────
+  // These call updateRenderObject → setter no-op guards in
+  // _RenderLightweightGlass (lines 367-405 in lightweight_liquid_glass.dart).
+
+  group('LightweightLiquidGlass — skipBlur and backdropLuma setter paths', () {
+    testWidgets('platform brightness change triggers backdropLuma setter',
+        (tester) async {
+      // Build in dark mode, then simulate light mode via MediaQuery override.
+      Brightness brightness = Brightness.dark;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return MediaQuery(
+                data: MediaQueryData(platformBrightness: brightness),
+                child: LightweightLiquidGlass(
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                  settings: _settings,
+                  child: const SizedBox(width: 80, height: 40),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Change brightness → backdropLuma value changes → setter fires
+      outerSetState(() => brightness = Brightness.light);
+      await tester.pump();
+
+      // Same brightness → no-op guard
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'skipBlur setter: switching from ancestor-blur to non-ancestor-blur',
+        (tester) async {
+      // First render inside LiquidGlassLayer (skipBlur=true), then
+      // re-parent outside it (skipBlur=false) to fire the setter.
+      bool useLayer = true;
+      late StateSetter outerSetState;
+
+      Widget buildChild() {
+        return LightweightLiquidGlass.inLayer(
+          shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+          child: const SizedBox(width: 80, height: 40),
+        );
+      }
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              if (useLayer) {
+                return LiquidGlassLayer(
+                  settings: settingsWithoutLighting,
+                  child: buildChild(),
+                );
+              } else {
+                // No layer ancestor → skipBlur=false
+                return AdaptiveLiquidGlassLayer(
+                  settings: settingsWithoutLighting,
+                  child: buildChild(),
+                );
+              }
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Toggle → different skipBlur value → setter fires
+      outerSetState(() => useLayer = false);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shape setter no-op guard (same shape pumped twice)',
+        (tester) async {
+      const shape = LiquidRoundedSuperellipse(borderRadius: 16);
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: LightweightLiquidGlass(
+            shape: shape,
+            settings: _settings,
+            child: const SizedBox(width: 80, height: 40),
+          ),
+        ),
+      );
+      await tester.pump();
+      // Re-pump with identical shape → no-op guard in set shape()
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

@@ -1,3 +1,18 @@
+# 0.10.5
+
+## ✨ New
+
+- **`SearchableBottomBarController`** — added `openSearch()`, `closeSearch()`, and `isSearchOpen` getter for programmatic search control. Previously the only way to open search was by driving `isSearchActive` from parent state.
+- **`GlassTabBar`** — added `maskingQuality` parameter (`MaskingQuality.high` / `MaskingQuality.off`), matching the existing `GlassBottomBar` API. Set to `off` to disable the 8 px jelly-bloom expansion on lower-end devices.
+- **`GlassSlider`** — added `interactionBehavior`, `glowColor`, and `glowRadius` for consistent drag-glow customisation across all interactive widgets.
+- **`GlassSegmentedControl`** — same `interactionBehavior`, `glowColor`, `glowRadius` params added for API parity with `GlassSlider` and `GlassTextField`.
+- **`LiquidGlassWidgets.respectsAccessibility`** — deprecated alias added pointing to `respectSystemAccessibility`. Will be removed in v1.0.
+
+## 🐛 Fixes
+
+- **`GlassTextField`** — fixed a use-after-dispose crash when `focusNode` cycled `null → external → null`. The widget now tracks ownership with an explicit `_ownsNode` flag and correctly creates a fresh internal node on each transition.
+- **`GlassTabBar`** — completely resolved scrollable-mode visual glitches. The indicator now stays perfectly glued to the active tab during scrolling without drifting, uses native "snappy" spring physics for consistent feel, and is correctly clipped to the rounded corners of the tab bar so it no longer bleeds out visually when scrolling off-screen.
+
 # 0.10.4
 
 A huge, heartfelt thank-you to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #49](https://github.com/sdegenaar/liquid_glass_widgets/pull/49). 🙏

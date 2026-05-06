@@ -50,6 +50,16 @@ class LiquidGlassWidgets {
   static set respectSystemAccessibility(bool value) =>
       glass_config.respectSystemAccessibility = value;
 
+  /// Deprecated — use [respectSystemAccessibility] instead.
+  ///
+  /// Retained for discoverability (the two-word form reads naturally as a
+  /// boolean predicate). Will be removed in v1.0.
+  @Deprecated('Use respectSystemAccessibility instead.')
+  static bool get respectsAccessibility => respectSystemAccessibility;
+  @Deprecated('Use respectSystemAccessibility instead.')
+  static set respectsAccessibility(bool value) =>
+      respectSystemAccessibility = value;
+
   /// Global [LiquidGlassSettings] override for the entire application.
   ///
   /// When set, these settings are used as the base for all glass widgets

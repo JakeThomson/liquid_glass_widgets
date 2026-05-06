@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
+import '../../src/types/glass_interaction_behavior.dart';
 import '../../types/glass_quality.dart';
 import '../../utils/draggable_indicator_physics.dart';
 import '../shared/glass_effect.dart';
@@ -120,6 +121,10 @@ class GlassSlider extends StatefulWidget {
     this.settings,
     this.useOwnLayer = false,
     this.quality,
+    // ── iOS 26 interaction ──────────────────────────────────────────────────────
+    this.interactionBehavior = GlassInteractionBehavior.full,
+    this.glowColor,
+    this.glowRadius = 1.5,
   });
 
   // ===========================================================================
@@ -209,6 +214,31 @@ class GlassSlider extends StatefulWidget {
   /// and chromatic aberration (Impeller only) in static layouts.
   /// Defaults to [GlassQuality.standard].
   final GlassQuality? quality;
+
+  // ── iOS 26 interaction ────────────────────────────────────────────────────
+
+  /// Controls which iOS 26 interaction effects are active on the thumb.
+  ///
+  /// | Value | Glow on drag |
+  /// |---|---|
+  /// | `none` | ✗ |
+  /// | `glowOnly` | ✓ |
+  /// | `scaleOnly` | ✗ |
+  /// | `full` *(default)* | ✓ |
+  ///
+  /// Set to [GlassInteractionBehavior.none] to suppress the drag glow entirely.
+  final GlassInteractionBehavior interactionBehavior;
+
+  /// Colour of the drag glow on the thumb.
+  ///
+  /// Only active when [interactionBehavior] includes glow. Defaults to a
+  /// soft white (~12% opacity) — same as [GlassTextField].
+  final Color? glowColor;
+
+  /// Spread radius of the drag glow relative to the thumb’s shorter dimension.
+  ///
+  /// Defaults to `1.5` (150% of thumb height), matching [GlassTextField].
+  final double glowRadius;
 
   @override
   State<GlassSlider> createState() => _GlassSliderState();
@@ -577,11 +607,14 @@ class _GlassSliderState extends State<GlassSlider>
             ),
           ),
 
-          // Glowing element (always present when transition > 0, controlled by opacity)
-          if (transition > 0.05)
+          // Glowing element — only when interactionBehavior includes glow.
+          if (transition > 0.05 && widget.interactionBehavior.hasGlow)
             Opacity(
               opacity: transition,
               child: GlassGlow(
+                glowColor:
+                    widget.glowColor ?? const Color(0x1FFFFFFF), // white ~12%
+                glowRadius: widget.glowRadius,
                 child: SizedBox(
                   width: thumbWidth,
                   height: thumbHeight,

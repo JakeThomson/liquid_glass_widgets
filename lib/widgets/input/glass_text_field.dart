@@ -267,6 +267,8 @@ class GlassTextField extends StatefulWidget {
 
 class _GlassTextFieldState extends State<GlassTextField> {
   late FocusNode _focusNode;
+  // Tracks whether _focusNode was created by us (true) or provided externally.
+  bool _ownsNode = false;
   bool _isFocused = false;
   bool _isPressed = false;
 
@@ -287,7 +289,13 @@ class _GlassTextFieldState extends State<GlassTextField> {
   @override
   void initState() {
     super.initState();
-    _focusNode = widget.focusNode ?? FocusNode();
+    if (widget.focusNode != null) {
+      _focusNode = widget.focusNode!;
+      _ownsNode = false;
+    } else {
+      _focusNode = FocusNode();
+      _ownsNode = true;
+    }
     _isFocused = _focusNode.hasFocus;
     _focusNode.addListener(_onFocusChange);
   }
@@ -301,16 +309,23 @@ class _GlassTextFieldState extends State<GlassTextField> {
   @override
   void didUpdateWidget(GlassTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If the external focusNode changed, rewire the listener.
+    // If the external focusNode reference changed, rewire the listener.
     if (oldWidget.focusNode != widget.focusNode) {
       _focusNode.removeListener(_onFocusChange);
-      if (widget.focusNode == null) {
-        // We own the node — keep the internal one.
-      } else {
-        // Dispose the old internal node if we owned it.
-        if (oldWidget.focusNode == null) _focusNode.dispose();
+
+      // Dispose the old node only if we owned it.
+      if (_ownsNode) _focusNode.dispose();
+
+      if (widget.focusNode != null) {
+        // Caller is providing an external node — adopt it.
         _focusNode = widget.focusNode!;
+        _ownsNode = false;
+      } else {
+        // Caller removed the external node — create a fresh internal one.
+        _focusNode = FocusNode();
+        _ownsNode = true;
       }
+
       _focusNode.addListener(_onFocusChange);
       _isFocused = _focusNode.hasFocus;
     }
@@ -323,10 +338,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
   @override
   void dispose() {
     _focusNode.removeListener(_onFocusChange);
-    // Only dispose if we created the focus node
-    if (widget.focusNode == null) {
-      _focusNode.dispose();
-    }
+    if (_ownsNode) _focusNode.dispose();
     super.dispose();
   }
 

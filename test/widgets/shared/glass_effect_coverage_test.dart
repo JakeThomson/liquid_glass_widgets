@@ -372,4 +372,185 @@ void main() {
       });
     }
   });
+
+  // ── _RenderInteractiveIndicator setter coverage ────────────────────────────
+  // Each updateRenderObject call exercises the setter no-op guards on the
+  // private render object (lines 568-656 in glass_effect.dart).
+
+  group('GlassEffect — render object setter updates', () {
+    testWidgets(
+        'ambientRim / baseAlphaMultiplier / edgeAlphaMultiplier / rimThickness / rimSmoothing setters fire via updateRenderObject',
+        (tester) async {
+      double ambient = 0.1;
+      double baseAlpha = 0.2;
+      double edgeAlpha = 0.4;
+      double rimThick = 0.5;
+      double rimSmooth = 1.5;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return GlassEffect(
+                shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                settings: _settings,
+                interactionIntensity: 0.0,
+                quality: GlassQuality.standard,
+                ambientRim: ambient,
+                baseAlphaMultiplier: baseAlpha,
+                edgeAlphaMultiplier: edgeAlpha,
+                rimThickness: rimThick,
+                rimSmoothing: rimSmooth,
+                child: const SizedBox(width: 80, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Pump with different values → updateRenderObject fires all setters.
+      outerSetState(() {
+        ambient = 0.3;
+        baseAlpha = 0.5;
+        edgeAlpha = 0.7;
+        rimThick = 1.0;
+        rimSmooth = 2.0;
+      });
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // Pump with same values again → no-op guard exercised (returns early).
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('backgroundKey setter fires when key changes',
+        (tester) async {
+      final key1 = GlobalKey(debugLabel: 'bg1');
+      final key2 = GlobalKey(debugLabel: 'bg2');
+      GlobalKey? activeKey = key1;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              RepaintBoundary(key: key1, child: const SizedBox(width: 100, height: 100)),
+              RepaintBoundary(key: key2, child: const SizedBox(width: 100, height: 100)),
+              StatefulBuilder(
+                builder: (ctx, setState) {
+                  outerSetState = setState;
+                  return GlassEffect(
+                    shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                    settings: _settings,
+                    interactionIntensity: 0.0,
+                    quality: GlassQuality.standard,
+                    backgroundKey: activeKey,
+                    child: const SizedBox(width: 80, height: 40),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Change key → backgroundKey setter fires
+      outerSetState(() => activeKey = key2);
+      await tester.pump();
+
+      // Same key → no-op guard
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('interactionIntensity and densityFactor setters fire',
+        (tester) async {
+      double intensity = 0.0;
+      double density = 0.0;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return GlassEffect(
+                shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                settings: _settings,
+                interactionIntensity: intensity,
+                densityFactor: density,
+                quality: GlassQuality.standard,
+                child: const SizedBox(width: 80, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Change → setters fire
+      outerSetState(() {
+        intensity = 0.5;
+        density = 0.3;
+      });
+      await tester.pump();
+
+      // Same values → no-op guard
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── Corner-radius heuristic branches (lines 775-800) ─────────────────────
+  // These are reached in _updateShaderUniforms when the shader is live.
+  // In headless tests the shader never loads, so these code paths are NOT
+  // reachable via `standard` quality (which falls back to ClipPath).
+  //
+  // However, switching *between shapes* via updateRenderObject is still useful
+  // as a smoke test that the shape selector doesn't crash.
+
+  group('GlassEffect — corner radius shape switching', () {
+    testWidgets('switching between shape types does not crash', (tester) async {
+      LiquidShape shape = const LiquidRoundedSuperellipse(borderRadius: 8);
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: StatefulBuilder(
+            builder: (ctx, setState) {
+              outerSetState = setState;
+              return GlassEffect(
+                shape: shape,
+                settings: _settings,
+                interactionIntensity: 0.0,
+                quality: GlassQuality.standard,
+                child: const SizedBox(width: 80, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Superellipse → Oval (stadium heuristic path)
+      outerSetState(() => shape = const LiquidOval());
+      await tester.pump();
+
+      // Oval → Rectangle (cornerRadius = 0.0 path)
+      outerSetState(() => shape = const LiquidRoundedRectangle(borderRadius: 0));
+      await tester.pump();
+
+      // Rectangle → Superellipse with large radius (> half size — clamp)
+      outerSetState(
+          () => shape = const LiquidRoundedSuperellipse(borderRadius: 9999));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
