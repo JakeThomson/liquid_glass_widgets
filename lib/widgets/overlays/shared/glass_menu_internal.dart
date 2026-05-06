@@ -86,18 +86,24 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final isMenuOpen =
-        _overlayController.isShowing && _animationController.value > 0.05;
+    // iOS 26: Button hides early (0.05) to avoid z-fighting with the morphing glass.
+    final isButtonVisible =
+        !(_overlayController.isShowing && _animationController.value > 0.05);
+
+    // Interaction lock: Only block taps when the menu is significantly open (>80%).
+    // This eliminates the "dead zone" where the menu is closing but the button is still ignoring taps.
+    final isMenuBlocking =
+        _overlayController.isShowing && _animationController.value > 0.8;
 
     return CompositedTransformTarget(
       link: _layerLink,
       child: Stack(
         children: [
-          // Original trigger button (hidden when menu is morphing)
+          // Original trigger button
           Opacity(
-            opacity: isMenuOpen ? 0.0 : 1.0,
+            opacity: isButtonVisible ? 1.0 : 0.0,
             child: IgnorePointer(
-              ignoring: isMenuOpen,
+              ignoring: isMenuBlocking,
               child: widget.triggerBuilder != null
                   ? widget.triggerBuilder!(context, _toggleMenu)
                   : GestureDetector(
@@ -222,7 +228,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
           // - Subtle 5px vertical displacement at peak (t=0.5)
           // - Seamless in both directions (opening and closing)
           offset: Offset(0, _calculateSwoopOffset(value)),
-          child: _buildMorphingContainer(value),
+          child: IgnorePointer(
+            ignoring: value < 0.8,
+            child: _buildMorphingContainer(value),
+          ),
         ),
       ],
     );
