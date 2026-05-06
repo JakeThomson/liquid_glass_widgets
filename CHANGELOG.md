@@ -11,7 +11,7 @@
 ## 🐛 Fixes
 
 - **`GlassTextField`** — fixed a use-after-dispose crash when `focusNode` cycled `null → external → null`. The widget now tracks ownership with an explicit `_ownsNode` flag and correctly creates a fresh internal node on each transition.
-- **`GlassTabBar`** — completely resolved scrollable-mode visual glitches. The indicator now stays perfectly glued to the active tab during scrolling without drifting, uses native "snappy" spring physics for consistent feel, and is correctly clipped to the rounded corners of the tab bar so it no longer bleeds out visually when scrolling off-screen.
+- **`GlassTabBar`** — resolved scrollable-mode visual glitches. The indicator now stays perfectly glued to the active tab during scrolling without drifting, uses native "snappy" spring physics for consistent feel, and implements a three-layer rendering architecture so the solid indicator pill cleanly clips at the rounded viewport corners while the 8px jelly bloom expands freely over the tab bar boundaries.
 
 # 0.10.4
 

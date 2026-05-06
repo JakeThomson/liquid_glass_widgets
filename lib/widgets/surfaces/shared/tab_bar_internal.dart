@@ -62,6 +62,9 @@ class TabBarContent extends StatefulWidget {
   final LiquidGlassSettings? indicatorSettings;
   final GlobalKey? backgroundKey;
   final MaskingQuality maskingQuality;
+
+  /// Border radius of the outer tab bar container — used to clip Layer 1
+  /// (tab labels + background pill) to the same rounded shape.
   final BorderRadius? tabBarBorderRadius;
 
   @override
@@ -82,7 +85,6 @@ class TabBarContentState extends State<TabBarContent>
 
   bool _isDown = false;
   bool _isDragging = false;
-  bool _justSwitched = false;
   late double _xAlign = _computeXAlignmentForTab(widget.selectedIndex);
 
   // Scrollable-overlay indicator position, animated in content space.
@@ -292,16 +294,8 @@ class TabBarContentState extends State<TabBarContent>
   }
 
   void _onTabTap(int index) {
-    final didSwitch = index != widget.selectedIndex;
-    if (didSwitch) {
+    if (index != widget.selectedIndex) {
       widget.onTabSelected(index);
-      // Trigger the bloom for exactly one spring cycle after a confirmed switch.
-      setState(() => _justSwitched = true);
-      // Clear after the spring settles (~400 ms is safely longer than the
-      // 350 ms snappy spring, so the bloom is visible without getting stuck).
-      Future.delayed(const Duration(milliseconds: 450), () {
-        if (mounted) setState(() => _justSwitched = false);
-      });
     }
     // Scroll the tapped tab fully into view in case it was partially visible.
     if (widget.isScrollable) {
@@ -409,22 +403,20 @@ class TabBarContentState extends State<TabBarContent>
                 (_tabOffsets[indexCeil] - _tabOffsets[indexFloor]) * t;
           }
 
-          // In scrollable mode, the Stack spans the full scroll content width,
-          // so FractionallySizedBox would divide that full width (not viewport)
-          // giving a wrong indicator size. Skip the indicator entirely until
-          // _measureTabs has accurate data.
-          final bool skipIndicator = widget.isScrollable && !measuredReady;
+          // In scrollable mode the overlay indicator (outside the
+          // SingleChildScrollView) is the ONLY indicator. Skipping the inline
+          // one entirely prevents it from being hard-clipped by the scroll
+          // view's own viewport when the selected tab is near an edge.
+          final bool skipIndicator = widget.isScrollable;
 
           return SpringBuilder(
             spring: GlassSpring.snappy(
               duration: const Duration(milliseconds: 300),
             ),
-            // Bloom only during explicit drag or the frame window after a
-            // confirmed tab switch. Scrolling the tab list must NOT trigger
-            // the bloom — removing _isDown from the scroll path achieves that.
-            value: _isDown ||
-                    _justSwitched ||
-                    (alignment.x - targetAlignment).abs() > 0.05
+            // Bloom while dragging, held down, or still in transit.
+            // Mirrors GlassSegmentedControl: the bloom deactivates naturally
+            // as the spring settles, with no artificial timer.
+            value: _isDown || (alignment.x - targetAlignment).abs() > 0.05
                 ? 1.0
                 : 0.0,
             builder: (context, thickness, child) {
@@ -469,94 +461,117 @@ class TabBarContentState extends State<TabBarContent>
     }
 
     if (widget.isScrollable) {
-      // Overlay architecture: indicator lives OUTSIDE SingleChildScrollView
-      // as a sibling in an outer Stack. No clip layer can touch it.
-      //
-      // SingleChildScrollView is NON-positioned → sizes the outer Stack to
-      // the viewport width. AnimatedGlassIndicator returns Positioned.fill
-      // and uses exactOffset=screenLeft (viewport coords) to place the pill.
-      return ClipPath(
-        clipper: _TabBarClipper(
-          borderRadius: widget.tabBarBorderRadius ??
-              BorderRadius.circular(24.0), // fallback
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Non-positioned: sizes the outer Stack to viewport width.
-            // NotificationListener is kept to cancel drag-indicator bloom if
-            // the user switches from indicator-drag to tab-list scroll.
-            NotificationListener<ScrollStartNotification>(
-              onNotification: (_) {
-                if (_isDown) setState(() => _isDown = false);
-                return false;
-              },
-              child: SingleChildScrollView(
-                controller: widget.scrollController,
-                scrollDirection: Axis.horizontal,
-                // No Listener here — we no longer bloom from raw pointer-down on
-                // the scroll area. Bloom is driven by _justSwitched (confirmed
-                // tap) and _isDown (indicator-pill drag only).
-                child: _buildTabLabels(
-                  selectedLabelStyle,
-                  unselectedLabelStyle,
-                  selectedIconColor,
-                  unselectedIconColor,
-                ),
-              ),
-            ),
+      // Three-layer architecture:
+      //  1. ClipRect layer: tab labels + solid background pill — both clip
+      //     cleanly at the viewport boundary as the user scrolls.
+      //  2. Glass bloom layer (above ClipRect): only the glass effect renders
+      //     here, so the jelly bloom can expand freely past the bar edges.
+      final bool measuredReady = _tabWidths.length == widget.tabs.length;
+      final double scrollOffset = widget.scrollController.hasClients
+          ? widget.scrollController.offset
+          : 0.0;
+      final double screenLeft = _indOffsetSpring.value - scrollOffset;
 
-            // Overlay indicator — position comes from _indOffset/_indWidth which
-            // are animated only during tab switches. During scroll the position is
-            // _indOffset - scrollOffset: rock-solid, no spring involvement.
-            Builder(
-              builder: (context) {
-                final bool measuredReady =
-                    _tabWidths.length == widget.tabs.length;
-                if (!measuredReady || _indWidthSpring.value == 0) {
-                  return const SizedBox.shrink();
-                }
+      // Bloom while the position spring is still in transit — deactivates
+      // naturally as the spring settles (mirrors GlassSegmentedControl).
+      final double targetOffset =
+          measuredReady && widget.selectedIndex < _tabOffsets.length
+              ? _tabOffsets[widget.selectedIndex]
+              : 0.0;
+      final bool isMoving = (_indOffsetSpring.value - targetOffset).abs() > 2.0;
 
-                final double scrollOffset = widget.scrollController.hasClients
-                    ? widget.scrollController.offset
-                    : 0.0;
-                final double viewportWidth = widget.scrollController.hasClients
-                    ? widget.scrollController.position.viewportDimension
-                    : double.infinity;
-
-                // Indicator scrolls naturally with the tab content.
-                final double screenLeft = _indOffsetSpring.value - scrollOffset;
-
-                return SpringBuilder(
-                  spring: GlassSpring.snappy(
-                    duration: const Duration(milliseconds: 300),
-                  ),
-                  value: _isDown || _justSwitched ? 1.0 : 0.0,
-                  builder: (context, thickness, _) {
-                    return AnimatedGlassIndicator(
-                      velocity: 0.0,
-                      itemCount: widget.tabs.length,
-                      alignment: Alignment.center, // unused when exactWidth set
-                      thickness: thickness,
-                      quality: widget.quality,
-                      indicatorColor: indicatorColor,
-                      isBackgroundIndicator: false,
-                      borderRadius:
-                          widget.indicatorBorderRadius?.topLeft.x ?? 16,
-                      glassSettings: widget.indicatorSettings,
-                      backgroundKey: widget.backgroundKey,
-                      exactWidth: _indWidthSpring.value,
-                      exactOffset: screenLeft,
-                      expansion: widget.maskingQuality == MaskingQuality.off
-                          ? 0.0
-                          : 8.0,
-                    );
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // ── Layer 1: clipped content ────────────────────────────────────
+          // ClipRRect clips to the tab bar's rounded corners so the solid
+          // background pill and tab labels don't overflow the corner radius.
+          ClipRRect(
+            borderRadius: widget.tabBarBorderRadius ?? BorderRadius.zero,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Tab labels (scrollable).
+                NotificationListener<ScrollStartNotification>(
+                  onNotification: (_) {
+                    if (_isDown) setState(() => _isDown = false);
+                    return false;
                   },
+                  child: SingleChildScrollView(
+                    controller: widget.scrollController,
+                    scrollDirection: Axis.horizontal,
+                    child: _buildTabLabels(
+                      selectedLabelStyle,
+                      unselectedLabelStyle,
+                      selectedIconColor,
+                      unselectedIconColor,
+                    ),
+                  ),
+                ),
+
+                // Background solid pill — clips with the bar.
+                if (measuredReady && _indWidthSpring.value > 0)
+                  SpringBuilder(
+                    spring: GlassSpring.snappy(
+                      duration: const Duration(milliseconds: 300),
+                    ),
+                    value: _isDown || isMoving ? 1.0 : 0.0,
+                    builder: (context, thickness, _) {
+                      return AnimatedGlassIndicator(
+                        velocity: 0.0,
+                        itemCount: widget.tabs.length,
+                        alignment: Alignment.center,
+                        thickness: thickness,
+                        quality: widget.quality,
+                        indicatorColor: indicatorColor,
+                        isBackgroundIndicator: false,
+                        borderRadius:
+                            widget.indicatorBorderRadius?.topLeft.x ?? 16,
+                        glassSettings: widget.indicatorSettings,
+                        backgroundKey: widget.backgroundKey,
+                        exactWidth: _indWidthSpring.value,
+                        exactOffset: screenLeft,
+                        expansion: widget.maskingQuality == MaskingQuality.off
+                            ? 0.0
+                            : 8.0,
+                        paintBackground: true,
+                        paintGlass: false, // glass rendered in layer 2
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+
+          // ── Layer 2: glass bloom (above all clips) ──────────────────────
+          if (measuredReady && _indWidthSpring.value > 0)
+            SpringBuilder(
+              spring: GlassSpring.snappy(
+                duration: const Duration(milliseconds: 300),
+              ),
+              value: _isDown || isMoving ? 1.0 : 0.0,
+              builder: (context, thickness, _) {
+                return AnimatedGlassIndicator(
+                  velocity: 0.0,
+                  itemCount: widget.tabs.length,
+                  alignment: Alignment.center,
+                  thickness: thickness,
+                  quality: widget.quality,
+                  indicatorColor: indicatorColor,
+                  isBackgroundIndicator: false,
+                  borderRadius: widget.indicatorBorderRadius?.topLeft.x ?? 16,
+                  glassSettings: widget.indicatorSettings,
+                  backgroundKey: widget.backgroundKey,
+                  exactWidth: _indWidthSpring.value,
+                  exactOffset: screenLeft,
+                  expansion:
+                      widget.maskingQuality == MaskingQuality.off ? 0.0 : 8.0,
+                  paintBackground: false, // background rendered in layer 1
+                  paintGlass: true,
                 );
               },
             ),
-          ],
-        ),
+        ],
       );
     }
 
@@ -734,48 +749,5 @@ class TabBarItem extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Clips the indicator horizontally to the exact rounded bounds of the
-/// [GlassTabBar] to prevent bleeding at the corners during scroll, while
-/// opening a "sunroof" and "basement" in the middle to allow the "jelly bloom"
-/// effect to expand freely vertically.
-class _TabBarClipper extends CustomClipper<Path> {
-  final BorderRadius borderRadius;
-
-  const _TabBarClipper({required this.borderRadius});
-
-  @override
-  Path getClip(Size size) {
-    final Path path = Path();
-
-    // 1. The exact inner shape (handles left and right curves perfectly)
-    path.addRRect(borderRadius.toRRect(Offset.zero & size));
-
-    // 2. Add infinite vertical space above the straight top edge
-    // We only open the roof where the top edge is perfectly flat.
-    final double leftFlatX = borderRadius.topLeft.x;
-    final double rightFlatX = size.width - borderRadius.topRight.x;
-
-    if (rightFlatX > leftFlatX) {
-      path.addRect(Rect.fromLTRB(leftFlatX, -24, rightFlatX, 0));
-    }
-
-    // 3. Add infinite vertical space below the straight bottom edge
-    final double leftFlatBottomX = borderRadius.bottomLeft.x;
-    final double rightFlatBottomX = size.width - borderRadius.bottomRight.x;
-
-    if (rightFlatBottomX > leftFlatBottomX) {
-      path.addRect(Rect.fromLTRB(
-          leftFlatBottomX, size.height, rightFlatBottomX, size.height + 24));
-    }
-
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant _TabBarClipper oldClipper) {
-    return oldClipper.borderRadius != borderRadius;
   }
 }

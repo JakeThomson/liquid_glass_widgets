@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/widgets/shared/animated_glass_indicator.dart';
 
 import '../../shared/test_helpers.dart';
 
@@ -863,6 +864,120 @@ void main() {
       await tester.tap(find.text('X2').first);
       await tester.pumpAndSettle();
       expect(selectedIndex, 1);
+    });
+
+    // ── Three-layer clipping architecture ─────────────────────────────────
+
+    testWidgets(
+        'scrollable mode: ClipRRect uses the custom tab bar border radius',
+        (tester) async {
+      const customRadius = BorderRadius.all(Radius.circular(24));
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: SizedBox(
+              width: 300,
+              child: GlassTabBar(
+                isScrollable: true,
+                borderRadius: customRadius,
+                tabs: List.generate(8, (i) => GlassTab(label: 'T${i + 1}')),
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Layer 1 ClipRRect must match the custom border radius.
+      final clipRRects = tester
+          .widgetList<ClipRRect>(
+            find.descendant(
+              of: find.byType(GlassTabBar),
+              matching: find.byType(ClipRRect),
+            ),
+          )
+          .toList();
+      expect(
+        clipRRects.any((w) => w.borderRadius == customRadius),
+        isTrue,
+        reason: 'Layer-1 ClipRRect must use the tabBarBorderRadius',
+      );
+    });
+
+    testWidgets(
+        'scrollable mode: two AnimatedGlassIndicator instances are rendered '
+        '(background pass inside clip, glass pass above)', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: SizedBox(
+              width: 300,
+              child: GlassTabBar(
+                isScrollable: true,
+                tabs: List.generate(8, (i) => GlassTab(label: 'T${i + 1}')),
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      // Allow _measureTabs post-frame callback and springs to settle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(
+        find.byType(AnimatedGlassIndicator),
+        findsNWidgets(2),
+        reason:
+            'Scrollable mode must render exactly two AnimatedGlassIndicator '
+            'instances: paintBackground-only (layer 1) + paintGlass-only (layer 2)',
+      );
+    });
+
+    testWidgets(
+        'scrollable mode: default border radius (height/2.2) flows into ClipRRect',
+        (tester) async {
+      const barHeight = 44.0;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: SizedBox(
+              width: 300,
+              child: GlassTabBar(
+                isScrollable: true,
+                height: barHeight,
+                tabs: List.generate(8, (i) => GlassTab(label: 'T${i + 1}')),
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final expectedRadius = BorderRadius.circular(barHeight / 2.2);
+      final clipRRects = tester
+          .widgetList<ClipRRect>(
+            find.descendant(
+              of: find.byType(GlassTabBar),
+              matching: find.byType(ClipRRect),
+            ),
+          )
+          .toList();
+      expect(
+        clipRRects.any((w) => w.borderRadius == expectedRadius),
+        isTrue,
+        reason: 'Default ClipRRect radius must equal height / 2.2',
+      );
     });
   });
 }

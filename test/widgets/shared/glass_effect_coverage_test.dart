@@ -427,8 +427,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('backgroundKey setter fires when key changes',
-        (tester) async {
+    testWidgets('backgroundKey setter fires when key changes', (tester) async {
       final key1 = GlobalKey(debugLabel: 'bg1');
       final key2 = GlobalKey(debugLabel: 'bg2');
       GlobalKey? activeKey = key1;
@@ -438,8 +437,10 @@ void main() {
         createTestApp(
           child: Stack(
             children: [
-              RepaintBoundary(key: key1, child: const SizedBox(width: 100, height: 100)),
-              RepaintBoundary(key: key2, child: const SizedBox(width: 100, height: 100)),
+              RepaintBoundary(
+                  key: key1, child: const SizedBox(width: 100, height: 100)),
+              RepaintBoundary(
+                  key: key2, child: const SizedBox(width: 100, height: 100)),
               StatefulBuilder(
                 builder: (ctx, setState) {
                   outerSetState = setState;
@@ -542,7 +543,8 @@ void main() {
       await tester.pump();
 
       // Oval → Rectangle (cornerRadius = 0.0 path)
-      outerSetState(() => shape = const LiquidRoundedRectangle(borderRadius: 0));
+      outerSetState(
+          () => shape = const LiquidRoundedRectangle(borderRadius: 0));
       await tester.pump();
 
       // Rectangle → Superellipse with large radius (> half size — clamp)
