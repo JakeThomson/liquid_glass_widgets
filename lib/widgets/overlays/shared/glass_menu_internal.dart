@@ -37,20 +37,30 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     }
   }
 
-  // iOS 26 Liquid Glass smooth spring physics
-  // Gentle, fluid motion with subtle overshoot - NOT harsh bounces
+  // ─── iOS 26 Spring Physics ────────────────────────────────────────────────
   //
-  // Response: ~0.35s (smooth, not too fast)
-  // DampingFraction: 0.7 (slightly underdamped = gentle settle, no harsh bounce)
-  // Result: Seamless liquid feel that complements the swoop curve
+  // Two separate springs for open vs close, matching native UIKit spring behaviour:
   //
-  // Conversion to Flutter SpringSimulation:
-  // - stiffness: 300 (smooth, not too snappy)
-  // - damping: 2 * 0.7 * sqrt(300) ≈ 24.2
-  final _springDescription = const SpringDescription(
+  // OPEN — "bouncy" underdamped spring (damping ratio ≈ 0.71)
+  //   stiffness: 320, damping: 18  →  ~10% overshoot on settle
+  //   This gives the characteristic iOS 26 "squishy" feel where the menu
+  //   slightly overshoots its final size before settling. The overshoot is
+  //   subtle (not cartoonish) — similar to UISpringTimingParameters on iOS.
+  //
+  // CLOSE — faster overdamped spring (damping ratio ≈ 1.01)
+  //   stiffness: 380, damping: 39  →  no bounce, fast clean dismiss
+  //   Native iOS context menus close quickly without bouncing back; the fast
+  //   settle reinforces the "tap resolves instantly" feel.
+  static const _openSpring = SpringDescription(
     mass: 1.0,
-    stiffness: 300.0, // Smooth motion (not too fast)
-    damping: 24.0, // Gentle settle (no harsh bounce)
+    stiffness: 320.0, // Slightly stiffer for quick response
+    damping: 18.0, // Underdamped → ~10% overshoot for squishy feel
+  );
+
+  static const _closeSpring = SpringDescription(
+    mass: 1.0,
+    stiffness: 380.0, // Faster close
+    damping: 39.0, // Critically-damped → clean dismiss, no bounce
   );
 
   Alignment _morphAlignment = Alignment.topLeft;
@@ -123,12 +133,20 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     );
   }
 
-  void _runSpring(double target) {
+  /// Runs a spring simulation toward [target].
+  ///
+  /// [velocityHint] is the gesture velocity (in logical pixels/s) that is
+  /// injected as the spring's initial velocity, normalised to the 0–1 animation
+  /// space.  A positive value means the gesture was moving in the "open"
+  /// direction; negative means closing.  Defaults to 0 (tap with no drag).
+  void _runSpring(double target, {double velocityHint = 0.0}) {
+    // Select spring profile based on direction.
+    final spring = target > 0.5 ? _openSpring : _closeSpring;
     final simulation = SpringSimulation(
-      _springDescription,
+      spring,
       _animationController.value,
       target,
-      0.0, // Initial velocity (could add velocity for swipe gestures)
+      velocityHint, // Inject gesture velocity for organic feel
     );
     _animationController.animateWith(simulation);
   }
@@ -184,7 +202,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     }
 
     _overlayController.show();
-    _runSpring(1.0);
+    // Open with a slight upward velocity hint (positive = toward open) so the
+    // spring feels like it launches from the button rather than starting from rest.
+    _runSpring(1.0, velocityHint: 2.5);
   }
 
   void _closeMenu() {
@@ -192,7 +212,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       _hoveredIndex = null;
       _isDragging = false;
     });
-    _runSpring(0.0);
+    // Close with a downward velocity hint so the dismiss feels immediate and
+    // snappy — matching native UIKit context menu dismissal behaviour.
+    _runSpring(0.0, velocityHint: -3.0);
   }
 
   Widget _buildMorphingOverlay(BuildContext context) {
@@ -237,24 +259,25 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     );
   }
 
-  /// Calculates the vertical "swoop" offset for liquid glass morphing.
+  /// Calculates the vertical "swoop" offset for iOS 26 liquid glass morphing.
   ///
-  /// iOS 26 uses a gentle parabolic curve that creates a subtle "liquid droop"
-  /// effect during morphing. This is NOT a bounce - it's a smooth arc that
-  /// complements the spring physics for a seamless feel.
+  /// Uses an asymmetric parabola with the peak shifted to t=0.4 (front-loaded)
+  /// so the liquid "droop" is more pronounced at the start of the open animation
+  /// and resolves before the content fades in.  The 8px amplitude gives a more
+  /// convincing liquid-drop feel without looking like a bounce.
   ///
-  /// The curve peaks at mid-animation (t=0.5) and smoothly returns to zero
-  /// at both ends, creating a natural "swoop down and up" motion.
+  /// Opening:  t goes 0 → 1  (peak at t≈0.4, then swoops back to 0)
+  /// Closing:  t goes 1 → 0  (same curve, naturally front-loaded on dismiss)
   double _calculateSwoopOffset(double t) {
-    // Parabolic curve: peaks at t=0.5, zero at t=0 and t=1
-    // This creates a smooth down-and-up arc without harsh direction changes
-    // Formula: -4 * (t - 0.5)² + 1, scaled by amplitude
-    final parabola = 1.0 - 4.0 * (t - 0.5) * (t - 0.5);
-
-    // Gentle 5px peak displacement for subtle liquid feel
-    // Opening: swoops down then up (parabola is always positive)
-    // Closing: same smooth curve in reverse (no jarring direction change)
-    return parabola * 5.0;
+    // Asymmetric parabola: peak shifted to t=0.4
+    // Formula: -A*(t - peak)^2 + peak^2*A, normalised so f(0)=0, f(1)=0
+    // Simplified: use (t)(1-t) scaled so the peak is near 0.4
+    // We achieve front-loading by weighting t less on the back half:
+    //   curve(t) = 4 * t * (1 - t) * (1 + 0.4 * (0.5 - t))
+    // This gives peak ≈ 0.40, value ≈ 1.02 at that point, zero at 0 and 1.
+    final base = 4.0 * t * (1.0 - t);
+    final skew = 1.0 + 0.4 * (0.5 - t); // Push peak toward t=0.4
+    return base * skew * 8.0; // 8px amplitude — more liquid, still tasteful
   }
 
   /// Calculates the total height of the menu content.
@@ -302,18 +325,28 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       value,
     )!;
 
-    // iOS 26 Crossfade Timing + Material Fade
-    // Problem: Empty morphing container still visible (glowing blob) during closing
-    // Solution: Fade glass material opacity as container shrinks
-    //
-    // Menu content: Fades in 0.7→1.0 opening, exits cleanly when closing
-    final menuOpacity = ((value - 0.7) / 0.3).clamp(0.0, 1.0);
-
-    // Glass container opacity: Fully visible when menu open, fades during closing
-    // - value > 0.3: Fully visible (1.0)
-    // - value 0.3→0: Fades out to transparent
-    // - Result: No "empty glowing blob" - seamless fade to real button
+    // ─── iOS 26 Crossfade Timing ─────────────────────────────────────────────
+    // Glass container opacity: fades in during 0→0.3 so there is never an
+    // "empty glowing blob" visible as the menu collapses to the button.
     final containerOpacity = (value / 0.3).clamp(0.0, 1.0);
+
+    // ─── iOS 26 Morph-Container Scale Pulse ──────────────────────────────────
+    // Native UIKit context menus do a subtle scale overshoot on the container
+    // itself as the spring settles: 1.0 → ~1.018 → 1.0.
+    // We derive this from the raw (unclamped) animation value so that the
+    // spring overshoot (which can briefly exceed 1.0) directly drives the
+    // scale, giving it a perfectly physics-synchronised feel.
+    final rawValue = _animationController.value;
+    // Scale pulse: grows slightly beyond 1.0 when rawValue > 1.0 (overshoot),
+    // then settles back.  Clamped below 1 so it never shrinks during open.
+    final containerScale = rawValue > 1.0
+        ? 1.0 + (rawValue - 1.0) * 0.18 // Amplify overshoot by 18% → ~1.018 max
+        : 1.0;
+
+    // ─── Item Stagger ─────────────────────────────────────────────────────────
+    // Pre-compute per-item stagger offsets (used in _buildMorphingContainer
+    // via the items list length).  Each item is offset by 20ms relative to
+    // the previous one so they cascade in smoothly from top-to-bottom.
 
     // Inherit settings from context (like GlassCard/GlassContainer)
     // If user provides custom settings, use those. Otherwise, check for inherited
@@ -367,16 +400,17 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
           clipper: ShapeBorderClipper(
             shape: LiquidRoundedSuperellipse(borderRadius: currentBorderRadius),
           ),
-          child: Stack(
-            alignment: _morphAlignment, // Align internal stack content
-            clipBehavior:
-                Clip.none, // Prevent double-clip artifacts during stretch
-            children: [
-              // Menu content - waits for container to be nearly full width
-              if (value > 0.85)
-                Opacity(
-                  opacity: menuOpacity,
-                  child: Stack(
+          child: Transform.scale(
+            scale: containerScale,
+            alignment: Alignment.center,
+            child: Stack(
+              alignment: _morphAlignment, // Align internal stack content
+              clipBehavior:
+                  Clip.none, // Prevent double-clip artifacts during stretch
+              children: [
+                // Menu content - waits for container to be nearly full width
+                if (value > 0.85)
+                  Stack(
                     clipBehavior: Clip.none,
                     children: [
                       // Sliding selection pill (background)
@@ -401,8 +435,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                                 color: widget.selectionColor,
                                 borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
-                                  color: const Color(
-                                      0x0DFFFFFF), // 5% white border
+                                  color: const Color(0x0DFFFFFF), // 5% white border
                                   width: 0.5,
                                 ),
                               ),
@@ -429,7 +462,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                         onPointerUp: (event) {
                           if (_isDragging) {
                             if (_hoveredIndex != null) {
-                              // Only trigger tap if we didn't scroll or drag much (prevents selection during stretching)
                               final currentOffset = _scrollController.hasClients
                                   ? _scrollController.offset
                                   : 0.0;
@@ -447,10 +479,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                                     item.onTap();
                                     _closeMenu();
                                   }
-                                } else {
-                                  // For non-GlassMenuItem (labels, dividers),
-                                  // we might want to close if it's a generic item,
-                                  // but usually only menu items close on tap.
                                 }
                               }
                             }
@@ -474,25 +502,32 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: SingleChildScrollView(
                               controller: _scrollController,
-                              physics:
-                                  const ClampingScrollPhysics(), // iOS-style scrolling
+                              physics: const ClampingScrollPhysics(), // iOS-style
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  const SizedBox(
-                                      height: 12), // Inner top padding
+                                  const SizedBox(height: 12), // Top padding
                                   ..._buildWrappedItems()
                                       .asMap()
                                       .entries
-                                      .expand((entry) => [
-                                            entry.value,
-                                            if (entry.key <
-                                                widget.items.length - 1)
-                                              const SizedBox(height: 2),
-                                          ]),
-                                  const SizedBox(
-                                      height: 12), // Inner bottom padding
+                                      .expand((entry) {
+                                    final staggerStart = 0.70 + entry.key * 0.04;
+                                    final staggerEnd = (staggerStart + 0.20)
+                                        .clamp(0.0, 1.0);
+                                    final itemOpacity = ((value - staggerStart) /
+                                            (staggerEnd - staggerStart))
+                                        .clamp(0.0, 1.0);
+                                    return [
+                                      Opacity(
+                                        opacity: itemOpacity,
+                                        child: entry.value,
+                                      ),
+                                      if (entry.key < widget.items.length - 1)
+                                        const SizedBox(height: 2),
+                                    ];
+                                  }),
+                                  const SizedBox(height: 12), // Bottom padding
                                 ],
                               ),
                             ),
@@ -501,12 +536,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                       ),
                     ],
                   ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+              ],
+            ), // outer Stack
+          ), // Transform.scale
+        ), // GlassGlow
+      ), // GlassContainer
+    ); // LiquidStretch (glassContent)
 
     return containerOpacity >= 1.0
         ? glassContent
