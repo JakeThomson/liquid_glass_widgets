@@ -1,4 +1,27 @@
+# 0.10.8
+
+Thanks to [@g3mf0r](https://github.com/g3mf0r) for [PR #52](https://github.com/sdegenaar/liquid_glass_widgets/pull/52). 🙏
+
+## 🐛 Fixes
+
+- **`GlassTabBar` — indicator drag drift on desktop/web** · The indicator position was accumulated via `delta.dx` additions each frame, causing the pill to visually lag behind the pointer on desktop platforms where pointer events arrive at a higher frequency than the frame budget. Fixed by computing position from the absolute global pointer coordinate on every update event, eliminating accumulated drift.
+
+- **`GlassTabBar` (scrollable) — tab labels hidden behind indicator pill** · The `SingleChildScrollView` (tab labels) and the background pill were inserted in the wrong stack order — labels were painted first, then the pill on top, obscuring them. Fixed by inserting the pill before the labels so labels always paint above the pill (correct z-order).
+
+- **`GlassTabBar` (scrollable) — indicator fly-off past bar edges** · The indicator pill had no boundary clamping in scrollable mode, allowing it to animate outside the visible bar area. Drag offset is now clamped to `[scrollOffset - 35 %, scrollOffset + screen + 35 %]`.
+
+## ✨ New
+
+- **`DividerSettings`** — new optional `dividerSettings` parameter on `GlassTabBar`. Renders animated vertical dividers between tabs with configurable `thickness`, `indent`, `endIndent`, custom `decoration`, animation `duration`/`curve`, and an `isHideAutomatically` flag that fades out dividers adjacent to the active tab. Includes a `copyWith` helper for convenient inline customisation.
+
+- **Grab-to-drag in scrollable mode** — the indicator pill in scrollable mode can now be directly grabbed and dragged to a new tab. Uses a `GestureArenaTeam` (`HorizontalDragGestureRecognizer` as captain + `TapGestureRecognizer`) to correctly win the arena against the `SingleChildScrollView` when the initial touch is within the active indicator's bounds. The scroll view retains natural scrolling behaviour when touching outside the pill.
+
+- **`indicatorShadow`** — new optional `indicatorShadow: List<BoxShadow>?` parameter on `GlassTabBar`. Applies a drop shadow to the resting (solid-colour) indicator pill, improving contrast in light-mode themes where the pill and track share similar colours. The shadow is automatically suppressed during the liquid glass drag animation so it does not interact with the backdrop blur, and restored when the pill returns to its idle state.
+
+---
+
 # 0.10.7
+
 
 Thanks to [@yukinoaruu](https://github.com/yukinoaruu) for [PR #51](https://github.com/sdegenaar/liquid_glass_widgets/pull/51). 🙏
 
