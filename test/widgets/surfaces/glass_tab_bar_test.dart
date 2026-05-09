@@ -1071,7 +1071,7 @@ void main() {
     test('copyWith updates custom decoration', () {
       const original = DividerSettings();
       final deco = BoxDecoration(
-        color: Colors.red.withOpacity(0.3),
+        color: Colors.red.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(2),
       );
       final copy = original.copyWith(decoration: deco);
