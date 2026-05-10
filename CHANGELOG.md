@@ -1,4 +1,25 @@
+# 0.10.9
+
+Thanks to [@g3mf0r](https://github.com/g3mf0r) for [PR #54](https://github.com/sdegenaar/liquid_glass_widgets/pull/54). 🙏
+
+## ✨ New
+
+- **`GlassTabBar` (scrollable) — jelly physics on indicator drag** · The scrollable indicator pill now feeds real-time drag velocity into the liquid glass shader, producing the same organic stretch-and-settle effect that fixed-mode tabs already had.
+
+## 🐛 Fixes
+
+- **`LiquidGlassWidgets.wrap` — `adaptiveQuality: true` without `adaptiveConfig` permanently locks to `standard`** · The default fallback config was created with `initialQuality: GlassQuality.standard`, which the adapter treats as a skip-Phase-2 signal — immediately jumping to Phase 3 at `standard` without ever running the warmup benchmark. On capable devices (including the iPhone simulator on Apple Silicon) this prevented the adapter from ever discovering that the device can sustain `premium`. Fixed by removing the erroneous `initialQuality` from the fallback; Phase 2 now always runs when no explicit quality is provided.
+
+- **`GlassTabBar` (scrollable) — indicator overflows bar on low tab counts** · The right drag boundary was computed as `viewMax` instead of `viewMax - indicatorWidth`, allowing the pill to slide outside the bar when there were only 2–3 wide tabs. Corrected to `viewMax - targetWidth`.
+
+- **`GlassTabBar` (fixed) — tiny accidental drags switch tabs** · Tab switching on drag-end now requires either a displacement greater than 20 % of the tab width **or** a flick velocity above 400 px/s, preventing unintended switches from small incidental movements.
+
+- **`GlassTabBar` (scrollable) — flick gesture ignored in scrollable mode** · A horizontal flick with sufficient velocity now overrides the nearest-tab distance calculation and advances the indicator in the flick direction, matching the fixed-mode behaviour.
+
+---
+
 # 0.10.8
+
 
 Thanks to [@g3mf0r](https://github.com/g3mf0r) for [PR #52](https://github.com/sdegenaar/liquid_glass_widgets/pull/52). 🙏
 
