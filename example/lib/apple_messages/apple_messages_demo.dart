@@ -14,9 +14,9 @@
 ///   flutter run -t lib/apple_messages/apple_messages_demo.dart
 library;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_cupertino_symbols/flutter_cupertino_symbols.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,28 +26,42 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 const _kBg = Color(0xFF000000);
 const _kSeparator = Color(0x33FFFFFF); // ~20% white
 const _kAvatarBg = Color(0xFF3A3A50); // muted indigo — iOS default avatar bg
-const _kSearchBg = Color(0xFF1C1C1E);
 const _kBlue = Color(0xFF0A84FF); // iOS 26 blue
 
 // Glass shared by both menu triggers — matches the "Edit" pill aesthetic
 const _kTriggerGlass = LiquidGlassSettings(
-  glassColor: Color(0xBB1C1C1E),
-  thickness: 28,
-  blur: 14,
-  lightIntensity: 0.3,
-  ambientStrength: 0.15,
-  chromaticAberration: 0.008,
+  glassColor: Colors
+      .white12, //(0x442C2C2E), // dark gray, ~27% opacity — true frosted look
+  thickness: 18,
+  blur: 3,
+  lightIntensity: 0.6,
+  ambientStrength: 0.1,
+  chromaticAberration: 0.01,
+  refractiveIndex: 1.2,
+  saturation: 1.15,
+);
+
+// Glass for the search+compose bar (blended group — premium needed for merging)
+const _kSearchGlass = LiquidGlassSettings(
+  glassColor: Color(0x332C2C2E), // slightly lighter, blends as a pair
+  thickness: 16,
+  blur: 3,
+  lightIntensity: 0.5,
+  ambientStrength: 0.08,
+  chromaticAberration: 0.003,
+  refractiveIndex: 1.1,
   saturation: 1.1,
 );
 
-// Glass for the menus themselves (slightly more opaque than triggers)
+// Glass for the menus themselves
 const _kMenuGlass = LiquidGlassSettings(
-  glassColor: Color(0xCC1C1C1E),
-  thickness: 32,
-  blur: 18,
-  lightIntensity: 0.28,
-  ambientStrength: 0.12,
-  chromaticAberration: 0.006,
+  // glassColor: Color(0xBB1C1C1E),
+  // thickness: 30,
+  // blur: 3,
+  lightIntensity: 0.3,
+  ambientStrength: 0.06,
+  chromaticAberration: 0.003,
+  refractiveIndex: 1.05,
   saturation: 1.05,
 );
 
@@ -108,12 +122,14 @@ const _kConversations = [
   ),
   _Conversation(
     name: '+61 428 048 980',
-    preview: 'Hi! Just a reminder your appointment is Fri 9 May at 2:30 PM. Reply STOP to opt out.',
+    preview:
+        'Hi! Just a reminder your appointment is Fri 9 May at 2:30 PM. Reply STOP to opt out.',
     time: 'Monday',
   ),
   _Conversation(
     name: '+61 482 092 063',
-    preview: 'Your parcel has been delivered to the front door. Track at auspost.com.au',
+    preview:
+        'Your parcel has been delivered to the front door. Track at auspost.com.au',
     time: 'Monday',
   ),
   _Conversation(
@@ -130,7 +146,8 @@ const _kConversations = [
   ),
   _Conversation(
     name: '+61 409 593 783',
-    preview: 'Hi! FREE flu vaccines are now available for ALL ages at participating pharmacies near you.',
+    preview:
+        'Hi! FREE flu vaccines are now available for ALL ages at participating pharmacies near you.',
     time: 'Sunday',
   ),
   _Conversation(
@@ -178,9 +195,9 @@ void main() async {
   ]);
   await LiquidGlassWidgets.initialize();
   runApp(LiquidGlassWidgets.wrap(
-    child: const AppleMessagesDemoApp(),
-    adaptiveQuality: true,
-  ));
+      child: const AppleMessagesDemoApp(),
+      adaptiveQuality: true,
+      adaptiveConfig: GlassAdaptiveScopeConfig(debugLogDiagnostics: true)));
 }
 
 class AppleMessagesDemoApp extends StatelessWidget {
@@ -228,7 +245,8 @@ class _MessagesScreenState extends State<_MessagesScreen> {
   }
 
   void _onScroll() {
-    final collapsed = _scrollController.hasClients && _scrollController.offset > 60;
+    final collapsed =
+        _scrollController.hasClients && _scrollController.offset > 60;
     if (collapsed != _headerCollapsed) {
       setState(() => _headerCollapsed = collapsed);
     }
@@ -251,48 +269,78 @@ class _MessagesScreenState extends State<_MessagesScreen> {
 
     return Scaffold(
       backgroundColor: _kBg,
+      extendBody: true,
       body: Stack(
         children: [
-          // ── Conversation list ────────────────────────────────────────────
-          CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              // Status bar space + nav bar height
-              SliverToBoxAdapter(child: SizedBox(height: topPad + 52)),
+          // ── Conversation list with edge fades ─────────────────────────
+          // ShaderMask fades scroll content at both edges using alpha mask —
+          // no clipping artefacts, content fades smoothly into/out of view.
+          ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (Rect bounds) {
+              // Top fade zone: from y=0 to (topPad+52+72) — covers nav bar
+              // + 72px fade into the first rows.
+              // Bottom fade zone: last 96px — fades out into the search bar.
+              final topZone = topPad + 52 + 72;
+              final bottomZone = 120.0 + botPad;
+              return LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: const [
+                  Colors.transparent,
+                  Colors.black,
+                  Colors.black,
+                  Colors.transparent,
+                ],
+                stops: [
+                  0.0,
+                  topZone / bounds.height,
+                  (bounds.height - bottomZone) / bounds.height,
+                  1.0,
+                ],
+              ).createShader(bounds);
+            },
+            child: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                // Status bar space + nav bar height
+                SliverToBoxAdapter(child: SizedBox(height: topPad + 52)),
 
-              // Large "Messages" title (collapses on scroll)
-              SliverToBoxAdapter(
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 200),
-                  opacity: _headerCollapsed ? 0 : 1,
-                  child: const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-                    child: Text(
-                      'Messages',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
+                // Large "Messages" title (collapses on scroll)
+                SliverToBoxAdapter(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: _headerCollapsed ? 0 : 1,
+                    child: const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      child: Text(
+                        'Messages',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
 
-              // Conversation rows
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) => _ConversationRow(
-                    conversation: _kConversations[i],
+                // Conversation rows
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) => _ConversationRow(
+                      conversation: _kConversations[i],
+                    ),
+                    childCount: _kConversations.length,
                   ),
-                  childCount: _kConversations.length,
                 ),
-              ),
 
-              // Bottom padding — clears the search bar
-              SliverToBoxAdapter(child: SizedBox(height: 90 + botPad)),
-            ],
+                // Bottom padding — minimal; content reaches the fade zone.
+                // The _SearchBar ColoredBox covers the safe area visually.
+                SliverToBoxAdapter(child: const SizedBox(height: 8)),
+              ],
+            ),
           ),
 
           // ── Top navigation bar ───────────────────────────────────────────
@@ -397,14 +445,18 @@ class _EditMenu extends StatelessWidget {
       menuWidth: 230,
       glassSettings: _kMenuGlass,
       menuBorderRadius: 16,
-      // Trigger: the "Edit" pill button
-      trigger: GlassButton(
-        onTap: () {}, // GlassMenu handles the tap via triggerBuilder
-        quality: GlassQuality.premium,
-        shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+      quality: GlassQuality.premium,
+      triggerBuilder: (context, toggleMenu) => GlassButton.custom(
+        onTap: toggleMenu,
+        width: 78,
+        height: 34,
+        // True capsule pill — borderRadius = height/2
+        shape: const LiquidRoundedSuperellipse(borderRadius: 17),
         settings: _kTriggerGlass,
-        icon: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        quality: GlassQuality.premium,
+        useOwnLayer: true, // standalone — outside any LiquidGlassLayer
+        stretch: 0.15, // subtle stretch — pill shape doesn't suit big stretches
+        child: const Center(
           child: Text(
             'Edit',
             style: TextStyle(
@@ -419,17 +471,17 @@ class _EditMenu extends StatelessWidget {
       items: [
         GlassMenuItem(
           title: 'Select Messages',
-          icon: CupertinoIcons.checkmark_circle,
+          icon: const Icon(SFSymbols.checkmark_circle),
           onTap: () {},
         ),
         GlassMenuItem(
           title: 'Edit Pins',
-          icon: CupertinoIcons.pin,
+          icon: const Icon(SFSymbols.pin),
           onTap: () {},
         ),
         GlassMenuItem(
           title: 'Set Up Name & Photo',
-          icon: CupertinoIcons.person_crop_circle,
+          icon: const Icon(SFSymbols.person_crop_circle),
           onTap: () {},
         ),
       ],
@@ -456,46 +508,43 @@ class _FilterMenu extends StatelessWidget {
       menuWidth: 240,
       glassSettings: _kMenuGlass,
       menuBorderRadius: 16,
-      // Trigger: the hamburger circle pill
-      trigger: GlassButton(
-        onTap: () {},
-        quality: GlassQuality.premium,
-        shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+      triggerBuilder: (context, toggleMenu) => GlassButton(
+        onTap: toggleMenu,
+        width: 44,
+        height: 44,
+        shape: const LiquidOval(), // 44×44 = perfect circle
         settings: _kTriggerGlass,
-        icon: const Padding(
-          padding: EdgeInsets.all(10),
-          child: Icon(
-            CupertinoIcons.line_horizontal_3,
-            color: Colors.white,
-            size: 20,
-          ),
+        quality: GlassQuality.premium,
+        useOwnLayer: true, // standalone — outside any LiquidGlassLayer
+        stretch: 0.2,
+        icon: const Icon(
+          SFSymbols.line_horizontal_3,
+          color: Colors.white,
+          size: 20,
         ),
       ),
       items: [
         GlassMenuItem(
           title: 'Messages',
-          icon: CupertinoIcons.bubble_left_bubble_right,
+          icon: const Icon(SFSymbols.bubble_left_and_bubble_right),
           trailing: activeFilter == 'Messages'
-              ? const Icon(CupertinoIcons.checkmark,
-                  color: Colors.white, size: 16)
+              ? const Icon(SFSymbols.checkmark, color: Colors.white, size: 16)
               : null,
           onTap: () => onFilterChanged('Messages'),
         ),
         GlassMenuItem(
           title: 'Spam',
-          icon: CupertinoIcons.xmark_bin,
+          icon: const Icon(SFSymbols.xmark_bin),
           trailing: activeFilter == 'Spam'
-              ? const Icon(CupertinoIcons.checkmark,
-                  color: Colors.white, size: 16)
+              ? const Icon(SFSymbols.checkmark, color: Colors.white, size: 16)
               : null,
           onTap: () => onFilterChanged('Spam'),
         ),
         GlassMenuItem(
           title: 'Recently Deleted',
-          icon: CupertinoIcons.trash,
+          icon: const Icon(SFSymbols.trash),
           trailing: activeFilter == 'Recently Deleted'
-              ? const Icon(CupertinoIcons.checkmark,
-                  color: Colors.white, size: 16)
+              ? const Icon(SFSymbols.checkmark, color: Colors.white, size: 16)
               : null,
           onTap: () => onFilterChanged('Recently Deleted'),
         ),
@@ -521,24 +570,40 @@ class _ConversationRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = conversation;
     return GestureDetector(
-      onTap: () {}, // no-op — this is a test fixture
+      onTap: () {},
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding:
+                const EdgeInsets.only(left: 8, right: 16, top: 8, bottom: 8),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Avatar
-                _Avatar(initial: c.initial, isUnread: c.isUnread),
+                // ── Unread dot column (8px wide, left of avatar) ────────────
+                SizedBox(
+                  width: 12,
+                  child: c.isUnread
+                      ? Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: _kBlue,
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 4),
+
+                // ── Avatar ──────────────────────────────────────────────────
+                _Avatar(initial: c.initial),
                 const SizedBox(width: 12),
 
-                // Content
+                // ── Content ─────────────────────────────────────────────────
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Name + time
                       Row(
                         children: [
                           Expanded(
@@ -555,7 +620,7 @@ class _ConversationRow extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Text(
                             c.time,
                             style: TextStyle(
@@ -563,16 +628,15 @@ class _ConversationRow extends StatelessWidget {
                               fontSize: 13,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            CupertinoIcons.chevron_forward,
-                            size: 13,
-                            color: Colors.white.withValues(alpha: 0.3),
+                          const SizedBox(width: 3),
+                          const Icon(
+                            SFSymbols.chevron_right,
+                            size: 12,
+                            color: Colors.white30,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 3),
-                      // Preview
+                      const SizedBox(height: 2),
                       Text(
                         c.hasAttachment ? '📷  ${c.preview}' : c.preview,
                         style: TextStyle(
@@ -589,10 +653,10 @@ class _ConversationRow extends StatelessWidget {
               ],
             ),
           ),
-          // Separator — indented to align with text (not avatar)
-          Padding(
-            padding: const EdgeInsets.only(left: 60),
-            child: Divider(height: 1, color: _kSeparator, thickness: 0.5),
+          // Separator indented past the dot + avatar
+          const Padding(
+            padding: EdgeInsets.only(left: 76),
+            child: Divider(height: 1, color: _kSeparator, thickness: 0.4),
           ),
         ],
       ),
@@ -605,60 +669,39 @@ class _ConversationRow extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({this.initial, required this.isUnread});
+  const _Avatar({this.initial});
   final String? initial;
-  final bool isUnread;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.bottomLeft,
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: _kAvatarBg,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: initial != null
-              ? Text(
-                  initial!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                )
-              : Icon(
-                  CupertinoIcons.person_fill,
-                  color: Colors.white.withValues(alpha: 0.6),
-                  size: 26,
-                ),
-        ),
-        // Unread blue dot
-        if (isUnread)
-          Positioned(
-            left: -6,
-            bottom: 14,
-            child: Container(
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                color: _kBlue,
-                shape: BoxShape.circle,
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: const BoxDecoration(
+        color: _kAvatarBg,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: initial != null
+          ? Text(
+              initial!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
               ),
+            )
+          : const Icon(
+              SFSymbols.person_fill,
+              color: Colors.white60,
+              size: 28,
             ),
-          ),
-      ],
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BOTTOM SEARCH BAR
+// BOTTOM SEARCH + COMPOSE BAR
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SearchBar extends StatelessWidget {
@@ -667,82 +710,68 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      // Frosted glass background behind the search bar
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withValues(alpha: 0),
-            Colors.black.withValues(alpha: 0.95),
-            Colors.black,
-          ],
-          stops: const [0, 0.3, 0.7],
-        ),
-      ),
-      padding: EdgeInsets.fromLTRB(12, 8, 12, bottomPad + 8),
-      child: Row(
-        children: [
-          // Search field
-          Expanded(
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: _kSearchBg,
-                borderRadius: BorderRadius.circular(14),
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ── Search + Compose bar ─────────────────────────────────────────────
+        // AdaptiveLiquidGlassLayer provides the rendering context.
+        // LiquidGlassBlendGroup inside makes the search pill and circle button
+        // liquid-merge when they are close together — matching native iOS 26.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: AdaptiveLiquidGlassLayer(
+            settings: _kSearchGlass,
+            quality: GlassQuality.premium,
+            blendAmount: 20,
+            child: LiquidGlassBlendGroup(
+              blend: 24, // merge radius in logical px
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const SizedBox(width: 10),
-                  Icon(
-                    CupertinoIcons.search,
-                    color: Colors.white.withValues(alpha: 0.45),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Search',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.35),
-                      fontSize: 17,
+                  // Search pill — joins blend group via useOwnLayer: false
+                  Expanded(
+                    child: GlassSearchBar(
+                      placeholder: 'Search',
+                      useOwnLayer: false,
+                      settings: _kSearchGlass,
+                      quality: GlassQuality.premium,
+                      showsCancelButton: true,
+                      height: 44,
+                      onChanged: (_) {},
+                      onCancel: () {},
                     ),
                   ),
-                  const Spacer(),
-                  Icon(
-                    CupertinoIcons.mic,
-                    color: Colors.white.withValues(alpha: 0.45),
-                    size: 18,
+                  const SizedBox(width: 8),
+
+                  // Compose circle — same blend group, liquid-merges with pill
+                  GlassButton(
+                    onTap: () {},
+                    width: 44,
+                    height: 44,
+                    shape: const LiquidOval(), // 44×44 = perfect circle
+                    settings: _kSearchGlass,
+                    quality: GlassQuality.premium,
+                    useOwnLayer: false, // joins blend group
+                    stretch: 0.15,
+                    icon: const Icon(
+                      SFSymbols.square_and_pencil,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
-                  const SizedBox(width: 12),
                 ],
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          // Compose button
-          GlassButton(
-            onTap: () {},
-            quality: GlassQuality.premium,
-            shape: const LiquidRoundedSuperellipse(borderRadius: 22),
-            settings: const LiquidGlassSettings(
-              glassColor: Color(0xBB1C1C1E),
-              thickness: 28,
-              blur: 12,
-              lightIntensity: 0.3,
-              chromaticAberration: 0.008,
-            ),
-            icon: const Padding(
-              padding: EdgeInsets.all(10),
-              child: Icon(
-                CupertinoIcons.square_pencil,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
+        ),
+
+        // ── Safe-area fill: solid black below the glass row ─────────────────
+        if (bottomPad > 0)
+          ColoredBox(
+            color: Colors.black,
+            child: SizedBox(height: bottomPad, width: double.infinity),
           ),
-        ],
-      ),
+      ],
     );
   }
 }

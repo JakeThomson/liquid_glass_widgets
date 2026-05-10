@@ -39,28 +39,32 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
   // ─── iOS 26 Spring Physics ────────────────────────────────────────────────
   //
-  // Two separate springs for open vs close, matching native UIKit spring behaviour:
+  // OPEN — fast and clean (ζ≈0.69): no bounce, ~0.28s settle.
+  //   Teardrop forms quickly, content reveals smoothly.
+  //   ω₀ = √360 ≈ 19.0 rad/s
+  //   ζ  = 26 / (2×19.0) ≈ 0.68 — slightly underdamped, clean settle
   //
-  // OPEN — "bouncy" underdamped spring (damping ratio ≈ 0.71)
-  //   stiffness: 320, damping: 18  →  ~10% overshoot on settle
-  //   This gives the characteristic iOS 26 "squishy" feel where the menu
-  //   slightly overshoots its final size before settling. The overshoot is
-  //   subtle (not cartoonish) — similar to UISpringTimingParameters on iOS.
-  //
-  // CLOSE — faster overdamped spring (damping ratio ≈ 1.01)
-  //   stiffness: 380, damping: 39  →  no bounce, fast clean dismiss
-  //   Native iOS context menus close quickly without bouncing back; the fast
-  //   settle reinforces the "tap resolves instantly" feel.
+  // CLOSE — HEAVILY UNDERDAMPED (ζ≈0.32): strong rubber-band physics.
+  //   rawValue oscillates: 1.0 → 0.0 → −0.34 → 0.0 → +0.11 → settles.
+  //   Blob squeezes visibly below button size then bounces back — liquid splash.
+  //   Overlay stays visible through all bounces via velocity guard on hide.
+  //   ω₀ = √350 ≈ 18.7 rad/s → response ≈ 0.34s
+  //   ζ  = 12 / (2×18.7) ≈ 0.32 — heavily underdamped: multi-bounce visible
   static const _openSpring = SpringDescription(
     mass: 1.0,
-    stiffness: 320.0, // Slightly stiffer for quick response
-    damping: 18.0, // Underdamped → ~10% overshoot for squishy feel
+    stiffness: 360.0, // response ≈ 0.28s — fast, clean open
+    damping: 26.0,    // ζ ≈ 0.69 — near-critically-damped, no bounce on open
   );
 
+  // CLOSE — heavily underdamped (ζ≈0.32).
+  // rawValue trajectory: 1.0 → ~0 (first cross) → −0.34 → ~0 → +0.11 → settle.
+  // Blob squeezes to ~81% of button size at first undershoot, pops back out.
+  // AnimationController.unbounded handles negative rawValue.
+  // Overlay hides ONLY when settled — see velocity guard in initState.
   static const _closeSpring = SpringDescription(
     mass: 1.0,
-    stiffness: 380.0, // Faster close
-    damping: 39.0, // Critically-damped → clean dismiss, no bounce
+    stiffness: 350.0, // response ≈ 0.34s — fast collapse with bouncing
+    damping: 12.0,    // ζ ≈ 0.32 — HEAVILY underdamped: strong rubber band
   );
 
   Alignment _morphAlignment = Alignment.topLeft;
@@ -70,12 +74,15 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     super.initState();
     _animationController = AnimationController.unbounded(vsync: this);
     _animationController.addListener(() {
-      // Rebuild on each spring physics tick
       if (mounted) setState(() {});
 
-      // Auto-hide when spring settles back to closed state
+      // Hide overlay only when the spring has FULLY SETTLED near 0.
+      // Velocity guard prevents premature hiding on first zero-crossing
+      // during the underdamped close bounce — without this, the overlay
+      // disappears at ~165ms and the rubber-band bounces are never seen.
       if (_overlayController.isShowing &&
           _animationController.value <= 0.001 &&
+          _animationController.velocity.abs() < 0.5 &&
           _animationController.status != AnimationStatus.forward) {
         _overlayController.hide();
       }
@@ -96,20 +103,21 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    // iOS 26: Button hides early (0.05) to avoid z-fighting with the morphing glass.
-    final isButtonVisible =
-        !(_overlayController.isShowing && _animationController.value > 0.05);
+    final rawValue = _animationController.value;
 
-    // Interaction lock: Only block taps when the menu is significantly open (>80%).
-    // This eliminates the "dead zone" where the menu is closing but the button is still ignoring taps.
-    final isMenuBlocking =
-        _overlayController.isShowing && _animationController.value > 0.8;
+    // The blob IS the button from frame 0 — same position, same shape,
+    // fully opaque. We hide the underlying trigger whenever the overlay is
+    // open so it doesn't double-render underneath the morphing blob.
+    final isButtonVisible = !_overlayController.isShowing;
+
+    // Block trigger taps while menu is significantly open.
+    final isMenuBlocking = _overlayController.isShowing && rawValue > 0.8;
 
     return CompositedTransformTarget(
       link: _layerLink,
       child: Stack(
         children: [
-          // Original trigger button
+          // Trigger — hidden while blob is the visual stand-in.
           Opacity(
             opacity: isButtonVisible ? 1.0 : 0.0,
             child: IgnorePointer(
@@ -202,9 +210,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     }
 
     _overlayController.show();
-    // Open with a slight upward velocity hint (positive = toward open) so the
-    // spring feels like it launches from the button rather than starting from rest.
-    _runSpring(1.0, velocityHint: 2.5);
+    // No velocity hint: overdamped spring starts from rest for a clean,
+    // smooth teardrop expansion with no artificial kick.
+    _runSpring(1.0, velocityHint: 0.0);
   }
 
   void _closeMenu() {
@@ -212,9 +220,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       _hoveredIndex = null;
       _isDragging = false;
     });
-    // Close with a downward velocity hint so the dismiss feels immediate and
-    // snappy — matching native UIKit context menu dismissal behaviour.
-    _runSpring(0.0, velocityHint: -3.0);
+    // Strong initial kick: immediately drives the blob into fast collapse,
+    // maximising the visible rubber-band bounce amplitude at the end.
+    _runSpring(0.0, velocityHint: -2.5);
   }
 
   Widget _buildMorphingOverlay(BuildContext context) {
@@ -259,25 +267,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     );
   }
 
-  /// Calculates the vertical "swoop" offset for iOS 26 liquid glass morphing.
-  ///
-  /// Uses an asymmetric parabola with the peak shifted to t=0.4 (front-loaded)
-  /// so the liquid "droop" is more pronounced at the start of the open animation
-  /// and resolves before the content fades in.  The 8px amplitude gives a more
-  /// convincing liquid-drop feel without looking like a bounce.
-  ///
-  /// Opening:  t goes 0 → 1  (peak at t≈0.4, then swoops back to 0)
-  /// Closing:  t goes 1 → 0  (same curve, naturally front-loaded on dismiss)
+  /// Parabolic downward swoop — blob physically drops during the teardrop
+  /// phase then rises back to its anchor. 14px amplitude makes the drop
+  /// clearly visible before the menu settles into its rectangle shape.
   double _calculateSwoopOffset(double t) {
-    // Asymmetric parabola: peak shifted to t=0.4
-    // Formula: -A*(t - peak)^2 + peak^2*A, normalised so f(0)=0, f(1)=0
-    // Simplified: use (t)(1-t) scaled so the peak is near 0.4
-    // We achieve front-loading by weighting t less on the back half:
-    //   curve(t) = 4 * t * (1 - t) * (1 + 0.4 * (0.5 - t))
-    // This gives peak ≈ 0.40, value ≈ 1.02 at that point, zero at 0 and 1.
-    final base = 4.0 * t * (1.0 - t);
-    final skew = 1.0 + 0.4 * (0.5 - t); // Push peak toward t=0.4
-    return base * skew * 8.0; // 8px amplitude — more liquid, still tasteful
+    return 4.0 * t * (1.0 - t) * 14.0; // 14px max drop, peak at t=0.5
   }
 
   /// Calculates the total height of the menu content.
@@ -304,44 +298,136 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       widgetQuality: widget.quality,
     );
 
+    // Raw (unclamped) value — drives overshoot/undershoot scale and opacity.
+    // Can exceed 1.0 (open overshoot) or go below 0.0 (close undershoot bounce).
+    final rawValue = _animationController.value;
+
     // Calculate menu height by measuring its natural size
     // This is necessary for proper height interpolation during morph
     final menuHeight = _calculateMenuHeight();
 
-    // iOS 26: Width always interpolates smoothly throughout animation
-    // Height goes natural at 85% to prevent any overflow from content
-    final currentWidth =
-        lerpDouble(_triggerSize!.width, widget.menuWidth, value)!;
+    // ─── iOS 26 Liquid Drop Morph Curves ──────────────────────────────────────
+    //
+    // Frame-by-frame analysis of native iOS 26 Photos app (30fps):
+    //
+    // OPEN (frames 43→47, ~130ms):
+    //   Early frames show a blob that is taller than wide → HEIGHT LEADS.
+    //   Frame 43 is clearly taller than wide (teardrop falling downward).
+    //   → HEIGHT uses easeOutCubic (front-loaded, drops down fast)
+    //   → WIDTH uses easeInOutCubic (surface tension holds; releases mid-morph)
+    //   → High border-radius makes the narrow-tall shape look like a droplet.
+    //
+    // CLOSE (frames 91→95, ~100ms):
+    //   Frames 92→93 are clearly taller than wide → WIDTH collapses first.
+    //   → WIDTH uses easeInCubic (collapses fast to button width)
+    //   → HEIGHT uses easeInOutCubic (lingers, creating the narrow tall pill)
+    //   → This makes the droplet look like it's being sucked back upward.
 
     final targetHeight = widget.menuHeight ?? menuHeight;
-    final currentHeight = value < 0.85
-        ? lerpDouble(_triggerSize!.height, targetHeight, value)!
-        : widget.menuHeight; // Natural height (null) or fixed height
+    final isClosing = _animationController.velocity <= 0;
 
-    // Interpolate border radius: circular button -> rounded menu
-    final currentBorderRadius = lerpDouble(
-      _triggerBorderRadius ?? 16.0,
-      widget.menuBorderRadius,
-      value,
-    )!;
+    double heightT;
+    double widthT;
 
-    // ─── iOS 26 Crossfade Timing ─────────────────────────────────────────────
-    // Glass container opacity: fades in during 0→0.3 so there is never an
-    // "empty glowing blob" visible as the menu collapses to the button.
-    final containerOpacity = (value / 0.3).clamp(0.0, 1.0);
+    if (!isClosing) {
+      // OPEN: height races ahead (easeOutQuart — very front-loaded),
+      // width is held back (easeInQuart — barely moves until t>0.7).
+      // At t=0.4: height≈76%, width≈2.6% → pronounced water-droplet shape.
+      // At t=0.7: height≈99%, width≈24% → long narrow teardrop before widening.
+      heightT = Curves.easeOutQuart.transform(value);
+      widthT = Curves.easeInQuart.transform(value);
+    } else {
+      // CLOSE: width collapses ultra-fast (easeInQuart),
+      // height lingers (easeInCubic) → narrow vertical pill before final snap.
+      widthT = Curves.easeInQuart.transform(value);
+      heightT = Curves.easeInCubic.transform(value);
+    }
 
-    // ─── iOS 26 Morph-Container Scale Pulse ──────────────────────────────────
-    // Native UIKit context menus do a subtle scale overshoot on the container
-    // itself as the spring settles: 1.0 → ~1.018 → 1.0.
-    // We derive this from the raw (unclamped) animation value so that the
-    // spring overshoot (which can briefly exceed 1.0) directly drives the
-    // scale, giving it a perfectly physics-synchronised feel.
-    final rawValue = _animationController.value;
-    // Scale pulse: grows slightly beyond 1.0 when rawValue > 1.0 (overshoot),
-    // then settles back.  Clamped below 1 so it never shrinks during open.
+    final currentHeight = value < 0.92
+        ? lerpDouble(_triggerSize!.height, targetHeight, heightT)!
+        : widget.menuHeight; // Let content breathe at full open
+
+    final currentWidth =
+        lerpDouble(_triggerSize!.width, widget.menuWidth, widthT)!;
+
+    // ─── Asymmetric Teardrop Border Radii ────────────────────────────────────────
+    //
+    // The water-droplet teardrop shape requires DIFFERENT radii top vs bottom:
+    //
+    //   TOP corners: large radius (close to buttonRadius) — stays round and
+    //     narrow like the button for most of the animation. Visually the top
+    //     of the blob looks narrow/pinched (like the neck of a hanging droplet).
+    //
+    //   BOTTOM corners: smaller radius (transitions to menuRadius faster) —
+    //     the bottom becomes flatter/wider-looking earlier, giving the shape
+    //     the classic "bulge at the bottom" of a falling water droplet.
+    //
+    // At t=0.4 during open:
+    //   topRadius ≈ buttonR (very round, narrow-looking top)
+    //   bottomRadius ≈ menuR (squarer, wider-looking bottom)
+    //   height ≈ 76% of menu height (tall)
+    //   width ≈ 2.6% of menu width (narrow)
+    //   → Result: a tall narrow shape, round at top, squarer at bottom = droplet
+    final triggerR = _triggerBorderRadius ?? 16.0;
+    // Top stays at buttonR until late (cubic easing — very slow to leave buttonR)
+    final topRadius = lerpDouble(triggerR, widget.menuBorderRadius,
+        math.pow(value, 3.0).toDouble())!;
+    // Bottom transitions faster (linear — immediately starts moving toward menuR)
+    final bottomRadius = lerpDouble(triggerR, widget.menuBorderRadius, value)!;
+    // Add sinusoidal boost at midpoint for extra organic roundness
+    final radiusBoost = 8.0 * math.sin(math.pi * value);
+    final effectiveTopRadius = topRadius + radiusBoost;
+    final effectiveBottomRadius = bottomRadius;
+
+    // Build the asymmetric teardrop shape
+    final teardropShape = LiquidVerticalRoundedSuperellipse(
+      topRadius: effectiveTopRadius,
+      bottomRadius: effectiveBottomRadius,
+    );
+
+
+    // ─── Jelly / Squash-and-Stretch ─────────────────────────────────────────
+    //
+    // Driven by the spring's own instantaneous velocity — same physics as the
+    // LiquidStretch bottom bar. High velocity → stretch in direction of travel.
+    // Low velocity (settling) → squash back. Creates rubber-band feel.
+    //
+    // OPEN (positive velocity):
+    //   • Height stretches TALLER (+45% of jelly) — falling-drop elongation
+    //   • Width squashes NARROWER (−30% of jelly) — surface tension hold
+    //
+    // CLOSE (negative velocity → jelly is negative):
+    //   • Height squashes shorter  → (-jelly)*stretch so it gets taller again? No:
+    //     jellyHeight = h * (1.0 + jelly*0.45) — jelly<0 → shorter on close ✓
+    //   • Width bulges wider:
+    //     jellyWidth = w * (1.0 - jelly*0.30) — jelly<0 → +term → wider ✓
+    //     Creates the bottom-heavy splash as the droplet collapses.
+    //
+    // Coefficient 0.022 — at peak close velocity (~−14 units/s): jelly≈−0.22,
+    // clamped to −0.22. Width bulges ×1.066. Height squashes ×0.90.
+    final rawVelocity = _animationController.velocity;
+    final jelly = (rawVelocity * 0.022).clamp(-0.22, 0.22);
+
+    // Squash-and-stretch (area approximately conserved: 1.10 × 0.934 ≈ 1.03)
+    final jellyWidth = currentWidth * (1.0 - jelly * 0.30);
+    final jellyHeight =
+        currentHeight != null ? currentHeight * (1.0 + jelly * 0.45) : null;
+
+
+
+    // ─── Container Scale Pulse ───────────────────────────────────────────────
+    //
+    // Open overshoot (rawValue > 1.0): not triggered — spring is overdamped.
+    //
+    // Close undershoot (rawValue < 0.0): blob squeezes visibly BELOW button
+    //   size. Factor 0.55 means at rawValue=-0.34: scale = 1 - 0.34*0.55 = 0.81.
+    //   Blob squeezes to 81% of button size. On second bounce (rawValue=+0.11):
+    //   value=0.11, blob briefly expands toward menu size — genuine rubber band.
     final containerScale = rawValue > 1.0
-        ? 1.0 + (rawValue - 1.0) * 0.18 // Amplify overshoot by 18% → ~1.018 max
-        : 1.0;
+        ? 1.0 + (rawValue - 1.0) * 0.10   // open overshoot (overdamped, won't fire)
+        : rawValue < 0.0
+            ? 1.0 + rawValue * 0.55        // close undershoot → strong squeeze
+            : 1.0;
 
     // ─── Item Stagger ─────────────────────────────────────────────────────────
     // Pre-compute per-item stagger offsets (used in _buildMorphingContainer
@@ -385,9 +471,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         quality: effectiveQuality,
         allowElevation:
             false, // Menu is overlay - don't darken when outside parent
-        width: currentWidth,
-        height: currentHeight, // Constrained during morph, natural when open
-        shape: LiquidRoundedSuperellipse(borderRadius: currentBorderRadius),
+        width: jellyWidth,
+        height: jellyHeight, // Constrained during morph, natural when open
+        shape: teardropShape,
         clipBehavior:
             Clip.antiAlias, // Clip items at the edges for edge-to-edge feel
         glowIntensity: widget.glowIntensity,
@@ -398,7 +484,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
           glowRadius: widget.glowRadius,
           glowBlurRadius: 40,
           clipper: ShapeBorderClipper(
-            shape: LiquidRoundedSuperellipse(borderRadius: currentBorderRadius),
+            shape: teardropShape,
           ),
           child: Transform.scale(
             scale: containerScale,
@@ -408,8 +494,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               clipBehavior:
                   Clip.none, // Prevent double-clip artifacts during stretch
               children: [
-                // Menu content - waits for container to be nearly full width
-                if (value > 0.85)
+                // Menu content — only appears when container is nearly at
+                // full size (0.94+), so the teardrop morph is fully visible
+                // first. Items stagger in rapidly in the last 6% of animation.
+                if (value > 0.94)
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -512,8 +600,19 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                                       .asMap()
                                       .entries
                                       .expand((entry) {
-                                    final staggerStart = 0.70 + entry.key * 0.04;
-                                    final staggerEnd = (staggerStart + 0.20)
+                                    // Center-out stagger: items in the
+                                    // MIDDLE of the menu appear first, then
+                                    // top and bottom items fade in together.
+                                    // Creates the "reveal upward AND downward"
+                                    // splash effect from the drop center.
+                                    final itemCount = widget.items.length;
+                                    final midPoint = (itemCount - 1) / 2.0;
+                                    final distFromCenter = midPoint == 0
+                                        ? 0.0
+                                        : ((entry.key.toDouble() - midPoint) / midPoint).abs();
+                                    // Center items at 0.94, edge items at 0.985
+                                    final staggerStart = 0.94 + distFromCenter * 0.045;
+                                    final staggerEnd = (staggerStart + 0.06)
                                         .clamp(0.0, 1.0);
                                     final itemOpacity = ((value - staggerStart) /
                                             (staggerEnd - staggerStart))
@@ -543,9 +642,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       ), // GlassContainer
     ); // LiquidStretch (glassContent)
 
-    return containerOpacity >= 1.0
-        ? glassContent
-        : Opacity(opacity: containerOpacity, child: glassContent);
+    // The blob is always fully opaque — shape morph is the only animation.
+    return glassContent;
   }
 
   List<Widget> _buildWrappedItems() {
