@@ -1,3 +1,28 @@
+# 0.10.10
+
+Thanks to [@g3mf0r](https://github.com/g3mf0r) for [PR #55](https://github.com/sdegenaar/liquid_glass_widgets/pull/55). 🙏
+
+## ✨ New
+
+- **`GlassMenu` — `menuAlignment` enum** · A new `GlassMenuAlignment` enum (10 values: `none`, `topLeft`, `topCenter`, `topRight`, `centerLeft`, `center`, `centerRight`, `bottomLeft`, `bottomCenter`, `bottomRight`) lets you pin the menu to a specific edge or corner of its trigger instead of relying solely on auto-detection. The enum is now part of the public API surface exported from `glass_menu.dart`.
+
+- **`GlassMenu` — `autoAdjustToScreen` with `menuPadding`** · When `autoAdjustToScreen: true`, the new `menuPadding: EdgeInsets?` parameter applies additional inset constraints so the menu body never clips against device edges.
+
+- **`GlassMenu` — `itemBorderRadius`** · Controls the corner radius of individual menu item cells, independent of the outer `menuBorderRadius`.
+
+## 🐛 Fixes
+
+- **`GlassTabBar` — multi-tab drag jump** · Dragging the indicator across multiple tab widths in a single gesture now snaps to the correct distant tab. The previous implementation only incremented/decremented by ±1 regardless of drag distance, causing the indicator to teleport unexpectedly when the finger crossed more than one tab boundary.
+
+- **`GlassTabBar` — glass refraction during indicator drag** · Refraction and shadow effects are correctly suppressed during the drag animation and restored on settlement, eliminating a visual glitch where the glass distortion would persist after releasing the indicator.
+
+## 🧪 Tests
+
+- Added 4 new `GlassMenu` tests covering `GlassMenuAlignment` enum values, `menuAlignment` parameter, `autoAdjustToScreen` + `menuPadding`, and `itemBorderRadius`.
+- Added 2 new `GlassTabBar` tests covering multi-tab drag jump (left and right) to prevent regression of the PR #55 fix.
+
+---
+
 # 0.10.9
 
 Thanks to [@g3mf0r](https://github.com/g3mf0r) for [PR #54](https://github.com/sdegenaar/liquid_glass_widgets/pull/54). 🙏

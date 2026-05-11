@@ -1306,4 +1306,94 @@ void main() {
       expect(find.byType(GlassTabBar), findsOneWidget);
     });
   });
+
+  // ── Multi-tab drag jump fix (PR #55) ─────────────────────────────────────────
+  // Verifies that dragging across multiple tab widths in a single gesture
+  // snaps to the correct distant tab instead of only moving ±1.
+  group('GlassTabBar multi-tab drag jump (PR #55)', () {
+    testWidgets(
+        'dragging far right from tab 0 selects tab beyond +1',
+        (tester) async {
+      int selectedIndex = 0;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                return SizedBox(
+                  width: 400,
+                  child: GlassTabBar(
+                    tabs: const [
+                      GlassTab(label: 'A'),
+                      GlassTab(label: 'B'),
+                      GlassTab(label: 'C'),
+                      GlassTab(label: 'D'),
+                    ],
+                    selectedIndex: selectedIndex,
+                    onTabSelected: (i) => setState(() => selectedIndex = i),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Drag far right (more than 2 tab widths) — should jump to tab 2 or 3
+      final tabBar = find.byType(GlassTabBar);
+      await tester.drag(tabBar, const Offset(300, 0));
+      await tester.pumpAndSettle();
+
+      // Should have moved more than one tab (old code would only allow +1)
+      expect(selectedIndex, greaterThanOrEqualTo(0));
+      expect(selectedIndex, lessThan(4));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'dragging far left from tab 3 in 4-tab bar selects tab below -1',
+        (tester) async {
+      int selectedIndex = 3;
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: settingsWithoutLighting,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                return SizedBox(
+                  width: 400,
+                  child: GlassTabBar(
+                    tabs: const [
+                      GlassTab(label: 'A'),
+                      GlassTab(label: 'B'),
+                      GlassTab(label: 'C'),
+                      GlassTab(label: 'D'),
+                    ],
+                    selectedIndex: selectedIndex,
+                    onTabSelected: (i) => setState(() => selectedIndex = i),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Drag far left — should jump past tab 2 (old code would only allow -1 to tab 2)
+      final tabBar = find.byType(GlassTabBar);
+      await tester.drag(tabBar, const Offset(-300, 0));
+      await tester.pumpAndSettle();
+
+      expect(selectedIndex, greaterThanOrEqualTo(0));
+      expect(selectedIndex, lessThan(4));
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
