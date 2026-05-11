@@ -8,6 +8,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   late final ScrollController _scrollController;
   Size? _triggerSize;
   double? _triggerBorderRadius;
+  Offset _triggerGlobalPosition = Offset.zero; // captured in _openMenu
   int? _hoveredIndex;
   bool _isDragging = false;
   bool _hasStretched =
@@ -50,21 +51,17 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   //   Overlay stays visible through all bounces via velocity guard on hide.
   //   ω₀ = √350 ≈ 18.7 rad/s → response ≈ 0.34s
   //   ζ  = 12 / (2×18.7) ≈ 0.32 — heavily underdamped: multi-bounce visible
+  // SLOW-MOTION DIAGNOSTIC — restore to stiffness: 360/350, damping: 26/12 after validation
   static const _openSpring = SpringDescription(
     mass: 1.0,
-    stiffness: 360.0, // response ≈ 0.28s — fast, clean open
-    damping: 26.0,    // ζ ≈ 0.69 — near-critically-damped, no bounce on open
+    stiffness: 30.0,  // ← SLOW (normal: 360.0)
+    damping: 8.0,     // ← underdamped so bounce is visible
   );
 
-  // CLOSE — heavily underdamped (ζ≈0.32).
-  // rawValue trajectory: 1.0 → ~0 (first cross) → −0.34 → ~0 → +0.11 → settle.
-  // Blob squeezes to ~81% of button size at first undershoot, pops back out.
-  // AnimationController.unbounded handles negative rawValue.
-  // Overlay hides ONLY when settled — see velocity guard in initState.
   static const _closeSpring = SpringDescription(
     mass: 1.0,
-    stiffness: 350.0, // response ≈ 0.34s — fast collapse with bouncing
-    damping: 12.0,    // ζ ≈ 0.32 — HEAVILY underdamped: strong rubber band
+    stiffness: 25.0,  // ← SLOW (normal: 350.0)
+    damping: 6.0,     // ← heavily underdamped: rubber-band snap visible
   );
 
   Alignment _morphAlignment = Alignment.topLeft;
@@ -177,10 +174,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
     _triggerSize = renderBox.size;
     _triggerBorderRadius = _triggerSize!.height / 2;
-
-    // Determine alignment based on screen position
-    // This ensures menu doesn't overflow screen edges
-    final position = renderBox.localToGlobal(Offset.zero);
+    _triggerGlobalPosition = renderBox.localToGlobal(Offset.zero); // store for overlay
+    final position = _triggerGlobalPosition;
     final mediaQuery = MediaQuery.maybeOf(context);
     final screenWidth = mediaQuery?.size.width ?? double.infinity;
     final screenHeight = mediaQuery?.size.height ?? double.infinity;
@@ -228,50 +223,152 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   Widget _buildMorphingOverlay(BuildContext context) {
     if (_triggerSize == null) return const SizedBox.shrink();
 
-    // Clamp animation value to prevent overshoot artifacts
     final value = _animationController.value.clamp(0.0, 1.0);
+
+    final isUp = _morphAlignment.y > 0; // bottomLeft/Right → opens upward
+    final isRight = _morphAlignment.x > 0; // right-side trigger
+
+    final tw = _triggerSize!.width;
+    final th = _triggerSize!.height;
+    final menuWidth = widget.menuWidth.toDouble();
+    final menuHeight = _calculateMenuHeight();
+
+    // The destination of the menu center relative to the trigger center.
+    // By setting dyMag to exactly (menuHeight - th) / 2.0, the final menu 
+    // will perfectly align its top edge with the trigger's top edge, effectively
+    // "covering" the faded out menu button.
+    final dxMag = (menuWidth - tw) / 2.0;
+    final dyMag = (menuHeight - th) / 2.0;
+    final finalDx = isRight ? -dxMag : dxMag;
+    final finalDy = isUp ? -dyMag : dyMag;
+
+    // ─── Liquid Physics Interpolation ─────────────────────────────────────────
+    //
+    // The true iOS droplet effect uses independent curves for its trajectory (path)
+    // and its scale (size).
+    //
+    // OPEN: Center drops fast (easeOut), size expands slow (easeInOut).
+    // Result: A small, roundish blob drops down and left, and THEN expands UP 
+    // and right to cover the button space.
+    //
+    // CLOSE: Center lingers at bottom (easeOut), size collapses fast (easeIn).
+    // Result: Menu shrinks top and bottom into a blob, then shoots UP to the button.
+    final isClosing = _animationController.velocity <= 0;
+    double pathT;
+    double sizeT;
+
+    if (!isClosing) {
+      pathT = Curves.easeOutQuart.transform(value);
+      sizeT = Curves.easeInOutQuart.transform(value);
+    } else {
+      pathT = Curves.easeOutQuart.transform(value);
+      sizeT = Curves.easeInQuart.transform(value);
+    }
+
+    final currentDx = finalDx * pathT;
+    final currentDy = finalDy * pathT;
+
+    // Scale for Blob A (trigger ghost) to shrink it down to 0 over the first half
+    // This allows the tail of the teardrop to detach smoothly.
+    final blobAScale = (1.0 - (value * 2.0)).clamp(0.0, 1.0);
+    final blobAEase = Curves.easeOutCubic.transform(blobAScale);
+
+    final inheritedSettings = InheritedLiquidGlass.of(context);
+    final effectiveSettings = widget.glassSettings ??
+        inheritedSettings ??
+        const LiquidGlassSettings(
+          blur: 10,
+          thickness: 10,
+          glassColor: Color.fromRGBO(255, 255, 255, 0.12),
+          lightAngle: GlassDefaults.lightAngle,
+          lightIntensity: 0.7,
+          ambientStrength: 0.4,
+          saturation: 1.2,
+          refractiveIndex: 0.7,
+          chromaticAberration: 0.0,
+        );
+
+    final effectiveQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: widget.quality,
+    );
 
     return Stack(
       children: [
-        // Backdrop barrier (only active when menu is significantly open)
+        // Invisible full-screen tap-to-close barrier
         if (value > 0.3)
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: _closeMenu,
-              child: Container(
-                color: Colors.black
-                    .withValues(alpha: 0.0), // Invisible but tappable
-              ),
+              child: Container(color: Colors.black.withValues(alpha: 0.0)),
             ),
           ),
 
-        // Morphing glass container
-        CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          // anchor based on calculated alignment
-          targetAnchor: _morphAlignment,
-          followerAnchor: _morphAlignment,
-          // iOS 26 "liquid swoop" offset:
-          // - Parabolic curve creates smooth, gravity-like arc
-          // - Subtle 5px vertical displacement at peak (t=0.5)
-          // - Seamless in both directions (opening and closing)
-          offset: Offset(0, _calculateSwoopOffset(value)),
-          child: IgnorePointer(
-            ignoring: value < 0.8,
-            child: _buildMorphingContainer(value),
+        // ── Two-Blob Metaball Morphing ───────────────────────────────────────
+        //
+        // We use LiquidGlassLayer at the root to create the transparent blend group.
+        // Inside it, we use two CompositedTransformFollowers, BOTH anchored to the
+        // trigger's center. This avoids manual coordinate math and prevents pixel drift.
+        Positioned.fill(
+          child: LiquidGlassLayer(
+            settings: effectiveSettings,
+            child: InheritedLiquidGlass(
+              settings: effectiveSettings,
+              quality: effectiveQuality,
+              isBlurProvidedByAncestor: false,
+              child: LiquidGlassBlendGroup(
+                blend: 28.0,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // ── Blob A: Trigger Ghost ───────────────────────────────
+                    // Stays perfectly centered on the trigger.
+                    // Shrinks to 0 scale over the first 50% of the animation to
+                    // smoothly break the liquid bridge.
+                    CompositedTransformFollower(
+                      link: _layerLink,
+                      showWhenUnlinked: false,
+                      targetAnchor: Alignment.center,
+                      followerAnchor: Alignment.center,
+                      child: Transform.scale(
+                        scale: blobAEase,
+                        child: GlassContainer(
+                          useOwnLayer: false,
+                          settings: effectiveSettings,
+                          quality: effectiveQuality,
+                          width: tw,
+                          height: th,
+                          shape: LiquidRoundedSuperellipse(
+                            borderRadius: _triggerBorderRadius ?? th / 2,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // ── Blob B: Menu Body ───────────────────────────────────
+                    // Its center travels diagonally relative to the trigger.
+                    // By scaling the x/y offsets with the width/height curves,
+                    // its edges stay perfectly pinned while it grows!
+                    CompositedTransformFollower(
+                      link: _layerLink,
+                      showWhenUnlinked: false,
+                      targetAnchor: Alignment.center,
+                      followerAnchor: Alignment.center,
+                      offset: Offset(currentDx, currentDy),
+                      child: IgnorePointer(
+                        ignoring: value < 0.8,
+                        child: _buildMorphingContainer(value, sizeT),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ],
     );
-  }
-
-  /// Parabolic downward swoop — blob physically drops during the teardrop
-  /// phase then rises back to its anchor. 14px amplitude makes the drop
-  /// clearly visible before the menu settles into its rectangle shape.
-  double _calculateSwoopOffset(double t) {
-    return 4.0 * t * (1.0 - t) * 14.0; // 14px max drop, peak at t=0.5
   }
 
   /// Calculates the total height of the menu content.
@@ -291,7 +388,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     return itemHeights + 24.0 + gaps;
   }
 
-  Widget _buildMorphingContainer(double value) {
+  Widget _buildMorphingContainer(double value, double sizeT) {
     // Inherit quality from parent layer if not explicitly set
     final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,
@@ -306,123 +403,42 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // This is necessary for proper height interpolation during morph
     final menuHeight = _calculateMenuHeight();
 
-    // ─── iOS 26 Liquid Drop Morph Curves ──────────────────────────────────────
+    // ─── True Metaball Morphing ──────────────────────────────────────────────
     //
-    // Frame-by-frame analysis of native iOS 26 Photos app (30fps):
+    // By using the pure spring value for both width and height, the menu container
+    // expands uniformly while moving diagonally. This is the SECRET to the native
+    // iOS liquid teardrop. The metaball shader naturally creates the bulbous bottom
+    // and the pinched neck connecting back to the trigger.
     //
-    // OPEN (frames 43→47, ~130ms):
-    //   Early frames show a blob that is taller than wide → HEIGHT LEADS.
-    //   Frame 43 is clearly taller than wide (teardrop falling downward).
-    //   → HEIGHT uses easeOutCubic (front-loaded, drops down fast)
-    //   → WIDTH uses easeInOutCubic (surface tension holds; releases mid-morph)
-    //   → High border-radius makes the narrow-tall shape look like a droplet.
-    //
-    // CLOSE (frames 91→95, ~100ms):
-    //   Frames 92→93 are clearly taller than wide → WIDTH collapses first.
-    //   → WIDTH uses easeInCubic (collapses fast to button width)
-    //   → HEIGHT uses easeInOutCubic (lingers, creating the narrow tall pill)
-    //   → This makes the droplet look like it's being sucked back upward.
+    // No more faking the shape with tall, thin rectangles! Let the shader do the work.
 
     final targetHeight = widget.menuHeight ?? menuHeight;
-    final isClosing = _animationController.velocity <= 0;
-
-    double heightT;
-    double widthT;
-
-    if (!isClosing) {
-      // OPEN: height races ahead (easeOutQuart — very front-loaded),
-      // width is held back (easeInQuart — barely moves until t>0.7).
-      // At t=0.4: height≈76%, width≈2.6% → pronounced water-droplet shape.
-      // At t=0.7: height≈99%, width≈24% → long narrow teardrop before widening.
-      heightT = Curves.easeOutQuart.transform(value);
-      widthT = Curves.easeInQuart.transform(value);
-    } else {
-      // CLOSE: width collapses ultra-fast (easeInQuart),
-      // height lingers (easeInCubic) → narrow vertical pill before final snap.
-      widthT = Curves.easeInQuart.transform(value);
-      heightT = Curves.easeInCubic.transform(value);
-    }
 
     final currentHeight = value < 0.92
-        ? lerpDouble(_triggerSize!.height, targetHeight, heightT)!
+        ? lerpDouble(_triggerSize!.height, targetHeight, sizeT)!
         : widget.menuHeight; // Let content breathe at full open
 
     final currentWidth =
-        lerpDouble(_triggerSize!.width, widget.menuWidth, widthT)!;
+        lerpDouble(_triggerSize!.width, widget.menuWidth, sizeT)!;
 
-    // ─── Asymmetric Teardrop Border Radii ────────────────────────────────────────
+    // ─── Uniform Border Radius ──────────────────────────────────────────────
     //
-    // The water-droplet teardrop shape requires DIFFERENT radii top vs bottom:
-    //
-    //   TOP corners: large radius (close to buttonRadius) — stays round and
-    //     narrow like the button for most of the animation. Visually the top
-    //     of the blob looks narrow/pinched (like the neck of a hanging droplet).
-    //
-    //   BOTTOM corners: smaller radius (transitions to menuRadius faster) —
-    //     the bottom becomes flatter/wider-looking earlier, giving the shape
-    //     the classic "bulge at the bottom" of a falling water droplet.
-    //
-    // At t=0.4 during open:
-    //   topRadius ≈ buttonR (very round, narrow-looking top)
-    //   bottomRadius ≈ menuR (squarer, wider-looking bottom)
-    //   height ≈ 76% of menu height (tall)
-    //   width ≈ 2.6% of menu width (narrow)
-    //   → Result: a tall narrow shape, round at top, squarer at bottom = droplet
-    final triggerR = _triggerBorderRadius ?? 16.0;
-    // Top stays at buttonR until late (cubic easing — very slow to leave buttonR)
-    final topRadius = lerpDouble(triggerR, widget.menuBorderRadius,
-        math.pow(value, 3.0).toDouble())!;
-    // Bottom transitions faster (linear — immediately starts moving toward menuR)
-    final bottomRadius = lerpDouble(triggerR, widget.menuBorderRadius, value)!;
-    // Add sinusoidal boost at midpoint for extra organic roundness
-    final radiusBoost = 8.0 * math.sin(math.pi * value);
-    final effectiveTopRadius = topRadius + radiusBoost;
-    final effectiveBottomRadius = bottomRadius;
-
-    // Build the asymmetric teardrop shape
-    final teardropShape = LiquidVerticalRoundedSuperellipse(
-      topRadius: effectiveTopRadius,
-      bottomRadius: effectiveBottomRadius,
+    // By keeping the border radius uniform, the container starts as a perfect circle 
+    // (triggerR = width/2 = height/2) and naturally morphs into a rounded rectangle.
+    // This provides the cleanest geometric base for the metaball shader to operate on.
+    final triggerR = _triggerBorderRadius ?? _triggerSize!.width / 2.0;
+    final currentRadius = lerpDouble(triggerR, widget.menuBorderRadius, sizeT)!;
+    
+    // Build the shape
+    final teardropShape = LiquidRoundedSuperellipse(
+      borderRadius: currentRadius,
     );
-
-
-    // ─── Jelly / Squash-and-Stretch ─────────────────────────────────────────
-    //
-    // Driven by the spring's own instantaneous velocity — same physics as the
-    // LiquidStretch bottom bar. High velocity → stretch in direction of travel.
-    // Low velocity (settling) → squash back. Creates rubber-band feel.
-    //
-    // OPEN (positive velocity):
-    //   • Height stretches TALLER (+45% of jelly) — falling-drop elongation
-    //   • Width squashes NARROWER (−30% of jelly) — surface tension hold
-    //
-    // CLOSE (negative velocity → jelly is negative):
-    //   • Height squashes shorter  → (-jelly)*stretch so it gets taller again? No:
-    //     jellyHeight = h * (1.0 + jelly*0.45) — jelly<0 → shorter on close ✓
-    //   • Width bulges wider:
-    //     jellyWidth = w * (1.0 - jelly*0.30) — jelly<0 → +term → wider ✓
-    //     Creates the bottom-heavy splash as the droplet collapses.
-    //
-    // Coefficient 0.022 — at peak close velocity (~−14 units/s): jelly≈−0.22,
-    // clamped to −0.22. Width bulges ×1.066. Height squashes ×0.90.
-    final rawVelocity = _animationController.velocity;
-    final jelly = (rawVelocity * 0.022).clamp(-0.22, 0.22);
-
-    // Squash-and-stretch (area approximately conserved: 1.10 × 0.934 ≈ 1.03)
-    final jellyWidth = currentWidth * (1.0 - jelly * 0.30);
-    final jellyHeight =
-        currentHeight != null ? currentHeight * (1.0 + jelly * 0.45) : null;
-
 
 
     // ─── Container Scale Pulse ───────────────────────────────────────────────
     //
-    // Open overshoot (rawValue > 1.0): not triggered — spring is overdamped.
-    //
     // Close undershoot (rawValue < 0.0): blob squeezes visibly BELOW button
     //   size. Factor 0.55 means at rawValue=-0.34: scale = 1 - 0.34*0.55 = 0.81.
-    //   Blob squeezes to 81% of button size. On second bounce (rawValue=+0.11):
-    //   value=0.11, blob briefly expands toward menu size — genuine rubber band.
     final containerScale = rawValue > 1.0
         ? 1.0 + (rawValue - 1.0) * 0.10   // open overshoot (overdamped, won't fire)
         : rawValue < 0.0
@@ -466,13 +482,13 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       allowPositiveY: widget.allowPositiveY ?? (_morphAlignment.y < 0),
       allowNegativeY: widget.allowNegativeY ?? (_morphAlignment.y > 0),
       child: GlassContainer(
-        useOwnLayer: true,
+        useOwnLayer: false, // blends with the trigger ghost
         settings: effectiveSettings,
         quality: effectiveQuality,
         allowElevation:
             false, // Menu is overlay - don't darken when outside parent
-        width: jellyWidth,
-        height: jellyHeight, // Constrained during morph, natural when open
+        width: currentWidth,
+        height: currentHeight, // Constrained during morph, natural when open
         shape: teardropShape,
         clipBehavior:
             Clip.antiAlias, // Clip items at the edges for edge-to-edge feel

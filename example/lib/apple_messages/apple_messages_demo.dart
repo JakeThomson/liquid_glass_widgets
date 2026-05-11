@@ -55,14 +55,15 @@ const _kSearchGlass = LiquidGlassSettings(
 
 // Glass for the menus themselves
 const _kMenuGlass = LiquidGlassSettings(
-  // glassColor: Color(0xBB1C1C1E),
-  // thickness: 30,
-  // blur: 3,
-  lightIntensity: 0.3,
-  ambientStrength: 0.06,
-  chromaticAberration: 0.003,
-  refractiveIndex: 1.05,
-  saturation: 1.05,
+  glassColor: Colors
+      .white12, //(0x442C2C2E), // dark gray, ~27% opacity — true frosted look
+  thickness: 18,
+  blur: 3,
+  lightIntensity: 0.6,
+  ambientStrength: 0.1,
+  chromaticAberration: 0.01,
+  refractiveIndex: 1.2,
+  saturation: 1.15,
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -508,6 +509,7 @@ class _FilterMenu extends StatelessWidget {
       menuWidth: 240,
       glassSettings: _kMenuGlass,
       menuBorderRadius: 16,
+      quality: GlassQuality.premium,
       triggerBuilder: (context, toggleMenu) => GlassButton(
         onTap: toggleMenu,
         width: 44,
