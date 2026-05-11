@@ -44,24 +44,22 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   //   Teardrop forms quickly, content reveals smoothly.
   //   ω₀ = √360 ≈ 19.0 rad/s
   //   ζ  = 26 / (2×19.0) ≈ 0.68 — slightly underdamped, clean settle
-  //
-  // CLOSE — HEAVILY UNDERDAMPED (ζ≈0.32): strong rubber-band physics.
-  //   rawValue oscillates: 1.0 → 0.0 → −0.34 → 0.0 → +0.11 → settles.
-  //   Blob squeezes visibly below button size then bounces back — liquid splash.
-  //   Overlay stays visible through all bounces via velocity guard on hide.
-  //   ω₀ = √350 ≈ 18.7 rad/s → response ≈ 0.34s
-  //   ζ  = 12 / (2×18.7) ≈ 0.32 — heavily underdamped: multi-bounce visible
-  // SLOW-MOTION DIAGNOSTIC — restore to stiffness: 360/350, damping: 26/12 after validation
+  // SLOW-MOTION DIAGNOSTIC — restore to stiffness: 360/350, damping: 26/35 after validation
   static const _openSpring = SpringDescription(
     mass: 1.0,
-    stiffness: 30.0,  // ← SLOW (normal: 360.0)
-    damping: 8.0,     // ← underdamped so bounce is visible
+    stiffness: 30.0,
+    damping: 8.0,
   );
 
+  // CLOSE — critically damped for a smooth, bounceless merge back into
+  // the trigger button. No liquid splash/overshoot on return.
+  //   ω₀ = √350 ≈ 18.7 rad/s
+  //   ζ  = 35 / (2×18.7) ≈ 0.93 — near-critically damped, no bounce
+  // SLOW-MOTION DIAGNOSTIC: stiffness 25, critical damping = 10
   static const _closeSpring = SpringDescription(
     mass: 1.0,
-    stiffness: 25.0,  // ← SLOW (normal: 350.0)
-    damping: 6.0,     // ← heavily underdamped: rubber-band snap visible
+    stiffness: 25.0,
+    damping: 10.0,
   );
 
   Alignment _morphAlignment = Alignment.topLeft;
@@ -268,9 +266,19 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final currentDx = finalDx * pathT;
     final currentDy = finalDy * pathT;
 
-    // Scale for Blob A (trigger ghost) to shrink it down to 0 over the first half
-    // This allows the tail of the teardrop to detach smoothly.
-    final blobAScale = (1.0 - (value * 2.0)).clamp(0.0, 1.0);
+    // ─── Anchor Blob A Scaling ──────────────────────────────────────────────
+    // Blob A acts as the "ghost" at the origin to anchor the liquid bridge.
+    // To completely eliminate the "bigger circle" metaball inflation when 
+    // Blob B returns to the origin, Blob A MUST be scale 0.0 at value = 0.0.
+    //
+    // - value 0.0 -> 0.1: Rapidly inflates to 1.0 to anchor Blob B as it leaves.
+    // - value 0.1 -> 0.5: Shrinks back to 0.0 to snap the teardrop tail.
+    double blobAScale;
+    if (value < 0.1) {
+      blobAScale = (value * 10.0).clamp(0.0, 1.0);
+    } else {
+      blobAScale = (1.0 - ((value - 0.1) * 2.5)).clamp(0.0, 1.0);
+    }
     final blobAEase = Curves.easeOutCubic.transform(blobAScale);
 
     final inheritedSettings = InheritedLiquidGlass.of(context);
@@ -414,9 +422,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
     final targetHeight = widget.menuHeight ?? menuHeight;
 
-    final currentHeight = value < 0.92
-        ? lerpDouble(_triggerSize!.height, targetHeight, sizeT)!
-        : widget.menuHeight; // Let content breathe at full open
+    final currentHeight = lerpDouble(_triggerSize!.height, targetHeight, sizeT)!;
 
     final currentWidth =
         lerpDouble(_triggerSize!.width, widget.menuWidth, sizeT)!;
