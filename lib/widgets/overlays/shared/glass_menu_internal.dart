@@ -45,22 +45,18 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   //   Teardrop forms quickly, content reveals smoothly.
   //   ω₀ = √360 ≈ 19.0 rad/s
   //   ζ  = 26 / (2×19.0) ≈ 0.68 — slightly underdamped, clean settle
-  // SLOW-MOTION DIAGNOSTIC — restore to stiffness: 360/350, damping: 26/35 after validation
   static const _openSpring = SpringDescription(
     mass: 1.0,
     stiffness: 30.0,
     damping: 8.0,
   );
 
-  // CLOSE — critically damped for a smooth, bounceless merge back into
-  // the trigger button. No liquid splash/overshoot on return.
-  //   ω₀ = √350 ≈ 18.7 rad/s
-  //   ζ  = 35 / (2×18.7) ≈ 0.93 — near-critically damped, no bounce
-  // SLOW-MOTION DIAGNOSTIC: stiffness 25, critical damping = 10
+  // CLOSE — We use an underdamped spring here to allow the menu to carry
+  // physical momentum into the trigger button, causing a satisfying "bump".
   static const _closeSpring = SpringDescription(
     mass: 1.0,
-    stiffness: 25.0,
-    damping: 10.0,
+    stiffness: 30.0,
+    damping: 8.0,
   );
 
   Alignment _morphAlignment = Alignment.topLeft;
@@ -94,11 +90,18 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     }
   }
 
+  bool _isClosing = false;
+  bool _hasHandedOff = false;
+
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController.unbounded(vsync: this);
     _animationController.addListener(() {
+      if (_isClosing && _animationController.value <= 0.0 && !_hasHandedOff) {
+        _hasHandedOff = true;
+      }
+
       if (mounted) setState(() {});
 
       // Hide overlay only when the spring has FULLY SETTLED near 0.
@@ -128,40 +131,66 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final rawValue = _animationController.value;
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        final rawValue = _animationController.value;
 
-    // The blob IS the button from frame 0 — same position, same shape,
-    // fully opaque. We hide the underlying trigger whenever the overlay is
-    // open so it doesn't double-render underneath the morphing blob.
-    // Instantly hide the real trigger to prevent double-glass rendering artifacts
-    // where the glass overlay stacks on top of the glass button.
-    final triggerOpacity = _overlayController.isShowing ? 0.0 : 1.0;
+        // Block trigger taps while menu is significantly open.
+        final isMenuBlocking = _overlayController.isShowing && rawValue > 0.8;
 
-    // Block trigger taps while menu is significantly open.
-    final isMenuBlocking = _overlayController.isShowing && rawValue > 0.8;
+        // Early handoff during close:
+        // When closing and the liquid morph is almost finished, we latch the handoff.
+        // We instantly hide the empty glass overlay and reveal the REAL trigger.
+        // The latch ensures that even if the underdamped spring bounces back up 
+        // past 0.15, we don't hide the icon again!
+        final isHandoff = _isClosing && _hasHandedOff;
+        final triggerOpacity = (_overlayController.isShowing && !isHandoff) ? 0.0 : 1.0;
 
-    return Stack(
-      children: [
-        // Trigger — hidden while blob is the visual stand-in.
-        Opacity(
-          opacity: triggerOpacity,
-          child: IgnorePointer(
-            ignoring: isMenuBlocking,
-            child: widget.triggerBuilder != null
-                ? widget.triggerBuilder!(context, _toggleMenu)
-                : GestureDetector(
-                    onTap: _toggleMenu,
-                    child: widget.trigger,
-                  ),
-          ),
-        ),
+        // Calculate the momentum push vector based on the exact same logic as Blob B
+        // so the real trigger precisely inherits the menu's momentum trajectory.
+        final tw = _triggerSize?.width ?? 44.0;
+        final th = _triggerSize?.height ?? 44.0;
+        final menuWidth = widget.menuWidth;
+        final menuHeight = _calculateMenuHeight();
+        final dxMag = (menuWidth - tw) / 2.0;
+        final dyMag = (menuHeight - th) / 2.0;
+        final finalDx = -_morphAlignment.x * dxMag;
+        final finalDy = -_morphAlignment.y * dyMag;
 
-        // Overlay portal for morphing animation
-        OverlayPortal(
-          controller: _overlayController,
-          overlayChildBuilder: _buildMorphingOverlay,
-        ),
-      ],
+        // Apply the push momentum to the real trigger during the underdamped bounce
+        // Include the offsets so the trajectory is mathematically perfect.
+        final double pushDx = isHandoff ? (finalDx + _horizontalOffset) * rawValue : 0.0;
+        final double pushDy = isHandoff ? (finalDy + _verticalOffset) * rawValue : 0.0;
+
+        return Stack(
+          children: [
+            // Trigger — physically bounces when slammed by the closing menu!
+            Transform.translate(
+              offset: Offset(pushDx, pushDy),
+              child: Opacity(
+                opacity: triggerOpacity,
+                child: IgnorePointer(
+                  ignoring: isMenuBlocking,
+                  child: widget.triggerBuilder != null
+                      ? widget.triggerBuilder!(context, _toggleMenu)
+                      : GestureDetector(
+                          onTap: _toggleMenu,
+                          child: widget.trigger,
+                        ),
+                ),
+              ),
+            ),
+
+            // Overlay portal for morphing animation
+            // The overlay contents fade out during the handoff so the real button shows instead
+            OverlayPortal(
+              controller: _overlayController,
+              overlayChildBuilder: _buildMorphingOverlay,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -192,6 +221,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _openMenu() {
+    _isClosing = false;
+    _hasHandedOff = false;
     // Capture geometry and screen position for morphing
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.hasSize) {
@@ -283,6 +314,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _closeMenu() {
+    _isClosing = true;
     setState(() {
       _hoveredIndex = null;
       _isDragging = false;
@@ -297,8 +329,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
     final value = _animationController.value.clamp(0.0, 1.0);
 
-    final isUp = _morphAlignment.y > 0; // bottomLeft/Right → opens upward
-    final isRight = _morphAlignment.x > 0; // right-side trigger
+
 
     final tw = _triggerSize!.width;
     final th = _triggerSize!.height;
@@ -311,31 +342,26 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // "covering" the faded out menu button.
     final dxMag = (menuWidth - tw) / 2.0;
     final dyMag = (menuHeight - th) / 2.0;
-    final finalDx = isRight ? -dxMag : dxMag;
-    final finalDy = isUp ? -dyMag : dyMag;
+    final finalDx = -_morphAlignment.x * dxMag;
+    final finalDy = -_morphAlignment.y * dyMag;
 
     // ─── Liquid Physics Interpolation ─────────────────────────────────────────
-    //
-    // The true iOS droplet effect uses independent curves for its trajectory (path)
-    // and its scale (size).
-    //
-    // OPEN: Center drops fast (easeOut), size expands slow (easeInOut).
-    // Result: A small, roundish blob drops down and left, and THEN expands UP 
-    // and right to cover the button space.
-    //
-    // CLOSE: Center lingers at bottom (easeOut), size collapses fast (easeIn).
-    // Result: Menu shrinks top and bottom into a blob, then shoots UP to the button.
-    final isClosing = _animationController.velocity <= 0;
-    double pathT;
-    double sizeT;
+    
+    // We clamp the curve inputs to avoid math exceptions at the extremes, 
+    // but re-inject the spring's natural momentum (value - clampedValue) so 
+    // the bounds physically bounce perfectly in sync with the physics engine!
+    final clampedValue = value.clamp(0.0, 1.0);
+    
+    // MASSIVE J-Curve drop: Drops way past the final destination
+    final pathT = const _CustomBackOutCurve(2.5).transform(clampedValue) + (value - clampedValue);
+    
+    // Size expands steadily (easeInOut) to grow visibly into a teardrop
+    final sizeT = Curves.easeInOut.transform(clampedValue) + (value - clampedValue);
 
-    if (!isClosing) {
-      pathT = Curves.easeOutQuart.transform(value);
-      sizeT = Curves.easeInOutQuart.transform(value);
-    } else {
-      pathT = Curves.easeOutQuart.transform(value);
-      sizeT = Curves.easeInQuart.transform(value);
-    }
+    // When the spring overshoots past 0 (negative value), the menu slams into the trigger.
+    // We capture this momentum to physically bump the trigger ghost (Blob A).
+    final double pushDx = value < 0.0 ? (finalDx + _horizontalOffset) * value : 0.0;
+    final double pushDy = value < 0.0 ? (finalDy + _verticalOffset) * value : 0.0;
 
     final currentDx = finalDx * pathT;
     final currentDy = finalDy * pathT;
@@ -399,9 +425,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         // Inside it, we use two CompositedTransformFollowers, BOTH anchored to the
         // trigger's center. This avoids manual coordinate math and prevents pixel drift.
         Positioned.fill(
-          child: LiquidGlassLayer(
-            settings: effectiveSettings,
-            child: InheritedLiquidGlass(
+          child: Opacity(
+            opacity: (_isClosing && _hasHandedOff) ? 0.0 : 1.0,
+            child: LiquidGlassLayer(
+              settings: effectiveSettings,
+              child: InheritedLiquidGlass(
               settings: effectiveSettings,
               quality: effectiveQuality,
               isBlurProvidedByAncestor: false,
@@ -410,13 +438,14 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // ── Blob A: Trigger Ghost ───────────────────────────────
-                    // Stays perfectly centered on the trigger.
+                    // ─── Blob A: Trigger Ghost ───────────────────────────────
+                    // Stays perfectly centered on the trigger, BUT absorbs the 
+                    // closing momentum (pushDx/pushDy) to bounce when slammed.
                     // Shrinks to 0 scale over the first 50% of the animation to
                     // smoothly break the liquid bridge.
                     Positioned(
-                      left: _triggerGlobalPosition.dx,
-                      top: _triggerGlobalPosition.dy,
+                      left: _triggerGlobalPosition.dx + pushDx,
+                      top: _triggerGlobalPosition.dy + pushDy,
                       child: Transform.scale(
                         scale: blobAEase,
                         child: GlassContainer(
@@ -451,7 +480,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
             ),
           ),
         ),
-      ],
+      ),
+    ],
     );
   }
 
@@ -492,13 +522,17 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     //
     // No more faking the shape with tall, thin rectangles! Let the shader do the work.
 
-    // ─── Uniform Border Radius ──────────────────────────────────────────────
-    //
     // By keeping the border radius uniform, the container starts as a perfect circle 
-    // or pill (triggerR = shortestSide/2) and naturally morphs into a rounded rectangle.
-    // This provides the cleanest geometric base for the metaball shader to operate on.
-    final triggerR = _triggerBorderRadius ?? _triggerSize!.shortestSide / 2.0;
-    final currentRadius = lerpDouble(triggerR, widget.menuBorderRadius, sizeT)!;
+    // or pill and naturally morphs into a rounded rectangle.
+    // To ensure it stays perfectly round as it grows (preventing it from becoming a box early),
+    // we interpolate from the MAX possible radius (perfect pill) to the final menu radius.
+    final maxRadius = math.min(currentWidth, currentHeight) / 2.0;
+    
+    // Delay the radius transition so the shape stays highly rounded (teardrop-like)
+    // while it pulls away from the trigger. Only morph to the sharper menu border
+    // radius towards the end of the expansion.
+    final double radiusT = Curves.easeInExpo.transform(sizeT);
+    final currentRadius = lerpDouble(maxRadius, widget.menuBorderRadius, radiusT)!;
     
     // Build the shape
     final teardropShape = LiquidRoundedSuperellipse(
@@ -872,5 +906,25 @@ class _SelectionItemWrapper extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _CustomBackOutCurve extends Curve {
+  const _CustomBackOutCurve(this.amplitude);
+  final double amplitude;
+
+  @override
+  double transformInternal(double t) {
+    return (t -= 1.0) * t * ((amplitude + 1.0) * t + amplitude) + 1.0;
+  }
+}
+
+class _CustomBackInCurve extends Curve {
+  const _CustomBackInCurve(this.amplitude);
+  final double amplitude;
+
+  @override
+  double transformInternal(double t) {
+    return t * t * ((amplitude + 1.0) * t - amplitude);
   }
 }
