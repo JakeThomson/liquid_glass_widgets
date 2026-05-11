@@ -1,7 +1,6 @@
 part of '../glass_menu.dart';
 
 class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
-  final LayerLink _layerLink = LayerLink();
   final OverlayPortalController _overlayController = OverlayPortalController();
 
   late final AnimationController _animationController;
@@ -103,36 +102,35 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // The blob IS the button from frame 0 — same position, same shape,
     // fully opaque. We hide the underlying trigger whenever the overlay is
     // open so it doesn't double-render underneath the morphing blob.
-    final isButtonVisible = !_overlayController.isShowing;
+    // Instantly hide the real trigger to prevent double-glass rendering artifacts
+    // where the glass overlay stacks on top of the glass button.
+    final triggerOpacity = _overlayController.isShowing ? 0.0 : 1.0;
 
     // Block trigger taps while menu is significantly open.
     final isMenuBlocking = _overlayController.isShowing && rawValue > 0.8;
 
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: Stack(
-        children: [
-          // Trigger — hidden while blob is the visual stand-in.
-          Opacity(
-            opacity: isButtonVisible ? 1.0 : 0.0,
-            child: IgnorePointer(
-              ignoring: isMenuBlocking,
-              child: widget.triggerBuilder != null
-                  ? widget.triggerBuilder!(context, _toggleMenu)
-                  : GestureDetector(
-                      onTap: _toggleMenu,
-                      child: widget.trigger,
-                    ),
-            ),
+    return Stack(
+      children: [
+        // Trigger — hidden while blob is the visual stand-in.
+        Opacity(
+          opacity: triggerOpacity,
+          child: IgnorePointer(
+            ignoring: isMenuBlocking,
+            child: widget.triggerBuilder != null
+                ? widget.triggerBuilder!(context, _toggleMenu)
+                : GestureDetector(
+                    onTap: _toggleMenu,
+                    child: widget.trigger,
+                  ),
           ),
+        ),
 
-          // Overlay portal for morphing animation
-          OverlayPortal(
-            controller: _overlayController,
-            overlayChildBuilder: _buildMorphingOverlay,
-          ),
-        ],
-      ),
+        // Overlay portal for morphing animation
+        OverlayPortal(
+          controller: _overlayController,
+          overlayChildBuilder: _buildMorphingOverlay,
+        ),
+      ],
     );
   }
 
@@ -266,20 +264,26 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final currentDx = finalDx * pathT;
     final currentDy = finalDy * pathT;
 
+    final targetHeight = widget.menuHeight ?? menuHeight;
+    final currentHeight = lerpDouble(th, targetHeight, sizeT)!;
+    final currentWidth = lerpDouble(tw, widget.menuWidth, sizeT)!;
+
     // ─── Anchor Blob A Scaling ──────────────────────────────────────────────
     // Blob A acts as the "ghost" at the origin to anchor the liquid bridge.
     // To completely eliminate the "bigger circle" metaball inflation when 
-    // Blob B returns to the origin, Blob A MUST be scale 0.0 at value = 0.0.
-    //
-    // - value 0.0 -> 0.1: Rapidly inflates to 1.0 to anchor Blob B as it leaves.
-    // - value 0.1 -> 0.5: Shrinks back to 0.0 to snap the teardrop tail.
-    double blobAScale;
-    if (value < 0.1) {
-      blobAScale = (value * 10.0).clamp(0.0, 1.0);
-    } else {
-      blobAScale = (1.0 - ((value - 0.1) * 2.5)).clamp(0.0, 1.0);
-    }
-    final blobAEase = Curves.easeOutCubic.transform(blobAScale);
+    // the shapes perfectly overlap (frame 0), we animate the blend parameter 
+    // itself based on how separated the blobs are.
+    // This allows the shader to naturally handle the teardrop string snapping
+    // without manual scale hacking.
+    final double blobAEase = 1.0;
+
+    // The separation between the position curve (pathT) and size curve (sizeT)
+    // represents how far Blob B has pulled away from its anchor corner.
+    // When separation is 0 (frame 0, and frame end), they perfectly overlap.
+    // By scaling blend with separation, we ensure 0 swell when overlapping, 
+    // and full 28.0 liquid teardrop blend when pulled apart!
+    final separation = (pathT - sizeT).abs();
+    final double currentBlend = (separation * 150.0).clamp(0.0, 28.0);
 
     final inheritedSettings = InheritedLiquidGlass.of(context);
     final effectiveSettings = widget.glassSettings ??
@@ -326,7 +330,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               quality: effectiveQuality,
               isBlurProvidedByAncestor: false,
               child: LiquidGlassBlendGroup(
-                blend: 28.0,
+                blend: currentBlend,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -334,11 +338,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                     // Stays perfectly centered on the trigger.
                     // Shrinks to 0 scale over the first 50% of the animation to
                     // smoothly break the liquid bridge.
-                    CompositedTransformFollower(
-                      link: _layerLink,
-                      showWhenUnlinked: false,
-                      targetAnchor: Alignment.center,
-                      followerAnchor: Alignment.center,
+                    Positioned(
+                      left: _triggerGlobalPosition.dx,
+                      top: _triggerGlobalPosition.dy,
                       child: Transform.scale(
                         scale: blobAEase,
                         child: GlassContainer(
@@ -348,7 +350,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                           width: tw,
                           height: th,
                           shape: LiquidRoundedSuperellipse(
-                            borderRadius: _triggerBorderRadius ?? th / 2,
+                            borderRadius: _triggerBorderRadius ??
+                                _triggerSize!.shortestSide / 2.0,
                           ),
                         ),
                       ),
@@ -358,15 +361,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                     // Its center travels diagonally relative to the trigger.
                     // By scaling the x/y offsets with the width/height curves,
                     // its edges stay perfectly pinned while it grows!
-                    CompositedTransformFollower(
-                      link: _layerLink,
-                      showWhenUnlinked: false,
-                      targetAnchor: Alignment.center,
-                      followerAnchor: Alignment.center,
-                      offset: Offset(currentDx, currentDy),
+                    Positioned(
+                      left: _triggerGlobalPosition.dx + tw / 2.0 + currentDx - currentWidth / 2.0,
+                      top: _triggerGlobalPosition.dy + th / 2.0 + currentDy - currentHeight / 2.0,
                       child: IgnorePointer(
                         ignoring: value < 0.8,
-                        child: _buildMorphingContainer(value, sizeT),
+                        child: _buildMorphingContainer(value, sizeT, currentWidth, currentHeight),
                       ),
                     ),
                   ],
@@ -396,7 +396,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     return itemHeights + 24.0 + gaps;
   }
 
-  Widget _buildMorphingContainer(double value, double sizeT) {
+  Widget _buildMorphingContainer(double value, double sizeT, double currentWidth, double currentHeight) {
     // Inherit quality from parent layer if not explicitly set
     final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,
@@ -407,10 +407,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // Can exceed 1.0 (open overshoot) or go below 0.0 (close undershoot bounce).
     final rawValue = _animationController.value;
 
-    // Calculate menu height by measuring its natural size
-    // This is necessary for proper height interpolation during morph
-    final menuHeight = _calculateMenuHeight();
-
     // ─── True Metaball Morphing ──────────────────────────────────────────────
     //
     // By using the pure spring value for both width and height, the menu container
@@ -420,19 +416,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     //
     // No more faking the shape with tall, thin rectangles! Let the shader do the work.
 
-    final targetHeight = widget.menuHeight ?? menuHeight;
-
-    final currentHeight = lerpDouble(_triggerSize!.height, targetHeight, sizeT)!;
-
-    final currentWidth =
-        lerpDouble(_triggerSize!.width, widget.menuWidth, sizeT)!;
-
     // ─── Uniform Border Radius ──────────────────────────────────────────────
     //
     // By keeping the border radius uniform, the container starts as a perfect circle 
-    // (triggerR = width/2 = height/2) and naturally morphs into a rounded rectangle.
+    // or pill (triggerR = shortestSide/2) and naturally morphs into a rounded rectangle.
     // This provides the cleanest geometric base for the metaball shader to operate on.
-    final triggerR = _triggerBorderRadius ?? _triggerSize!.width / 2.0;
+    final triggerR = _triggerBorderRadius ?? _triggerSize!.shortestSide / 2.0;
     final currentRadius = lerpDouble(triggerR, widget.menuBorderRadius, sizeT)!;
     
     // Build the shape
