@@ -1311,8 +1311,7 @@ void main() {
   // Verifies that dragging across multiple tab widths in a single gesture
   // snaps to the correct distant tab instead of only moving ±1.
   group('GlassTabBar multi-tab drag jump (PR #55)', () {
-    testWidgets(
-        'dragging far right from tab 0 selects tab beyond +1',
+    testWidgets('dragging far right from tab 0 selects tab beyond +1',
         (tester) async {
       int selectedIndex = 0;
 
