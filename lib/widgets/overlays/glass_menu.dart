@@ -17,8 +17,8 @@ part 'shared/glass_menu_internal.dart';
 ///
 /// When [GlassMenu.menuAlignment] is set to one of these values, the menu
 /// anchors its opposite edge to that point on the trigger. For example,
-/// [topLeft] anchors the menu's right edge to the trigger's right edge, so
-/// the body expands to the left.
+/// [topLeft] anchors the menu's top-left corner to the trigger, so
+/// the body expands downwards and to the right.
 ///
 /// Use [none] (the default) to let the menu auto-detect the best alignment
 /// based on the trigger's screen position.

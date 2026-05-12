@@ -4,6 +4,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   final OverlayPortalController _overlayController = OverlayPortalController();
 
   late final AnimationController _animationController;
+  
   late final ScrollController _scrollController;
   Size? _triggerSize;
   double? _triggerBorderRadius;
@@ -41,18 +42,22 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
   // ─── iOS 26 Spring Physics ────────────────────────────────────────────────
   //
-  // OPEN — fast and clean (ζ≈0.69): no bounce, ~0.28s settle.
-  //   Teardrop forms quickly, content reveals smoothly.
-  //   ω₀ = √360 ≈ 19.0 rad/s
-  //   ζ  = 26 / (2×19.0) ≈ 0.68 — slightly underdamped, clean settle
+  // Both open and close share the same underdamped spring profile:
+  //   mass: 1.0, stiffness: 30.0, damping: 8.0
+  //   ω₀ = √(30/1) ≈ 5.5 rad/s,  ζ = 8/(2×5.5) ≈ 0.73 — slightly underdamped.
+  //
+  // The underdamping is intentional: it lets the spring overshoot past 0.0 on
+  // close, which drives the physical "bump" on the trigger icon. The J-curve
+  // position curve and the -2.5 velocity hint in _closeMenu() amplify this
+  // into a satisfying iOS-native momentum feel.
   static const _openSpring = SpringDescription(
     mass: 1.0,
     stiffness: 30.0,
     damping: 8.0,
   );
 
-  // CLOSE — We use an underdamped spring here to allow the menu to carry
-  // physical momentum into the trigger button, causing a satisfying "bump".
+  // Same profile as open — the closing bump comes from the negative velocity
+  // hint injected by _closeMenu(), not from a different spring constant.
   static const _closeSpring = SpringDescription(
     mass: 1.0,
     stiffness: 30.0,
@@ -66,27 +71,24 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       case GlassMenuAlignment.none:
         return null;
 
-      // When the user selects "Left", we return "Right" alignment.
-      // This anchors the menu's RIGHT edge to the button's RIGHT edge,
-      // causing the menu body to expand to the LEFT (away from the button).
       case GlassMenuAlignment.topLeft:
-        return Alignment.topRight;
+        return Alignment.topLeft;
       case GlassMenuAlignment.topCenter:
         return Alignment.topCenter;
       case GlassMenuAlignment.topRight:
-        return Alignment.topLeft;
+        return Alignment.topRight;
       case GlassMenuAlignment.centerLeft:
-        return Alignment.centerRight;
+        return Alignment.centerLeft;
       case GlassMenuAlignment.center:
         return Alignment.center;
       case GlassMenuAlignment.centerRight:
-        return Alignment.centerLeft;
+        return Alignment.centerRight;
       case GlassMenuAlignment.bottomLeft:
-        return Alignment.bottomRight;
+        return Alignment.bottomLeft;
       case GlassMenuAlignment.bottomCenter:
         return Alignment.bottomCenter;
       case GlassMenuAlignment.bottomRight:
-        return Alignment.bottomLeft;
+        return Alignment.bottomRight;
     }
   }
 
@@ -113,6 +115,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
           _animationController.velocity.abs() < 0.5 &&
           _animationController.status != AnimationStatus.forward) {
         _overlayController.hide();
+        // Reset screen-edge clamping offsets now that the overlay is fully
+        // closed. Stale values from a previous open position must not bleed
+        // into the next open cycle if the widget is moved between opens.
+        _horizontalOffset = 0.0;
+        _verticalOffset = 0.0;
       }
     });
     _scrollController = ScrollController();
@@ -264,7 +271,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         _morphAlignment = isRightHalf ? Alignment.topRight : Alignment.topLeft;
       }
     } else {
-      // MANUAL: Use provided alignment with inverted mapping
+      // MANUAL: Use the provided alignment directly.
+      // Note: autoAdjustToScreen clamping will still compensate for overflow.
       _morphAlignment =
           _getAlignment(widget.menuAlignment!) ?? Alignment.center;
     }
@@ -327,8 +335,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   Widget _buildMorphingOverlay(BuildContext context) {
     if (_triggerSize == null) return const SizedBox.shrink();
 
-    final value = _animationController.value.clamp(0.0, 1.0);
-
+    // Raw value can legitimately exceed [0, 1]: the underdamped spring
+    // overshoots on close (goes negative) to create the J-curve bounce.
+    final rawValue = _animationController.value;
+    final clampedValue = rawValue.clamp(0.0, 1.0);
 
 
     final tw = _triggerSize!.width;
@@ -346,22 +356,24 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final finalDy = -_morphAlignment.y * dyMag;
 
     // ─── Liquid Physics Interpolation ─────────────────────────────────────────
-    
-    // We clamp the curve inputs to avoid math exceptions at the extremes, 
-    // but re-inject the spring's natural momentum (value - clampedValue) so 
-    // the bounds physically bounce perfectly in sync with the physics engine!
-    final clampedValue = value.clamp(0.0, 1.0);
-    
-    // MASSIVE J-Curve drop: Drops way past the final destination
-    final pathT = const _CustomBackOutCurve(2.5).transform(clampedValue) + (value - clampedValue);
-    
-    // Size expands steadily (easeInOut) to grow visibly into a teardrop
-    final sizeT = Curves.easeInOut.transform(clampedValue) + (value - clampedValue);
+    //
+    // Curve inputs are clamped to [0,1] to prevent math exceptions.
+    // We only inject the close-side undershoot (rawValue < 0) so the blob
+    // physically bounces past the trigger on close. The open-side overshoot
+    // (rawValue > 1) is intentionally excluded — it causes an unwanted size wobble.
+    final closeUndershoot = rawValue < 0.0 ? rawValue : 0.0;
 
-    // When the spring overshoots past 0 (negative value), the menu slams into the trigger.
-    // We capture this momentum to physically bump the trigger ghost (Blob A).
-    final double pushDx = value < 0.0 ? (finalDx + _horizontalOffset) * value : 0.0;
-    final double pushDy = value < 0.0 ? (finalDy + _verticalOffset) * value : 0.0;
+    // MASSIVE J-Curve drop: position overshoots far past the destination before
+    // snapping back — this creates the teardrop "string pull" effect.
+    final pathT = const _CustomBackOutCurve(2.5).transform(clampedValue) + closeUndershoot;
+
+    // Size expands steadily (easeInOut) to grow visibly into a teardrop.
+    final sizeT = Curves.linearToEaseOut.transform(clampedValue) + closeUndershoot;  //easeInOut
+
+    // When the spring overshoots past 0 (rawValue < 0), Blob A is physically
+    // displaced to mirror the closing momentum — bouncing with the trigger.
+    final double pushDx = rawValue < 0.0 ? (finalDx + _horizontalOffset) * rawValue : 0.0;
+    final double pushDy = rawValue < 0.0 ? (finalDy + _verticalOffset) * rawValue : 0.0;
 
     final currentDx = finalDx * pathT;
     final currentDy = finalDy * pathT;
@@ -370,20 +382,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final currentHeight = lerpDouble(th, targetHeight, sizeT)!;
     final currentWidth = lerpDouble(tw, widget.menuWidth, sizeT)!;
 
-    // ─── Anchor Blob A Scaling ──────────────────────────────────────────────
-    // Blob A acts as the "ghost" at the origin to anchor the liquid bridge.
-    // To completely eliminate the "bigger circle" metaball inflation when 
-    // the shapes perfectly overlap (frame 0), we animate the blend parameter 
-    // itself based on how separated the blobs are.
-    // This allows the shader to naturally handle the teardrop string snapping
-    // without manual scale hacking.
-    final double blobAEase = 1.0;
-
-    // The separation between the position curve (pathT) and size curve (sizeT)
-    // represents how far Blob B has pulled away from its anchor corner.
-    // When separation is 0 (frame 0, and frame end), they perfectly overlap.
-    // By scaling blend with separation, we ensure 0 swell when overlapping, 
-    // and full 28.0 liquid teardrop blend when pulled apart!
+    // The separation between pathT (position) and sizeT (size) represents how
+    // far Blob B has pulled away from its anchor. Blend scales naturally with
+    // this gap — 0 when perfectly overlapping (no swell), full 28.0 when
+    // maximally stretched (full liquid teardrop bridge).
     final separation = (pathT - sizeT).abs();
     final double currentBlend = (separation * 150.0).clamp(0.0, 28.0);
 
@@ -410,7 +412,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     return Stack(
       children: [
         // Invisible full-screen tap-to-close barrier
-        if (value > 0.3)
+        if (clampedValue > 0.3)
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
@@ -447,7 +449,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                       left: _triggerGlobalPosition.dx + pushDx,
                       top: _triggerGlobalPosition.dy + pushDy,
                       child: Transform.scale(
-                        scale: blobAEase,
+                        scale: 1.0,
                         child: GlassContainer(
                           useOwnLayer: false,
                           settings: effectiveSettings,
@@ -467,11 +469,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                     // By scaling the x/y offsets with the width/height curves,
                     // its edges stay perfectly pinned while it grows!
                     Positioned(
-                      left: _triggerGlobalPosition.dx + tw / 2.0 + currentDx - currentWidth / 2.0 + (_horizontalOffset * value),
-                      top: _triggerGlobalPosition.dy + th / 2.0 + currentDy - currentHeight / 2.0 + (_verticalOffset * value),
+                      left: _triggerGlobalPosition.dx + tw / 2.0 + currentDx - currentWidth / 2.0 + (_horizontalOffset * clampedValue),
+                      top: _triggerGlobalPosition.dy + th / 2.0 + currentDy - currentHeight / 2.0 + (_verticalOffset * clampedValue),
                       child: IgnorePointer(
-                        ignoring: value < 0.8,
-                        child: _buildMorphingContainer(value, sizeT, currentWidth, currentHeight),
+                        ignoring: clampedValue < 0.8,
+                        child: _buildMorphingContainer(clampedValue, sizeT, currentWidth, currentHeight),
                       ),
                     ),
                   ],
@@ -490,6 +492,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   /// Sums up all menu item heights plus padding to determine the target height
   /// for the morphing animation.
   double _calculateMenuHeight() {
+    if (widget.menuHeight != null) {
+      return widget.menuHeight!;
+    }
+    
     // Sum all menu item heights (each defaults to 44.0)
     final itemHeights = widget.items.fold<double>(
       0.0,
@@ -531,7 +537,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // Delay the radius transition so the shape stays highly rounded (teardrop-like)
     // while it pulls away from the trigger. Only morph to the sharper menu border
     // radius towards the end of the expansion.
-    final double radiusT = Curves.easeInExpo.transform(sizeT);
+    // Clamp to [0,1] for the curve: a border-radius cannot meaningfully overshoot,
+    // but sizeT can exceed 1.0 during the spring overshoot phase.
+    final double radiusT = Curves.easeInExpo.transform(sizeT.clamp(0.0, 1.0));
     final currentRadius = lerpDouble(maxRadius, widget.menuBorderRadius, radiusT)!;
     
     // Build the shape
@@ -821,7 +829,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   void _updateHoveredIndex(Offset localPosition) {
     // Detect if we've moved into "stretch territory" (outside visible menu bounds)
     // We use the visible container height if fixed, otherwise the natural height.
-    final visibleHeight = widget.menuHeight ?? _calculateMenuHeight();
+    final visibleHeight = _calculateMenuHeight();
     final x = localPosition.dx;
     final dy = localPosition.dy;
 
@@ -916,15 +924,5 @@ class _CustomBackOutCurve extends Curve {
   @override
   double transformInternal(double t) {
     return (t -= 1.0) * t * ((amplitude + 1.0) * t + amplitude) + 1.0;
-  }
-}
-
-class _CustomBackInCurve extends Curve {
-  const _CustomBackInCurve(this.amplitude);
-  final double amplitude;
-
-  @override
-  double transformInternal(double t) {
-    return t * t * ((amplitude + 1.0) * t - amplitude);
   }
 }
