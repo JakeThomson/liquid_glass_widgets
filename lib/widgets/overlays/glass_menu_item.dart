@@ -197,7 +197,7 @@ class _GlassMenuItemState extends State<GlassMenuItem> {
             : baseColor.withValues(alpha: 0.9));
     // Dynamic background for hover/press states
     // We use a subtle white overlay to "brighten" the glass
-    final bool effectivePressed = widget.isPressed ?? _isPressed;
+    final bool effectivePressed = (widget.isPressed == true) || _isPressed;
     final bool effectiveSelected = widget.isSelected;
 
     final Color backgroundColor = effectiveSelected
@@ -230,9 +230,9 @@ class _GlassMenuItemState extends State<GlassMenuItem> {
             duration: const Duration(milliseconds: 150),
             curve: Curves.easeOutCubic,
             child: AnimatedContainer(
-              duration: effectiveSelected
-                  ? Duration.zero
-                  : const Duration(milliseconds: 150),
+              duration: (effectiveSelected || effectivePressed)
+                  ? Duration.zero // Instant highlight on tap down
+                  : const Duration(milliseconds: 150), // Smooth fade out on release
               curve: Curves.easeOutCubic,
               height: widget.height,
               padding: const EdgeInsets.symmetric(horizontal: 16),

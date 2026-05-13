@@ -192,26 +192,35 @@ class AdaptiveGlass extends StatelessWidget {
       // Calculate density factor for shader (0.0 = normal, 1.0 = elevated)
       final double densityFactor = shouldElevate ? 1.0 : 0.0;
 
+      // Normalise settings for the 2D lightweight shader to prevent it from looking
+      // overpowering when the user has tuned their settings for the 3D premium shader.
+      // Thickness is scaled down because 2D inner shadows look much thicker than 3D bevels.
+      // Light intensity is scaled down because 2D gradients look brighter than 3D speculars.
+      final normalizedSettings = baseSettings.copyWith(
+        thickness: (baseSettings.effectiveThickness * 0.4).clamp(0.0, double.infinity),
+        lightIntensity: (baseSettings.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
+      );
+
       // Apply subtle elevation boost to settings (preserves saturation!)
-      final color = baseSettings.effectiveGlassColor;
+      final color = normalizedSettings.effectiveGlassColor;
       final effectiveSettings = shouldElevate
           ? LiquidGlassSettings(
               glassColor:
                   color.withValues(alpha: (color.a + 0.2).clamp(0.0, 1.0)),
-              refractiveIndex: baseSettings.refractiveIndex,
-              thickness: baseSettings.effectiveThickness,
-              lightAngle: baseSettings.lightAngle,
+              refractiveIndex: normalizedSettings.refractiveIndex,
+              thickness: normalizedSettings.effectiveThickness,
+              lightAngle: normalizedSettings.lightAngle,
               lightIntensity:
-                  (baseSettings.effectiveLightIntensity * 1.2).clamp(0.0, 10.0),
-              chromaticAberration: baseSettings.chromaticAberration,
-              blur: baseSettings.effectiveBlur,
-              visibility: baseSettings.visibility,
+                  (normalizedSettings.effectiveLightIntensity * 1.2).clamp(0.0, 10.0),
+              chromaticAberration: normalizedSettings.chromaticAberration,
+              blur: normalizedSettings.effectiveBlur,
+              visibility: normalizedSettings.visibility,
               saturation:
-                  baseSettings.effectiveSaturation, // Preserve user saturation!
+                  normalizedSettings.effectiveSaturation, // Preserve user saturation!
               ambientStrength:
-                  (baseSettings.effectiveAmbientStrength * 0.4).clamp(0.0, 1.0),
+                  (normalizedSettings.effectiveAmbientStrength * 0.4).clamp(0.0, 1.0),
             )
-          : baseSettings;
+          : normalizedSettings;
 
       // PIPELINE HAND-OFF (The Secret Sauce)
       // If this is a container (allowElevation=false), we are providing a blur

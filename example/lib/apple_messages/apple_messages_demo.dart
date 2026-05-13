@@ -1,6 +1,6 @@
 /// Apple Messages iOS 26 — GlassMenu Spring Physics Test Case
 ///
-/// This is a high-fidelity clone of the iOS 26 Messages app, built
+/// This is a clone of the iOS 26 Messages app, built
 /// specifically to compare [GlassMenu] spring physics against the native
 /// UIKit context menu implementation side-by-side on device.
 ///
@@ -30,12 +30,11 @@ const _kBlue = Color(0xFF0A84FF); // iOS 26 blue
 
 // Glass shared by both menu triggers — matches the "Edit" pill aesthetic
 const _kTriggerGlass = LiquidGlassSettings(
-  glassColor: Colors
-      .white12, //(0x442C2C2E), // dark gray, ~27% opacity — true frosted look
+  glassColor: Colors.white10,
   thickness: 18,
   blur: 3,
-  lightIntensity: 0.6,
-  ambientStrength: 0.1,
+  lightIntensity: 0.4,
+  ambientStrength: 0.08,
   chromaticAberration: 0.01,
   refractiveIndex: 1.2,
   saturation: 1.15,
@@ -43,22 +42,21 @@ const _kTriggerGlass = LiquidGlassSettings(
 
 // Glass for the search+compose bar (blended group — premium needed for merging)
 const _kSearchGlass = LiquidGlassSettings(
-  glassColor: Color(0x332C2C2E), // slightly lighter, blends as a pair
-  thickness: 16,
-  blur: 3,
-  lightIntensity: 0.5,
-  ambientStrength: 0.08,
-  chromaticAberration: 0.003,
-  refractiveIndex: 1.1,
-  saturation: 1.1,
+  glassColor: Colors.white10, // slightly lighter, blends as a pair
+  thickness: 18,
+  blur: 2,
+  lightIntensity: 0.4,
+  ambientStrength: 0.2,
+  chromaticAberration: 0.1,
+  refractiveIndex: 1.2,
+  saturation: 1.15,
 );
 
 // Glass for the menus themselves
 const _kMenuGlass = LiquidGlassSettings(
-  glassColor: Colors
-      .white12, //(0x442C2C2E), // dark gray, ~27% opacity — true frosted look
+  glassColor: Colors.white12,
   thickness: 18,
-  blur: 3,
+  blur: 6,
   lightIntensity: 0.6,
   ambientStrength: 0.1,
   chromaticAberration: 0.01,
@@ -279,11 +277,12 @@ class _MessagesScreenState extends State<_MessagesScreen> {
           ShaderMask(
             blendMode: BlendMode.dstIn,
             shaderCallback: (Rect bounds) {
-              // Top fade zone: from y=0 to (topPad+52+72) — covers nav bar
-              // + 72px fade into the first rows.
-              // Bottom fade zone: last 96px — fades out into the search bar.
-              final topZone = topPad + 52 + 72;
-              final bottomZone = 120.0 + botPad;
+              // Top fade zone: from y=0 to (topPad+52+50) — covers nav bar
+              // + 50px fade into the first rows.
+              // Bottom fade zone: covers the search bar height + safe area.
+              final topZone = topPad + 52 + 50;
+              final bottomZone =
+                  60.0 + botPad; // Fade only below the search bar
               return LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -291,7 +290,8 @@ class _MessagesScreenState extends State<_MessagesScreen> {
                   Colors.transparent,
                   Colors.black,
                   Colors.black,
-                  Colors.transparent,
+                  Colors
+                      .transparent, // Fades out smoothly at the bottom like the top
                 ],
                 stops: [
                   0.0,
@@ -339,7 +339,10 @@ class _MessagesScreenState extends State<_MessagesScreen> {
 
                 // Bottom padding — minimal; content reaches the fade zone.
                 // The _SearchBar ColoredBox covers the safe area visually.
-                SliverToBoxAdapter(child: const SizedBox(height: 8)),
+                // Ensure last row scrolls fully above the search bar overlay.
+                // 92 = top padding (8) + bar height (44) + min bottom padding (32)
+                // + buffer (8); botPad covers the device safe area.
+                SliverToBoxAdapter(child: SizedBox(height: 92 + botPad)),
               ],
             ),
           ),
@@ -353,6 +356,8 @@ class _MessagesScreenState extends State<_MessagesScreen> {
           ),
 
           // ── Bottom search + compose bar ──────────────────────────────────
+          // bottom: 0 — inner padding (widget.bottomPad) handles safe area
+          // on both iOS (home indicator) and Android (gesture nav bar).
           Positioned(
             left: 0,
             right: 0,
@@ -400,7 +405,7 @@ class _NavBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // ── Edit menu (top-left) ─────────────────────────────────
-                  _EditMenu(),
+                  const _EditMenu(),
                   const Spacer(),
 
                   // Inline "Messages" title when scrolled
@@ -449,10 +454,10 @@ class _EditMenu extends StatelessWidget {
       quality: GlassQuality.premium,
       triggerBuilder: (context, toggleMenu) => GlassButton.custom(
         onTap: toggleMenu,
-        width: 78,
-        height: 34,
+        width: 68,
+        height: 44,
         // True capsule pill — borderRadius = height/2
-        shape: const LiquidRoundedSuperellipse(borderRadius: 17),
+        shape: const LiquidRoundedSuperellipse(borderRadius: 22),
         settings: _kTriggerGlass,
         quality: GlassQuality.premium,
         useOwnLayer: true, // standalone — outside any LiquidGlassLayer
@@ -520,9 +525,9 @@ class _FilterMenu extends StatelessWidget {
         useOwnLayer: true, // standalone — outside any LiquidGlassLayer
         stretch: 0.2,
         icon: const Icon(
-          SFSymbols.line_horizontal_3,
+          SFSymbols.line_horizontal_3_decrease,
           color: Colors.white,
-          size: 20,
+          size: 24,
         ),
       ),
       items: [
@@ -706,9 +711,36 @@ class _Avatar extends StatelessWidget {
 // BOTTOM SEARCH + COMPOSE BAR
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _SearchBar extends StatelessWidget {
+class _SearchBar extends StatefulWidget {
   const _SearchBar({required this.bottomPad});
   final double bottomPad;
+
+  @override
+  State<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends State<_SearchBar> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_isFocused != _focusNode.hasFocus) {
+      setState(() => _isFocused = _focusNode.hasFocus);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -720,21 +752,27 @@ class _SearchBar extends StatelessWidget {
         // LiquidGlassBlendGroup inside makes the search pill and circle button
         // liquid-merge when they are close together — matching native iOS 26.
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          // Bottom padding: when there is a large safe-area inset (iOS home indicator)
+          // we subtract 8 so the bar sits at the desired visual height (26px).
+          // On devices with small or no insets (Android gesture nav, iPhone SE),
+          // a minimum padding of 32 ensures it's not too close to the bottom edge.
+          padding: EdgeInsets.fromLTRB(
+              12, 8, 12, widget.bottomPad > 32 ? widget.bottomPad - 8 : 32),
           child: AdaptiveLiquidGlassLayer(
             settings: _kSearchGlass,
             quality: GlassQuality.premium,
             blendAmount: 20,
             child: LiquidGlassBlendGroup(
-              blend: 24, // merge radius in logical px
+              blend: 14,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Search pill — joins blend group via useOwnLayer: false
+                  // Search pill — joins blend group
                   Expanded(
                     child: GlassSearchBar(
+                      focusNode: _focusNode,
                       placeholder: 'Search',
-                      useOwnLayer: false,
+                      useOwnLayer: false, // joins blend group
                       settings: _kSearchGlass,
                       quality: GlassQuality.premium,
                       showsCancelButton: true,
@@ -743,22 +781,34 @@ class _SearchBar extends StatelessWidget {
                       onCancel: () {},
                     ),
                   ),
-                  const SizedBox(width: 8),
 
-                  // Compose circle — same blend group, liquid-merges with pill
-                  GlassButton(
-                    onTap: () {},
-                    width: 44,
-                    height: 44,
-                    shape: const LiquidOval(), // 44×44 = perfect circle
-                    settings: _kSearchGlass,
-                    quality: GlassQuality.premium,
-                    useOwnLayer: false, // joins blend group
-                    stretch: 0.15,
-                    icon: const Icon(
-                      SFSymbols.square_and_pencil,
-                      color: Colors.white,
-                      size: 20,
+                  // Compose circle — joins blend group
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOutCubic,
+                    child: AnimatedOpacity(
+                      opacity: !_isFocused ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 180),
+                      child: !_isFocused
+                          ? Padding(
+                              padding: const EdgeInsets.only(left: 10),
+                              child: GlassButton(
+                                onTap: () {},
+                                width: 44,
+                                height: 44,
+                                shape: const LiquidOval(),
+                                settings: _kSearchGlass,
+                                quality: GlassQuality.premium,
+                                useOwnLayer: false, // joins blend group
+                                stretch: 0.25,
+                                icon: const Icon(
+                                  SFSymbols.square_and_pencil,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
                     ),
                   ),
                 ],
@@ -766,13 +816,6 @@ class _SearchBar extends StatelessWidget {
             ),
           ),
         ),
-
-        // ── Safe-area fill: solid black below the glass row ─────────────────
-        if (bottomPad > 0)
-          ColoredBox(
-            color: Colors.black,
-            child: SizedBox(height: bottomPad, width: double.infinity),
-          ),
       ],
     );
   }

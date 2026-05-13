@@ -148,8 +148,8 @@ void main() {
       // Wait for autofocus and animations
       await tester.pumpAndSettle(const Duration(seconds: 1));
 
-      // Cancel button should appear
-      expect(find.text('Cancel'), findsOneWidget);
+      // Cancel button appears as a glass icon (×), not text
+      expect(find.byIcon(CupertinoIcons.xmark), findsOneWidget);
     });
 
     testWidgets('calls onCancel when cancel button is tapped', (tester) async {
@@ -176,8 +176,8 @@ void main() {
       // Wait for autofocus and animations
       await tester.pumpAndSettle(const Duration(seconds: 1));
 
-      // Tap cancel
-      await tester.tap(find.text('Cancel'));
+      // Tap cancel icon
+      await tester.tap(find.byIcon(CupertinoIcons.xmark));
       await tester.pumpAndSettle();
 
       expect(cancelled, isTrue);
@@ -203,7 +203,6 @@ void main() {
       expect(searchBar.autofocus, isFalse);
       expect(searchBar.enabled, isTrue);
       expect(searchBar.height, equals(44.0));
-      expect(searchBar.cancelButtonText, equals('Cancel'));
       expect(searchBar.useOwnLayer, isFalse);
       expect(searchBar.quality, isNull);
     });

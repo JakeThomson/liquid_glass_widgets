@@ -46,7 +46,6 @@ class GlassSearchBarConfig {
     this.autoFocusOnExpand = false,
     this.expandWhenActive = true,
     this.showsCancelButton = true,
-    this.cancelButtonText = 'Cancel',
     this.cancelButtonColor,
     this.onSearchFocusChanged,
     this.onSearchFieldTap,
@@ -226,14 +225,9 @@ class GlassSearchBarConfig {
   /// dismiss pill with an "X" icon, replicating Apple News.
   final bool showsCancelButton;
 
-  /// Label for the slide-in cancel button.
+  /// Color of the cancel (×) icon.
   ///
-  /// Defaults to `'Cancel'`.
-  final String cancelButtonText;
-
-  /// Color of the cancel button text.
-  ///
-  /// Defaults to white with 90 % opacity, matching iOS system style.
+  /// Defaults to white with 90% opacity, matching iOS system style.
   final Color? cancelButtonColor;
 
   /// Called whenever the search field gains or loses keyboard focus.
