@@ -232,7 +232,8 @@ class _GlassMenuItemState extends State<GlassMenuItem> {
             child: AnimatedContainer(
               duration: (effectiveSelected || effectivePressed)
                   ? Duration.zero // Instant highlight on tap down
-                  : const Duration(milliseconds: 150), // Smooth fade out on release
+                  : const Duration(
+                      milliseconds: 150), // Smooth fade out on release
               curve: Curves.easeOutCubic,
               height: widget.height,
               padding: const EdgeInsets.symmetric(horizontal: 16),

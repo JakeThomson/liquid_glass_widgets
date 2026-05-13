@@ -17,8 +17,8 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 
 ## Features
 
-- **Comprehensive glass widget library** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces (see [Widget Categories](#widget-categories) for the full list)
-- **Liquid Morph Engine** — a new standalone physics system powering iOS 26-style teardrop morphing animations. `GlassMenu` is the first consumer; future widgets will use the same engine for consistent, physics-correct transitions throughout the library. See [`docs/LIQUID_MORPH_ENGINE.md`](docs/LIQUID_MORPH_ENGINE.md)
+- **Comprehensive glass widget library** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces (see [Widget Categories](#widget-categories))
+- **Liquid Morph Engine** — a standalone physics system powering iOS 26-style teardrop morphing. `GlassMenu` is the first consumer; future widgets will use the same engine for consistent liquid transitions. See [`docs/LIQUID_MORPH_ENGINE.md`](docs/LIQUID_MORPH_ENGINE.md)
 - **Real frosted glass** — native two-pass Gaussian blur + shader refraction on Impeller; lightweight shader on Skia/Web
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
 - **Adaptive quality** *(experimental)* — `GlassAdaptiveScope` benchmarks the device at startup and adjusts quality in real time: `minimal` on slow hardware, `standard` on mid-range, `premium` on fast devices. Degrades on thermal throttle, recovers when cool
@@ -48,9 +48,9 @@ cd example && flutter pub get && flutter run -t lib/apple_music/apple_music_demo
 ```
 
 
-### [Apple Messages Demo](example/lib/apple_messages/) — Liquid Morph Engine Showcase
+### [Apple Messages Demo](example/lib/apple_messages/) — iOS 26 Replica
 
-A high-fidelity Messages replica that showcases the new **Liquid Morph Engine** via `GlassMenu`. Tap the menu or **Edit** button at the top to see the teardrop open/close physics live.
+A replica showcasing the **Liquid Morph Engine** via `GlassMenu`. Tap the menu or **Edit** button at the top to see the teardrop open/close physics live.
 
 ```bash
 cd example && flutter pub get && flutter run -t lib/apple_messages/apple_messages_demo.dart
@@ -69,7 +69,7 @@ cd example && flutter pub get && flutter run -t lib/apple_news/apple_news_demo.d
 
 ### [Widget Showcase](example/) — Full Component Library
 
-A complete catalogue of all 36 widgets organized by category. Use it to explore every component, try live settings, and copy patterns directly into your app.
+A complete catalogue of every glass widget organised by category. Use it to explore components, try live settings, and copy patterns directly into your app.
 
 ```bash
 cd example && flutter pub get && flutter run
@@ -82,15 +82,15 @@ cd example && flutter pub get && flutter run
 
 Seven focused, self-contained demos — one widget, one file, runnable standalone:
 
-| Demo | Run command |
+| Demo | Run command (from `example/`) |
 |---|---|
-| `glass_menu_demo.dart` — all 9 menu alignments | `flutter run -t lib/demos/glass_menu_demo.dart` |
-| `glass_tab_bar_scrollable_demo.dart` — scrollable tab bar | `flutter run -t lib/demos/glass_tab_bar_scrollable_demo.dart` |
-| `glass_modal_sheet_demo.dart` — peek / half / full states | `flutter run -t lib/demos/glass_modal_sheet_demo.dart` |
-| `glass_bottom_bar_demo.dart` — magic-lens masking | `flutter run -t lib/demos/glass_bottom_bar_demo.dart` |
-| `bottom_bar_tab_width_demo.dart` — tabWidth showcase | `flutter run -t lib/demos/bottom_bar_tab_width_demo.dart` |
-| `searchable_bar_demo.dart` — searchable bar edge cases | `flutter run -t lib/demos/searchable_bar_demo.dart` |
-| `shape_debug_demo.dart` — GlassButton shapes | `flutter run -t lib/demos/shape_debug_demo.dart` |
+| `glass_menu_demo.dart` — all 9 menu alignments | `cd example && flutter run -t lib/demos/glass_menu_demo.dart` |
+| `glass_tab_bar_scrollable_demo.dart` — scrollable tab bar | `cd example && flutter run -t lib/demos/glass_tab_bar_scrollable_demo.dart` |
+| `glass_modal_sheet_demo.dart` — peek / half / full states | `cd example && flutter run -t lib/demos/glass_modal_sheet_demo.dart` |
+| `glass_bottom_bar_demo.dart` — magic-lens masking | `cd example && flutter run -t lib/demos/glass_bottom_bar_demo.dart` |
+| `bottom_bar_tab_width_demo.dart` — tabWidth showcase | `cd example && flutter run -t lib/demos/bottom_bar_tab_width_demo.dart` |
+| `searchable_bar_demo.dart` — searchable bar edge cases | `cd example && flutter run -t lib/demos/searchable_bar_demo.dart` |
+| `shape_debug_demo.dart` — GlassButton shapes | `cd example && flutter run -t lib/demos/shape_debug_demo.dart` |
 
 
 ## Widget Categories

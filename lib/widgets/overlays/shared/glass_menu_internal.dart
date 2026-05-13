@@ -40,7 +40,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     }
   }
 
-
   Alignment _morphAlignment = Alignment.topLeft;
 
   Alignment? _getAlignment(GlassMenuAlignment align) {
@@ -130,7 +129,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         // We instantly hide the empty glass overlay and reveal the REAL trigger.
         // The latch ensures that even if the underdamped spring bounces back up
         // past 0.15, we don't hide the icon again!
-        final isHandoff = _morphController.isClosing && _morphController.hasHandedOff;
+        final isHandoff =
+            _morphController.isClosing && _morphController.hasHandedOff;
         final triggerOpacity =
             (_overlayController.isShowing && !isHandoff) ? 0.0 : 1.0;
 
@@ -182,7 +182,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       },
     );
   }
-
 
   void _toggleMenu() {
     if (_overlayController.isShowing && _morphController.value > 0.1) {
@@ -247,8 +246,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
     if (widget.autoAdjustToScreen) {
       final flutterView = View.of(context);
-      final mqPadding = EdgeInsets.fromViewPadding(flutterView.padding, flutterView.devicePixelRatio);
-      
+      final mqPadding = EdgeInsets.fromViewPadding(
+          flutterView.padding, flutterView.devicePixelRatio);
+
       final double safeTop = widget.menuPadding.top + mqPadding.top;
       final double safeBottom = widget.menuPadding.bottom + mqPadding.bottom;
       final double safeLeft = widget.menuPadding.left + mqPadding.left;
@@ -338,7 +338,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final currentHeight = lerpDouble(th, targetHeight, state.sizeT)!;
     final currentWidth = lerpDouble(tw, widget.menuWidth, state.sizeT)!;
 
-
     final inheritedSettings = InheritedLiquidGlass.of(context);
     final effectiveSettings = widget.glassSettings ??
         inheritedSettings ??
@@ -378,7 +377,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         // trigger's center. This avoids manual coordinate math and prevents pixel drift.
         Positioned.fill(
           child: Opacity(
-          opacity: (_morphController.isClosing && _morphController.hasHandedOff) ? 0.0 : 1.0,
+            opacity:
+                (_morphController.isClosing && _morphController.hasHandedOff)
+                    ? 0.0
+                    : 1.0,
             child: LiquidGlassLayer(
               settings: effectiveSettings,
               child: InheritedLiquidGlass(
@@ -466,8 +468,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       final mediaQuery = MediaQuery.maybeOf(context);
       if (mediaQuery != null) {
         final flutterView = View.of(context);
-        final mqPadding = EdgeInsets.fromViewPadding(flutterView.padding, flutterView.devicePixelRatio);
-        
+        final mqPadding = EdgeInsets.fromViewPadding(
+            flutterView.padding, flutterView.devicePixelRatio);
+
         // Clamp to screen height minus safe areas and a 20px safety buffer
         final maxHeight = mediaQuery.size.height -
             mqPadding.vertical -
@@ -480,8 +483,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     return naturalHeight;
   }
 
-  Widget _buildMorphingContainer(
-      LiquidMorphState state, double clampedValue, double currentWidth, double currentHeight) {
+  Widget _buildMorphingContainer(LiquidMorphState state, double clampedValue,
+      double currentWidth, double currentHeight) {
     // Inherit quality from parent layer if not explicitly set
     final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,
@@ -508,7 +511,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // radius towards the end of the expansion.
     // Clamp to [0,1] for the curve: a border-radius cannot meaningfully overshoot,
     // but sizeT can exceed 1.0 during the spring overshoot phase.
-    final double radiusT = Curves.easeInExpo.transform(state.sizeT.clamp(0.0, 1.0));
+    final double radiusT =
+        Curves.easeInExpo.transform(state.sizeT.clamp(0.0, 1.0));
     final currentRadius =
         lerpDouble(maxRadius, widget.menuBorderRadius, radiusT)!;
 
@@ -655,7 +659,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                             if (scrollDisplacement < 10 &&
                                 dragDisplacement < 10 &&
                                 !_isScrollable) {
-                              final indexToTap = _hoveredIndex ?? _calculateIndexFromPosition(event.localPosition);
+                              final indexToTap = _hoveredIndex ??
+                                  _calculateIndexFromPosition(
+                                      event.localPosition);
                               if (indexToTap != null) {
                                 final item = widget.items[indexToTap];
                                 if (item is GlassMenuItem && item.enabled) {
@@ -696,9 +702,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                                       .entries
                                       .expand((entry) {
                                     // Items fade in smoothly over the second half of the animation.
-                                    // Removed the complex out-to-in 94% stagger so items show up 
+                                    // Removed the complex out-to-in 94% stagger so items show up
                                     // naturally without a delayed "pop-in" on fast springs.
-                                    final itemOpacity = ((clampedValue - 0.5) / 0.5).clamp(0.0, 1.0);
+                                    final itemOpacity =
+                                        ((clampedValue - 0.5) / 0.5)
+                                            .clamp(0.0, 1.0);
                                     return [
                                       Opacity(
                                         opacity: itemOpacity,
@@ -799,7 +807,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final visibleHeight = _calculateMenuHeight();
     final x = localPosition.dx;
     final dy = localPosition.dy;
-    final y = dy + (_scrollController.hasClients ? _scrollController.offset : 0.0);
+    final y =
+        dy + (_scrollController.hasClients ? _scrollController.offset : 0.0);
 
     final isWithinActiveZone = x > -20 &&
         x < widget.menuWidth + 20 &&
@@ -843,7 +852,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     }
 
     int? detectedIndex;
-    
+
     // Only calculate hover selection for non-scrollable menus (slide-to-select).
     if (!_isScrollable) {
       detectedIndex = _calculateIndexFromPosition(localPosition);
@@ -885,4 +894,3 @@ class _SelectionItemWrapper extends StatelessWidget {
     );
   }
 }
-

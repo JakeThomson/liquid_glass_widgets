@@ -278,14 +278,18 @@ class _LiquidTeardropBorder extends OutlinedBorder {
     final tr = math.min(topRadius, halfTopWidth);
     final br = math.min(bottomRadius, halfBottomWidth);
 
-    final topLeftX = cx + (rect.width / 2) * alignX - halfTopWidth * alignX - halfTopWidth;
+    final topLeftX =
+        cx + (rect.width / 2) * alignX - halfTopWidth * alignX - halfTopWidth;
     final topRightX = topLeftX + topWidth;
 
-    final bottomLeftX = cx + (rect.width / 2) * alignX - halfBottomWidth * alignX - halfBottomWidth;
+    final bottomLeftX = cx +
+        (rect.width / 2) * alignX -
+        halfBottomWidth * alignX -
+        halfBottomWidth;
     final bottomRightX = bottomLeftX + bottomWidth;
 
     path.moveTo(topLeftX + tr, rect.top);
-    
+
     path.lineTo(topRightX - tr, rect.top);
     if (tr > 0) {
       path.arcToPoint(
@@ -295,9 +299,12 @@ class _LiquidTeardropBorder extends OutlinedBorder {
     }
 
     path.cubicTo(
-      topRightX, rect.top + tr + (rect.height - tr - br) * 0.5,
-      bottomRightX, rect.bottom - br - (rect.height - tr - br) * 0.5,
-      bottomRightX, rect.bottom - br,
+      topRightX,
+      rect.top + tr + (rect.height - tr - br) * 0.5,
+      bottomRightX,
+      rect.bottom - br - (rect.height - tr - br) * 0.5,
+      bottomRightX,
+      rect.bottom - br,
     );
 
     if (br > 0) {
@@ -316,9 +323,12 @@ class _LiquidTeardropBorder extends OutlinedBorder {
     }
 
     path.cubicTo(
-      bottomLeftX, rect.bottom - br - (rect.height - tr - br) * 0.5,
-      topLeftX, rect.top + tr + (rect.height - tr - br) * 0.5,
-      topLeftX, rect.top + tr,
+      bottomLeftX,
+      rect.bottom - br - (rect.height - tr - br) * 0.5,
+      topLeftX,
+      rect.top + tr + (rect.height - tr - br) * 0.5,
+      topLeftX,
+      rect.top + tr,
     );
 
     if (tr > 0) {
@@ -333,7 +343,8 @@ class _LiquidTeardropBorder extends OutlinedBorder {
   }
 
   @override
-  Path getInnerPath(Rect rect, {TextDirection? textDirection}) => getOuterPath(rect, textDirection: textDirection);
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
+      getOuterPath(rect, textDirection: textDirection);
 
   @override
   void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {}
@@ -352,7 +363,7 @@ class _LiquidTeardropBorder extends OutlinedBorder {
 
   @override
   OutlinedBorder copyWith({BorderSide? side}) {
-    return this; 
+    return this;
   }
 }
 
@@ -414,6 +425,6 @@ class LiquidTeardropShape extends LiquidShape {
   }
 
   @override
-  List<Object?> get props => [...super.props, topWidth, bottomWidth, topRadius, bottomRadius, alignX];
+  List<Object?> get props =>
+      [...super.props, topWidth, bottomWidth, topRadius, bottomRadius, alignX];
 }
-

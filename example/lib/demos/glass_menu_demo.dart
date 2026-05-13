@@ -144,8 +144,8 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                 // ── 3×3 grid of menu triggers ─────────────────────────────
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -263,8 +263,8 @@ class _Trigger extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveShape = shape ??
-        LiquidRoundedRectangle(borderRadius: height / 2);
+    final effectiveShape =
+        shape ?? LiquidRoundedRectangle(borderRadius: height / 2);
 
     return GlassMenu(
       menuAlignment: alignment,

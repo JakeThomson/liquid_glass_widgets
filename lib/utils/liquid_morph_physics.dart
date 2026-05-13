@@ -242,9 +242,8 @@ class LiquidMorphPhysics {
     // ── J-Curve Position ──────────────────────────────────────────────────────
     // The back-out curve overshoots far past 1.0 before snapping back,
     // creating the "string pull" teardrop neck at maximum separation.
-    final pathT =
-        _BackOutCurve(_backOutAmplitude).transform(clampedValue) +
-            closeUndershoot;
+    final pathT = _BackOutCurve(_backOutAmplitude).transform(clampedValue) +
+        closeUndershoot;
 
     // ── Size ─────────────────────────────────────────────────────────────────
     // Size grows steadily then decelerates so the teardrop bulge is clearly
@@ -257,8 +256,7 @@ class LiquidMorphPhysics {
     // proportionally to mirror the closing momentum.
     final pushDx =
         rawValue < 0.0 ? (finalDx + horizontalOffset) * rawValue : 0.0;
-    final pushDy =
-        rawValue < 0.0 ? (finalDy + verticalOffset) * rawValue : 0.0;
+    final pushDy = rawValue < 0.0 ? (finalDy + verticalOffset) * rawValue : 0.0;
 
     // ── Blob B Displacement ───────────────────────────────────────────────────
     final currentDx = finalDx * pathT;

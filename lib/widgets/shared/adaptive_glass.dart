@@ -197,8 +197,10 @@ class AdaptiveGlass extends StatelessWidget {
       // Thickness is scaled down because 2D inner shadows look much thicker than 3D bevels.
       // Light intensity is scaled down because 2D gradients look brighter than 3D speculars.
       final normalizedSettings = baseSettings.copyWith(
-        thickness: (baseSettings.effectiveThickness * 0.4).clamp(0.0, double.infinity),
-        lightIntensity: (baseSettings.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
+        thickness:
+            (baseSettings.effectiveThickness * 0.4).clamp(0.0, double.infinity),
+        lightIntensity:
+            (baseSettings.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
       );
 
       // Apply subtle elevation boost to settings (preserves saturation!)
@@ -210,15 +212,16 @@ class AdaptiveGlass extends StatelessWidget {
               refractiveIndex: normalizedSettings.refractiveIndex,
               thickness: normalizedSettings.effectiveThickness,
               lightAngle: normalizedSettings.lightAngle,
-              lightIntensity:
-                  (normalizedSettings.effectiveLightIntensity * 1.2).clamp(0.0, 10.0),
+              lightIntensity: (normalizedSettings.effectiveLightIntensity * 1.2)
+                  .clamp(0.0, 10.0),
               chromaticAberration: normalizedSettings.chromaticAberration,
               blur: normalizedSettings.effectiveBlur,
               visibility: normalizedSettings.visibility,
-              saturation:
-                  normalizedSettings.effectiveSaturation, // Preserve user saturation!
+              saturation: normalizedSettings
+                  .effectiveSaturation, // Preserve user saturation!
               ambientStrength:
-                  (normalizedSettings.effectiveAmbientStrength * 0.4).clamp(0.0, 1.0),
+                  (normalizedSettings.effectiveAmbientStrength * 0.4)
+                      .clamp(0.0, 1.0),
             )
           : normalizedSettings;
 
