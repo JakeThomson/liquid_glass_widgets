@@ -35,7 +35,7 @@ The SDF metaball shader creates the teardrop neck between the blobs automaticall
 - **Handoff latching** · Re-opening during a close animation inherits the in-flight velocity and reverses smoothly — no pop or cut.
 - **Blob scaling** · Blob sizes scale relative to trigger size and computed menu height, so short and tall menus receive proportionally correct teardrop curvature.
 
-> **See it live:** The [Apple Messages demo](example/lib/apple_messages/apple_messages_demo.dart) (`cd example && flutter run -t lib/apple_messages/apple_messages_demo.dart`) showcases the morphing engine in a real-world context — long-press any message bubble to trigger the `GlassMenu` with full teardrop open/close physics.
+> **See it live:** The [Apple Messages demo](example/lib/apple_messages/apple_messages_demo.dart) (`cd example && flutter run -t lib/apple_messages/apple_messages_demo.dart`) showcases the morphing engine in a real-world context — tap the menu or **Edit** button at the top of the screen to trigger the `GlassMenu` with full teardrop open/close physics.
 
 ### Spring physics refinements
 
@@ -46,13 +46,15 @@ The SDF metaball shader creates the teardrop neck between the blobs automaticall
 
 - **`GlassMenu` — safe area / notch clipping on iOS and Android** · Menu position and maximum height were computed from `MediaQuery.padding`, which is consumed by ancestor `SafeArea` widgets and reports `0` inside a fully-safe tree. Switched to `View.of(context).padding` (raw hardware insets) so the menu is always clamped correctly regardless of `SafeArea` nesting depth. Fixes the menu appearing under the Dynamic Island on iPhone 14 Pro and similar devices.
 
+- **`GlassMenu` (scrollable) — scrolling now works on large menus** · Menus with more items than fit on screen can now be scrolled reliably.
+
 ## 🗂 Example restructure — `demos/` suite
 
 The `example/` package has been reorganised for a cleaner public-facing demo experience:
 
 - New `example/lib/demos/` folder containing seven self-contained, copy-pasteable demos:
   - **`glass_menu_demo.dart`** — all 9 `GlassMenuAlignment` positions, scrollable item list
-  - **Apple Messages demo** — to see the engine in a richer real-world context, `flutter run -t lib/apple_messages/apple_messages_demo.dart` and long-press any message bubble
+  - **Apple Messages demo** — to see the engine in a richer real-world context, `flutter run -t lib/apple_messages/apple_messages_demo.dart` and tap the menu / **Edit** button at the top
   - **`glass_tab_bar_scrollable_demo.dart`** — scrollable `GlassTabBar` with dynamic tab add
   - **`glass_modal_sheet_demo.dart`** — all sheet states (peek / half / full), Apple Maps peek style
   - **`glass_bottom_bar_demo.dart`** — magic-lens masking with `GlassBottomBar`
