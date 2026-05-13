@@ -349,7 +349,8 @@ void main() {
         final raw = i / 100.0; // 0.00 → 0.40
         final cur = _compute(raw).anchorScale;
         expect(cur, lessThanOrEqualTo(prev),
-            reason: 'anchorScale not monotonically decreasing at rawValue=$raw');
+            reason:
+                'anchorScale not monotonically decreasing at rawValue=$raw');
         prev = cur;
       }
     });

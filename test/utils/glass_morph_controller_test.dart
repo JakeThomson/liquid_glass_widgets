@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/utils/glass_morph_controller.dart';
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: mounts a minimal widget that owns a GlassMorphController.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -136,7 +135,8 @@ void main() {
       expect(ctrl.hasHandedOff, isFalse);
     });
 
-    testWidgets('value advances above 0 after one engine frame', (tester) async {
+    testWidgets('value advances above 0 after one engine frame',
+        (tester) async {
       final ctrl = await _mount(tester);
       ctrl.open();
       // Advance 2 engine frames (spring has non-zero dt to integrate)
@@ -172,7 +172,8 @@ void main() {
       expect(ctrl.isClosing, isTrue);
     });
 
-    testWidgets('value returns toward 0.0 after close() settles', (tester) async {
+    testWidgets('value returns toward 0.0 after close() settles',
+        (tester) async {
       final ctrl = await _mount(tester);
       ctrl.open();
       await tester.pumpAndSettle();
@@ -181,7 +182,8 @@ void main() {
       expect(ctrl.value, closeTo(0.0, 0.02));
     });
 
-    testWidgets('hasHandedOff latches true after close animation', (tester) async {
+    testWidgets('hasHandedOff latches true after close animation',
+        (tester) async {
       final ctrl = await _mount(tester);
       ctrl.open();
       await tester.pumpAndSettle();
@@ -196,7 +198,8 @@ void main() {
       expect(() => ctrl.close(), returnsNormally);
     });
 
-    testWidgets('isClosing is false at construction (never closed)', (tester) async {
+    testWidgets('isClosing is false at construction (never closed)',
+        (tester) async {
       final ctrl = await _mount(tester);
       expect(ctrl.isClosing, isFalse);
     });
@@ -243,7 +246,8 @@ void main() {
 
   group('GlassMorphController — MorphSpeed variants', () {
     for (final speed in MorphSpeed.values) {
-      testWidgets('$speed speed opens and settles without crashing', (tester) async {
+      testWidgets('$speed speed opens and settles without crashing',
+          (tester) async {
         final ctrl = await _mount(tester, speed: speed);
         ctrl.open();
         await tester.pumpAndSettle();
@@ -251,7 +255,8 @@ void main() {
       });
     }
 
-    test('fast spring has higher stiffness than slow (settles faster by design)',
+    test(
+        'fast spring has higher stiffness than slow (settles faster by design)',
         () {
       // Verify the contract via physics constants rather than animation timing.
       // GlassMorphController._effectiveSpring uses these values:
@@ -287,7 +292,8 @@ void main() {
       expect(state.phase, equals(MorphPhase.idle));
     });
 
-    testWidgets('currentDx > 0 after animation settles to halfway', (tester) async {
+    testWidgets('currentDx > 0 after animation settles to halfway',
+        (tester) async {
       final ctrl = await _mount(tester);
       ctrl.open();
       // Pump until value is clearly above 0.4 (anchor scale has zeroed out
@@ -441,8 +447,7 @@ void main() {
       expect(notifyCount, equals(0));
     });
 
-    testWidgets(
-        'open() with disableAnimations=true still settles to ~1.0',
+    testWidgets('open() with disableAnimations=true still settles to ~1.0',
         (tester) async {
       final ctrl = await _mount(tester);
       ctrl.setDisableAnimations(true);
@@ -454,7 +459,7 @@ void main() {
     });
 
     test(
-        'disableAnimations uses instant spring (stiffness=500) — '  
+        'disableAnimations uses instant spring (stiffness=500) — '
         'same as MorphSpeed.instant, which is the fastest preset', () {
       // The instant-spring constant (stiffness=500) used by disableAnimations
       // is identical to MorphSpeed.instant, which already sits above the
@@ -467,7 +472,8 @@ void main() {
       expect(disabledStiffness, greaterThan(normalStiffness));
     });
 
-    testWidgets('disableAnimations does not affect value at rest', (tester) async {
+    testWidgets('disableAnimations does not affect value at rest',
+        (tester) async {
       final ctrl = await _mount(tester);
       ctrl.setDisableAnimations(true);
       // No open() called — value must still be 0.

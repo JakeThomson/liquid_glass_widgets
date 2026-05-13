@@ -165,8 +165,7 @@ class GlassMorphController extends ChangeNotifier {
   /// `true` from the moment [open] is called until the spring has fully
   /// settled back at `0.0` after [close].
   bool get isShowing =>
-      _animationController.value > 0.001 ||
-      (_isClosing && !_hasSettled);
+      _animationController.value > 0.001 || (_isClosing && !_hasSettled);
 
   /// Whether the controller is in the closing phase.
   bool get isClosing => _isClosing;
@@ -206,7 +205,6 @@ class GlassMorphController extends ChangeNotifier {
 
   /// Whether reduced-motion override is currently active.
   bool get disableAnimations => _disableAnimations;
-
 
   /// Opens the morph animation from the current position.
   ///
