@@ -591,8 +591,6 @@ This disables only the automatic system-flag bridge. An explicit `GlassAccessibi
 
 ## Architecture
 
-For a full architectural overview see [`ARCHITECTURE.md`](ARCHITECTURE.md).
-
 ### Rendering pipeline
 
 On Impeller, every `GlassQuality.premium` surface uses a two-pass pipeline:

@@ -106,6 +106,7 @@ test/golden/**/failures/
 
 # Root-level planning docs
 RENDERER_IMPROVEMENT_PLAN.md
+ARCHITECTURE.md
 
 # Example app — generated platform folders (not needed for a package example)
 example/android/
