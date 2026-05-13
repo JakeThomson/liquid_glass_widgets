@@ -4,7 +4,7 @@
 /// [GlassBottomBar.tabWidth] control the tab pill width on both bar variants.
 ///
 /// Run standalone:
-///   flutter run -t example/lib/tab_width_demo.dart
+///   flutter run -t example/lib/demos/bottom_bar_tab_width_demo.dart
 library;
 
 import 'package:flutter/cupertino.dart';
