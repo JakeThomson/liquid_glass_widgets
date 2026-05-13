@@ -2,7 +2,7 @@
 /// smart silence, and the Apple Maps-style floating sheet experience.
 ///
 /// Run standalone:
-///   flutter run -t lib/modal_sheet_showcase/modal_sheet_showcase.dart
+///   flutter run -t example/lib/demos/glass_modal_sheet_demo.dart
 library;
 
 import 'package:flutter/cupertino.dart';

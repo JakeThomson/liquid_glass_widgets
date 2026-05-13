@@ -122,6 +122,9 @@ example/showcase/IMAGE_GUIDE.md
 example/showcase/QUICKSTART.md
 example/showcase/SHOWCASE_SUMMARY.md
 
+# Local-only playground (never commit)
+example/lib/playground/
+
 # Root-level scratch/debug scripts and output (not for repo)
 test_output.txt
 test_output.log

@@ -1,4 +1,74 @@
+# 0.11.0
+
+## ✨ New — Liquid Morph Engine (new architectural system)
+
+This release introduces the **Liquid Morph Engine** — a standalone, reusable physics and animation system for iOS 26-style liquid glass morphing. It lives in `lib/engine/` and is fully decoupled from any specific widget.
+
+`GlassMenu` is the **first consumer** of the engine. Future widgets (sheets, cards, buttons) will use the same engine to achieve consistent, physics-correct liquid glass transitions throughout the library.
+
+> **Documentation:** [`docs/LIQUID_MORPH_ENGINE.md`](docs/LIQUID_MORPH_ENGINE.md) — full guide covering `GlassMorphController`, `LiquidMorphState`, `LiquidMorphPhysics`, and how to integrate the engine into your own custom widgets.
+
+### Core engine types
+
+| Type | Role |
+|---|---|
+| `GlassMorphController` | Lifecycle owner — manages the spring, exposes `open()` / `close()` |
+| `LiquidMorphState` | Immutable value object — one per frame, contains all render values |
+| `MorphPhase` | Semantic lifecycle enum — tells you where in the animation you are |
+| `MorphSpeed` | Enum — controls spring stiffness without exposing raw physics constants |
+| `LiquidMorphPhysics` | Internal stateless math engine |
+
+### How it works
+
+Two conceptual "blobs" drive every morphing animation:
+
+- **Blob A** (anchor) — the ghost trigger that shrinks away over the first 40 % of the animation, cleanly breaking the liquid bridge.
+- **Blob B** (body) — travels from the trigger centre to the widget centre along a J-curve overshoot trajectory, expanding from trigger size to target size.
+
+The SDF metaball shader creates the teardrop neck between the blobs automatically — there is no explicit neck geometry. `LiquidMorphPhysics.compute()` determines each blob's position, scale, and blend factor on every frame.
+
+### `GlassMenu` — first engine consumer
+
+- **Teardrop open animation** · The menu grows from the trigger point along the dual-curve SDF path, producing the iOS 26 "bubble emerging from button" effect.
+- **Rubber-band close physics** · On dismiss the teardrop recoils with a critically-damped spring + overshoot tail, matching the tactile snap of native iOS context menus.
+- **Velocity-bump alignment** · Spring initial velocity is seeded from touch velocity at release — fast flicks close snappily, slow releases settle deliberately.
+- **Handoff latching** · Re-opening during a close animation inherits the in-flight velocity and reverses smoothly — no pop or cut.
+- **Blob scaling** · Blob sizes scale relative to trigger size and computed menu height, so short and tall menus receive proportionally correct teardrop curvature.
+
+> **See it live:** The [Apple Messages demo](example/lib/apple_messages/apple_messages_demo.dart) (`cd example && flutter run -t lib/apple_messages/apple_messages_demo.dart`) showcases the morphing engine in a real-world context — tap the menu or **Edit** button at the top of the screen to trigger the `GlassMenu` with full teardrop open/close physics.
+
+### Spring physics refinements
+
+- Critical damping (`ζ = 1.0`) on all spring controllers prevents oscillation on rapid successive opens.
+- `interactionScale`, `stretch`, and `stretchResistance` integrate into the morphing path via the same spring solver used by `LiquidStretch`.
+
+## 🐛 Fixes
+
+- **`GlassMenu` — safe area / notch clipping on iOS and Android** · Menu position and maximum height were computed from `MediaQuery.padding`, which is consumed by ancestor `SafeArea` widgets and reports `0` inside a fully-safe tree. Switched to `View.of(context).padding` (raw hardware insets) so the menu is always clamped correctly regardless of `SafeArea` nesting depth. Fixes the menu appearing under the Dynamic Island on iPhone 14 Pro and similar devices.
+
+- **`GlassMenu` (scrollable) — scrolling now works on large menus** · Menus with more items than fit on screen can now be scrolled reliably.
+
+## 🗂 Example restructure — `demos/` suite
+
+The `example/` package has been reorganised for a cleaner public-facing demo experience:
+
+- New `example/lib/demos/` folder containing seven self-contained, copy-pasteable demos:
+  - **`glass_menu_demo.dart`** — all 9 `GlassMenuAlignment` positions, scrollable item list
+  - **`glass_tab_bar_scrollable_demo.dart`** — scrollable `GlassTabBar` with dynamic tab add
+  - **`glass_modal_sheet_demo.dart`** — all sheet states (peek / half / full), Apple Maps peek style
+  - **`glass_bottom_bar_demo.dart`** — magic-lens masking with `GlassBottomBar`
+  - **`bottom_bar_tab_width_demo.dart`** — `tabWidth` on both bar variants side-by-side
+  - **`searchable_bar_demo.dart`** — `GlassSearchableBottomBar` edge cases
+  - **`shape_debug_demo.dart`** — `GlassButton` shape visualiser
+
+- **Apple Messages demo** (`example/lib/apple_messages/`) — showcases the Liquid Morph Engine in a full real-world context; tap the menu or **Edit** button at the top to trigger `GlassMenu`.
+- `example/lib/modal_sheet_showcase/` removed (file moved to `demos/glass_modal_sheet_demo.dart`).
+- Experimental scratchpad scripts moved to git-ignored `example/lib/playground/`.
+
+---
+
 # 0.10.10
+
 
 Thanks to [@g3mf0r](https://github.com/g3mf0r) for [PR #55](https://github.com/sdegenaar/liquid_glass_widgets/pull/55). 🙏
 

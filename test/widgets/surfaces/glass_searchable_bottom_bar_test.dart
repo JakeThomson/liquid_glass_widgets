@@ -325,7 +325,6 @@ void main() {
       expect(config.enableSuggestions, isTrue);
       expect(config.autoFocusOnExpand, isFalse);
       expect(config.showsCancelButton, isTrue);
-      expect(config.cancelButtonText, equals('Cancel'));
     });
 
     test('respects custom hint text', () {

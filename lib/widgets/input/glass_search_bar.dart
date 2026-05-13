@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
+import '../interactive/glass_button.dart';
 import 'glass_text_field.dart';
 
 /// A glass morphism search bar following Apple's iOS 26 design patterns.
@@ -108,7 +109,6 @@ class GlassSearchBar extends StatefulWidget {
     this.textStyle,
     this.placeholderStyle,
     this.height = 44.0,
-    this.cancelButtonText = 'Cancel',
     this.settings,
     this.useOwnLayer = false,
     this.quality,
@@ -187,7 +187,7 @@ class GlassSearchBar extends StatefulWidget {
   /// Defaults to white with 60% opacity.
   final Color? clearIconColor;
 
-  /// Color of the cancel button text.
+  /// Color of the cancel (×) icon.
   ///
   /// Defaults to white with 90% opacity.
   final Color? cancelButtonColor;
@@ -202,11 +202,6 @@ class GlassSearchBar extends StatefulWidget {
   ///
   /// Defaults to 44 (iOS standard).
   final double height;
-
-  /// Text for the cancel button.
-  ///
-  /// Defaults to 'Cancel'.
-  final String cancelButtonText;
 
   // ===========================================================================
   // Glass Effect Properties
@@ -290,6 +285,18 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
     }
   }
 
+  void _handleTapOutside(PointerDownEvent event) {
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox != null) {
+      final Offset localPosition = renderBox.globalToLocal(event.position);
+      if (renderBox.paintBounds.contains(localPosition)) {
+        // Tap was inside the search bar row (e.g., on the cancel button), do nothing.
+        return;
+      }
+    }
+    _focusNode.unfocus();
+  }
+
   void _handleClear() {
     _controller.clear();
     widget.onChanged?.call('');
@@ -351,6 +358,7 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
               textInputAction: TextInputAction.search,
               autofocus: widget.autofocus,
               enabled: widget.enabled,
+              onTapOutside: _handleTapOutside,
               textStyle: widget.textStyle,
               placeholderStyle: widget.placeholderStyle,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -377,16 +385,19 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
             duration: const Duration(milliseconds: 180),
             child: _showCancelButton
                 ? Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: GestureDetector(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: GlassButton(
                       onTap: _handleCancel,
-                      child: Text(
-                        widget.cancelButtonText,
-                        style: TextStyle(
-                          color: cancelButtonColor,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w400,
-                        ),
+                      width: widget.height,
+                      height: widget.height,
+                      shape: const LiquidOval(),
+                      settings: widget.settings,
+                      useOwnLayer: widget.useOwnLayer,
+                      quality: widget.quality,
+                      icon: Icon(
+                        CupertinoIcons.xmark,
+                        color: cancelButtonColor,
+                        size: 20,
                       ),
                     ),
                   )

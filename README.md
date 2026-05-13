@@ -1,6 +1,6 @@
 # Liquid Glass Widgets
 
-Bring Apple's iOS 26 Liquid Glass to your Flutter app — 37 glass widgets with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
+Bring Apple's iOS 26 Liquid Glass to your Flutter app — a comprehensive glass widget library with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
 
 [![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg?label=pub.dev&labelColor=333940&logo=dart)](https://pub.dev/packages/liquid_glass_widgets)
 [![pub points](https://img.shields.io/pub/points/liquid_glass_widgets?label=pub%20points&labelColor=333940)](https://pub.dev/packages/liquid_glass_widgets/score)
@@ -17,7 +17,8 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 
 ## Features
 
-- **36 glass widgets** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces
+- **Comprehensive glass widget library** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces (see [Widget Categories](#widget-categories))
+- **Liquid Morph Engine** — a standalone physics system powering iOS 26-style teardrop morphing. `GlassMenu` is the first consumer; future widgets will use the same engine for consistent liquid transitions. See [`docs/LIQUID_MORPH_ENGINE.md`](docs/LIQUID_MORPH_ENGINE.md)
 - **Real frosted glass** — native two-pass Gaussian blur + shader refraction on Impeller; lightweight shader on Skia/Web
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
 - **Adaptive quality** *(experimental)* — `GlassAdaptiveScope` benchmarks the device at startup and adjusts quality in real time: `minimal` on slow hardware, `standard` on mid-range, `premium` on fast devices. Degrades on thermal throttle, recovers when cool
@@ -47,6 +48,15 @@ cd example && flutter pub get && flutter run -t lib/apple_music/apple_music_demo
 ```
 
 
+### [Apple Messages Demo](example/lib/apple_messages/) — iOS 26 Replica
+
+A replica showcasing the **Liquid Morph Engine** via `GlassMenu`. Tap the menu or **Edit** button at the top to see the teardrop open/close physics live.
+
+```bash
+cd example && flutter pub get && flutter run -t lib/apple_messages/apple_messages_demo.dart
+```
+
+
 ### [Apple News Demo](example/lib/apple_news/) — iOS 26 Replica
 
 A recreation of the Apple News app demonstrating `GlassSearchableBottomBar` with its morphing search pill, category chips, hero cards, and rounded article tiles.
@@ -59,13 +69,28 @@ cd example && flutter pub get && flutter run -t lib/apple_news/apple_news_demo.d
 
 ### [Widget Showcase](example/) — Full Component Library
 
-A complete catalogue of all 36 widgets organized by category. Use it to explore every component, try live settings, and copy patterns directly into your app.
+A complete catalogue of every glass widget organised by category. Use it to explore components, try live settings, and copy patterns directly into your app.
 
 ```bash
 cd example && flutter pub get && flutter run
 ```
 
 <img width="1280" height="589" alt="Widget Showcase" src="https://github.com/user-attachments/assets/b65551cf-7ee8-4494-9c0a-f3c870b5eb70" />
+
+
+### [Component Demos](example/lib/demos/) — Copy-Pasteable Examples
+
+Seven focused, self-contained demos — one widget, one file, runnable standalone:
+
+| Demo | Run command (from `example/`) |
+|---|---|
+| `glass_menu_demo.dart` — all 9 menu alignments | `cd example && flutter run -t lib/demos/glass_menu_demo.dart` |
+| `glass_tab_bar_scrollable_demo.dart` — scrollable tab bar | `cd example && flutter run -t lib/demos/glass_tab_bar_scrollable_demo.dart` |
+| `glass_modal_sheet_demo.dart` — peek / half / full states | `cd example && flutter run -t lib/demos/glass_modal_sheet_demo.dart` |
+| `glass_bottom_bar_demo.dart` — magic-lens masking | `cd example && flutter run -t lib/demos/glass_bottom_bar_demo.dart` |
+| `bottom_bar_tab_width_demo.dart` — tabWidth showcase | `cd example && flutter run -t lib/demos/bottom_bar_tab_width_demo.dart` |
+| `searchable_bar_demo.dart` — searchable bar edge cases | `cd example && flutter run -t lib/demos/searchable_bar_demo.dart` |
+| `shape_debug_demo.dart` — GlassButton shapes | `cd example && flutter run -t lib/demos/shape_debug_demo.dart` |
 
 
 ## Widget Categories
@@ -93,7 +118,7 @@ cd example && flutter pub get && flutter run
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.10.10
+  liquid_glass_widgets: ^0.11.0
 ```
 
 ```bash
@@ -566,12 +591,24 @@ This disables only the automatic system-flag bridge. An explicit `GlassAccessibi
 
 ## Architecture
 
+For a full architectural overview see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+### Rendering pipeline
+
 On Impeller, every `GlassQuality.premium` surface uses a two-pass pipeline:
 
 1. **Blur pass** — `BackdropFilterLayer(ImageFilter.blur)`, clipped to the exact widget shape. Shared across all surfaces inside a `GlassBackdropScope` (injected automatically by `LiquidGlassWidgets.wrap()`).
 2. **Shader pass** — `BackdropFilterLayer(ImageFilter.shader)` — refraction, edge lighting, glass tint, and chromatic aberration.
 
 On Skia/Web, `lightweight_glass.frag` runs as a single pass with no backdrop capture.
+
+### Liquid Morph Engine
+
+A standalone physics and animation system powering iOS 26-style teardrop morphing. It lives in `lib/engine/` and is fully decoupled from any specific widget — `GlassMenu` is its first consumer.
+
+Key types: `GlassMorphController` · `LiquidMorphState` · `LiquidMorphPhysics` · `MorphPhase` · `MorphSpeed`
+
+See [`docs/LIQUID_MORPH_ENGINE.md`](docs/LIQUID_MORPH_ENGINE.md) for a full integration guide.
 
 ### Content-Adaptive Glass Strength (0.7.0)
 
