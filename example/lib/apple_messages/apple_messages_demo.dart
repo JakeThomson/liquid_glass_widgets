@@ -197,11 +197,12 @@ void main() async {
       child: const AppleMessagesDemoApp(),
       adaptiveQuality: true,
      // ignore: experimental_member_use
-    adaptiveConfig: const GlassAdaptiveScopeConfig(
+   adaptiveConfig: const GlassAdaptiveScopeConfig(
       // Left on intentionally for 0.9.1 — helps gather diagnostics
       // if the adaptive threshold fix doesn't hold on all hardware.
       debugLogDiagnostics: true,
     ),
+  ));
 }
 
 class AppleMessagesDemoApp extends StatelessWidget {

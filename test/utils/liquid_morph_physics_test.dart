@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:liquid_glass_widgets/utils/glass_morph_controller.dart'
-    show LiquidMorphState, MorphPhase;
+
 import 'package:liquid_glass_widgets/utils/liquid_morph_physics.dart';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

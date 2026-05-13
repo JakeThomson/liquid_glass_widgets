@@ -1,10 +1,10 @@
-/// GlassTabBar Scrollable Demo
-///
-/// Demonstrates a scrollable GlassTabBar with a dynamic number of tabs.
-/// The demo shows how to add tabs at runtime and updates the selected
-/// tab index accordingly. It also follows the library's initialization
-/// pattern (LiquidGlassWidgets.initialize + wrap) for consistency with
-/// other examples.
+// GlassTabBar Scrollable Demo
+//
+// Demonstrates a scrollable GlassTabBar with a dynamic number of tabs.
+// The demo shows how to add tabs at runtime and updates the selected
+// tab index accordingly. It also follows the library's initialization
+// pattern (LiquidGlassWidgets.initialize + wrap) for consistency with
+// other examples.
 
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
