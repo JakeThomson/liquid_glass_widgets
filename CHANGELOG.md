@@ -1,25 +1,48 @@
 # 0.11.0
 
-## ✨ New — Liquid Morphing Engine for `GlassMenu`
+## ✨ New — Liquid Morph Engine (new architectural system)
 
-This release ships a brand-new internal **Liquid Morphing Engine** that drives the open/close animation of `GlassMenu`. The menu no longer simply fades or scales — it morphs organically using physics-based spring curves and a hand-tuned teardrop SDF that stretches and recoils as the user interacts with it.
+This release introduces the **Liquid Morph Engine** — a standalone, reusable physics and animation system for iOS 26-style liquid glass morphing. It lives in `lib/engine/` and is fully decoupled from any specific widget.
 
-### Dual-Curve Liquid Morphing (`GlassMenu`)
+`GlassMenu` is the **first consumer** of the engine. Future widgets (sheets, cards, buttons) will use the same engine to achieve consistent, physics-correct liquid glass transitions throughout the library.
 
-- **Teardrop open animation** · The menu container grows from the trigger point along a dual-curve SDF path: the leading edge opens with a spring that pulls the glass out, while the trailing edge follows with independent damping, producing the iOS 26 "bubble emerging from button" look.
-- **Rubber-band close physics** · On dismiss the teardrop recoils using a critically-damped spring with a rubber-band overshoot tail, matching the tactile snap of native iOS context menus.
-- **Velocity-bump alignment** · The spring's initial velocity is seeded from the user's touch velocity at the moment of release, so fast flicks produce snappier closes and slow releases produce slower, more deliberate ones.
-- **Handoff latching** · If the user re-opens the menu during the close animation, the morphing engine inherits the in-flight velocity and smoothly reverses — no pop or cut.
-- **Blob scaling** · The glass blob scales relative to the trigger button's size and the menu's computed content height, so short menus and tall menus both receive proportionally correct teardrop curvature.
+> **Documentation:** [`docs/LIQUID_MORPH_ENGINE.md`](docs/LIQUID_MORPH_ENGINE.md) — full guide covering `GlassMorphController`, `LiquidMorphState`, `LiquidMorphPhysics`, and how to integrate the engine into your own custom widgets.
 
-### Spring Physics Refinements
+### Core engine types
 
-- Critical damping (`ζ = 1.0`) on all spring controllers prevents oscillation artifacts during rapid successive opens.
-- `interactionScale`, `stretch`, and `stretchResistance` are fully integrated into the morphing path — the container stretches on drag and recoils on release using the same spring solver as `LiquidStretch`.
+| Type | Role |
+|---|---|
+| `GlassMorphController` | Lifecycle owner — manages the spring, exposes `open()` / `close()` |
+| `LiquidMorphState` | Immutable value object — one per frame, contains all render values |
+| `MorphPhase` | Semantic lifecycle enum — tells you where in the animation you are |
+| `MorphSpeed` | Enum — controls spring stiffness without exposing raw physics constants |
+| `LiquidMorphPhysics` | Internal stateless math engine |
+
+### How it works
+
+Two conceptual "blobs" drive every morphing animation:
+
+- **Blob A** (anchor) — the ghost trigger that shrinks away over the first 40 % of the animation, cleanly breaking the liquid bridge.
+- **Blob B** (body) — travels from the trigger centre to the widget centre along a J-curve overshoot trajectory, expanding from trigger size to target size.
+
+The SDF metaball shader creates the teardrop neck between the blobs automatically — there is no explicit neck geometry. `LiquidMorphPhysics.compute()` determines each blob's position, scale, and blend factor on every frame.
+
+### `GlassMenu` — first engine consumer
+
+- **Teardrop open animation** · The menu grows from the trigger point along the dual-curve SDF path, producing the iOS 26 "bubble emerging from button" effect.
+- **Rubber-band close physics** · On dismiss the teardrop recoils with a critically-damped spring + overshoot tail, matching the tactile snap of native iOS context menus.
+- **Velocity-bump alignment** · Spring initial velocity is seeded from touch velocity at release — fast flicks close snappily, slow releases settle deliberately.
+- **Handoff latching** · Re-opening during a close animation inherits the in-flight velocity and reverses smoothly — no pop or cut.
+- **Blob scaling** · Blob sizes scale relative to trigger size and computed menu height, so short and tall menus receive proportionally correct teardrop curvature.
+
+### Spring physics refinements
+
+- Critical damping (`ζ = 1.0`) on all spring controllers prevents oscillation on rapid successive opens.
+- `interactionScale`, `stretch`, and `stretchResistance` integrate into the morphing path via the same spring solver used by `LiquidStretch`.
 
 ## 🐛 Fixes
 
-- **`GlassMenu` — safe area / notch clipping on iOS and Android** · The menu's position and maximum height were previously computed from `MediaQuery.padding`, which is consumed by ancestor `SafeArea` widgets and reports `0` inside a fully-safe tree. Switched to `View.of(context).padding` (raw hardware insets) so the menu is always clamped correctly regardless of how many `SafeArea` widgets are in the ancestor chain. Fixes the menu appearing under the Dynamic Island on iPhone 14 Pro and similar devices.
+- **`GlassMenu` — safe area / notch clipping on iOS and Android** · Menu position and maximum height were computed from `MediaQuery.padding`, which is consumed by ancestor `SafeArea` widgets and reports `0` inside a fully-safe tree. Switched to `View.of(context).padding` (raw hardware insets) so the menu is always clamped correctly regardless of `SafeArea` nesting depth. Fixes the menu appearing under the Dynamic Island on iPhone 14 Pro and similar devices.
 
 ## 🗂 Example restructure — `demos/` suite
 
@@ -35,6 +58,7 @@ The `example/` package has been reorganised for a cleaner public-facing demo exp
   - **`shape_debug_demo.dart`** — `GlassButton` shape visualiser
 
 - `example/lib/modal_sheet_showcase/` removed (file moved to `demos/glass_modal_sheet_demo.dart`).
+- Experimental scratchpad scripts moved to git-ignored `example/lib/playground/`.
 
 ---
 
