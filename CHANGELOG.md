@@ -35,6 +35,8 @@ The SDF metaball shader creates the teardrop neck between the blobs automaticall
 - **Handoff latching** · Re-opening during a close animation inherits the in-flight velocity and reverses smoothly — no pop or cut.
 - **Blob scaling** · Blob sizes scale relative to trigger size and computed menu height, so short and tall menus receive proportionally correct teardrop curvature.
 
+> **See it live:** The [Apple Messages demo](example/lib/apple_messages/apple_messages_demo.dart) (`cd example && flutter run -t lib/apple_messages/apple_messages_demo.dart`) showcases the morphing engine in a real-world context — long-press any message bubble to trigger the `GlassMenu` with full teardrop open/close physics.
+
 ### Spring physics refinements
 
 - Critical damping (`ζ = 1.0`) on all spring controllers prevents oscillation on rapid successive opens.
@@ -50,6 +52,7 @@ The `example/` package has been reorganised for a cleaner public-facing demo exp
 
 - New `example/lib/demos/` folder containing seven self-contained, copy-pasteable demos:
   - **`glass_menu_demo.dart`** — all 9 `GlassMenuAlignment` positions, scrollable item list
+  - **Apple Messages demo** — to see the engine in a richer real-world context, `flutter run -t lib/apple_messages/apple_messages_demo.dart` and long-press any message bubble
   - **`glass_tab_bar_scrollable_demo.dart`** — scrollable `GlassTabBar` with dynamic tab add
   - **`glass_modal_sheet_demo.dart`** — all sheet states (peek / half / full), Apple Maps peek style
   - **`glass_bottom_bar_demo.dart`** — magic-lens masking with `GlassBottomBar`
