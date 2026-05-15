@@ -623,24 +623,17 @@ class _GlassSwitchState extends State<GlassSwitch>
       height: totalHeight,
       child: GlassEffect(
         shape: thumbShape,
-        settings: (effectiveQuality ?? GlassQuality.standard)
-                .usesLightweightShader
-            ? const LiquidGlassSettings(
-                glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
-                refractiveIndex: 1.15,
-                thickness: 20,
-                lightIntensity: 2.0,
-                blur: 0,
-                lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
-              )
-            : const LiquidGlassSettings(
-                glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
-                refractiveIndex: 1.15, // Premium sharpness boost
-                thickness: 10,
-                lightIntensity: 2, // Bold specular highlight
-                blur: 0,
-                lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
-              ),
+        // Single settings object — GlassEffect.build() normalises automatically
+        // for Standard quality (thickness × 0.4, lightIntensity × 0.6).
+        // No per-component quality branch needed here.
+        settings: const LiquidGlassSettings(
+          glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
+          refractiveIndex: 1.15,
+          thickness: 10,
+          lightIntensity: 2.0,
+          blur: 0,
+          lightAngle: GlassDefaults.lightAngle,
+        ),
         quality: effectiveQuality ?? GlassQuality.standard,
         interactionIntensity: transition,
         child: Stack(

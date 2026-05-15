@@ -631,26 +631,17 @@ class _GlassSliderState extends State<GlassSlider>
       borderRadius: totalHeight / 2,
     );
 
-    // SIMPLIFIED: Static const settings matching GlassSwitch pattern
-    // All animation is handled via interactionIntensity parameter
-    final thumbSettings =
-        (_effectiveQuality ?? GlassQuality.standard).usesLightweightShader
-            ? const LiquidGlassSettings(
-                glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
-                refractiveIndex: 1.15,
-                thickness: 20,
-                lightIntensity: 2.0,
-                blur: 0,
-                lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
-              )
-            : const LiquidGlassSettings(
-                glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
-                refractiveIndex: 1.15,
-                thickness: 10,
-                lightIntensity: 2,
-                blur: 0,
-                lightAngle: GlassDefaults.lightAngle, // Apple iOS 26 standard
-              );
+    // Single settings object — GlassEffect.build() normalises automatically
+    // for Standard quality (thickness × 0.4, lightIntensity × 0.6).
+    // No per-component quality branch needed here.
+    const thumbSettings = LiquidGlassSettings(
+      glassColor: Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
+      refractiveIndex: 1.15,
+      thickness: 10,
+      lightIntensity: 2.0,
+      blur: 0,
+      lightAngle: GlassDefaults.lightAngle,
+    );
 
     // CRITICAL: Outer SizedBox with dynamic size ensures proper premium rendering
     return SizedBox(

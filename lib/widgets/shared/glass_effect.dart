@@ -399,6 +399,47 @@ class _GlassEffectState extends State<GlassEffect>
     // 4. Resolve if we can use the high-fidelity refraction shader
     final bool canUseRefraction = effectiveKey != null && !avoidsRefraction;
 
+    // Standard-path structural normalization for interactive_indicator.frag.
+    // The Premium Impeller path renders a real 3D bevel with natural gradient
+    // falloff. The 2D indicator shader draws a flat rim that reads as heavier
+    // at the same parameter values. Scaling these structural params down brings
+    // the pill's visual weight in line with the Premium bevel.
+    //
+    // NOTE: This mirrors the AdaptiveGlass normalization for lightweight_glass.frag
+    // (cards/buttons). Both are intentional Standard-path normalization sites —
+    // each scoped to its own shader's parameter space.
+    // Premium exits above via LiquidGlass.withOwnLayer; this block never runs there.
+    final double effectiveRimThickness = widget.quality == GlassQuality.standard
+        ? widget.rimThickness * 0.35
+        : widget.rimThickness;
+    final double effectiveAmbientRim = widget.quality == GlassQuality.standard
+        ? widget.ambientRim * 0.7
+        : widget.ambientRim;
+    final double effectiveEdgeAlpha = widget.quality == GlassQuality.standard
+        ? widget.edgeAlphaMultiplier * 0.7
+        : widget.edgeAlphaMultiplier;
+
+    // Normalise LiquidGlassSettings for the Standard path.
+    // The 2D interactive_indicator.frag renders thickness and specular highlights
+    // heavier than the Impeller 3D path at equal parameter values.
+    // Ratios are identical to AdaptiveGlass (thickness × 0.4, lightIntensity × 0.6)
+    // so the visual language stays consistent between static and interactive surfaces.
+    //
+    // NOTE: glassColor.alpha is intentionally NOT boosted here (unlike AdaptiveGlass).
+    // Interactive thumb body opacity is already governed by
+    //   standardBaseAlpha = baseAlphaMultiplier × interactionIntensity
+    // inside the shader — boosting alpha here would double-count it.
+    final LiquidGlassSettings effectiveSettings;
+    if (widget.quality == GlassQuality.standard) {
+      final base = widget.settings;
+      effectiveSettings = base.copyWith(
+        thickness:      (base.effectiveThickness     * 0.4).clamp(0.0, double.infinity),
+        lightIntensity: (base.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
+      );
+    } else {
+      effectiveSettings = widget.settings;
+    }
+
     // Path B: High-Fidelity Refraction Shader (Custom GLSL)
     // This is the "New Shader" featuring magnification and liquid distortion.
     if (canUseRefraction && shader != null) {
@@ -407,17 +448,17 @@ class _GlassEffectState extends State<GlassEffect>
         clipBehavior: Clip.antiAliasWithSaveLayer,
         child: _InteractiveIndicatorEffect(
           shader: shader,
-          settings: widget.settings,
+          settings: effectiveSettings,
           shape: widget.shape,
           interactionIntensity: widget.interactionIntensity,
           densityFactor: widget.densityFactor,
           backgroundImage: _backgroundImage,
           backgroundKey: effectiveKey,
           devicePixelRatio: View.of(context).devicePixelRatio,
-          ambientRim: widget.ambientRim,
+          ambientRim: effectiveAmbientRim,
           baseAlphaMultiplier: widget.baseAlphaMultiplier,
-          edgeAlphaMultiplier: widget.edgeAlphaMultiplier,
-          rimThickness: widget.rimThickness,
+          edgeAlphaMultiplier: effectiveEdgeAlpha,
+          rimThickness: effectiveRimThickness,
           rimSmoothing: widget.rimSmoothing,
           child: widget.child,
         ),
@@ -434,17 +475,17 @@ class _GlassEffectState extends State<GlassEffect>
         clipBehavior: Clip.antiAliasWithSaveLayer,
         child: _InteractiveIndicatorEffect(
           shader: shader,
-          settings: widget.settings.copyWith(blur: 0),
+          settings: effectiveSettings.copyWith(blur: 0),
           shape: widget.shape,
           interactionIntensity: widget.interactionIntensity,
           densityFactor: widget.densityFactor,
           backgroundImage: null, // Fallback mode
           backgroundKey: null,
           devicePixelRatio: View.of(context).devicePixelRatio,
-          ambientRim: widget.ambientRim,
+          ambientRim: effectiveAmbientRim,
           baseAlphaMultiplier: widget.baseAlphaMultiplier,
-          edgeAlphaMultiplier: widget.edgeAlphaMultiplier,
-          rimThickness: widget.rimThickness,
+          edgeAlphaMultiplier: effectiveEdgeAlpha,
+          rimThickness: effectiveRimThickness,
           rimSmoothing: widget.rimSmoothing,
           child: widget.child,
         ),

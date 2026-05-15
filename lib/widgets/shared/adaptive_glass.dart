@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../types/glass_quality.dart';
 import '../../utils/glass_performance_monitor.dart';
+import '../interactive/liquid_glass_scope.dart';
 import 'glass_accessibility_scope.dart';
 import 'lightweight_liquid_glass.dart';
 import 'inherited_liquid_glass.dart';
@@ -196,11 +197,42 @@ class AdaptiveGlass extends StatelessWidget {
       // overpowering when the user has tuned their settings for the 3D premium shader.
       // Thickness is scaled down because 2D inner shadows look much thicker than 3D bevels.
       // Light intensity is scaled down because 2D gradients look brighter than 3D speculars.
+      //
+      // VOLUMETRIC FROSTING SIMULATION:
+      // The 3D Impeller raymarcher computes body brightness from light physically
+      // scattering through a thick volume — glassColor.alpha has no role there.
+      // The 2D shader computes: bodyColor = glassColor.rgb * (ambient + boost),
+      // so with a typical white12 (alpha=0.12) color the body is nearly invisible.
+      //
+      // Fix: derive a frosted-body opacity target from thickness + lightIntensity
+      // and use it to boost BOTH glassColor.alpha AND ambientStrength, matching
+      // the physical volume accumulation of the Impeller path.
+      final double thicknessNorm = (baseSettings.effectiveThickness / 30.0).clamp(0.0, 1.0);
+      final double lightNorm     = (baseSettings.effectiveLightIntensity / 1.0).clamp(0.0, 1.0);
+      // frostingTarget: 0.0 (no thickness) → ~0.38 (thick+bright, t=28 l=0.9).
+      // Intentionally conservative: the adapter boosts frosting to add visual weight,
+      // but we must NOT over-paint with white or we lose the blurred-backdrop
+      // color pickup that gives glass its tinted hue. The shader needs a sampler2D
+      // rework to properly absorb background color; until then, keep alpha modest.
+      final double frostingTarget = thicknessNorm * lightNorm * 0.45;
+
+      final Color baseColor = baseSettings.effectiveGlassColor;
+      // Only boost alpha up to the frosting target — never reduce it.
+      final double newAlpha = math.max(baseColor.a, frostingTarget).clamp(0.0, 1.0);
+      // Ambient at 1.0× target — enough to add body without white-washing
+      // the blurred-backdrop color bleed (which provides scene color absorption).
+      final double newAmbient = math.max(
+        baseSettings.effectiveAmbientStrength,
+        frostingTarget * 1.0,
+      ).clamp(0.0, 1.0);
+
       final normalizedSettings = baseSettings.copyWith(
         thickness:
             (baseSettings.effectiveThickness * 0.4).clamp(0.0, double.infinity),
         lightIntensity:
             (baseSettings.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
+        glassColor: baseColor.withValues(alpha: newAlpha),
+        ambientStrength: newAmbient,
       );
 
       // Apply subtle elevation boost to settings (preserves saturation!)
@@ -225,15 +257,17 @@ class AdaptiveGlass extends StatelessWidget {
             )
           : normalizedSettings;
 
-      // PIPELINE HAND-OFF (The Secret Sauce)
       // If this is a container (allowElevation=false), we are providing a blur
       // for all our children to use. We update the InheritedLiquidGlass tree.
+      final backgroundKey = LiquidGlassScope.of(context);
+      
       if (!allowElevation) {
         return LightweightLiquidGlass(
           shape: shape,
           settings: effectiveSettings,
           densityFactor: 0.0, // Containers are never elevated
           glowIntensity: 0.0, // Containers don't glow
+          backgroundKey: backgroundKey,
           child: InheritedLiquidGlass(
             settings: effectiveSettings,
             quality: quality,
@@ -247,7 +281,8 @@ class AdaptiveGlass extends StatelessWidget {
         shape: shape,
         settings: effectiveSettings,
         densityFactor: densityFactor, // 0.0 or 1.0 based on elevation
-        glowIntensity: glowIntensity, // Pass through from button animation
+        glowIntensity: glowIntensity * 0.35, // Normalise additive glow to match Impeller
+        backgroundKey: backgroundKey,
         child: child,
       );
 

@@ -19,6 +19,9 @@ uniform vec4 uData4; // 16..19 (cornerRadius, scale.x, scale.y, glowIntensity)
 uniform vec4 uData5; // 20..23 (densityFactor, indicatorWeight, specularSharpnessF, backdropLuma)
 // cornerRadius < 0 → asymmetric mode; per-corner radii come from uData6.
 uniform vec4 uData6; // 24..27 (topLeft, topRight, bottomRight, bottomLeft) — asymmetric only
+uniform vec4 uData7; // 28..31 (bgOrigin.x, bgOrigin.y, bgSize.width, bgSize.height)
+
+uniform sampler2D uBackground; // The captured background texture
 // Slot 22 (uData5.z): specular sharpness level — passed as float 0.0/1.0/2.0, cast to int.
 // Flutter's FragmentShader API only supports setFloat — no setInt exists.
 // Passing as a float and rounding in GLSL gives an exact integer; the GPU
@@ -46,13 +49,15 @@ const float kKickIntensity        = 0.4;   // Back-surface brightness relative t
 // Rim & Body Color Balance
 const float kRimBaseOpacity       = 0.4;   // Base rim brightness before light modulation
 const float kRimSpecularMix       = 0.6;   // How much specular highlights boost rim
-const float kRimAlphaBase         = 0.8;   // Base rim opacity (calibrated to Impeller parity)
+const float kRimAlphaBase         = 0.65;  // Base rim opacity (calibrated to Impeller parity)
 const float kRimAlphaSpecular     = 0.5;   // Additional opacity from specular highlights
 const float kBodyAmbientBoost     = 0.1;   // Ambient light contribution to body layer
 const float kCompositeRimAlpha    = 0.8;   // Rim-to-body blend strength at edges
 
 // Light Intensity Response (how uLightIntensity modulates appearance)
-const float kMinRimVisibility     = 0.5;   // Minimum rim brightness (prevents invisible shapes)
+const float kMinRimVisibility     = 0.35;  // Minimum rim brightness — lowered from 0.5 so
+                                            //   AdaptiveGlass lightIntensity normalisation can
+                                            //   actually reach the rim on the Standard (2D) path.
 const float kRimIntensityScale    = 0.6;   // Rim sensitivity to light intensity changes
 const float kBodyIntensityScale   = 0.15;  // Body sensitivity to light intensity changes
 
@@ -123,6 +128,8 @@ void main() {
   // but Dart only writes 23 floats. Packing into uData5.z fixes the alignment.)
   float uSpecularSharpnessF = uData5.z; // 0=soft, 1=medium, 2=sharp
   float uBackdropLuma       = uData5.w; // VQ4: 0.15=dark platform, 0.85=light platform
+  vec2 uBackgroundOrigin    = uData7.xy;
+  vec2 uBackgroundSize      = uData7.zw;
 
   // ---- STAGE 0: COORDINATE SYNC ----
   vec2 pixelCoord = FlutterFragCoord().xy;
@@ -184,8 +191,8 @@ void main() {
   float normalZ = sqrt(max(0.0, 1.0 - dot(surfaceNormal, surfaceNormal)));
 
   // ---- STAGE 3: HAIRLINE MASK ----
-  float effectiveBorder = kBorderThickness + uIndicatorWeight * 0.5;
-  float effectiveSmoothing = smoothing * (1.0 + uIndicatorWeight * 0.5);
+  float effectiveBorder = kBorderThickness + uIndicatorWeight * 0.2;
+  float effectiveSmoothing = smoothing * (1.0 + uIndicatorWeight * 0.2);
   float borderMask = 1.0 - smoothstep(0.0, effectiveSmoothing, abs(dist) - effectiveBorder);
 
   // ---- STAGE 3.5: SYNTHETIC DENSITY PHYSICS ----
@@ -291,7 +298,17 @@ void main() {
   // Density Effect #2: Darker body (-30% ambient at full density)
   // Simulates how nested BackdropFilters darken background twice
   float effectiveAmbient = uAmbientStrength * (1.0 - densityFactor * 0.3);
-  vec3 bodyColor = uGlassColor.rgb * (effectiveAmbient + bodyIntensityBoost);
+
+  // Sample background texture if available (size > 1.0 means it's not the 1x1 dummy)
+  vec3 bgRgb = vec3(uBackdropLuma);
+  if (uBackgroundSize.x > 1.0) {
+    vec2 posInBg = uBackgroundOrigin + localLogical;
+    vec2 uv = posInBg / uBackgroundSize;
+    // We do NOT do refraction bending here — lightweight path is flat glass.
+    bgRgb = texture(uBackground, uv).rgb;
+  }
+
+  vec3 bodyColor = bgRgb * (effectiveAmbient + bodyIntensityBoost);
 
   // Density Effect #3: Higher opacity (+15% alpha at full density)
   // Elevated buttons appear more "solid" and less translucent

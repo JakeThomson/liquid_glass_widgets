@@ -21,6 +21,8 @@ precision highp float;
   2. Chromatic aberration - separates RGB channels at edges for prism effect
   3. Directional lighting - rim highlights based on light angle
   4. Fresnel glow - subtle glow at grazing angles
+  5. Synthetic bevel gradient - top-bright / bottom-dim rim falloff that
+     simulates the view-angle gradient of a real 3D Impeller bevel
 */
 
 // -----------------------------------------------------------------------------
@@ -227,8 +229,33 @@ void main() {
   
   // Configurable hairline rim
   float borderMask = 1.0 - smoothstep(0.0, smoothing * uRimSmoothing, distFromEdge - uRimThickness);
+
+  // --------------------------------------------------------------------------
+  // SYNTHETIC BEVEL GRADIENT
+  // --------------------------------------------------------------------------
+  // The Impeller 3D bevel naturally brightens at the top because the top-face
+  // normals angle toward the viewer, catching more ambient light. On a flat 2D
+  // ring every point gets the same brightness, which reads as "fake".
+  //
+  // We simulate this by blending rim brightness with a vertical gradient derived
+  // from the Y component of the surface normal:
+  //   surfaceNormal.y < 0  → top of pill  → brighter (add bevelBoost)
+  //   surfaceNormal.y > 0  → bottom       → dimmer   (subtract bevelDip)
+  //
+  // This is pure ALU — no texture samples, no uniforms required.
+  // kBevelStrength: calibrated so the gradient reads clearly on large pills
+  // (tab bar ~50px) without being aggressive on small elements (switch thumb ~22px).
+  const float kBevelStrength = 0.18;
+  // normalY range: -1 (top edge) to +1 (bottom edge) in Flutter's Y-down space
+  float bevelGradient = -surfaceNormal.y * kBevelStrength;
+  // Blend the gradient in only where the border mask is visible to avoid
+  // affecting the body of the pill.
+  // Clamp to 0.0: gradient dims the bottom rim to neutral, never to negative
+  // (negative values subtract from finalColor and cause dark jagged artefacts).
+  float modifiedRimBrightness = max(0.0, rimBrightness + bevelGradient * borderMask);
+
   // Scale rim brightness with ambientRim parameter
-  vec3 rimColor = vec3(1.0) * rimBrightness * (uAmbientRim * 10.0);
+  vec3 rimColor = vec3(1.0) * modifiedRimBrightness * (uAmbientRim * 10.0);
   
   // ==========================================================================
   // COMPOSITE FINAL COLOR
