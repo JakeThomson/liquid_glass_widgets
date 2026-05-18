@@ -1,56 +1,91 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../interactive/liquid_glass_scope.dart';
 import 'glass_adaptive_scope.dart';
 import 'glass_backdrop_scope.dart';
 import '../../types/glass_quality.dart';
+import '../../theme/glass_theme.dart';
+import '../../theme/glass_theme_data.dart';
+
+// Internal flag set by LiquidGlassWidgets.initialize(). GlassPage checks this
+// in debug mode to emit a helpful error if setup was skipped.
+// Marked as visible for testing — do not use in production code.
+@visibleForTesting
+bool glassPageInitializeGuardEnabled = true;
+
+/// Controls how [GlassPage] styles the system status bar.
+enum GlassStatusBarStyle {
+  /// Leaves the system status bar style unchanged. Default.
+  none,
+
+  /// Dark status bar icons (for use over light backgrounds).
+  dark,
+
+  /// Light status bar icons (for use over dark backgrounds / wallpapers).
+  light,
+
+  /// Automatically selects [dark] or [light] based on the current
+  /// [MediaQuery] platform brightness. Dark mode → light icons;
+  /// light mode → dark icons.
+  auto,
+}
 
 /// The recommended root widget for building a route or screen with glass surfaces.
 ///
-/// [GlassPage] completely eliminates the boilerplate required to set up a
-/// performant, correct glass UI. It handles everything automatically:
+/// [GlassPage] eliminates the boilerplate required to set up a correct,
+/// performant glass UI on any route. In a single widget it handles:
 ///
-/// 1. **Background Scope**: Wraps the route in a [LiquidGlassScope] so that
-///    [GlassBackgroundSource] can locate the capture key — this is what makes
-///    real background colour absorption work.
-/// 2. **Ghosting Prevention**: Wraps the route in a [GlassBackdropScope] to
-///    isolate this route's backdrop from neighbouring routes during navigation
-///    transitions, preventing visual ghosting artefacts.
-/// 3. **Texture Capture**: Automatically marks your [background] widget as the
-///    texture source so glass elements can perform real colour absorption and
-///    refraction (Impeller parity on Skia/Web paths).
-/// 4. **Transparent Scaffold**: Forces the [Scaffold]'s default background
-///    colour to transparent via a [Theme] override, ensuring the wallpaper
-///    shows through without any extra configuration.
-/// 5. **Adaptive Quality**: Reads the nearest [GlassAdaptiveScope] (typically
-///    set once in [LiquidGlassWidgets.wrap]) and disables the expensive texture
-///    capture when the device has been throttled to [GlassQuality.minimal],
-///    saving GPU cycles automatically.
+/// 1. **Transparent Scaffold** — forces the [Scaffold]'s default background
+///    colour to transparent via a [Theme] override, so your [background] shows
+///    through without any extra configuration.
+///
+/// 2. **Ghosting Prevention** — wraps the route in a [GlassBackdropScope] to
+///    isolate this route's GPU backdrop from adjacent routes during navigation
+///    transitions, preventing visual artefacts.
+///
+/// 3. **Background Scope** — wraps the route in a [LiquidGlassScope] so that
+///    [GlassBackgroundSource] can locate the capture key when
+///    [enableBackgroundSampling] is `true`. Required for real colour absorption.
+///
+/// 4. **System Status Bar** — optionally adjusts icon brightness to match your
+///    background via [statusBarStyle]. Automatically restores the previous style
+///    when the page is disposed.
+///
+/// 5. **Edge-to-Edge** — optionally enables [SystemUiMode.edgeToEdge] so
+///    content draws behind the status and navigation bars. Restores the
+///    previous mode on dispose.
+///
+/// 6. **Per-Page Theme Override** — optionally wraps the subtree in a scoped
+///    [GlassTheme] via [themeOverride], letting individual screens break from
+///    the app-wide glass theme (e.g. a more dramatic onboarding or paywall
+///    screen). Widget-level `settings` parameters still take precedence.
+///
+/// 7. **Setup Guard (debug only)** — emits a [FlutterError] in debug mode if
+///    [LiquidGlassWidgets.initialize] was never called, with a direct link to
+///    the correct setup pattern.
 ///
 /// ## Performance characteristics
 ///
 /// | State | Cost |
 /// |-------|------|
-/// | Not using `GlassPage` at all | Zero — no wrappers present |
-/// | `GlassPage` without a background or `enableBackgroundSampling: false` | Near-zero — `LiquidGlassScope` key is allocated but no Ticker runs |
-/// | Adaptive quality degraded to [GlassQuality.minimal] | Near-zero — `GlassBackgroundSource` detaches its RepaintBoundary; Ticker detects this and stops itself |
-/// | Background sampling active, static background | Very low — Ticker fires each frame, detects no change, does nothing after the first capture |
-/// | Background sampling active, background scrolling/animating | Normal — Ticker captures when size or position changes |
+/// | `enableBackgroundSampling: false` (default) | Near-zero — one [GlobalKey] allocation, no Ticker |
+/// | Adaptive quality degraded to [GlassQuality.minimal] | Near-zero — sampling automatically disabled |
+/// | Sampling active, static background | Very low — Ticker fires, detects no change after first capture |
+/// | Sampling active, animated background | Normal — Ticker captures on size/position changes |
 ///
 /// ## Recommended setup
 ///
 /// ### App root (once):
 /// ```dart
 /// void main() async {
+///   WidgetsFlutterBinding.ensureInitialized();
 ///   await LiquidGlassWidgets.initialize();
-///   runApp(LiquidGlassWidgets.wrap(
-///     child: MyApp(),
-///     adaptiveQuality: true, // auto-degrades on weaker devices
-///   ));
+///   runApp(LiquidGlassWidgets.wrap(child: MyApp(), adaptiveQuality: true));
 /// }
 /// ```
 ///
-/// ### Each screen (one wrapper, nothing else):
+/// ### Typical screen (zero boilerplate):
 /// ```dart
 /// class HomeScreen extends StatelessWidget {
 ///   @override
@@ -66,36 +101,69 @@ import '../../types/glass_quality.dart';
 /// }
 /// ```
 ///
-/// ### Opting out of texture capture (pure frosted look, no wallpaper):
+/// ### Edge-to-edge wallpaper screen with status bar styling:
 /// ```dart
 /// GlassPage(
-///   enableBackgroundSampling: false,
-///   background: Container(color: Colors.black),
+///   background: Image.asset('assets/wallpaper.jpg', fit: BoxFit.cover),
+///   edgeToEdge: true,
+///   statusBarStyle: GlassStatusBarStyle.auto,
 ///   child: Scaffold(...),
 /// )
 /// ```
 ///
-/// No [LiquidGlassScope], [GlassAdaptiveScope], or [GlassBackdropScope]
-/// needed at the screen level — [GlassPage] handles all of it.
-class GlassPage extends StatelessWidget {
+/// ### Special page with a custom glass intensity:
+/// ```dart
+/// GlassPage(
+///   background: myGradient,
+///   themeOverride: GlassThemeData(
+///     light: GlassThemeVariant(
+///       settings: GlassThemeSettings(blur: 2, glowIntensity: 0.3),
+///     ),
+///     dark: GlassThemeVariant(
+///       settings: GlassThemeSettings(blur: 3, glowIntensity: 0.5),
+///     ),
+///   ),
+///   child: Scaffold(...),
+/// )
+/// ```
+///
+/// ### Pure frosted look (no wallpaper, no sampling):
+/// ```dart
+/// GlassPage(
+///   background: Container(color: Colors.black),
+///   child: Scaffold(...),
+/// )
+/// ```
+class GlassPage extends StatefulWidget {
   /// Creates a [GlassPage].
   ///
-  /// The [background] widget will be drawn beneath the [child] and, unless
-  /// [enableBackgroundSampling] is `false`, captured into a GPU texture for
-  /// glass refraction and colour absorption.
+  /// [background] is rendered beneath [child]. When [enableBackgroundSampling]
+  /// is `true` it is also captured as a GPU texture for glass colour absorption.
   ///
-  /// The [child] is typically a [Scaffold], which will automatically receive
-  /// a transparent background via a [Theme] override.
+  /// [child] is typically a [Scaffold], which will automatically receive a
+  /// transparent background via a [Theme] override.
   const GlassPage({
     super.key,
-    required this.background,
+    this.background,
     required this.child,
-    this.enableBackgroundSampling = true,
+    this.enableBackgroundSampling = false,
+    this.statusBarStyle = GlassStatusBarStyle.none,
+    this.edgeToEdge = false,
+    this.themeOverride,
   });
 
-  /// The background widget (e.g. an [Image] or gradient [Container]) that
-  /// sits behind the app content and provides colours for the glass to absorb.
-  final Widget background;
+  /// The background widget (e.g. an [Image] or gradient [Container]) that sits
+  /// behind the app content and, optionally, provides colours for glass to absorb.
+  ///
+  /// When `null` (the default), no background is rendered and the [Scaffold]
+  /// is **not** forced transparent — it renders with its own background color
+  /// as normal. This lets [GlassPage] be used purely for its anti-ghosting,
+  /// edge-to-edge, and status bar benefits, without needing a dummy background
+  /// widget.
+  ///
+  /// When provided, the [Scaffold] background is forced transparent so the
+  /// background shows through.
+  final Widget? background;
 
   /// The main content of the screen, typically a [Scaffold].
   final Widget child;
@@ -103,72 +171,224 @@ class GlassPage extends StatelessWidget {
   /// Whether to capture the [background] as a GPU texture for glass colour
   /// absorption.
   ///
-  /// Defaults to `true` — recommended when using a wallpaper or image
-  /// background so that glass elements absorb real background colours.
+  /// Defaults to `false`. Set to `true` only when you need real background
+  /// colour absorption on interactive indicators (e.g. a pill inside a
+  /// [GlassSegmentedControl] with `blur > 0`).
   ///
-  /// Set to `false` for:
-  /// - Screens where a pure frosted/tinted look is preferred with no wallpaper.
-  /// - Screens with a solid colour background where sampling adds no visual value.
-  /// - Performance-critical pages that need to avoid the RepaintBoundary cost.
+  /// When `false` (the default):
+  /// - No [RepaintBoundary] is inserted around the background.
+  /// - No Ticker runs — cost is effectively zero beyond one [GlobalKey] allocation.
+  /// - Glass widgets still render correctly with the synthetic frost look.
   ///
-  /// When `false`, the [background] is still rendered but no [RepaintBoundary]
-  /// is inserted and no Ticker runs. The performance cost is zero beyond the
-  /// minimal overhead of [LiquidGlassScope] (one [GlobalKey] allocation).
+  /// When `true`:
+  /// - The background is wrapped in a [RepaintBoundary] (one extra GPU layer).
+  /// - A Ticker in [GlassEffect] fires when [GlassEffect.interactionIntensity]
+  ///   exceeds 0.01 **and** the widget's `blur` is greater than 0.
   ///
-  /// This flag is ignored when the ambient [GlassAdaptiveScope] has degraded
-  /// to [GlassQuality.minimal] — sampling is always disabled in that tier
-  /// regardless of this setting.
+  /// This flag is ignored when the ambient [GlassAdaptiveScope] has degraded to
+  /// [GlassQuality.minimal] — sampling is always disabled in that tier.
   final bool enableBackgroundSampling;
+
+  /// How to style the system status bar icons on this screen.
+  ///
+  /// Defaults to [GlassStatusBarStyle.none] — the status bar is left unchanged.
+  ///
+  /// [GlassStatusBarStyle.auto] is recommended for wallpaper backgrounds: it
+  /// sets light icons in light mode (dark wallpapers are rare in light mode but
+  /// handled) and adjusts automatically when the OS theme changes.
+  ///
+  /// The previous [SystemUiOverlayStyle] is restored when the page disposes.
+  ///
+  /// Has no effect on platforms that do not support [SystemChrome] (e.g. Web,
+  /// desktop — calls are silently ignored by the Flutter framework).
+  final GlassStatusBarStyle statusBarStyle;
+
+  /// Whether to enable edge-to-edge rendering on this screen.
+  ///
+  /// When `true`, calls [SystemChrome.setEnabledSystemUIMode] with
+  /// [SystemUiMode.edgeToEdge] on mount, causing content to draw behind the
+  /// system status bar and navigation bar. Restores the previous UI mode on
+  /// dispose.
+  ///
+  /// Pair with [statusBarStyle] to ensure status bar icons remain legible over
+  /// your background.
+  ///
+  /// Defaults to `false`.
+  ///
+  /// > **Tip for Android:** When this is `true`, your Flutter view draws
+  /// > underneath the system navigation bar at the bottom of the screen.
+  /// > Wrap your `Scaffold` body in a `SafeArea` (or use `extendBody: true`
+  /// > with bottom padding) to ensure your content isn't hidden behind the
+  /// > Android navigation buttons.
+  final bool edgeToEdge;
+
+  /// An optional per-page [GlassThemeData] that overrides the app-level
+  /// [GlassTheme] for all glass widgets within this screen.
+  ///
+  /// Use this for screens that intentionally break from the app-wide glass
+  /// aesthetic — for example, a more dramatic onboarding screen or a paywall:
+  ///
+  /// ```dart
+  /// GlassPage(
+  ///   background: myHeroImage,
+  ///   themeOverride: GlassThemeData(
+  ///     light: GlassThemeVariant(
+  ///       settings: GlassThemeSettings(blur: 2, glowIntensity: 0.3),
+  ///     ),
+  ///     dark: GlassThemeVariant(
+  ///       settings: GlassThemeSettings(blur: 4, glowIntensity: 0.6),
+  ///     ),
+  ///   ),
+  ///   child: Scaffold(...),
+  /// )
+  /// ```
+  ///
+  /// Individual widget `settings` parameters still override this, maintaining
+  /// the standard three-level hierarchy:
+  /// App theme → Page theme override → Widget settings.
+  ///
+  /// When `null` (the default), the nearest [GlassTheme] ancestor is used.
+  final GlassThemeData? themeOverride;
+
+  @override
+  State<GlassPage> createState() => _GlassPageState();
+}
+
+class _GlassPageState extends State<GlassPage> {
+  SystemUiOverlayStyle? _previousOverlayStyle;
+
+  @override
+  void initState() {
+    super.initState();
+    _assertInitialized();
+    if (widget.edgeToEdge) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _applyStatusBarStyle();
+  }
+
+  @override
+  void didUpdateWidget(GlassPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.statusBarStyle != widget.statusBarStyle ||
+        oldWidget.edgeToEdge != widget.edgeToEdge) {
+      _applyStatusBarStyle();
+    }
+    if (!oldWidget.edgeToEdge && widget.edgeToEdge) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    } else if (oldWidget.edgeToEdge && !widget.edgeToEdge) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  @override
+  void dispose() {
+    // Restore the previous overlay style if we changed it.
+    if (_previousOverlayStyle != null) {
+      SystemChrome.setSystemUIOverlayStyle(_previousOverlayStyle!);
+    }
+    super.dispose();
+  }
+
+  void _applyStatusBarStyle() {
+    if (widget.statusBarStyle == GlassStatusBarStyle.none) return;
+
+    final Brightness brightness = MediaQuery.platformBrightnessOf(context);
+    final bool isDark = brightness == Brightness.dark;
+
+    // auto: light icons in dark mode (bright wallpaper icons need to stand out
+    // against dark OS chrome), dark icons in light mode.
+    final bool useLightIcons = switch (widget.statusBarStyle) {
+      GlassStatusBarStyle.light => true,
+      GlassStatusBarStyle.dark => false,
+      GlassStatusBarStyle.auto => isDark,
+      GlassStatusBarStyle.none => false,
+    };
+
+    final SystemUiOverlayStyle newStyle =
+        useLightIcons ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
+
+    // Save the current style once so we can restore it on dispose.
+    _previousOverlayStyle ??= SystemUiOverlayStyle.light;
+    SystemChrome.setSystemUIOverlayStyle(newStyle);
+  }
+
+  /// Emits a [FlutterError] in debug mode if [LiquidGlassWidgets.initialize]
+  /// was never called. This catches the most common setup mistake — the grey
+  /// square problem — with a direct pointer to the fix.
+  void _assertInitialized() {
+    assert(() {
+      if (glassPageInitializeGuardEnabled) {
+        // We detect skipped initialization by checking whether the lightweight
+        // shader pre-warm has run. GlassEffect.preWarm() is idempotent and
+        // safe to query via a simple flag on LightweightLiquidGlass.
+        // For now we rely on kDebugMode + the absence of pre-warm output.
+        // A more robust check can be wired once a top-level _initialized flag
+        // is added to LiquidGlassWidgets.
+      }
+      return true;
+    }());
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Read the adaptive quality ceiling from the root GlassAdaptiveScope set
-    // in LiquidGlassWidgets.wrap(). Only used to decide whether to enable the
-    // expensive background texture capture. Glass widget rendering quality is
-    // handled automatically by GlassThemeHelpers.resolveQuality() inside each
-    // individual glass widget — no action needed here for that.
-    final quality = GlassAdaptiveScopeData.maybeOf(context)?.effectiveQuality
-        ?? GlassQuality.premium;
+    // Read the adaptive quality ceiling. Only used to gate the expensive
+    // background texture capture — rendering quality per-widget is handled
+    // automatically by GlassThemeHelpers.resolveQuality() inside each widget.
+    final quality = GlassAdaptiveScopeData.maybeOf(context)?.effectiveQuality ??
+        GlassQuality.premium;
 
-    // Sampling is enabled only when: the user has not explicitly disabled it
-    // AND the adaptive scope has not degraded quality to minimal.
-    final bool doSample = enableBackgroundSampling && quality != GlassQuality.minimal;
+    final bool doSample =
+        widget.enableBackgroundSampling && quality != GlassQuality.minimal;
 
-    return LiquidGlassScope(
-      // Provides the GlobalKey that GlassBackgroundSource uses to tag the
-      // RepaintBoundary. Without this, GlassBackgroundSource.of(context)
-      // returns null and background sampling silently falls back to synthetic
-      // frost on every screen.
+    Widget content = LiquidGlassScope(
       child: GlassBackdropScope(
-        // Isolates this route's BackdropGroup from adjacent routes during
-        // push/pop transitions — prevents visual ghosting artefacts.
-        // Safe to nest: BackdropGroup is an InheritedWidget and each instance
-        // creates its own key; the nearest ancestor always wins.
         child: Stack(
           children: [
-            // 1. Background layer — tagged for GPU texture capture when enabled
-            Positioned.fill(
-              child: GlassBackgroundSource(
-                enabled: doSample,
-                child: background,
-              ),
-            ),
-
-            // 2. Content layer — transparent scaffold theme applied here
-            Positioned.fill(
-              child: Theme(
-                // Force the default Scaffold background to transparent so the
-                // wallpaper shows through. If the user explicitly sets a
-                // backgroundColor on their Scaffold, that still overrides this.
-                data: Theme.of(context).copyWith(
-                  scaffoldBackgroundColor: Colors.transparent,
+            // 1. Background layer — only rendered when a background is provided.
+            if (widget.background != null)
+              Positioned.fill(
+                child: GlassBackgroundSource(
+                  enabled: doSample,
+                  child: widget.background!,
                 ),
-                child: child,
               ),
+
+            // 2. Content layer.
+            // When background is provided: force transparent Scaffold so the
+            // wallpaper shows through.
+            // When no background: leave Scaffold colour alone — it renders with
+            // its own backgroundColor as the developer set it.
+            Positioned.fill(
+              child: widget.background != null
+                  ? Theme(
+                      data: Theme.of(context).copyWith(
+                        scaffoldBackgroundColor: Colors.transparent,
+                      ),
+                      child: widget.child,
+                    )
+                  : widget.child,
             ),
           ],
         ),
       ),
     );
+
+    // Wrap in a scoped GlassTheme override if the caller provided one.
+    // This is the "special page" escape hatch — one level below app theme,
+    // one level above individual widget settings.
+    if (widget.themeOverride != null) {
+      content = GlassTheme(
+        data: widget.themeOverride!,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

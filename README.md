@@ -128,9 +128,9 @@ flutter pub get
 
 ## Quick Start
 
-Set up the library once in `main.dart`. `initialize()` pre-caches shaders and
-registers the debug performance monitor. `wrap()` installs the root backdrop
-scope and accessibility bridge:
+Two steps and one builder — that's the entire setup:
+
+**Step 1.** Call `initialize()` in `main()` to pre-warm shaders:
 
 ```dart
 import 'package:flutter/material.dart';
@@ -138,37 +138,99 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Async platform setup: shader prewarming + Impeller pipeline.
   await LiquidGlassWidgets.initialize();
-
-  // Widget-tree composition: installs GlassBackdropScope (required).
-  // Enable adaptiveQuality to automatically tune glass quality per device.
-  runApp(LiquidGlassWidgets.wrap(
-    child: const MyApp(),
-    adaptiveQuality: true,
-  ));
+  runApp(const MyApp());
 }
+```
+
+**Step 2.** Add `appBuilder` to your `MaterialApp`. This single line installs backdrop isolation, adaptive quality, accessibility handling, and your global glass theme — all inside the `MaterialApp` context where `MediaQuery` is available:
+
+```dart
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: const MyHomePage(),
+      builder: LiquidGlassWidgets.appBuilder(
+        adaptiveQuality: true, // auto-tunes quality per device (recommended)
+        theme: GlassThemeData.simple(
+          blur: 10,
+          thickness: 30,
+          quality: GlassQuality.standard,
+        ),
+      ),
+    );
+  }
+}
+```
+
+Then add any glass widget to your tree — no per-widget configuration needed:
+
+```dart
+Scaffold(
+  appBar: GlassAppBar(title: const Text('My App')),
+  body: const Center(child: GlassCard(child: Text('Hello, Glass!'))),
+)
 ```
 
 > **Accessibility is on by default.** The library automatically reads the
 > device's Reduce Motion and Reduce Transparency settings — no extra setup
 > required. See [Accessibility](#accessibility) for details.
 
-Then add any glass widget to your tree:
+> **Advanced setup:** For apps that don't use `MaterialApp` or that need the
+> glass scopes above the navigator, use `LiquidGlassWidgets.wrap()` instead.
+> See [Advanced Configuration](#advanced-configuration) for details.
+
+
+
+## Theming
+
+Wrap your app once with `GlassTheme` and every glass widget inherits your visual settings automatically — no per-widget configuration needed:
 
 ```dart
-Scaffold(
-  appBar: GlassAppBar(title: const Text('My App')),
-  bottomNavigationBar: GlassBottomBar(
-    tabs: [
-      GlassBottomBarTab(label: 'Home', icon: const Icon(Icons.home)),
-      GlassBottomBarTab(label: 'Profile', icon: const Icon(Icons.person)),
-    ],
-    selectedIndex: 0,
-    onTabSelected: (i) {},
+MaterialApp(
+  builder: (context, child) => GlassTheme(
+    data: GlassThemeData(
+      light: GlassThemeVariant(
+        settings: GlassThemeSettings(thickness: 30, blur: 6),
+        quality: GlassQuality.standard,
+      ),
+      dark: GlassThemeVariant(
+        settings: GlassThemeSettings(thickness: 40, blur: 8),
+        quality: GlassQuality.standard,
+      ),
+    ),
+    child: child!,
   ),
-  body: const Center(child: GlassCard(child: Text('Hello, Glass!'))),
+)
+```
+
+> **`GlassThemeSettings` vs `LiquidGlassSettings`:** Use `GlassThemeSettings` inside `GlassThemeVariant`. It accepts the same parameters but all are nullable — only fields you explicitly set are applied; everything else inherits from each widget's own defaults. `LiquidGlassSettings` is the full settings type used on individual widgets.
+
+Three-level override hierarchy (highest wins):
+
+1. **Widget `settings` parameter** — explicit, widget-level override
+2. **`GlassPage(themeOverride: ...)`** — per-screen override for special pages (onboarding, paywalls)
+3. **`GlassTheme`** — app-wide defaults
+
+Access the current theme programmatically:
+
+```dart
+final variant = GlassThemeData.of(context).variantFor(context);
+```
+
+### Glow Colors
+
+`GlassGlowColors` controls the interaction glow emitted by surfaces like `GlassBottomBar` and `GlassSearchableBottomBar`:
+
+```dart
+GlassThemeVariant(
+  glowColors: GlassGlowColors(
+    primary: Colors.blue,
+    glowBlurRadius: 12,
+    glowSpreadRadius: 0.2,
+    glowOpacity: 0.8,
+  ),
 )
 ```
 
@@ -231,50 +293,54 @@ Two ideal use cases:
 > **Theme shorthand**: `GlassThemeVariant.minimal` applies `minimal` quality globally via `GlassThemeData`.
 
 
-## Theming
+## GlassPage
 
-All widgets automatically inherit from `GlassTheme` and adapt to light/dark mode:
+`GlassPage` is the recommended root widget for any screen that uses glass surfaces. It eliminates several common setup mistakes in one widget:
 
 ```dart
-GlassTheme(
-  data: GlassThemeData(
-    light: GlassThemeVariant(
-      settings: GlassThemeSettings(thickness: 30, blur: 12),
-      quality: GlassQuality.standard,
-    ),
-    dark: GlassThemeVariant(
-      settings: GlassThemeSettings(thickness: 50, blur: 18),
-      quality: GlassQuality.premium,
-    ),
+// Minimum — just wrap your Scaffold, GlassPage handles everything else:
+GlassPage(
+  child: Scaffold(
+    appBar: GlassAppBar(title: const Text('Home')),
+    body: MyContent(),
   ),
-  child: MaterialApp(home: MyHomePage()),
 )
-```
 
-> **`GlassThemeSettings` vs `LiquidGlassSettings`:** Use `GlassThemeSettings` inside `GlassThemeVariant`. It accepts the same parameters but all are nullable — only the fields you explicitly set are applied; everything else inherits from each widget's own defaults. `LiquidGlassSettings` is the full settings type used on individual widgets.
-
-Access the current theme variant programmatically:
-
-```dart
-final variant = GlassThemeData.of(context).variantFor(context);
-```
-
-### Glow Colors
-
-`GlassGlowColors` controls the interaction glow emitted by surfaces like `GlassBottomBar` and `GlassSearchableBottomBar`. Set it once in your theme and every navigation surface picks it up automatically:
-
-```dart
-GlassThemeVariant(
-  glowColors: GlassGlowColors(
-    primary: Colors.blue,   // tab indicator & search pill glow
-    blurRadius: 12,         // glow softness (default: 0 = crisp edge)
-    spreadRadius: 0.2,      // glow spread beyond the widget edge (default: 0)
-    opacity: 0.8,           // overall glow intensity (default: 1.0)
+// With a wallpaper:
+GlassPage(
+  background: Image.asset('assets/wallpaper.jpg', fit: BoxFit.cover),
+  edgeToEdge: true,
+  statusBarStyle: GlassStatusBarStyle.auto,
+  child: Scaffold(
+    appBar: GlassAppBar(title: const Text('Home')),
+    body: MyContent(),
   ),
 )
 ```
 
-Individual widgets can still override via their `interactionGlowColor` parameter — the explicit param always wins over the theme.
+| What it handles | Without `GlassPage` |
+|---|---|
+| Transparent `Scaffold` | Must set `scaffoldBackgroundColor: transparent` manually |
+| Navigation ghosting | Must remember to add `GlassBackdropScope` to every route |
+| Background scope setup | Must wrap in `LiquidGlassScope` manually |
+| Status bar icons | Must call `SystemChrome.setSystemUIOverlayStyle` and restore it |
+| Edge-to-edge mode | Must call `SystemChrome.setEnabledSystemUIMode` and restore it |
+| Per-screen theme | Must wrap subtree in a local `GlassTheme` manually |
+
+### Parameters
+
+| Parameter | Default | Purpose |
+|---|---|---|
+| `background` | `null` | Optional wallpaper/background widget. When omitted, `Scaffold` background is left unchanged |
+| `child` | required | Screen content, typically a `Scaffold` |
+| `enableBackgroundSampling` | `false` | Enable GPU texture capture for real colour absorption |
+| `statusBarStyle` | `GlassStatusBarStyle.none` | Status bar icon brightness; `auto` is recommended for wallpaper screens |
+| `edgeToEdge` | `false` | Draw content behind system bars (full immersive) |
+| `themeOverride` | `null` | Per-screen `GlassThemeData` override for special screens |
+
+> **Background sampling is `false` by default.** Most glass widgets use synthetic frost and do not need background capture. Enable it only if you are using interactive indicators (e.g. `GlassSegmentedControl`) with `blur > 0`.
+> 
+> **Tip for `edgeToEdge` on Android:** When `true`, content draws underneath the Android navigation bar. Remember to wrap your `Scaffold` body in a `SafeArea` (or use `extendBody: true` and pad the bottom) so your content isn't hidden behind the system buttons.
 
 ### Specular Sharpness
 
