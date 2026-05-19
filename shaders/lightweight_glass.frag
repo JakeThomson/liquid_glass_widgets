@@ -292,107 +292,77 @@ void main() {
     kickSpecular = kc16 * kc16;
   }
   keySpecular  *= uLightIntensity * densitySpecularBoost;
-  kickSpecular *= uLightIntensity * kKickIntensity * densitySpecularBoost;
-
-  // ---- STAGE 5: BODY LAYER (WITH SYNTHETIC DENSITY) ----
-  float bodyIntensityBoost = kBodyAmbientBoost * (1.0 + uLightIntensity * kBodyIntensityScale);
-
-  // Density Effect #2: Darker body (-30% ambient at full density)
-  // Simulates how nested BackdropFilters darken background twice
-  float effectiveAmbient = uAmbientStrength * (1.0 - densityFactor * 0.3);
-
-  // Sample background texture if available (size > 1.0 means it's not the 1x1 dummy)
-  vec3 bgRgb = vec3(uBackdropLuma);
-  if (uBackgroundSize.x > 1.0) {
-    vec2 posInBg = uBackgroundOrigin + localLogical;
-    vec2 uv = posInBg / uBackgroundSize;
-    // We do NOT do refraction bending here — lightweight path is flat glass.
-    bgRgb = texture(uBackground, uv).rgb;
-  }
-
-  // Additive frost model: background shows through via ambient term;
-  // bodyIntensityBoost is a fixed additive white lift (the glass 'frost')
-  // that prevents the body from collapsing to near-black on dark backgrounds.
-  // This ensures BG Sample ON and OFF produce consistent visual weight.
-  vec3 bodyColor = bgRgb * effectiveAmbient + vec3(bodyIntensityBoost);
-
-  // Density Effect #3: Higher opacity (+15% alpha at full density)
-  // Elevated buttons appear more "solid" and less translucent
-  float bodyAlpha = (uGlassColor.a + densityFactor * 0.15) * mask;
+  // ---- STAGE 5: GLASS ALPHA ----
+  // glassColor.a IS the opacity. Density adds +15% for elevated buttons.
+  float glassAlpha = clamp(uGlassColor.a + densityFactor * 0.15, 0.0, 1.0);
 
   // ---- STAGE 6: RIM LAYER ----
   float thicknessOffset = (uThickness - kThicknessReference) / kThicknessReference;
   float totalSpecular = keySpecular + kickSpecular;
   float rimBaseWithIntensity = max(kMinRimVisibility, kRimBaseOpacity * uLightIntensity * kRimIntensityScale);
-
-  // Density Effect #4: Brighter rim (+5% brightness at full density)
-  // Enhanced "frost" at edges makes elevated buttons stand out against containers
   float rimBrightness = rimBaseWithIntensity + thicknessOffset * 0.10 + (densityFactor * 0.05);
   vec3 rimColorBase = vec3(1.0) * (rimBrightness + totalSpecular * kRimSpecularMix);
-
-  // Rim opacity: base (modulated by refractiveIndex) + specular highlights + thickness + density
   float rimAlphaBase = kRimAlphaBase * uRefractiveIndex;
   rimAlphaBase += totalSpecular * kRimAlphaSpecular;
   rimAlphaBase *= (1.0 + thicknessOffset * kThicknessRimBoost) * (1.0 + densityFactor * 0.1);
   rimAlphaBase *= borderMask;
   rimAlphaBase = clamp(rimAlphaBase, 0.0, 1.0);
 
-  // ---- STAGE 7: FINAL COMPOSITE ----
-  vec3 finalColor = mix(bodyColor, rimColorBase, rimAlphaBase);
-  
-  // Indicator-specific luminous boost when uIndicatorWeight is 1.0
-  finalColor += vec3(0.05) * uIndicatorWeight;
-  float finalAlpha = max(bodyAlpha, rimAlphaBase * kCompositeRimAlpha);
-
-  // STAGE 7.5: INTERACTIVE GLOW (Branchless for GPU efficiency)
-  // Uses explicit uGlowIntensity parameter (0.0-1.0) instead of saturation.
-  // This matches Impeller's architecture where glow is separate from color saturation.
+  // ---- STAGE 7: EXTRAS (glow, fresnel) ----
+  float adaptiveStrength = mix(1.2, 0.8, uBackdropLuma);
+  float fresnel = (1.0 - normalZ) * borderMask * 0.10 * adaptiveStrength;
   float glowMask = step(0.01, uGlowIntensity);
   vec3 glowContribution = vec3(1.0) * uGlowIntensity * 0.3 * glowMask;
-  finalColor = clamp(finalColor + glowContribution, 0.0, 1.0);
-  finalAlpha = max(finalAlpha, uGlowIntensity * 0.3 * glowMask);
 
-  // STAGE 7.6: iOS 26 GLASS TINT (luminosity-preserving — matches Impeller path)
-  // Applied BEFORE saturation so the tint is saturation-neutral, matching the
-  // order in liquid_glass_final_render.frag: applyGlassColor → applySaturation.
-  //
-  // Previously this was an additive tint:
-  //   mix(finalColor, finalColor + uGlassColor.rgb * 0.2, uGlassColor.a)
-  // That was wrong: additive blending blows out bright surfaces and doesn't
-  // preserve luminance, so white glass on a white surface → overexposed white.
-  finalColor = applyGlassColorLW(finalColor, uGlassColor);
+  // ---- STAGE 8: FINAL COMPOSITE ----
+  if (uBackgroundSize.x > 1.0) {
+    // PATH A: BG Sample ON
+    // We have the background. We composite glass over it manually.
+    // Output: fully opaque (mask) — Flutter must NOT re-composite the bg on top.
+    vec2 posInBg = uBackgroundOrigin + localLogical;
+    vec2 uv = posInBg / uBackgroundSize;
+    vec3 bgRgb = texture(uBackground, uv).rgb;
 
-  // STAGE 7.7: VQ4 CONTENT-ADAPTIVE STRENGTH + COLOR SATURATION
-  //
-  // Mirror of the VQ4 block in liquid_glass_final_render.frag.
-  //
-  // In the lightweight path there is no backdrop texture, so we use the
-  // platform brightness as the backdrop luma proxy:
-  //   uBackdropLuma = 0.15 → dark app theme → richer glass (strength 1.2)
-  //   uBackdropLuma = 0.85 → light app theme → subtler glass (strength 0.8)
-  //
-  // This matches how iOS 26 adaptive glass actually behaves at the system
-  // level: dark mode glass is heavier; light mode glass is lighter.
-  //
-  // Cost: 1 mix() for adaptiveStrength + 1 modified saturation mix() = 2 MADs.
-  float adaptiveStrength = mix(1.2, 0.8, uBackdropLuma);
+    // Safety valve: if the texture is near-black the GPU hasn't flushed yet
+    // (first-frame race). Fall back to PATH B so the glass shows transparent
+    // instead of compositing glass over a black image.
+    float bgLuma = dot(bgRgb, LUMA_WEIGHTS);
+    if (bgLuma < 0.02) {
+      // Treat as PATH B — premultiplied transparent output.
+      float pmA2 = glassAlpha;
+      vec3 pmRgb2 = uGlassColor.rgb * glassAlpha;
+      float outA2 = rimAlphaBase + pmA2 * (1.0 - rimAlphaBase);
+      vec3 outRgb2 = rimColorBase * rimAlphaBase + pmRgb2 * (1.0 - rimAlphaBase);
+      pmRgb2 = outRgb2 + vec3(0.05) * uIndicatorWeight + glowContribution + vec3(fresnel);
+      fragColor = vec4(clamp(pmRgb2, 0.0, 1.0) * mask, outA2 * mask);
+    } else {
+      // Normal PATH A — background texture is valid.
+      vec3 bodyColor = uGlassColor.rgb * glassAlpha + bgRgb * (1.0 - glassAlpha);
+      vec3 finalColor = bodyColor * (1.0 - rimAlphaBase) + rimColorBase * rimAlphaBase;
+      finalColor += vec3(0.05) * uIndicatorWeight;
+      finalColor = clamp(finalColor + glowContribution + vec3(fresnel), 0.0, 1.0);
+      fragColor = vec4(finalColor * mask, mask);
+    }
 
-  // Adaptive saturation: same formula as Impeller path.
-  float adaptiveSaturation = uSaturation * adaptiveStrength;
-  float luminance = dot(finalColor, LUMA_WEIGHTS);
-  finalColor = mix(vec3(luminance), finalColor, adaptiveSaturation);
-  finalColor = clamp(finalColor, 0.0, 1.0);
+  } else {
+    // PATH B: BG Sample OFF
+    // No background texture. Flutter SrcOver composites us over the real BG.
+    // Output premultiplied alpha. glassColor.a IS the coverage.
+    //
+    // Body in premultiplied space: glassColor.rgb * glassAlpha.
+    float pmA = glassAlpha;
+    vec3 pmRgb = uGlassColor.rgb * glassAlpha;
 
-  // STAGE 7.8: VQ2 FRESNEL EDGE BRIGHTENING — ported from liquid_glass_final_render.frag.
-  // iOS 26 glass is subtly brighter at grazing angles even without a directional
-  // highlight. normalZ → 0 at the rim, → 1 at the flat interior.
-  // Gated by borderMask (equivalent to Impeller's edgeFactor) so the effect is
-  // confined to the rim zone and does not accumulate on interior pixels.
-  // VQ4: scale fresnel by adaptiveStrength — rim is crisper on dark content,
-  // softer on light content, matching iOS 26 rim behaviour.
-  // Fully branchless — zero GPU divergence.
-  float fresnel = (1.0 - normalZ) * borderMask * 0.10 * adaptiveStrength;
-  finalColor = clamp(finalColor + vec3(fresnel), 0.0, 1.0);
+    // Rim composited over body (SrcOver in premultiplied space).
+    float outA = rimAlphaBase + pmA * (1.0 - rimAlphaBase);
+    vec3 outRgb = rimColorBase * rimAlphaBase + pmRgb * (1.0 - rimAlphaBase);
+    pmA = outA;
+    pmRgb = outRgb;
 
-  fragColor = vec4(finalColor * finalAlpha, finalAlpha);
+    // Indicator, glow, fresnel (additive emission — no alpha change).
+    pmRgb += vec3(0.05) * uIndicatorWeight;
+    pmRgb += glowContribution + vec3(fresnel);
+
+    fragColor = vec4(clamp(pmRgb, 0.0, 1.0) * mask, pmA * mask);
+  }
 }

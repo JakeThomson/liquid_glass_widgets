@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../types/glass_quality.dart';
 import '../../utils/glass_performance_monitor.dart';
-import '../interactive/liquid_glass_scope.dart';
 import 'glass_accessibility_scope.dart';
 import 'lightweight_liquid_glass.dart';
 import 'inherited_liquid_glass.dart';
@@ -210,34 +209,11 @@ class AdaptiveGlass extends StatelessWidget {
         // Frosting normalization: adapts Premium settings for the 2D shader.
         // Thickness scaled down (2D inner shadows look much thicker than 3D bevels).
         // Light intensity scaled down (2D gradients look brighter than 3D speculars).
-        //
-        // VOLUMETRIC FROSTING SIMULATION:
-        // The 3D Impeller raymarcher computes body brightness from light physically
-        // scattering through a thick volume — glassColor.alpha has no role there.
-        // The 2D shader computes: bodyColor = glassColor.rgb * (ambient + boost),
-        // so with a typical white12 (alpha=0.12) color the body is nearly invisible.
-        // Fix: derive a frosted-body opacity target from thickness + lightIntensity.
-        final double thicknessNorm =
-            (baseSettings.effectiveThickness / 30.0).clamp(0.0, 1.0);
-        final double lightNorm =
-            (baseSettings.effectiveLightIntensity / 1.0).clamp(0.0, 1.0);
-        final double frostingTarget = thicknessNorm * lightNorm * 0.45;
-
-        final Color baseColor = baseSettings.effectiveGlassColor;
-        final double newAlpha =
-            math.max(baseColor.a, frostingTarget).clamp(0.0, 1.0);
-        final double newAmbient = math.max(
-          baseSettings.effectiveAmbientStrength,
-          frostingTarget * 1.0,
-        ).clamp(0.0, 1.0);
-
         normalizedSettings = baseSettings.copyWith(
           thickness: (baseSettings.effectiveThickness * 0.4)
               .clamp(0.0, double.infinity),
           lightIntensity:
               (baseSettings.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
-          glassColor: baseColor.withValues(alpha: newAlpha),
-          ambientStrength: newAmbient,
         );
       }
 
@@ -265,15 +241,12 @@ class AdaptiveGlass extends StatelessWidget {
 
       // If this is a container (allowElevation=false), we are providing a blur
       // for all our children to use. We update the InheritedLiquidGlass tree.
-      final backgroundKey = LiquidGlassScope.of(context);
-      
       if (!allowElevation) {
         return LightweightLiquidGlass(
           shape: shape,
           settings: effectiveSettings,
           densityFactor: 0.0, // Containers are never elevated
           glowIntensity: 0.0, // Containers don't glow
-          backgroundKey: backgroundKey,
           child: InheritedLiquidGlass(
             settings: effectiveSettings,
             quality: quality,
@@ -283,12 +256,13 @@ class AdaptiveGlass extends StatelessWidget {
         );
       }
 
+      // Elevated widgets use PATH B (no backgroundKey). They composite via
+      // SrcOver against the container's output.
       final Widget lightweightWidget = LightweightLiquidGlass(
         shape: shape,
         settings: effectiveSettings,
         densityFactor: densityFactor, // 0.0 or 1.0 based on elevation
         glowIntensity: glowIntensity * 0.35, // Normalise additive glow to match Impeller
-        backgroundKey: backgroundKey,
         child: child,
       );
 

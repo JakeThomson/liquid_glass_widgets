@@ -268,20 +268,42 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
     }
   }
 
+  // Guard: prevents concurrent async captures from stacking up.
+  // Only one toImage() call can be in-flight at a time.
+  bool _capturePending = false;
+
+  /// Initiates an async background capture via [RenderRepaintBoundary.toImage].
+  ///
+  /// Using [toImage] (Future-based) instead of [toImageSync] is critical:
+  /// [toImage] resolves AFTER the GPU compositor has flushed the current frame,
+  /// guaranteeing valid pixel content. [toImageSync] races the GPU and returns
+  /// an all-black image on the first frame, causing the "black on first load" bug.
+  ///
+  /// The [_capturePending] flag prevents concurrent captures from stacking up
+  /// when the ticker fires multiple times before the first capture completes.
   void _captureBackground(
       RenderRepaintBoundary boundary, Size size, Offset pos) {
-    try {
-      final image = boundary.toImageSync(pixelRatio: 1.0);
+    if (_capturePending) return; // Already capturing — wait for it to finish.
+    _capturePending = true;
+    boundary.toImage(pixelRatio: 1.0).then((image) {
+      if (!mounted) {
+        image.dispose();
+        _capturePending = false;
+        return;
+      }
       _backgroundImage?.dispose();
       _backgroundImage = image;
       _lastCaptureSize = size;
       _lastCapturePosition = pos;
-      if (mounted) setState(() {});
-    } catch (_) {
-      // toImageSync can fail during the first few frames on some drivers;
-      // the ticker will retry next frame automatically.
-    }
+      _capturePending = false;
+      setState(() {});
+    }).catchError((_) {
+      // toImage can fail transiently (e.g. widget detached mid-capture).
+      // Clear the flag so the ticker will retry on the next frame.
+      _capturePending = false;
+    });
   }
+
 
   @override
   void didUpdateWidget(LightweightLiquidGlass oldWidget) {
@@ -692,11 +714,16 @@ class _RenderLightweightGlass extends RenderProxyBox {
     shader.setFloat(index++, physicalOrigin.dy);
 
     // 4, 5, 6, 7: uGlassColor (vec4)
+    //
+    // Pass glassColor.alpha unchanged — the shader applies a Fresnel-based
+    // modulation in Stage 2.5 (lightweight_glass.frag) so the alpha creates
+    // a depth gradient (full at rim, 12% at center) instead of a flat fill.
+    // This correctly approximates the 3D SDF Fresnel of the Premium path.
     final color = _settings.effectiveGlassColor;
     shader.setFloat(index++, (color.r * 255.0).round().clamp(0, 255) / 255.0);
     shader.setFloat(index++, (color.g * 255.0).round().clamp(0, 255) / 255.0);
     shader.setFloat(index++, (color.b * 255.0).round().clamp(0, 255) / 255.0);
-    shader.setFloat(index++, (color.a * 255.0).round().clamp(0, 255) / 255.0);
+    shader.setFloat(index++, color.a.clamp(0.0, 1.0));
 
     // 8: uThickness (float)
     shader.setFloat(index++, _settings.effectiveThickness);
