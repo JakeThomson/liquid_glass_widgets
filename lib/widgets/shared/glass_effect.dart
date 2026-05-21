@@ -451,6 +451,8 @@ class _GlassEffectState extends State<GlassEffect>
       effectiveSettings = base.copyWith(
         thickness:      (base.effectiveThickness     * 0.4).clamp(0.0, double.infinity),
         lightIntensity: (base.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
+        ambientStrength: (base.effectiveAmbientStrength * 0.25).clamp(0.0, 1.0),
+        glowIntensity:  (base.glowIntensity  * 0.50).clamp(0.0, 5.0),
       );
     } else {
       effectiveSettings = widget.settings;

@@ -204,7 +204,11 @@ class AdaptiveGlass extends StatelessWidget {
 
       final LiquidGlassSettings normalizedSettings;
       if (skipNormalization) {
-        normalizedSettings = baseSettings;
+        normalizedSettings = baseSettings.copyWith(
+          glassColor: baseSettings.glassColor.withValues(
+            alpha: (baseSettings.glassColor.a * baseSettings.standardOpacityMultiplier).clamp(0.0, 1.0),
+          ),
+        );
       } else {
         // Frosting normalization: adapts Premium settings for the 2D shader.
         // Thickness scaled down (2D inner shadows look much thicker than 3D bevels).
@@ -214,6 +218,9 @@ class AdaptiveGlass extends StatelessWidget {
               .clamp(0.0, double.infinity),
           lightIntensity:
               (baseSettings.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
+          glassColor: baseSettings.glassColor.withValues(
+            alpha: (baseSettings.glassColor.a * baseSettings.standardOpacityMultiplier).clamp(0.0, 1.0),
+          ),
         );
       }
 
@@ -221,8 +228,7 @@ class AdaptiveGlass extends StatelessWidget {
       final color = normalizedSettings.effectiveGlassColor;
       final effectiveSettings = shouldElevate
           ? LiquidGlassSettings(
-              glassColor:
-                  color.withValues(alpha: (color.a + 0.2).clamp(0.0, 1.0)),
+              glassColor: color, // Removed flat +0.2 alpha boost for predictability
               refractiveIndex: normalizedSettings.refractiveIndex,
               thickness: normalizedSettings.effectiveThickness,
               lightAngle: normalizedSettings.lightAngle,

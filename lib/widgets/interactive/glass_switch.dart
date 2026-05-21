@@ -640,14 +640,14 @@ class _GlassSwitchState extends State<GlassSwitch>
           lightAngle: GlassDefaults.lightAngle,
         ),
         rimThickness:
-            isStdPath ? 0.0 : 0.5, // zero rim width; premium unchanged
+            isStdPath ? 0.5 : 0.5, // beautiful thin rim; premium unchanged
         ambientRim: isStdPath
-            ? 0.07
-            : 0.1, // ~70% of Premium ring strength; premium unchanged
+            ? 0.08
+            : 0.1, // ~80% of Premium ring strength; premium unchanged
         baseAlphaMultiplier:
-            isStdPath ? 0.06 : 0.2, // clear glass body; premium unchanged
+            isStdPath ? 0.15 : 0.2, // clear glass body; premium unchanged
         edgeAlphaMultiplier:
-            isStdPath ? 0.0 : 0.4, // zero edge glow; premium unchanged
+            isStdPath ? 0.30 : 0.4, // soft edge glow; premium unchanged
         quality: effectiveQuality ?? GlassQuality.standard,
         interactionIntensity: transition,
         child: Stack(

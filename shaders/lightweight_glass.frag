@@ -42,30 +42,22 @@ const float kBorderThickness      = 0.5;   // Rim width in logical pixels (iOS 2
 const float kNormalThreshold      = 0.01;  // Minimum gradient for surface normal calculation
 
 // Dual-Highlight Specular Model (simulates glass depth)
-const float kSpecularPowerPrimary = 14.0;  // Key light sharpness (higher = tighter highlight)
-const float kSpecularPowerKick    = 20.0;  // Back-surface reflection sharpness (internal bounce)
-const float kKickIntensity        = 0.4;   // Back-surface brightness relative to primary
+const float kSpecularPowerPrimary = 14.0;
+const float kSpecularPowerKick    = 20.0;
+const float kKickIntensity        = 0.4;
 
 // Rim & Body Color Balance
 const float kRimBaseOpacity       = 0.4;   // Base rim brightness before light modulation
 const float kRimSpecularMix       = 0.6;   // How much specular highlights boost rim
 const float kRimAlphaBase         = 0.65;  // Base rim opacity (calibrated to Impeller parity)
 const float kRimAlphaSpecular     = 0.5;   // Additional opacity from specular highlights
-const float kBodyAmbientBoost     = 0.12;  // Additive frost/whitening contribution to body layer
-                                            //   Intentionally additive (not multiplicative) so dark
-                                            //   backgrounds don't collapse the body to near-black.
-const float kCompositeRimAlpha    = 0.8;   // Rim-to-body blend strength at edges
-
-// Light Intensity Response (how uLightIntensity modulates appearance)
-const float kMinRimVisibility     = 0.35;  // Minimum rim brightness — lowered from 0.5 so
-                                            //   AdaptiveGlass lightIntensity normalisation can
-                                            //   actually reach the rim on the Standard (2D) path.
+// Light Intensity Response
+const float kMinRimVisibility     = 0.35;  // Minimum rim brightness floor
 const float kRimIntensityScale    = 0.6;   // Rim sensitivity to light intensity changes
-const float kBodyIntensityScale   = 0.15;  // Body sensitivity to light intensity changes
 
-// Thickness Response (how uThickness affects glass appearance)
+// Thickness Response
 const float kThicknessReference   = 10.0;  // Neutral thickness value (no visual modulation)
-const float kThicknessRimBoost    = 0.15;  // Rim opacity boost per unit thickness deviation  
+const float kThicknessRimBoost    = 0.15;  // Rim opacity boost per unit thickness deviation
 
 
 // -----------------------------------------------------------------------------
@@ -292,29 +284,47 @@ void main() {
     kickSpecular = kc16 * kc16;
   }
   keySpecular  *= uLightIntensity * densitySpecularBoost;
+  kickSpecular *= uLightIntensity * kKickIntensity * densitySpecularBoost;
   // ---- STAGE 5: GLASS ALPHA ----
-  // glassColor.a IS the opacity. Density adds +15% for elevated buttons.
-  float glassAlpha = clamp(uGlassColor.a + densityFactor * 0.15, 0.0, 1.0);
+  // glassColor.a IS the opacity. 
+  float glassAlpha = clamp(uGlassColor.a, 0.0, 1.0);
 
-  // ---- STAGE 6: RIM LAYER ----
+  // ---- STAGE 6: RIM & BEVEL LAYER ----
   float thicknessOffset = (uThickness - kThicknessReference) / kThicknessReference;
   float totalSpecular = keySpecular + kickSpecular;
   float rimBaseWithIntensity = max(kMinRimVisibility, kRimBaseOpacity * uLightIntensity * kRimIntensityScale);
   float rimBrightness = rimBaseWithIntensity + thicknessOffset * 0.10 + (densityFactor * 0.05);
   vec3 rimColorBase = vec3(1.0) * (rimBrightness + totalSpecular * kRimSpecularMix);
-  float rimAlphaBase = kRimAlphaBase * uRefractiveIndex;
+
+  // Directional light influence for a subtle lit-side bonus.
+  float normalDotLight = max(0.0, dot(surfaceNormal, uLightDirection));
+  float normalDotOpposite = max(0.0, dot(surfaceNormal, -uLightDirection));
+  float directionalInfluence = normalDotLight + normalDotOpposite * 0.8;
+  directionalInfluence *= directionalInfluence; // squared for tighter highlight
+
+  // Constant base rim (structural edge) + small directional bonus.
+  // The base (kRimAlphaBase = 0.38) is independent of uLightIntensity so
+  // AdaptiveGlass normalization (×0.6) cannot weaken it. This matches
+  // Premium's 3D bevel which is always visible from geometry regardless
+  // of light settings. The directional bonus adds subtle lit-side variation.
+  float rimAlphaBase = kRimAlphaBase + 0.15 * directionalInfluence * uLightIntensity;
+  rimAlphaBase *= uRefractiveIndex;
   rimAlphaBase += totalSpecular * kRimAlphaSpecular;
   rimAlphaBase *= (1.0 + thicknessOffset * kThicknessRimBoost) * (1.0 + densityFactor * 0.1);
   rimAlphaBase *= borderMask;
   rimAlphaBase = clamp(rimAlphaBase, 0.0, 1.0);
 
-  // ---- STAGE 7: EXTRAS (glow, fresnel) ----
+  // ---- STAGE 7: EXTRAS (fresnel) ----
   float adaptiveStrength = mix(1.2, 0.8, uBackdropLuma);
   float fresnel = (1.0 - normalZ) * borderMask * 0.10 * adaptiveStrength;
-  float glowMask = step(0.01, uGlowIntensity);
-  vec3 glowContribution = vec3(1.0) * uGlowIntensity * 0.3 * glowMask;
 
   // ---- STAGE 8: FINAL COMPOSITE ----
+  // PATH-SPECIFIC frosted-glass material weight.
+  // PATH A (BG texture): background ALREADY provides visual presence. Adding white frost
+  //   neutralises the warm background colours that show through the glass (wrong look).
+  //   Premium shows blurred warm background through glass — so frost = 0 in PATH A.
+  // PATH B (no texture): need modest opacity so glass body is visible over the blur layer.
+  //   20% white lift is enough to be distinct without looking frosty.
   if (uBackgroundSize.x > 1.0) {
     // PATH A: BG Sample ON
     // We have the background. We composite glass over it manually.
@@ -323,46 +333,100 @@ void main() {
     vec2 uv = posInBg / uBackgroundSize;
     vec3 bgRgb = texture(uBackground, uv).rgb;
 
+    // Apply saturation to the background to match Premium's depth.
+    // IMPORTANT: Use uSaturation directly (1.2), NOT dampened by adaptiveStrength.
+    // Premium runs applySaturation(bg, uSaturation * adaptiveStrength) which on dark
+    // backgrounds (adaptiveStrength=1.2) = 1.44x. On this mountain scene the sky
+    // becomes richer blue. Standard was applying 1.032x (barely anything).
+    // Using plain uSaturation = 1.2x matches Premium's default calibration.
+    float bgLuminance = dot(bgRgb, LUMA_WEIGHTS);
+    vec3 saturatedBg = mix(vec3(bgLuminance), bgRgb, uSaturation);
+
     // Safety valve: if the texture is near-black the GPU hasn't flushed yet
-    // (first-frame race). Fall back to PATH B so the glass shows transparent
-    // instead of compositing glass over a black image.
-    float bgLuma = dot(bgRgb, LUMA_WEIGHTS);
-    if (bgLuma < 0.02) {
+    if (bgLuminance < 0.02) {
       // Treat as PATH B — premultiplied transparent output.
-      float pmA2 = glassAlpha;
-      vec3 pmRgb2 = uGlassColor.rgb * glassAlpha;
+      float frost2 = 0.08 + densityFactor * 0.05; // same as PATH B value
+      float pmA2 = max(glassAlpha, frost2);
+      vec3 pmRgb2 = uGlassColor.rgb * pmA2;
+      
+      // Min 3% ambient darkening so glass interior is distinguishable at ambientStrength=0.
+      float ambientDarken2 = clamp((uAmbientStrength * 0.25 + 0.03) * (1.0 + densityFactor * 0.5), 0.0, 0.8);
+      pmA2 = pmA2 + ambientDarken2 * (1.0 - pmA2);
+      
       float outA2 = rimAlphaBase + pmA2 * (1.0 - rimAlphaBase);
       vec3 outRgb2 = rimColorBase * rimAlphaBase + pmRgb2 * (1.0 - rimAlphaBase);
-      pmRgb2 = outRgb2 + vec3(0.05) * uIndicatorWeight + glowContribution + vec3(fresnel);
+      pmRgb2 = outRgb2 + vec3(0.05) * uIndicatorWeight + vec3(fresnel);
       fragColor = vec4(clamp(pmRgb2, 0.0, 1.0) * mask, outA2 * mask);
     } else {
       // Normal PATH A — background texture is valid.
-      vec3 bodyColor = uGlassColor.rgb * glassAlpha + bgRgb * (1.0 - glassAlpha);
-      vec3 finalColor = bodyColor * (1.0 - rimAlphaBase) + rimColorBase * rimAlphaBase;
+      // Min 8% ambient darkening: creates the glass shadow (interior appears darker than
+      // surroundings) — this is the visual separation between glass and non-glass,
+      // equivalent to what Premium's blur produces through averaging.
+      float ambientDarken = clamp((uAmbientStrength * 0.25 + 0.08) * (1.0 + densityFactor * 0.5), 0.0, 0.8);
+      vec3 darkenedBg = saturatedBg * (1.0 - ambientDarken);
+
+      // PATH A body: use luminosity-preserving glass tint (applyGlassColorLW).
+      // - Achromatic glass (white, grey): direct mix → same as mix(darkenedBg, white, alpha)
+      // - Chromatic glass (mint, bronze, blue): shifts hue toward glass colour while
+      //   preserving background luminance → matches how Premium shows tinted glass.
+      // Without this, mint/bronze presets look nearly invisible (pale tint at 18% barely
+      // shifts the warm mountain background). applyGlassColorLW makes colour vivid & visible.
+      vec3 bodyColor = applyGlassColorLW(darkenedBg, uGlassColor);
+
+      // Adaptive rim color: brighten the background at the edge (Premium's getHighlightColor).
+      vec3 adaptiveRimColor = mix(bgRgb, vec3(1.0), 0.7);
+
+      vec3 finalColor = bodyColor * (1.0 - rimAlphaBase) + adaptiveRimColor * rimAlphaBase;
       finalColor += vec3(0.05) * uIndicatorWeight;
-      finalColor = clamp(finalColor + glowContribution + vec3(fresnel), 0.0, 1.0);
+      finalColor = clamp(finalColor + vec3(fresnel), 0.0, 1.0);
       fragColor = vec4(finalColor * mask, mask);
     }
 
   } else {
-    // PATH B: BG Sample OFF
-    // No background texture. Flutter SrcOver composites us over the real BG.
-    // Output premultiplied alpha. glassColor.a IS the coverage.
-    //
-    // Body in premultiplied space: glassColor.rgb * glassAlpha.
-    float pmA = glassAlpha;
-    vec3 pmRgb = uGlassColor.rgb * glassAlpha;
+    // PATH B: All Standard widgets use this path.
+    // Flutter SrcOver composites us over the BackdropFilter(blur+saturation) background.
+    // The saturation is now applied in the Dart blur filter, matching Premium's depth.
+    // simulatedFrost ensures minimum material alpha when glassColor.a=0 (Premium default).
+    // With glassColor=(0,0,0,0) and no frost, pmA=0 → completely invisible in SrcOver.
+    // For white glass: pmRgb=(1,1,1)*0.08 → 8% white lift over blurred bg = frosted material.
+    // PATH B: 8% frost floor ensures minimum glass presence without the "frosted plastic" look.
+    // User-specified glassColor.a (typically 0.12+) takes precedence via max().
+    // 8% is enough for material visibility while preserving Premium-matching transparency.
+    float simulatedFrost = 0.08 + densityFactor * 0.05;
+    float pmA = max(glassAlpha, simulatedFrost);
+    vec3 pmRgb = uGlassColor.rgb * pmA;
 
-    // Rim composited over body (SrcOver in premultiplied space).
-    float outA = rimAlphaBase + pmA * (1.0 - rimAlphaBase);
-    vec3 outRgb = rimColorBase * rimAlphaBase + pmRgb * (1.0 - rimAlphaBase);
+    // Min 3% ambient darkening: glass should always be slightly darker/different than
+    // surrounding content. Premium achieves this physically through blur compositing.
+    float ambientDarken = clamp((uAmbientStrength * 0.25 + 0.03) * (1.0 + densityFactor * 0.5), 0.0, 0.8);
+    pmA = pmA + ambientDarken * (1.0 - pmA);
+
+    // Contrast-adaptive rim: over bright backgrounds white-on-white has no contrast.
+    // Shift rim colour toward a mid-grey (0.55) proportional to backdrop brightness,
+    // so the border ring remains distinguishable regardless of background lightness.
+    float rimContrast = mix(1.0, 0.55, uBackdropLuma);
+    vec3 pathBRimColor = rimColorBase * rimContrast;
+
+    // Guarantee a minimum border presence: even if rimAlphaBase computed above is
+    // low (low light, low thickness), the border should always read as glass.
+    float minRimAlpha = borderMask * 0.10;
+    float effectiveRimAlpha = max(rimAlphaBase, minRimAlpha);
+
+    // Rim composited over body.
+    float outA = effectiveRimAlpha + pmA * (1.0 - effectiveRimAlpha);
+    vec3 outRgb = pathBRimColor * effectiveRimAlpha + pmRgb * (1.0 - effectiveRimAlpha);
     pmA = outA;
     pmRgb = outRgb;
 
-    // Indicator, glow, fresnel (additive emission — no alpha change).
     pmRgb += vec3(0.05) * uIndicatorWeight;
-    pmRgb += glowContribution + vec3(fresnel);
+    pmRgb += vec3(fresnel);
+
+    // Interactive glow: active state on switches/sliders (restored from main).
+    float glowMask = step(0.01, uGlowIntensity);
+    pmRgb += vec3(uGlowIntensity * 0.3 * glowMask);
+    pmA = max(pmA, uGlowIntensity * 0.3 * glowMask);
 
     fragColor = vec4(clamp(pmRgb, 0.0, 1.0) * mask, pmA * mask);
   }
 }
+

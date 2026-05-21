@@ -278,7 +278,7 @@ void main() {
   
   // Interior light lift — matches Premium Impeller's internal SDF specular glow.
   // uAmbientStrength directly controls this lift value.
-  // Default: ambientStrength=0.07 matches previous hardcoded value.
+  // Ambient strength is already normalized (0.25x) in the Dart layout pass.
   finalColor += vec3(uAmbientStrength); // TUNE via LiquidGlassSettings.ambientStrength
   
   // Apply glass tint color
@@ -295,7 +295,7 @@ void main() {
   // Standard mode: Provide a solid glassy body even at rest (Intensity 0), 
   // boosting it slightly when pressed.
   float standardBaseAlpha = uBaseAlphaMultiplier * mix(0.6, 1.0, uInteractionIntensity);
-  // Restore original 0.70 — clear glass is translucent, not frosted.
+  // Restore original 0.70 when background is enabled — clear glass is translucent, not frosted.
   float baseAlpha = (uHasBackground > 0.5) ? 0.70 : standardBaseAlpha;
   
   // TWEAK: edgeAlpha - edge opacity (higher = more solid edges)
@@ -305,11 +305,8 @@ void main() {
   
   // Blend from center to edge
   float glassAlpha = mix(baseAlpha, edgeAlpha, edgeInfluence);
-  // Structural ring alpha, gated by uAmbientRim so setting ambientRim=0 fully
-  // disables the forced ring (used by Standard switch/slider thumbs).
-  // The bevelGradient above still adds top/bottom variation to rimColor on
-  // surfaces where finalColor isn't already clamped (background-captured glass).
-  glassAlpha = max(glassAlpha, borderMask * 0.9 * clamp(uAmbientRim * 10.0, 0.0, 1.0));
+  float ringOpacity = borderMask * 0.9 * clamp(uAmbientRim * 10.0, 0.0, 1.0);
+  glassAlpha = max(glassAlpha, ringOpacity);
 
 
 

@@ -14,7 +14,7 @@ import 'package:liquid_glass_widgets_example/constants/glass_settings.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LiquidGlassWidgets.initialize();
-  runApp(const ShapeDebugApp());
+  runApp(LiquidGlassWidgets.wrap(child: const ShapeDebugApp()));
 }
 
 class ShapeDebugApp extends StatelessWidget {
@@ -35,7 +35,7 @@ class ShapeDebugPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LiquidGlassScope.stack(
+    return GlassPage(
       background: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -45,26 +45,24 @@ class ShapeDebugPage extends StatelessWidget {
           ),
         ),
       ),
-      content: Positioned.fill(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: AdaptiveLiquidGlassLayer(
-            settings: RecommendedGlassSettings.standard,
-            quality: GlassQuality.standard,
-            child: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'GlassButton Shape Debug',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+      child: Scaffold(
+        body: AdaptiveLiquidGlassLayer(
+          settings: RecommendedGlassSettings.standard,
+          quality: GlassQuality.standard,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'GlassButton Shape Debug',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
+                  ),
                     const SizedBox(height: 8),
                     Text(
                       'Verifying shape and radius behavior',
@@ -164,7 +162,6 @@ class ShapeDebugPage extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

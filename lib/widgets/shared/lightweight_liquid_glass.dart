@@ -619,24 +619,26 @@ class _RenderLightweightGlass extends RenderProxyBox {
 
     final blurSigma = _settings.effectiveBlur;
     if (blurSigma > 0 && !_skipBlur) {
-      ui.ImageFilter filter = ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma);
+      // Compose blur + saturation to match Premium's background treatment.
+      // Premium applies Gaussian blur then boosts saturation on the blurred result,
+      // giving it richer, deeper colours (the "blue sky through glass" effect).
+      // We replicate this by composing: outer=saturationFilter, inner=blurFilter.
+      // Result: the blurred background seen through Standard glass is saturated
+      // identically to Premium — no background texture capture required.
+      final double sat = _settings.effectiveSaturation; // default 1.2
 
-      // Apply a universal brightness lift to mimic Impeller's volumetric scattering.
-      // This is necessary because 2D blur intrinsically darkens, and we want
-      // the glass to retain a luminous, physical feel regardless of OS theme.
-      // 1.15x multiplier + 0.05 additive lift
-      const double mult = 1.15;
-      const double add = 0.05; // 0.05 * 255 ≈ 13
-      final ui.ColorFilter brightnessFilter = ui.ColorFilter.matrix(<double>[
-        mult, 0.0, 0.0, 0.0, add * 255.0,
-        0.0, mult, 0.0, 0.0, add * 255.0,
-        0.0, 0.0, mult, 0.0, add * 255.0,
-        0.0, 0.0, 0.0, 1.0, 0.0,
+      // Standard saturation ColorFilter matrix (ITU-R BT.601 luminance weights).
+      const double rw = 0.2126, gw = 0.7152, bw = 0.0722;
+      final ui.ColorFilter satFilter = ui.ColorFilter.matrix(<double>[
+        rw + (1 - rw) * sat, gw - gw * sat,       bw - bw * sat,       0, 0,
+        rw - rw * sat,       gw + (1 - gw) * sat, bw - bw * sat,       0, 0,
+        rw - rw * sat,       gw - gw * sat,       bw + (1 - bw) * sat, 0, 0,
+        0,                   0,                   0,                   1, 0,
       ]);
 
-      filter = ui.ImageFilter.compose(
-        outer: brightnessFilter,
-        inner: filter,
+      final ui.ImageFilter filter = ui.ImageFilter.compose(
+        outer: satFilter,
+        inner: ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
       );
 
       context.pushLayer(

@@ -18,30 +18,21 @@ import 'widgets/shared/lightweight_liquid_glass.dart';
 ///
 /// ## Setup
 ///
-/// Two async steps, then one builder:
-///
 /// ```dart
 /// void main() async {
 ///   WidgetsFlutterBinding.ensureInitialized();
 ///   await LiquidGlassWidgets.initialize(); // pre-warms shaders
 ///
-///   runApp(MaterialApp(
-///     home: const MyHomePage(),
-///     // One line installs accessibility, adaptive quality, and global theme:
-///     builder: LiquidGlassWidgets.appBuilder(
-///       adaptiveQuality: true,
-///       theme: GlassThemeData(
-///         light: GlassThemeVariant(settings: GlassThemeSettings(blur: 10)),
-///         dark:  GlassThemeVariant(settings: GlassThemeSettings(blur: 14)),
-///       ),
+///   runApp(LiquidGlassWidgets.wrap(
+///     child: const MyApp(),
+///     adaptiveQuality: true,
+///     theme: GlassThemeData(
+///       light: GlassThemeVariant(settings: GlassThemeSettings(blur: 10)),
+///       dark:  GlassThemeVariant(settings: GlassThemeSettings(blur: 14)),
 ///     ),
 ///   ));
 /// }
 /// ```
-///
-/// Use [wrap] for advanced cases where you need control over the widget tree
-/// above `MaterialApp` — e.g. a custom app widget that does not use
-/// `MaterialApp` at all.
 class LiquidGlassWidgets {
   LiquidGlassWidgets._();
 
@@ -147,13 +138,14 @@ class LiquidGlassWidgets {
   ///
   /// // Recommended for Android / broad device support:
   /// runApp(LiquidGlassWidgets.wrap(
-  ///   const MyApp(),
+  ///   child: const MyApp(),
   ///   adaptiveQuality: true,
+  ///   theme: GlassThemeData(...),
   /// ));
   ///
   /// // Game / experience — bypass accessibility, conservative quality start:
   /// runApp(LiquidGlassWidgets.wrap(
-  ///   const MyApp(),
+  ///   child: const MyApp(),
   ///   respectSystemAccessibility: false,
   ///   adaptiveQuality: true,
   ///   adaptiveConfig: GlassAdaptiveScopeConfig(
@@ -210,6 +202,7 @@ class LiquidGlassWidgets {
   /// `GlassAdaptiveScope` (when enabled) → `GlassBackdropScope` → `child`
   static Widget wrap({
     required Widget child,
+    GlassThemeData? theme,
     bool respectSystemAccessibility = true,
     bool adaptiveQuality = false,
     GlassAdaptiveScopeConfig? adaptiveConfig,
@@ -218,6 +211,10 @@ class LiquidGlassWidgets {
     glass_config.respectSystemAccessibility = respectSystemAccessibility;
 
     Widget result = GlassBackdropScope(child: child);
+
+    if (theme != null) {
+      result = GlassTheme(data: theme, child: result);
+    }
 
     if (adaptiveQuality) {
       // When no adaptiveConfig is given: GlassAdaptiveScope.initState() seeds
@@ -244,126 +241,6 @@ class LiquidGlassWidgets {
     }
 
     return result;
-  }
-
-  // ── appBuilder() ───────────────────────────────────────────────────────────
-
-  /// Returns a [TransitionBuilder] for use in `MaterialApp.builder` that
-  /// installs the complete Liquid Glass infrastructure **inside** the
-  /// `MaterialApp` context.
-  ///
-  /// This is the **recommended setup for most apps**. Placing the scopes inside
-  /// `MaterialApp.builder` (rather than above `MaterialApp` via [wrap]) gives
-  /// them access to `MediaQuery` from the very first frame — meaning
-  /// accessibility preferences (Reduce Motion, Reduce Transparency) and the
-  /// adaptive quality benchmark are both read correctly on startup.
-  ///
-  /// ## What it installs (outermost → innermost)
-  ///
-  /// 1. **[GlassBackdropScope]** — root backdrop isolation; prevents ghosting
-  ///    during navigation transitions.
-  /// 2. **[GlassAdaptiveScope]** (when `adaptiveQuality: true`) — benchmarks
-  ///    the device and applies a global quality ceiling automatically.
-  /// 3. **[GlassAccessibilityScope]** — reads Reduce Motion / Reduce
-  ///    Transparency from `MediaQuery` once and propagates down the tree,
-  ///    eliminating per-widget lookups.
-  /// 4. **[GlassTheme]** (when `theme` is provided) — makes your global glass
-  ///    theme available to every widget below without any manual tree nesting.
-  ///
-  /// ## Recommended usage
-  ///
-  /// ```dart
-  /// void main() async {
-  ///   WidgetsFlutterBinding.ensureInitialized();
-  ///   await LiquidGlassWidgets.initialize();
-  ///
-  ///   runApp(MaterialApp(
-  ///     home: const MyHomePage(),
-  ///     builder: LiquidGlassWidgets.appBuilder(
-  ///       adaptiveQuality: true,
-  ///       theme: GlassThemeData(
-  ///         light: GlassThemeVariant(
-  ///           settings: GlassThemeSettings(blur: 10, thickness: 30),
-  ///         ),
-  ///         dark: GlassThemeVariant(
-  ///           settings: GlassThemeSettings(blur: 14, thickness: 40),
-  ///         ),
-  ///       ),
-  ///     ),
-  ///   ));
-  /// }
-  /// ```
-  ///
-  /// ## Composing with an existing builder
-  ///
-  /// If you already use `MaterialApp.builder` for another purpose (e.g.
-  /// `flutter_screenutil`), compose manually:
-  ///
-  /// ```dart
-  /// MaterialApp(
-  ///   builder: (context, child) {
-  ///     // Your existing builder wraps LiquidGlass:
-  ///     final glassChild = LiquidGlassWidgets.appBuilder()(
-  ///       context, child,
-  ///     );
-  ///     return ScreenUtilInit(child: glassChild);
-  ///   },
-  /// )
-  /// ```
-  ///
-  /// ## Parameters
-  ///
-  /// All parameters are identical in meaning to those on [wrap]. See [wrap] for
-  /// full documentation of `adaptiveQuality`, `adaptiveConfig`, and
-  /// `respectSystemAccessibility`.
-  static TransitionBuilder appBuilder({
-    GlassThemeData? theme,
-    bool respectSystemAccessibility = true,
-    bool adaptiveQuality = false,
-    GlassAdaptiveScopeConfig? adaptiveConfig,
-  }) {
-    // Apply global accessibility preference synchronously — this mirrors the
-    // behaviour of wrap() so the two methods are equivalent in that regard.
-    glass_config.respectSystemAccessibility = respectSystemAccessibility;
-
-    return (BuildContext context, Widget? child) {
-      // child is the full app widget tree produced by MaterialApp (Navigator,
-      // routes, overlays). We must never drop it.
-      Widget result = child ?? const SizedBox.shrink();
-
-      // 4. Innermost scope: GlassTheme (optional).
-      // Placed deepest so it can read the MediaQuery available inside builder.
-      if (theme != null) {
-        result = GlassTheme(data: theme, child: result);
-      }
-
-      // 3. GlassAccessibilityScope — reads Reduce Motion / High Contrast from
-      // MediaQuery once per rebuild and propagates via InheritedWidget,
-      // eliminating per-widget MediaQuery lookups.
-      result = GlassAccessibilityScope(child: result);
-
-      // 2. GlassAdaptiveScope — optional quality ceiling + benchmarking.
-      if (adaptiveQuality) {
-        final config = adaptiveConfig ?? const GlassAdaptiveScopeConfig();
-        result = GlassAdaptiveScope(
-          minQuality: config.minQuality,
-          maxQuality: config.maxQuality,
-          initialQuality: config.initialQuality,
-          targetFrameMs: config.targetFrameMs,
-          allowStepUp: config.allowStepUp,
-          onQualityChanged: config.onQualityChanged,
-          onDiagnostic: config.onDiagnostic,
-          debugLogDiagnostics: config.debugLogDiagnostics,
-          child: result,
-        );
-      }
-
-      // 1. Outermost scope: GlassBackdropScope — root backdrop group that
-      // prevents navigation-transition ghosting across all routes.
-      result = GlassBackdropScope(child: result);
-
-      return result;
-    };
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────

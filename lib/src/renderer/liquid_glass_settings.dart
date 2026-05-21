@@ -23,6 +23,7 @@ class LiquidGlassSettings with EquatableMixin {
     this.saturation = 1.5,
     this.glowIntensity = 0.75,
     this.specularSharpness = GlassSpecularSharpness.medium,
+    this.standardOpacityMultiplier = 1.0,
   });
 
   /// Creates [LiquidGlassSettings] using Figma-inspired parameter names.
@@ -49,6 +50,7 @@ class LiquidGlassSettings with EquatableMixin {
     double lightAngle = GlassDefaults.lightAngle,
     Color glassColor = const Color.fromARGB(0, 255, 255, 255),
     GlassSpecularSharpness specularSharpness = GlassSpecularSharpness.medium,
+    double standardOpacityMultiplier = 1.0,
   }) : this(
           visibility: visibility,
           refractiveIndex: 1 + (refraction / 100) * 0.2,
@@ -61,6 +63,7 @@ class LiquidGlassSettings with EquatableMixin {
           saturation: 1.5,
           glassColor: glassColor,
           specularSharpness: specularSharpness,
+          standardOpacityMultiplier: standardOpacityMultiplier,
         );
 
   /// Retrieves the nearest [LiquidGlassSettings] from the widget tree.
@@ -165,6 +168,14 @@ class LiquidGlassSettings with EquatableMixin {
   /// Defaults to [GlassSpecularSharpness.medium] which matches iOS 26.
   final GlassSpecularSharpness specularSharpness;
 
+  /// A multiplier applied to the alpha channel of [glassColor] when rendering
+  /// in Standard mode. This allows tuning the Standard 2D compositing opacity
+  /// to achieve parity with the Premium 3D volumetric refraction, without
+  /// needing separate color values for each mode.
+  /// 
+  /// Defaults to 1.0. A common "magic number" for light mode is ~0.4.
+  final double standardOpacityMultiplier;
+
   /// The effective saturation taking visibility into account.
   double get effectiveSaturation => 1 + (saturation - 1) * visibility;
 
@@ -201,6 +212,7 @@ class LiquidGlassSettings with EquatableMixin {
       saturation: lerpDouble(a.saturation, b.saturation, t)!,
       glowIntensity: lerpDouble(a.glowIntensity, b.glowIntensity, t)!,
       specularSharpness: t < 0.5 ? a.specularSharpness : b.specularSharpness,
+      standardOpacityMultiplier: lerpDouble(a.standardOpacityMultiplier, b.standardOpacityMultiplier, t)!,
     );
   }
 
@@ -227,6 +239,7 @@ class LiquidGlassSettings with EquatableMixin {
     double? saturation,
     double? glowIntensity,
     GlassSpecularSharpness? specularSharpness,
+    double? standardOpacityMultiplier,
   }) =>
       LiquidGlassSettings(
         visibility: visibility ?? this.visibility,
@@ -241,6 +254,7 @@ class LiquidGlassSettings with EquatableMixin {
         saturation: saturation ?? this.saturation,
         glowIntensity: glowIntensity ?? this.glowIntensity,
         specularSharpness: specularSharpness ?? this.specularSharpness,
+        standardOpacityMultiplier: standardOpacityMultiplier ?? this.standardOpacityMultiplier,
       );
 
   @override
@@ -257,5 +271,6 @@ class LiquidGlassSettings with EquatableMixin {
         saturation,
         glowIntensity,
         specularSharpness,
+        standardOpacityMultiplier,
       ];
 }

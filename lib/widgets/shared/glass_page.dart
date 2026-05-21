@@ -146,7 +146,7 @@ class GlassPage extends StatefulWidget {
     super.key,
     this.background,
     required this.child,
-    this.enableBackgroundSampling = false,
+    this.enableBackgroundSampling,
     this.statusBarStyle = GlassStatusBarStyle.none,
     this.edgeToEdge = false,
     this.themeOverride,
@@ -171,11 +171,11 @@ class GlassPage extends StatefulWidget {
   /// Whether to capture the [background] as a GPU texture for glass colour
   /// absorption.
   ///
-  /// Defaults to `false`. Set to `true` only when you need real background
-  /// colour absorption on interactive indicators (e.g. a pill inside a
-  /// [GlassSegmentedControl] with `blur > 0`).
+  /// Defaults to `true` if [background] is provided, and `false` otherwise.
+  /// Set to `false` explicitly if you have a background but do not want the
+  /// performance cost of sampling it (glass will use synthetic frost).
   ///
-  /// When `false` (the default):
+  /// When `false`:
   /// - No [RepaintBoundary] is inserted around the background.
   /// - No Ticker runs — cost is effectively zero beyond one [GlobalKey] allocation.
   /// - Glass widgets still render correctly with the synthetic frost look.
@@ -187,7 +187,7 @@ class GlassPage extends StatefulWidget {
   ///
   /// This flag is ignored when the ambient [GlassAdaptiveScope] has degraded to
   /// [GlassQuality.minimal] — sampling is always disabled in that tier.
-  final bool enableBackgroundSampling;
+  final bool? enableBackgroundSampling;
 
   /// How to style the system status bar icons on this screen.
   ///
@@ -256,6 +256,9 @@ class GlassPage extends StatefulWidget {
 
 class _GlassPageState extends State<GlassPage> {
   SystemUiOverlayStyle? _previousOverlayStyle;
+
+  bool get _effectiveSampling =>
+      widget.enableBackgroundSampling ?? (widget.background != null);
 
   @override
   void initState() {
@@ -344,7 +347,7 @@ class _GlassPageState extends State<GlassPage> {
         GlassQuality.premium;
 
     final bool doSample =
-        widget.enableBackgroundSampling && quality != GlassQuality.minimal;
+        _effectiveSampling && quality != GlassQuality.minimal;
 
     Widget content = LiquidGlassScope(
       child: GlassBackdropScope(

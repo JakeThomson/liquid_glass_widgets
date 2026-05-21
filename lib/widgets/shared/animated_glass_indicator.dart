@@ -168,6 +168,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
         ? LiquidRoundedSuperellipse(borderRadius: borderRadius * 2)
         : LiquidRoundedRectangle(borderRadius: borderRadius);
 
+    final bool isStdPath = quality == GlassQuality.standard || quality == GlassQuality.minimal;
+
     final glassWidget = GlassEffect(
       shape: shape,
       settings: effectiveSettings,
@@ -180,6 +182,11 @@ class AnimatedGlassIndicator extends StatelessWidget {
       // uRimThickness is what actually controls the visible hairline rim width.
       // Clamp to 0–8 px: beyond 8 the rim bleeds into the pill body.
       rimThickness: (glassSettings?.effectiveThickness ?? 0.5).clamp(0.0, 8.0),
+      // Calibrate standard-tier indicator styling in Dart space instead of the shader:
+      // Soften the forced rim outline to match premium's elegance and keep the body translucent.
+      ambientRim: isStdPath ? 0.08 : 0.1,
+      baseAlphaMultiplier: isStdPath ? 0.15 : 0.2,
+      edgeAlphaMultiplier: isStdPath ? 0.35 : 0.4,
       child: const GlassGlow(
         glowColor: Colors
             .transparent, // caused grey rectangle flicker if clicking multiple times

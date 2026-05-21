@@ -1,3 +1,95 @@
+# 0.12.0
+
+## ⚠️ Breaking — `appBuilder()` removed
+
+`LiquidGlassWidgets.appBuilder()` has been removed. Use `LiquidGlassWidgets.wrap()` instead — it now accepts a `theme` parameter and is the single recommended entry point.
+
+Before:
+```dart
+runApp(MaterialApp(
+  home: const MyHomePage(),
+  builder: LiquidGlassWidgets.appBuilder(
+    adaptiveQuality: true,
+    theme: GlassThemeData.simple(blur: 10),
+  ),
+));
+```
+
+After:
+```dart
+runApp(LiquidGlassWidgets.wrap(
+  child: const MyApp(),
+  adaptiveQuality: true,
+  theme: GlassThemeData.simple(blur: 10),
+));
+```
+
+**Why:** `appBuilder` was a `TransitionBuilder` that sat inside `MaterialApp.builder`, which made it awkward to compose with other builders (e.g. `flutter_screenutil`) and created confusion about whether scopes lived above or below the navigator. `wrap()` is simpler, does the same thing, and sits at the top of the widget tree where its scope is unambiguous.
+
+## ✨ New
+
+### `LiquidGlassWidgets.wrap()` — `theme` parameter
+
+`wrap()` now accepts an optional `GlassThemeData? theme` parameter. When provided, it wraps the child in a `GlassTheme` — eliminating the need for a separate `GlassTheme` widget in your tree.
+
+### `LiquidGlassSettings.standardOpacityMultiplier`
+
+A new multiplier applied to the glass colour alpha when rendering in Standard mode. This allows tuning Standard 2D compositing opacity to achieve parity with Premium 3D volumetric refraction without needing separate colour values for each mode.
+
+```dart
+LiquidGlassSettings(
+  glassColor: Colors.white.withValues(alpha: 0.3),
+  standardOpacityMultiplier: 0.4, // Standard renders at 0.3 × 0.4 = 0.12 alpha
+)
+```
+
+Defaults to `1.0` (no change). Fully interpolated via `LiquidGlassSettings.lerp()` and wired through `copyWith()`.
+
+### `GlassPage` — smart `enableBackgroundSampling` default
+
+`enableBackgroundSampling` is now `bool?` instead of `bool`. It defaults to `true` when a `background` widget is provided, and `false` otherwise. This eliminates a common setup mistake where developers provided a background but forgot to enable sampling — resulting in synthetic frost instead of real colour absorption.
+
+To opt out explicitly:
+```dart
+GlassPage(
+  background: Image.asset('assets/wallpaper.jpg'),
+  enableBackgroundSampling: false, // force synthetic frost
+  child: Scaffold(...),
+)
+```
+
+### Export hygiene
+
+- `glass_page.dart` now uses a `show` clause: only `GlassPage` and `GlassStatusBarStyle` are exported (internal state classes are no longer public).
+- `liquid_glass_scope.dart` now uses a `show` clause: only `LiquidGlassScope`, `GlassBackgroundSource`, and `GlassRefractionSource` are exported.
+
+## 🎨 Visual — Standard/Premium parity improvements
+
+### Shader composite improvements (`lightweight_glass.frag`)
+
+The Standard-tier lightweight shader composite logic has been improved for closer visual parity with the Premium Impeller path. Shader rim constants are **unchanged** from 0.11.0 — AdaptiveGlass normalization now handles Premium → Standard scaling in Dart space instead:
+
+- **PATH A** (background texture): now uses `applyGlassColorLW()` — a luminosity-preserving glass tint that matches Premium's colour handling for both chromatic (mint, bronze) and achromatic (white, grey) glass colours.
+- **PATH A** ambient darkening: `ambientStrength × 0.25 + 0.08` creates the glass shadow effect that visually separates glass from non-glass, matching what Premium achieves through blur compositing.
+- **PATH A** adaptive rim colour: `mix(bgRgb, white, 0.7)` brightens the background at the edge, matching Premium's `getHighlightColor`.
+- **PATH B** frost floor: 8% minimum material alpha ensures glass surfaces are always visible when `glassColor.a = 0` (Premium default), preventing invisible glass in SrcOver compositing.
+- **PATH B** contrast-adaptive rim: shifts rim colour toward mid-grey on bright backgrounds so white-on-white borders remain distinguishable.
+- **Directional rim bonus**: a small `0.15 × directionalInfluence × lightIntensity` term adds subtle lit-side variation on top of the constant rim base — matching how Premium's 3D bevel naturally brightens toward the light source.
+
+### Elevated widget predictability
+
+Removed the arbitrary `+0.2` alpha boost on elevated widgets inside `AdaptiveGlass`. Elevation is now expressed purely through the shader's `densityFactor` physics, making the opacity response predictable and proportional to user settings.
+
+### Interactive widget normalisation (`GlassEffect`)
+
+Standard-tier interactive indicators (slider thumbs, switch thumbs, segmented control pills) now apply the same normalisation as `AdaptiveGlass` — `thickness × 0.4`, `lightIntensity × 0.6` — preventing the 2D shader from rendering these elements heavier than their Premium counterparts.
+
+## 🧪 Tests — 1,853 passing
+
+All golden master images updated to reflect the new visual calibration. Shader validation passes SPIR-V (Windows/SkSL) compilation.
+
+---
+
 # 0.11.0
 
 ## ✨ New — Liquid Morph Engine (new architectural system)
