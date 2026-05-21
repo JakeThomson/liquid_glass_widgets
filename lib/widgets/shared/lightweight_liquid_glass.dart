@@ -211,8 +211,7 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
   void _updateTicker() {
     // A key that exists but has no attached RepaintBoundary (enabled:false)
     // must not start the ticker — treat it the same as a null key.
-    final bool hasBoundary =
-        _safeGetBoundary(widget.backgroundKey) != null;
+    final bool hasBoundary = _safeGetBoundary(widget.backgroundKey) != null;
 
     if (hasBoundary && !_ticker.isActive) {
       _ticker.start();
@@ -303,7 +302,6 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
       _capturePending = false;
     });
   }
-
 
   @override
   void didUpdateWidget(LightweightLiquidGlass oldWidget) {
@@ -630,10 +628,26 @@ class _RenderLightweightGlass extends RenderProxyBox {
       // Standard saturation ColorFilter matrix (ITU-R BT.601 luminance weights).
       const double rw = 0.2126, gw = 0.7152, bw = 0.0722;
       final ui.ColorFilter satFilter = ui.ColorFilter.matrix(<double>[
-        rw + (1 - rw) * sat, gw - gw * sat,       bw - bw * sat,       0, 0,
-        rw - rw * sat,       gw + (1 - gw) * sat, bw - bw * sat,       0, 0,
-        rw - rw * sat,       gw - gw * sat,       bw + (1 - bw) * sat, 0, 0,
-        0,                   0,                   0,                   1, 0,
+        rw + (1 - rw) * sat,
+        gw - gw * sat,
+        bw - bw * sat,
+        0,
+        0,
+        rw - rw * sat,
+        gw + (1 - gw) * sat,
+        bw - bw * sat,
+        0,
+        0,
+        rw - rw * sat,
+        gw - gw * sat,
+        bw + (1 - bw) * sat,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
       ]);
 
       final ui.ImageFilter filter = ui.ImageFilter.compose(
@@ -699,8 +713,8 @@ class _RenderLightweightGlass extends RenderProxyBox {
     super.paint(context, offset);
   }
 
-  void _updateShaderUniforms(
-      Size size, Offset physicalOrigin, Offset physicalScale, Offset bgOrigin, Size bgSize) {
+  void _updateShaderUniforms(Size size, Offset physicalOrigin,
+      Offset physicalScale, Offset bgOrigin, Size bgSize) {
     // _updateShaderUniforms is only ever called from _paintGlassContent,
     // which is only reached when _shader != null (guarded in paint()).
     // The assertion makes the non-nullability explicit for the analyser.

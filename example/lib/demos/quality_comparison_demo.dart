@@ -16,8 +16,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
-
-
 // ── Thematic presets for testing ─────────────────────────────────────────────
 class _ThemePreset {
   final String name;
@@ -262,23 +260,9 @@ class _ComparisonPageState extends State<_ComparisonPage> {
         fit: StackFit.expand,
         children: [
           // Background — mountain landscape gives good glass contrast
-          Image.network(
-            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4'
-            '?q=80&w=2070&auto=format&fit=crop',
+          Image.asset(
+            'assets/mountain_landscape.jpg',
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1a2a4a),
-                    Color(0xFF0d1b2a),
-                    Color(0xFF162032)
-                  ],
-                ),
-              ),
-            ),
           ),
           // Subtle dark veil for readability
           Container(color: Colors.black.withValues(alpha: 0.28)),
@@ -292,14 +276,17 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               _buildHeader(),
               if (_showTuning)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   child: SizedBox(
-                    height: 280, // Safe bounded height to prevent visual overflow
+                    height:
+                        280, // Safe bounded height to prevent visual overflow
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1)),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -375,7 +362,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             ],
           ),
           const SizedBox(height: 10),
-          
+
           // Thematic Preset Selector (Glass Menu)
           const Text(
             'THEME PRESETS',
@@ -413,7 +400,8 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? presetColor.withValues(alpha: 0.2)
@@ -458,7 +446,9 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                           style: TextStyle(
                             color: isSelected ? Colors.white : Colors.white70,
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                       ],
@@ -476,7 +466,9 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             child: Row(
               children: [
                 Text(
-                  _showTuning ? '▲ Hide Advanced Tuning' : '▼ Tune Premium & Standard',
+                  _showTuning
+                      ? '▲ Hide Advanced Tuning'
+                      : '▼ Tune Premium & Standard',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.55),
                     fontSize: 11,
@@ -487,7 +479,8 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                 if (!_showTuning) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 1.5),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFB830).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
@@ -533,11 +526,10 @@ class _ComparisonPageState extends State<_ComparisonPage> {
         _Slider('Specularity', _lightIntensity, 0.0, 2.5,
             (v) => setState(() => _lightIntensity = v),
             color: Colors.white),
-        _Slider('Blur', _blur, 0.0, 20.0,
-            (v) => setState(() => _blur = v),
+        _Slider('Blur', _blur, 0.0, 20.0, (v) => setState(() => _blur = v),
             color: Colors.white),
-        _Slider('Ambient', _ambient, 0.0, 0.6,
-            (v) => setState(() => _ambient = v),
+        _Slider(
+            'Ambient', _ambient, 0.0, 0.6, (v) => setState(() => _ambient = v),
             color: Colors.white),
         _Slider('Saturation', _saturation, 0.0, 3.0,
             (v) => setState(() => _saturation = v),
@@ -577,7 +569,8 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF5AC8FA).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0xFF5AC8FA).withValues(alpha: 0.3)),
+                  border: Border.all(
+                      color: const Color(0xFF5AC8FA).withValues(alpha: 0.3)),
                 ),
                 child: const Text(
                   'RESET TO DEFAULTS',

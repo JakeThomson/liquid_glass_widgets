@@ -172,7 +172,7 @@ class LiquidGlassSettings with EquatableMixin {
   /// in Standard mode. This allows tuning the Standard 2D compositing opacity
   /// to achieve parity with the Premium 3D volumetric refraction, without
   /// needing separate color values for each mode.
-  /// 
+  ///
   /// Defaults to 1.0. A common "magic number" for light mode is ~0.4.
   final double standardOpacityMultiplier;
 
@@ -212,7 +212,8 @@ class LiquidGlassSettings with EquatableMixin {
       saturation: lerpDouble(a.saturation, b.saturation, t)!,
       glowIntensity: lerpDouble(a.glowIntensity, b.glowIntensity, t)!,
       specularSharpness: t < 0.5 ? a.specularSharpness : b.specularSharpness,
-      standardOpacityMultiplier: lerpDouble(a.standardOpacityMultiplier, b.standardOpacityMultiplier, t)!,
+      standardOpacityMultiplier: lerpDouble(
+          a.standardOpacityMultiplier, b.standardOpacityMultiplier, t)!,
     );
   }
 
@@ -254,7 +255,8 @@ class LiquidGlassSettings with EquatableMixin {
         saturation: saturation ?? this.saturation,
         glowIntensity: glowIntensity ?? this.glowIntensity,
         specularSharpness: specularSharpness ?? this.specularSharpness,
-        standardOpacityMultiplier: standardOpacityMultiplier ?? this.standardOpacityMultiplier,
+        standardOpacityMultiplier:
+            standardOpacityMultiplier ?? this.standardOpacityMultiplier,
       );
 
   @override

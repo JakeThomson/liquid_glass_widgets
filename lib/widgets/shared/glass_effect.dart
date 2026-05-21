@@ -449,10 +449,10 @@ class _GlassEffectState extends State<GlassEffect>
     if (widget.quality == GlassQuality.standard) {
       final base = widget.settings;
       effectiveSettings = base.copyWith(
-        thickness:      (base.effectiveThickness     * 0.4).clamp(0.0, double.infinity),
+        thickness: (base.effectiveThickness * 0.4).clamp(0.0, double.infinity),
         lightIntensity: (base.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
         ambientStrength: (base.effectiveAmbientStrength * 0.25).clamp(0.0, 1.0),
-        glowIntensity:  (base.glowIntensity  * 0.50).clamp(0.0, 5.0),
+        glowIntensity: (base.glowIntensity * 0.50).clamp(0.0, 5.0),
       );
     } else {
       effectiveSettings = widget.settings;
@@ -737,15 +737,32 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     if (child != null) {
       final blurSigma = _settings.effectiveBlur;
       if (blurSigma > 0) {
-        ui.ImageFilter filter = ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma);
+        ui.ImageFilter filter =
+            ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma);
 
         const double mult = 1.15;
         const double add = 0.05;
         final ui.ColorFilter brightnessFilter = ui.ColorFilter.matrix(<double>[
-          mult, 0.0, 0.0, 0.0, add * 255.0,
-          0.0, mult, 0.0, 0.0, add * 255.0,
-          0.0, 0.0, mult, 0.0, add * 255.0,
-          0.0, 0.0, 0.0, 1.0, 0.0,
+          mult,
+          0.0,
+          0.0,
+          0.0,
+          add * 255.0,
+          0.0,
+          mult,
+          0.0,
+          0.0,
+          add * 255.0,
+          0.0,
+          0.0,
+          mult,
+          0.0,
+          add * 255.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
         ]);
 
         filter = ui.ImageFilter.compose(
@@ -894,7 +911,8 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
 
     _shader.setFloat(index++, physicalScale.dx);
     _shader.setFloat(index++, physicalScale.dy);
-    _shader.setFloat(index++, _settings.glowIntensity); // uGlowIntensity (fresnel boost)
+    _shader.setFloat(
+        index++, _settings.glowIntensity); // uGlowIntensity (fresnel boost)
     _shader.setFloat(
         index++,
         _densityFactor.clamp(0.0,

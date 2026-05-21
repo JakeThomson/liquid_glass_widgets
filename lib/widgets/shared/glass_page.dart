@@ -346,8 +346,7 @@ class _GlassPageState extends State<GlassPage> {
     final quality = GlassAdaptiveScopeData.maybeOf(context)?.effectiveQuality ??
         GlassQuality.premium;
 
-    final bool doSample =
-        _effectiveSampling && quality != GlassQuality.minimal;
+    final bool doSample = _effectiveSampling && quality != GlassQuality.minimal;
 
     Widget content = LiquidGlassScope(
       child: GlassBackdropScope(

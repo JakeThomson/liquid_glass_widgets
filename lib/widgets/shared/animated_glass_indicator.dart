@@ -168,7 +168,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
         ? LiquidRoundedSuperellipse(borderRadius: borderRadius * 2)
         : LiquidRoundedRectangle(borderRadius: borderRadius);
 
-    final bool isStdPath = quality == GlassQuality.standard || quality == GlassQuality.minimal;
+    final bool isStdPath =
+        quality == GlassQuality.standard || quality == GlassQuality.minimal;
 
     final glassWidget = GlassEffect(
       shape: shape,

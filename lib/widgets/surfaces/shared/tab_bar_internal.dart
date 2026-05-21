@@ -725,12 +725,14 @@ class TabBarContentState extends State<TabBarContent>
                 //
                 // Standard/Minimal: glass renders BELOW labels — the 2D shader is an
                 // opaque paint pass that would obscure the icon if placed on top.
-                final bool isPremiumQuality = widget.quality == GlassQuality.premium;
+                final bool isPremiumQuality =
+                    widget.quality == GlassQuality.premium;
                 return Stack(
                   clipBehavior: Clip.none,
                   children: [
                     if (canShowIndicator)
-                      buildIndicator(paintBackground: true, paintGlass: !isPremiumQuality),
+                      buildIndicator(
+                          paintBackground: true, paintGlass: !isPremiumQuality),
                     tabLabels,
                     if (canShowIndicator && isPremiumQuality)
                       buildIndicator(paintBackground: false, paintGlass: true),

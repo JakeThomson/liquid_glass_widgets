@@ -645,9 +645,9 @@ class _GlassSwitchState extends State<GlassSwitch>
             ? 0.08
             : 0.1, // ~80% of Premium ring strength; premium unchanged
         baseAlphaMultiplier:
-            isStdPath ? 0.15 : 0.2, // clear glass body; premium unchanged
+            isStdPath ? 0.0 : 0.2, // clear glass body; premium unchanged
         edgeAlphaMultiplier:
-            isStdPath ? 0.30 : 0.4, // soft edge glow; premium unchanged
+            isStdPath ? 0.15 : 0.4, // soft edge glow; premium unchanged
         quality: effectiveQuality ?? GlassQuality.standard,
         interactionIntensity: transition,
         child: Stack(

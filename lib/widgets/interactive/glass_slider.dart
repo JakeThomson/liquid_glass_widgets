@@ -647,14 +647,21 @@ class _GlassSliderState extends State<GlassSlider>
           glassColor: const Color.from(alpha: 0.1, red: 1, green: 1, blue: 1),
           refractiveIndex: 1.15,
           thickness: 10,
-          lightIntensity: isStdPath ? 0.0 : 2.0, // no specular on synthetic path; premium unchanged
+          lightIntensity: isStdPath
+              ? 0.0
+              : 2.0, // no specular on synthetic path; premium unchanged
           blur: 0,
           lightAngle: GlassDefaults.lightAngle,
         ),
-        rimThickness: isStdPath ? 0.5 : 0.5,          // beautiful thin rim; premium unchanged
-        ambientRim: isStdPath ? 0.08 : 0.1,           // ~80% of Premium ring strength; premium unchanged
-        baseAlphaMultiplier: isStdPath ? 0.15 : 0.2,  // clear glass body; premium unchanged
-        edgeAlphaMultiplier: isStdPath ? 0.30 : 0.4,   // soft edge glow; premium unchanged
+        rimThickness:
+            isStdPath ? 0.5 : 0.5, // beautiful thin rim; premium unchanged
+        ambientRim: isStdPath
+            ? 0.08
+            : 0.1, // ~80% of Premium ring strength; premium unchanged
+        baseAlphaMultiplier:
+            isStdPath ? 0.08 : 0.2, // clear glass body; premium unchanged
+        edgeAlphaMultiplier:
+            isStdPath ? 0.1 : 0.4, // soft edge glow; premium unchanged
         quality: _effectiveQuality ?? GlassQuality.standard,
         interactionIntensity: transition,
         child: thumbContent,

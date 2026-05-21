@@ -1,31 +1,5 @@
 # 0.12.0
 
-## ⚠️ Breaking — `appBuilder()` removed
-
-`LiquidGlassWidgets.appBuilder()` has been removed. Use `LiquidGlassWidgets.wrap()` instead — it now accepts a `theme` parameter and is the single recommended entry point.
-
-Before:
-```dart
-runApp(MaterialApp(
-  home: const MyHomePage(),
-  builder: LiquidGlassWidgets.appBuilder(
-    adaptiveQuality: true,
-    theme: GlassThemeData.simple(blur: 10),
-  ),
-));
-```
-
-After:
-```dart
-runApp(LiquidGlassWidgets.wrap(
-  child: const MyApp(),
-  adaptiveQuality: true,
-  theme: GlassThemeData.simple(blur: 10),
-));
-```
-
-**Why:** `appBuilder` was a `TransitionBuilder` that sat inside `MaterialApp.builder`, which made it awkward to compose with other builders (e.g. `flutter_screenutil`) and created confusion about whether scopes lived above or below the navigator. `wrap()` is simpler, does the same thing, and sits at the top of the widget tree where its scope is unambiguous.
-
 ## ✨ New
 
 ### `LiquidGlassWidgets.wrap()` — `theme` parameter
@@ -34,7 +8,7 @@ runApp(LiquidGlassWidgets.wrap(
 
 ### `LiquidGlassSettings.standardOpacityMultiplier`
 
-A new multiplier applied to the glass colour alpha when rendering in Standard mode. This allows tuning Standard 2D compositing opacity to achieve parity with Premium 3D volumetric refraction without needing separate colour values for each mode.
+A new multiplier applied to the glass colour alpha when rendering in Standard mode. This allows tuning Standard 2D compositing opacity to achieve more parity with Premium 3D volumetric refraction without needing separate colour values for each mode.
 
 ```dart
 LiquidGlassSettings(
@@ -45,15 +19,15 @@ LiquidGlassSettings(
 
 Defaults to `1.0` (no change). Fully interpolated via `LiquidGlassSettings.lerp()` and wired through `copyWith()`.
 
-### `GlassPage` — smart `enableBackgroundSampling` default
+### `GlassPage` — full-screen glass scaffold
 
-`enableBackgroundSampling` is now `bool?` instead of `bool`. It defaults to `true` when a `background` widget is provided, and `false` otherwise. This eliminates a common setup mistake where developers provided a background but forgot to enable sampling — resulting in synthetic frost instead of real colour absorption.
+A new full-screen scaffold widget for glass-based layouts. Handles background imagery, status bar styling, and background sampling in a single widget.
 
-To opt out explicitly:
+`enableBackgroundSampling` defaults to `true` when a `background` widget is provided, and `false` otherwise — so the common case just works without extra configuration.
+
 ```dart
 GlassPage(
   background: Image.asset('assets/wallpaper.jpg'),
-  enableBackgroundSampling: false, // force synthetic frost
   child: Scaffold(...),
 )
 ```
@@ -72,9 +46,17 @@ The Standard-tier lightweight shader composite logic has been improved for close
 - **PATH A** (background texture): now uses `applyGlassColorLW()` — a luminosity-preserving glass tint that matches Premium's colour handling for both chromatic (mint, bronze) and achromatic (white, grey) glass colours.
 - **PATH A** ambient darkening: `ambientStrength × 0.25 + 0.08` creates the glass shadow effect that visually separates glass from non-glass, matching what Premium achieves through blur compositing.
 - **PATH A** adaptive rim colour: `mix(bgRgb, white, 0.7)` brightens the background at the edge, matching Premium's `getHighlightColor`.
+- **PATH A** edge-zone refraction: indicator-style background warping at rounded corners using `smoothstep` edge zone with quadratic falloff — the same proven approach as `interactive_indicator.frag` but scaled for containers. Zero transcendentals (polynomial `smoothstep` + multiplies only). Flat interior pixels naturally produce zero offset. Currently active on surface widgets (`GlassBottomBar`, `GlassTabBar`, `GlassSideBar`, `GlassToolbar`) when a `backgroundKey` is provided; `GlassCard` and `GlassButton` use PATH B and will benefit once `AdaptiveGlass` gains scope-aware background key passthrough.
+- **PATH A** unified interactive glow: `uGlowIntensity` press-feedback now applies in PATH A, closing an architectural gap where switch/slider thumbs inside background-sampled containers had no glow.
+- **Volumetric depth gradient**: subtle top-to-bottom ambient shading (`+vertCoord × 0.04`) in both PATH A and PATH B creates a natural 3D anchored depth feel, simulating light entering from above. Cost: one multiply + one add per fragment.
 - **PATH B** frost floor: 8% minimum material alpha ensures glass surfaces are always visible when `glassColor.a = 0` (Premium default), preventing invisible glass in SrcOver compositing.
 - **PATH B** contrast-adaptive rim: shifts rim colour toward mid-grey on bright backgrounds so white-on-white borders remain distinguishable.
 - **Directional rim bonus**: a small `0.15 × directionalInfluence × lightIntensity` term adds subtle lit-side variation on top of the constant rim base — matching how Premium's 3D bevel naturally brightens toward the light source.
+
+### Interactive widget transparency tuning
+
+- `GlassSwitch` standard thumb: `baseAlphaMultiplier: 0.0`, `edgeAlphaMultiplier: 0.15` — fully transparent body with subtle edge presence for a cleaner glass look.
+- `GlassSlider` standard thumb: `baseAlphaMultiplier: 0.08`, `edgeAlphaMultiplier: 0.1` — minimal body opacity with soft edge glow.
 
 ### Elevated widget predictability
 
@@ -84,9 +66,9 @@ Removed the arbitrary `+0.2` alpha boost on elevated widgets inside `AdaptiveGla
 
 Standard-tier interactive indicators (slider thumbs, switch thumbs, segmented control pills) now apply the same normalisation as `AdaptiveGlass` — `thickness × 0.4`, `lightIntensity × 0.6` — preventing the 2D shader from rendering these elements heavier than their Premium counterparts.
 
-## 🧪 Tests — 1,853 passing
+## 📦 Example app
 
-All golden master images updated to reflect the new visual calibration. Shader validation passes SPIR-V (Windows/SkSL) compilation.
+- Quality comparison demo background image bundled as a local asset (`example/assets/mountain_landscape.jpg`) — eliminates network dependency and first-frame loading flash.
 
 ---
 

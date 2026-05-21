@@ -303,7 +303,7 @@ void main() {
   directionalInfluence *= directionalInfluence; // squared for tighter highlight
 
   // Constant base rim (structural edge) + small directional bonus.
-  // The base (kRimAlphaBase = 0.38) is independent of uLightIntensity so
+  // The base (kRimAlphaBase = 0.65) is independent of uLightIntensity so
   // AdaptiveGlass normalization (×0.6) cannot weaken it. This matches
   // Premium's 3D bevel which is always visible from geometry regardless
   // of light settings. The directional bonus adds subtle lit-side variation.
@@ -319,6 +319,8 @@ void main() {
   float fresnel = (1.0 - normalZ) * borderMask * 0.10 * adaptiveStrength;
 
   // ---- STAGE 8: FINAL COMPOSITE ----
+  float vertCoord = localLogical.y / max(uSize.y, 1.0);
+
   // PATH-SPECIFIC frosted-glass material weight.
   // PATH A (BG texture): background ALREADY provides visual presence. Adding white frost
   //   neutralises the warm background colours that show through the glass (wrong look).
@@ -331,26 +333,21 @@ void main() {
     // Output: fully opaque (mask) — Flutter must NOT re-composite the bg on top.
     vec2 posInBg = uBackgroundOrigin + localLogical;
     vec2 uv = posInBg / uBackgroundSize;
-    vec3 bgRgb = texture(uBackground, uv).rgb;
 
-    // Apply saturation to the background to match Premium's depth.
-    // IMPORTANT: Use uSaturation directly (1.2), NOT dampened by adaptiveStrength.
-    // Premium runs applySaturation(bg, uSaturation * adaptiveStrength) which on dark
-    // backgrounds (adaptiveStrength=1.2) = 1.44x. On this mountain scene the sky
-    // becomes richer blue. Standard was applying 1.032x (barely anything).
-    // Using plain uSaturation = 1.2x matches Premium's default calibration.
-    float bgLuminance = dot(bgRgb, LUMA_WEIGHTS);
-    vec3 saturatedBg = mix(vec3(bgLuminance), bgRgb, uSaturation);
+    // Safety valve: first do a fast baseline sample to check if the texture is valid.
+    // If the texture is near-black, the GPU hasn't flushed yet.
+    vec3 testRgb = texture(uBackground, uv).rgb;
+    float testLuma = dot(testRgb, LUMA_WEIGHTS);
 
-    // Safety valve: if the texture is near-black the GPU hasn't flushed yet
-    if (bgLuminance < 0.02) {
+    if (testLuma < 0.02) {
       // Treat as PATH B — premultiplied transparent output.
       float frost2 = 0.08 + densityFactor * 0.05; // same as PATH B value
       float pmA2 = max(glassAlpha, frost2);
       vec3 pmRgb2 = uGlassColor.rgb * pmA2;
       
-      // Min 3% ambient darkening so glass interior is distinguishable at ambientStrength=0.
-      float ambientDarken2 = clamp((uAmbientStrength * 0.25 + 0.03) * (1.0 + densityFactor * 0.5), 0.0, 0.8);
+      // Min 3% ambient darkening + bottom volumetric gradient shadow
+      float bottomDarken = vertCoord * 0.04;
+      float ambientDarken2 = clamp((uAmbientStrength * 0.25 + 0.03) * (1.0 + densityFactor * 0.5) + bottomDarken, 0.0, 0.8);
       pmA2 = pmA2 + ambientDarken2 * (1.0 - pmA2);
       
       float outA2 = rimAlphaBase + pmA2 * (1.0 - rimAlphaBase);
@@ -359,18 +356,43 @@ void main() {
       fragColor = vec4(clamp(pmRgb2, 0.0, 1.0) * mask, outA2 * mask);
     } else {
       // Normal PATH A — background texture is valid.
-      // Min 8% ambient darkening: creates the glass shadow (interior appears darker than
-      // surroundings) — this is the visual separation between glass and non-glass,
-      // equivalent to what Premium's blur produces through averaging.
-      float ambientDarken = clamp((uAmbientStrength * 0.25 + 0.08) * (1.0 + densityFactor * 0.5), 0.0, 0.8);
+      //
+      // Edge-zone refraction: indicator-style background warping at rounded
+      // corners. Uses the same approach as interactive_indicator.frag —
+      // smoothstep edge zone with quadratic falloff — but scaled for containers.
+      //
+      // Zero transcendentals: smoothstep compiles to a polynomial (3t²−2t³),
+      // and all remaining ops are multiplies. No refract(), no sqrt().
+      //
+      // Flat interior: when distFromEdge > edgeZone, edgeInfluence = 0 and
+      // edgeOffset = vec2(0) — the texture sample is identical to a flat read.
+      // No branch needed; the GPU computes the same UV for all interior pixels.
+      float distFromEdge = abs(dist);
+      float edgeZone = 10.0;
+      float edgeInfluence = smoothstep(edgeZone, 0.0, distFromEdge);
+      edgeInfluence *= edgeInfluence; // quadratic falloff for natural lens curve
+
+      vec2 edgeOffset = surfaceNormal * edgeInfluence * uThickness * 0.5;
+      vec2 refractedUV = uv + edgeOffset / uBackgroundSize;
+
+      // On OpenGL ES the background texture uses bottom-left Y origin;
+      // edgeOffset.y (computed in Flutter's Y-down space) must be negated.
+      #ifdef IMPELLER_TARGET_OPENGLES
+          refractedUV = uv + vec2(edgeOffset.x, -edgeOffset.y) / uBackgroundSize;
+      #endif
+
+      vec3 bgRgb = texture(uBackground, refractedUV).rgb;
+      float bgLuminance = dot(bgRgb, LUMA_WEIGHTS);
+
+      // Apply saturation to the background to match Premium's depth.
+      vec3 saturatedBg = mix(vec3(bgLuminance), bgRgb, uSaturation);
+
+      // Min 8% ambient darkening + bottom volumetric gradient shadow
+      float bottomDarken = vertCoord * 0.04;
+      float ambientDarken = clamp((uAmbientStrength * 0.25 + 0.08) * (1.0 + densityFactor * 0.5) + bottomDarken, 0.0, 0.8);
       vec3 darkenedBg = saturatedBg * (1.0 - ambientDarken);
 
       // PATH A body: use luminosity-preserving glass tint (applyGlassColorLW).
-      // - Achromatic glass (white, grey): direct mix → same as mix(darkenedBg, white, alpha)
-      // - Chromatic glass (mint, bronze, blue): shifts hue toward glass colour while
-      //   preserving background luminance → matches how Premium shows tinted glass.
-      // Without this, mint/bronze presets look nearly invisible (pale tint at 18% barely
-      // shifts the warm mountain background). applyGlassColorLW makes colour vivid & visible.
       vec3 bodyColor = applyGlassColorLW(darkenedBg, uGlassColor);
 
       // Adaptive rim color: brighten the background at the edge (Premium's getHighlightColor).
@@ -378,6 +400,11 @@ void main() {
 
       vec3 finalColor = bodyColor * (1.0 - rimAlphaBase) + adaptiveRimColor * rimAlphaBase;
       finalColor += vec3(0.05) * uIndicatorWeight;
+
+      // Unified interactive glow: active state feedback on standard interactive widgets
+      float glowMask = step(0.01, uGlowIntensity);
+      finalColor += vec3(uGlowIntensity * 0.3 * glowMask);
+
       finalColor = clamp(finalColor + vec3(fresnel), 0.0, 1.0);
       fragColor = vec4(finalColor * mask, mask);
     }
@@ -396,9 +423,10 @@ void main() {
     float pmA = max(glassAlpha, simulatedFrost);
     vec3 pmRgb = uGlassColor.rgb * pmA;
 
-    // Min 3% ambient darkening: glass should always be slightly darker/different than
-    // surrounding content. Premium achieves this physically through blur compositing.
-    float ambientDarken = clamp((uAmbientStrength * 0.25 + 0.03) * (1.0 + densityFactor * 0.5), 0.0, 0.8);
+    // Min 3% ambient darkening + bottom volumetric gradient shadow:
+    // Glass should always be slightly darker/different than surrounding content.
+    float bottomDarken = vertCoord * 0.04;
+    float ambientDarken = clamp((uAmbientStrength * 0.25 + 0.03) * (1.0 + densityFactor * 0.5) + bottomDarken, 0.0, 0.8);
     pmA = pmA + ambientDarken * (1.0 - pmA);
 
     // Contrast-adaptive rim: over bright backgrounds white-on-white has no contrast.

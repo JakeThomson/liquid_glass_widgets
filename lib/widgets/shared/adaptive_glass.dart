@@ -206,7 +206,9 @@ class AdaptiveGlass extends StatelessWidget {
       if (skipNormalization) {
         normalizedSettings = baseSettings.copyWith(
           glassColor: baseSettings.glassColor.withValues(
-            alpha: (baseSettings.glassColor.a * baseSettings.standardOpacityMultiplier).clamp(0.0, 1.0),
+            alpha: (baseSettings.glassColor.a *
+                    baseSettings.standardOpacityMultiplier)
+                .clamp(0.0, 1.0),
           ),
         );
       } else {
@@ -219,7 +221,9 @@ class AdaptiveGlass extends StatelessWidget {
           lightIntensity:
               (baseSettings.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
           glassColor: baseSettings.glassColor.withValues(
-            alpha: (baseSettings.glassColor.a * baseSettings.standardOpacityMultiplier).clamp(0.0, 1.0),
+            alpha: (baseSettings.glassColor.a *
+                    baseSettings.standardOpacityMultiplier)
+                .clamp(0.0, 1.0),
           ),
         );
       }
@@ -228,7 +232,8 @@ class AdaptiveGlass extends StatelessWidget {
       final color = normalizedSettings.effectiveGlassColor;
       final effectiveSettings = shouldElevate
           ? LiquidGlassSettings(
-              glassColor: color, // Removed flat +0.2 alpha boost for predictability
+              glassColor:
+                  color, // Removed flat +0.2 alpha boost for predictability
               refractiveIndex: normalizedSettings.refractiveIndex,
               thickness: normalizedSettings.effectiveThickness,
               lightAngle: normalizedSettings.lightAngle,
@@ -268,7 +273,8 @@ class AdaptiveGlass extends StatelessWidget {
         shape: shape,
         settings: effectiveSettings,
         densityFactor: densityFactor, // 0.0 or 1.0 based on elevation
-        glowIntensity: glowIntensity * 0.35, // Normalise additive glow to match Impeller
+        glowIntensity:
+            glowIntensity * 0.35, // Normalise additive glow to match Impeller
         child: child,
       );
 
