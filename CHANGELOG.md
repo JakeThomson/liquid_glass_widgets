@@ -1,3 +1,53 @@
+# 0.12.2
+
+## ✨ New — `GlassTextField` enhancements
+
+Three community-requested features for `GlassTextField` (and `GlassTextArea`):
+
+### Explicit size properties
+
+`height`, `minHeight`, and `maxHeight` give direct control over the field's dimensions — no wrapping `SizedBox` needed:
+
+```dart
+// Fixed height — matches GlassSearchBar's 44pt:
+GlassTextField(height: 44, placeholder: 'Search')
+
+// Constrained range — grows with content:
+GlassTextField(minHeight: 44, maxHeight: 200, maxLines: 10)
+```
+
+`height` is mutually exclusive with `minHeight`/`maxHeight` (assertion enforced).
+
+### `onLineCountChanged` callback
+
+Fires whenever the number of **rendered** lines changes (accounting for text wrapping, not `\n` characters). Also fires on initial build. Uses the `TextField`'s own `RenderBox` height — no external `TextPainter` math, so it works correctly with text scaling and system accessibility settings.
+
+```dart
+GlassTextField(
+  maxLines: 6,
+  onLineCountChanged: (lines) {
+    setState(() => _borderRadius = lines > 1 ? 8.0 : 20.0);
+  },
+)
+```
+
+### `iconAlignment` parameter
+
+Controls where prefix/suffix icons sit when the field spans multiple lines:
+
+```dart
+// Pin send button to bottom — chat composer pattern:
+GlassTextField(
+  maxLines: 6,
+  iconAlignment: CrossAxisAlignment.end,
+  suffixIcon: Icon(Icons.send),
+)
+```
+
+Accepts `CrossAxisAlignment.start` (top), `.center` (default), or `.end` (bottom). No visible effect on single-line fields.
+
+All three features are forwarded through `GlassTextArea`.
+
 # 0.12.1
 
 ## 🐛 Fix — eliminate rectangular blur halo over PlatformViews (iOS Impeller)
