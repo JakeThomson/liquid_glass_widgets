@@ -1,3 +1,15 @@
+# 0.12.5
+
+## ✨ New — `GlassMenu.onClose` callback
+
+Added `onClose: VoidCallback?` to `GlassMenu`. Fires when a close is triggered
+(barrier tap, trigger re-tap, or item selection), before the animation completes.
+Useful for synchronising external state such as a `GlassMorphController`.
+
+Thanks to [@g3mf0r](https://github.com/g3mf0r) for the contribution ([#67](https://github.com/sdegenaar/liquid_glass_widgets/pull/67)).
+
+---
+
 # 0.12.4
 
 ## 🐛 Fix — `GlassTextField` layout and reactivity
