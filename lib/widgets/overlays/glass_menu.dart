@@ -174,6 +174,12 @@ class GlassMenu extends StatefulWidget {
   /// Defaults to 0.0 (touches the edge). Set to a value like 12.0 for a safe margin.
   final EdgeInsets menuPadding;
 
+  /// Called when the menu is fully closed.
+  ///
+  /// This includes when the user taps outside the menu barrier or toggles
+  /// the trigger button to hide the menu.
+  final VoidCallback? onClose;
+
   /// Creates a liquid glass menu.
   const GlassMenu({
     super.key,
@@ -203,6 +209,7 @@ class GlassMenu extends StatefulWidget {
     this.glowColor,
     this.glowRadius = 0.6,
     this.glowIntensity = 0.0,
+    this.onClose,
   }) : assert(trigger != null || triggerBuilder != null,
             'Either trigger or triggerBuilder must be provided');
 
