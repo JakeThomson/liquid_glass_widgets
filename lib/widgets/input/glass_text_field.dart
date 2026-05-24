@@ -461,10 +461,9 @@ class _GlassTextFieldState extends State<GlassTextField> {
 
     _initController();
 
-    // Schedule initial line count measurement after first layout.
-    if (widget.onLineCountChanged != null) {
-      _scheduleLineCountCheck();
-    }
+    // Schedule initial line count measurement after first layout
+    // to ensure icon alignment handles multiline vs single line correctly.
+    _scheduleLineCountCheck();
   }
 
   void _initController() {
@@ -473,9 +472,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
   }
 
   void _onControllerChange() {
-    if (widget.onLineCountChanged != null) {
-      _scheduleLineCountCheck();
-    }
+    _scheduleLineCountCheck();
   }
 
   void _onFocusChange() {
@@ -579,15 +576,31 @@ class _GlassTextFieldState extends State<GlassTextField> {
     // Use MediaQuery textScaler for accurate line height calculation.
     final textScaler = MediaQuery.textScalerOf(context);
     final effectiveStyle = widget.textStyle ?? _defaultTextStyle;
-    final fontSize = effectiveStyle.fontSize ?? 16.0;
-    final effectiveLineHeight =
-        textScaler.scale(fontSize) * (effectiveStyle.height ?? 1.2);
 
-    final lineCount =
-        (size.height / effectiveLineHeight).round().clamp(1, 9999);
+    int lineCount = 1;
+    if (widget.maxLines != 1) {
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: currentText.isEmpty ? ' ' : currentText,
+          style: effectiveStyle,
+        ),
+        textDirection: Directionality.of(context),
+        textScaler: textScaler,
+      );
+      // Pass the exact unpadded width of the field to mimic text wrapping.
+      textPainter.layout(maxWidth: size.width);
+
+      // computeLineMetrics accurately returns the number of rendered lines,
+      // including text wrapping and trailing newlines.
+      lineCount = textPainter.computeLineMetrics().length.clamp(1, 9999);
+    }
 
     if (lineCount != _currentLineCount) {
-      _currentLineCount = lineCount;
+      if (mounted) {
+        setState(() {
+          _currentLineCount = lineCount;
+        });
+      }
       widget.onLineCountChanged?.call(lineCount);
     }
   }
