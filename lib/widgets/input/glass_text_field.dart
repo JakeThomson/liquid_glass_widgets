@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderEditable;
 import 'package:flutter/services.dart';
@@ -575,10 +574,9 @@ class _GlassTextFieldState extends State<GlassTextField> {
     // Use the RenderEditable's width if available — it already deducts
     // _caretMargin, so the TextPainter will wrap at the exact same boundary.
     final editable = _findRenderEditable(renderBox);
-    final double measureWidth =
-        (editable != null && editable.hasSize)
-            ? editable.size.width
-            : renderBox.size.width;
+    final double measureWidth = (editable != null && editable.hasSize)
+        ? editable.size.width
+        : renderBox.size.width;
 
     if (measureWidth <= 0) return;
 
@@ -603,8 +601,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
         textScaler: textScaler,
       );
       textPainter.layout(maxWidth: measureWidth);
-      lineCount =
-          textPainter.computeLineMetrics().length.clamp(1, 9999);
+      lineCount = textPainter.computeLineMetrics().length.clamp(1, 9999);
     }
 
     if (lineCount != _currentLineCount) {
@@ -632,6 +629,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
       }
       child.visitChildren(visitor);
     }
+
     root.visitChildren(visitor);
     return result;
   }

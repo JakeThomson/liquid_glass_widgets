@@ -108,9 +108,8 @@ class _TextFieldDemoState extends State<TextFieldDemo> {
   @override
   Widget build(BuildContext context) {
     // ── [B] Exact user pattern ──
-    final patternHeight = _patternLines > 1
-        ? null
-        : (_patternHasFocus ? 46.0 : 50.0);
+    final patternHeight =
+        _patternLines > 1 ? null : (_patternHasFocus ? 46.0 : 50.0);
     final patternRadius = _patternLines <= 1 ? 22.0 : 12.0;
 
     // ── [C] Icon alignment demo — dynamic radius ──
@@ -310,8 +309,8 @@ class _TextFieldDemoState extends State<TextFieldDemo> {
                         child: GlassCard(
                           useOwnLayer: true,
                           quality: GlassQuality.premium,
-                          shape: const LiquidRoundedSuperellipse(
-                              borderRadius: 16),
+                          shape:
+                              const LiquidRoundedSuperellipse(borderRadius: 16),
                           settings: LiquidGlassSettings(
                             glassColor: isMe
                                 ? Colors.blue.withValues(alpha: 0.3)
@@ -356,13 +355,13 @@ class _TextFieldDemoState extends State<TextFieldDemo> {
                   ),
                   useOwnLayer: true,
                   quality: GlassQuality.premium,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   interactionBehavior: GlassInteractionBehavior.full,
                   onChanged: (_) => setState(() {}),
                   bottom: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     child: Row(
                       children: [
                         IconButton(
@@ -383,14 +382,13 @@ class _TextFieldDemoState extends State<TextFieldDemo> {
                           transitionBuilder: (child, animation) =>
                               FadeTransition(
                             opacity: animation,
-                            child: ScaleTransition(
-                                scale: animation, child: child),
+                            child:
+                                ScaleTransition(scale: animation, child: child),
                           ),
                           child: IconButton(
-                            key: ValueKey(
-                                _composerController.text.isNotEmpty
-                                    ? 'send'
-                                    : 'idle'),
+                            key: ValueKey(_composerController.text.isNotEmpty
+                                ? 'send'
+                                : 'idle'),
                             icon: Icon(
                               CupertinoIcons.arrow_up_circle_fill,
                               size: 28,

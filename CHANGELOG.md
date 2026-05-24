@@ -1,3 +1,12 @@
+# 0.12.6
+
+## 🐛 Fix — `GlassTextField` icon alignment and line-count accuracy
+
+- **`iconAlignment: .end` no longer drifts under system Large Text.** The `Center` widget now wraps only the `TextField`, not the entire icon `Row`, so `CrossAxisAlignment.end/.start` works correctly against the full container height.
+- **Line-count measurement is now pixel-perfect.** `_measureLineCount` walks the render tree to find the actual `RenderEditable` and uses its layout width (which accounts for the internal `_caretMargin` ≈ 3 px). Falls back gracefully if the render walk fails.
+
+---
+
 # 0.12.5
 
 ## ✨ New — `GlassMenu.onClose` callback
