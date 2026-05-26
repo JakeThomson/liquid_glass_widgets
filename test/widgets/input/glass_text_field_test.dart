@@ -664,7 +664,7 @@ void main() {
   // ===========================================================================
 
   group('GlassTextField fixed-height vertical centring', () {
-    testWidgets('fixed height: Row fills container directly (no Align wrapper)',
+    testWidgets('fixed height: Align(center) wraps the Row for centring',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -678,11 +678,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // In fixed-height mode, the Row fills the SizedBox directly without
-      // an Align wrapper. This prevents icon drift under text scaling.
-      // The Row should be present and the GlassTextField should render.
-      expect(find.byType(Row), findsWidgets);
-      expect(find.byType(GlassTextField), findsOneWidget);
+      // In fixed-height mode, v0.12.4 wraps the Row in Align(center)
+      // so text and icons stay vertically centred together.
+      expect(find.byType(Align), findsWidgets);
     });
 
     testWidgets(
@@ -864,8 +862,7 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('onLineCountChanged fires on text change',
-        (tester) async {
+    testWidgets('onLineCountChanged fires on text change', (tester) async {
       final List<int> counts = [];
       final controller = TextEditingController();
 
@@ -884,9 +881,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-
-      // Record how many callbacks fired on initial build.
-      final initialCount = counts.length;
 
       // Type text.
       controller.text = 'Hello';
@@ -962,8 +956,7 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('iconAlignment in fixed-height mode', () {
-    testWidgets(
-        'Row crossAxisAlignment is widget.iconAlignment (not overridden)',
+    testWidgets('Row crossAxisAlignment forced to .center in fixed-height mode',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -978,12 +971,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The Row must use the actual iconAlignment.
+      // In fixed-height mode, the Row must use .center (not .end)
+      // to prevent icon drift under system text scaling. The math:
+      // icon pos = (container − icon) / 2, independent of Row height.
       final rows = tester.widgetList<Row>(find.byType(Row));
       expect(
-        rows.any((r) => r.crossAxisAlignment == CrossAxisAlignment.end),
+        rows.any((r) => r.crossAxisAlignment == CrossAxisAlignment.center),
         isTrue,
-        reason: 'Row crossAxisAlignment must respect widget.iconAlignment',
+        reason:
+            'Fixed-height mode forces .center for drift-free icon positioning',
       );
     });
 

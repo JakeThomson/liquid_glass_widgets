@@ -609,9 +609,19 @@ class _GlassTextFieldState extends State<GlassTextField> {
     final defaultTextStyle = _defaultTextStyle;
     final defaultPlaceholderStyle = _defaultPlaceholderStyle;
 
+    // In fixed-height mode, force CrossAxisAlignment.center so that icon
+    // position is immune to system text scaling. With .center inside
+    // Align(center), the icon position simplifies to (container − icon) / 2
+    // which is independent of the Row's intrinsic height. The .end/.start
+    // alignments depend on Row height and therefore drift when text scales.
+    // In dynamic-height mode, respect the caller's iconAlignment as-is.
+    final effectiveIconAlignment = widget.height != null
+        ? CrossAxisAlignment.center
+        : widget.iconAlignment;
+
     // Build the icon + text row.
     final rowContent = Row(
-      crossAxisAlignment: widget.iconAlignment,
+      crossAxisAlignment: effectiveIconAlignment,
       children: [
         // Prefix icon
         if (widget.prefixIcon != null) ...[
@@ -665,13 +675,9 @@ class _GlassTextFieldState extends State<GlassTextField> {
       ],
     );
 
-    // Fixed-height mode: strip vertical padding so the Row fills the full
-    // SizedBox height. The Row's crossAxisAlignment handles icon positioning,
-    // and the TextField centres its own text via isDense + contentPadding.zero.
-    // We intentionally do NOT wrap in Align(center) — that gives the Row loose
-    // constraints, causing the Row to shrink to its intrinsic height and
-    // re-centre when system text scaling changes (icon drift).
-    // Dynamic/constrained-height modes use the full padding as before.
+    // Fixed-height mode: strip vertical padding and center the row so that
+    // placeholder text stays vertically centred regardless of system font
+    // scale. Dynamic/constrained-height modes use the full padding as before.
     final resolvedPadding = widget.padding.resolve(Directionality.of(context));
     Widget textFieldContent = widget.height != null
         ? Padding(
@@ -679,7 +685,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
               left: resolvedPadding.left,
               right: resolvedPadding.right,
             ),
-            child: rowContent,
+            child: Align(alignment: Alignment.center, child: rowContent),
           )
         : Padding(padding: widget.padding, child: rowContent);
 
