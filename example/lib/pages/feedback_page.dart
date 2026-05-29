@@ -62,6 +62,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             ),
           ),
           leading: GlassButton(
+            quality: GlassQuality.premium,
             icon: const Icon(CupertinoIcons.back),
             onTap: () => Navigator.of(context).pop(),
             width: 40,
@@ -126,8 +127,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     const SizedBox(height: 16),
                     Slider(
                       value: _circularProgress,
-                      onChanged: (v) =>
-                          setState(() => _circularProgress = v),
+                      onChanged: (v) => setState(() => _circularProgress = v),
                       activeColor: const Color(0xFF007AFF),
                       inactiveColor: Colors.white24,
                     ),
@@ -218,8 +218,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     const SizedBox(height: 16),
                     Slider(
                       value: _linearProgress,
-                      onChanged: (v) =>
-                          setState(() => _linearProgress = v),
+                      onChanged: (v) => setState(() => _linearProgress = v),
                       activeColor: const Color(0xFF007AFF),
                       inactiveColor: Colors.white24,
                     ),
@@ -240,8 +239,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                             context,
                             message: 'Settings saved successfully!',
                             type: GlassToastType.success,
-                            icon: Icon(
-                                CupertinoIcons.check_mark_circled_solid),
+                            icon: Icon(CupertinoIcons.check_mark_circled_solid),
                             position: GlassToastPosition.top,
                           ),
                         ),
@@ -267,8 +265,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                         ),
                         _ToastButton(
                           label: 'Warning',
-                          icon: CupertinoIcons
-                              .exclamationmark_triangle_fill,
+                          icon: CupertinoIcons.exclamationmark_triangle_fill,
                           onTap: () => GlassToast.show(
                             context,
                             message: 'Storage space running low',
@@ -319,10 +316,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                           ),
                         ),
                         if (_uploadProgress == 1.0)
-                          const Icon(
-                              CupertinoIcons.checkmark_circle_fill,
-                              color: Colors.green,
-                              size: 24),
+                          const Icon(CupertinoIcons.checkmark_circle_fill,
+                              color: Colors.green, size: 24),
                       ],
                     ),
                     const SizedBox(height: 16),

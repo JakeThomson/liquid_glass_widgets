@@ -307,7 +307,7 @@ class _ExploreTab extends StatelessWidget {
                           ),
                           const Spacer(),
                           const Text(
-                            'Full-fidelity Apple Music\nrecreation with Liquid Glass',
+                            'Apple Music recreation\n with Liquid Glass Widgets',
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w600,

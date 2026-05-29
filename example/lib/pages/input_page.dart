@@ -45,6 +45,7 @@ class _InputPageState extends State<InputPage> {
             ),
           ),
           leading: GlassButton(
+            quality: GlassQuality.premium,
             icon: const Icon(CupertinoIcons.back),
             onTap: () => Navigator.of(context).pop(),
             width: 40,
@@ -183,8 +184,7 @@ class _InputPageState extends State<InputPage> {
                               'Already have an account? Sign In',
                               style: TextStyle(
                                 fontSize: 14,
-                                color:
-                                    Colors.white.withValues(alpha: 0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                               ),
                             ),
                           ),

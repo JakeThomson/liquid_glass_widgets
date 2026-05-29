@@ -266,7 +266,8 @@ class GlassThemeVariant {
     settings: GlassThemeSettings(
       thickness: 10.0, // Consistent with light/dark
       blur: 8.0, // BackdropFilter sigma — enough frosting to see shapes through
-      glassColor: Color.fromRGBO(200, 210, 230, 0.15), // Visible tint for the container overlay
+      glassColor: Color.fromRGBO(
+          200, 210, 230, 0.15), // Visible tint for the container overlay
     ),
     quality: GlassQuality.minimal,
     glowColors: GlassGlowColors.fallback,

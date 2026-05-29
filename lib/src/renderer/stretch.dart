@@ -515,10 +515,8 @@ class RenderRawLiquidStretch extends RenderProxyBox {
 
         if (absDx > 0.001 || absDy > 0.001) {
           // Scale each axis based on its own drag component.
-          final relativeX =
-              size.width > 0 ? absDx / size.width : 0.0;
-          final relativeY =
-              size.height > 0 ? absDy / size.height : 0.0;
+          final relativeX = size.width > 0 ? absDx / size.width : 0.0;
+          final relativeY = size.height > 0 ? absDy / size.height : 0.0;
 
           // Elongate along the drag direction.
           final stretchX = 1.0 + relativeX * _anchorStretchIntensity;
@@ -535,10 +533,8 @@ class RenderRawLiquidStretch extends RenderProxyBox {
           // Pivot at the opposite edge for each axis independently.
           // Drag right → pivot at left (0), drag left → pivot at right.
           // Drag down → pivot at top (0), drag up → pivot at bottom.
-          final pivotX =
-              _stretchPixels.dx >= 0 ? 0.0 : size.width;
-          final pivotY =
-              _stretchPixels.dy >= 0 ? 0.0 : size.height;
+          final pivotX = _stretchPixels.dx >= 0 ? 0.0 : size.width;
+          final pivotY = _stretchPixels.dy >= 0 ? 0.0 : size.height;
 
           matrix
             ..translateByDouble(pivotX, pivotY, 0.0, 1.0)
@@ -562,8 +558,7 @@ class RenderRawLiquidStretch extends RenderProxyBox {
           ..translateByDouble(size.width / 2, size.height / 2, 0.0, 1.0)
           ..scaleByDouble(scale.dx, scale.dy, 1.0, 1.0)
           ..translateByDouble(-size.width / 2, -size.height / 2, 0.0, 1.0)
-          ..translateByDouble(
-              _stretchPixels.dx, _stretchPixels.dy, 0.0, 1.0);
+          ..translateByDouble(_stretchPixels.dx, _stretchPixels.dy, 0.0, 1.0);
       }
     }
 

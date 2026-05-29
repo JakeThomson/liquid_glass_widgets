@@ -138,9 +138,10 @@ class _KeypadLockScreenDemoState extends State<KeypadLockScreenDemo>
             image: AssetImage('assets/bulldog.jpeg'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-        Colors.black.withValues(alpha: 0.3), // Adjust opacity for darkness
-        BlendMode.darken, // Or BlendMode.srcOver for a solid overlay
-      ),
+              Colors.black
+                  .withValues(alpha: 0.3), // Adjust opacity for darkness
+              BlendMode.darken, // Or BlendMode.srcOver for a solid overlay
+            ),
             alignment: Alignment(0, 0),
           ),
         ),

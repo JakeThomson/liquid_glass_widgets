@@ -24,6 +24,7 @@ class ContainersPage extends StatelessWidget {
             ),
           ),
           leading: GlassButton(
+            quality: GlassQuality.premium,
             icon: const Icon(CupertinoIcons.back),
             onTap: () => Navigator.of(context).pop(),
             width: 40,
@@ -87,7 +88,8 @@ class ContainersPage extends StatelessWidget {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.9),
                                     ),
                                   ),
                                 ],
@@ -124,8 +126,7 @@ class ContainersPage extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color:
-                                        Colors.purple.withValues(alpha: 0.3),
+                                    color: Colors.purple.withValues(alpha: 0.3),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Icon(
@@ -230,23 +231,22 @@ class ContainersPage extends StatelessWidget {
                         child: SizedBox(
                           height: 60,
                           child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceEvenly,
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               Text('Left',
                                   style: TextStyle(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.8))),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.8))),
                               const GlassDivider.vertical(),
                               Text('Center',
                                   style: TextStyle(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.8))),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.8))),
                               const GlassDivider.vertical(),
                               Text('Right',
                                   style: TextStyle(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.8))),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.8))),
                             ],
                           ),
                         ),
@@ -272,8 +272,7 @@ class ContainersPage extends StatelessWidget {
                               leading: const Icon(CupertinoIcons.bell_fill,
                                   color: Colors.orange),
                               title: const Text('Notifications'),
-                              subtitle: const Text(
-                                  'Banners, sounds, badges'),
+                              subtitle: const Text('Banners, sounds, badges'),
                               trailing: GlassListTile.chevron,
                               onTap: () {},
                             ),
@@ -289,8 +288,7 @@ class ContainersPage extends StatelessWidget {
                                   CupertinoIcons.paintbrush_fill,
                                   color: Colors.purple),
                               title: const Text('Appearance'),
-                              subtitle:
-                                  const Text('Dark mode, accent colour'),
+                              subtitle: const Text('Dark mode, accent colour'),
                               trailing: GlassListTile.chevron,
                               isLast: true,
                               onTap: () {},

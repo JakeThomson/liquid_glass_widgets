@@ -307,8 +307,7 @@ void main() {
       expect(button.persistPressOnDrag, isTrue);
     });
 
-    testWidgets(
-        'persistPressOnDrag: true — uses Listener (pointer events)',
+    testWidgets('persistPressOnDrag: true — uses Listener (pointer events)',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(

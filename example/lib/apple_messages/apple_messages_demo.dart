@@ -16,8 +16,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_cupertino_symbols/flutter_cupertino_symbols.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
+import '../constants/sf_symbols.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PALETTE  (matches iOS 26 dark Messages)

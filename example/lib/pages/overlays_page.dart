@@ -36,8 +36,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
             Text(
               'This is a basic glass bottom sheet',
               style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white.withValues(alpha: 0.7)),
+                  fontSize: 16, color: Colors.white.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -223,6 +222,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
             ),
           ),
           leading: GlassButton(
+            quality: GlassQuality.premium,
             icon: const Icon(CupertinoIcons.back),
             onTap: () => Navigator.of(context).pop(),
             width: 40,
@@ -293,8 +293,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
                             const SizedBox(height: 8),
                             GlassMenu(
                               quality: GlassQuality.premium,
-                              triggerBuilder: (context, toggle) =>
-                                  GlassButton(
+                              triggerBuilder: (context, toggle) => GlassButton(
                                 icon: Icon(CupertinoIcons.ellipsis),
                                 onTap: toggle,
                                 label: 'Premium',
@@ -316,8 +315,8 @@ class _OverlaysPageState extends State<OverlaysPage> {
                                   icon: Icon(CupertinoIcons.trash),
                                   title: 'Delete',
                                   isDestructive: true,
-                                  onTap: () => setState(() =>
-                                      _lastMenuSelection = 'Delete'),
+                                  onTap: () => setState(
+                                      () => _lastMenuSelection = 'Delete'),
                                 ),
                               ],
                             ),
@@ -330,8 +329,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
                             const SizedBox(height: 8),
                             GlassMenu(
                               quality: GlassQuality.standard,
-                              triggerBuilder: (context, toggle) =>
-                                  GlassButton(
+                              triggerBuilder: (context, toggle) => GlassButton(
                                 icon: Icon(CupertinoIcons.ellipsis),
                                 onTap: toggle,
                                 label: 'Standard',
@@ -353,8 +351,8 @@ class _OverlaysPageState extends State<OverlaysPage> {
                                   icon: Icon(CupertinoIcons.trash),
                                   title: 'Delete',
                                   isDestructive: true,
-                                  onTap: () => setState(() =>
-                                      _lastMenuSelection = 'Delete'),
+                                  onTap: () => setState(
+                                      () => _lastMenuSelection = 'Delete'),
                                 ),
                               ],
                             ),
@@ -369,7 +367,6 @@ class _OverlaysPageState extends State<OverlaysPage> {
                     ),
 
                     const SizedBox(height: 40),
-
 
                     // ── GlassActionSheet ─────────────────────────────
                     const _SectionTitle(title: 'GlassActionSheet'),

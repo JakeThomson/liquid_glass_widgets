@@ -24,6 +24,7 @@ class SurfacesPage extends StatelessWidget {
             ),
           ),
           leading: GlassButton(
+            quality: GlassQuality.premium,
             icon: const Icon(CupertinoIcons.back),
             onTap: () => Navigator.of(context).pop(),
             width: 40,
@@ -201,8 +202,7 @@ class SurfacesPage extends StatelessWidget {
                               width: 200,
                               padding: const EdgeInsets.all(12),
                               header: const Padding(
-                                padding:
-                                    EdgeInsets.only(bottom: 20, top: 10),
+                                padding: EdgeInsets.only(bottom: 20, top: 10),
                                 child: Text(
                                   'My App',
                                   style: TextStyle(
@@ -242,8 +242,7 @@ class SurfacesPage extends StatelessWidget {
                                 child: Text(
                                   'Content Area',
                                   style: TextStyle(
-                                    color:
-                                        Colors.white.withValues(alpha: 0.8),
+                                    color: Colors.white.withValues(alpha: 0.8),
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -389,8 +388,7 @@ class _SearchableBarDemoPage extends StatefulWidget {
   const _SearchableBarDemoPage();
 
   @override
-  State<_SearchableBarDemoPage> createState() =>
-      _SearchableBarDemoPageState();
+  State<_SearchableBarDemoPage> createState() => _SearchableBarDemoPageState();
 }
 
 class _SearchableBarDemoPageState extends State<_SearchableBarDemoPage> {
@@ -483,14 +481,12 @@ class _SearchableBarDemoPageState extends State<_SearchableBarDemoPage> {
                       slivers: [
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding:
-                                const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
                             child: Row(
                               children: [
                                 GlassButton(
                                   icon: const Icon(CupertinoIcons.back),
-                                  onTap: () =>
-                                      Navigator.of(context).pop(),
+                                  onTap: () => Navigator.of(context).pop(),
                                   width: 40,
                                   height: 40,
                                   iconSize: 20,
@@ -512,8 +508,7 @@ class _SearchableBarDemoPageState extends State<_SearchableBarDemoPage> {
                           ),
                         ),
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                              24, 24, 24, 140),
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 140),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) => _ContentRow(
@@ -630,8 +625,8 @@ class _ContentRow extends StatelessWidget {
             height: 64,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.3),
-              borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(14)),
+              borderRadius:
+                  const BorderRadius.horizontal(left: Radius.circular(14)),
             ),
             child: Center(
               child: Text(

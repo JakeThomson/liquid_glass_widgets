@@ -44,6 +44,7 @@ class _InteractivePageState extends State<InteractivePage> {
             ),
           ),
           leading: GlassButton(
+            quality: GlassQuality.premium,
             icon: const Icon(CupertinoIcons.back),
             onTap: () => Navigator.of(context).pop(),
             width: 40,
@@ -178,7 +179,8 @@ class _InteractivePageState extends State<InteractivePage> {
                         GlassButton(
                           icon: Icon(CupertinoIcons.stop_fill),
                           onTap: () {},
-                          shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                          shape:
+                              const LiquidRoundedSuperellipse(borderRadius: 16),
                           glowColor: Colors.red.withValues(alpha: 0.3),
                         ),
                       ],
@@ -458,15 +460,13 @@ class _InteractivePageState extends State<InteractivePage> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: ['Flutter', 'Dart', 'iOS', 'Android']
-                          .map((filter) {
-                        final isSelected =
-                            _selectedFilters.contains(filter);
+                      children:
+                          ['Flutter', 'Dart', 'iOS', 'Android'].map((filter) {
+                        final isSelected = _selectedFilters.contains(filter);
                         return GlassChip(
                           label: filter,
                           selected: isSelected,
-                          selectedColor:
-                              Colors.blue.withValues(alpha: 0.4),
+                          selectedColor: Colors.blue.withValues(alpha: 0.4),
                           onTap: () {
                             setState(() {
                               if (isSelected) {

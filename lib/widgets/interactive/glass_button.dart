@@ -676,11 +676,17 @@ class _GlassButtonState extends State<GlassButton>
         //
         // Solution: Wrap the glass in a vector ClipPath at the same shape
         // boundary. The clip is a paint-level operation that renders at the
-        // final screen resolution every frame — always crisp. It masks the
-        // jagged edge pixels from the scaled texture while keeping the full
-        // premium interior (refraction, chromatic aberration, 3D specular).
-        final bool needsEdgeClip = widget.stretch > 0 &&
-            effectiveQuality == GlassQuality.premium;
+        // Note: Premium quality on Impeller may show slightly jagged edges
+        // during stretch animations. This is a known Impeller compositing
+        // limitation — LiquidGlassLayer rasterizes at a fixed resolution and
+        // TransformLayer scales the cached output. Standard quality doesn't
+        // have this issue because the 2D shader re-executes every frame.
+        // Switching to standard during stretch was tried but the visual pop
+        // from the different specular rendering was more noticeable than
+        // the jaggedness itself.
+
+        final bool needsEdgeClip =
+            widget.stretch > 0 && effectiveQuality == GlassQuality.premium;
 
         // Pass glow intensity directly to AdaptiveGlass for Skia shader feedback.
         // On Impeller, GlassGlow widget is used instead (separate from glass effect).
@@ -742,9 +748,8 @@ class _GlassButtonState extends State<GlassButton>
       ),
     );
 
-    final stretchWidget = skipBoundary
-        ? stretchContent
-        : RepaintBoundary(child: stretchContent);
+    final stretchWidget =
+        skipBoundary ? stretchContent : RepaintBoundary(child: stretchContent);
 
     // Apply opacity when disabled
     final finalWidget = widget.enabled

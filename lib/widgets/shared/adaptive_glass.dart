@@ -492,19 +492,52 @@ class _FrostedFallback extends StatelessWidget {
         // above — see the [_ShapeClip] doc comment.
         _ShapeClip(shape: shape, child: child),
 
-        // Specular Rim: drawn as a pure native overlay vector perfectly on top
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _SpecularRimPainter(
+        // Specular Rim: drawn as a pure native overlay vector perfectly on top.
+        // Wrapped in _ShapeClip because canvas.drawPath draws a center-aligned
+        // stroke. Clipping it removes the outer half, creating a true 'inner
+        // border' which is optically correct for glass internal reflections.
+        //
+        // Suppressed for flat-edge shapes (borderRadius: 0) like app bars,
+        // where the rim looks like a Material divider rather than a glass edge.
+        if (!_isFlatEdge(shape))
+          Positioned.fill(
+            child: IgnorePointer(
+              child: _ShapeClip(
                 shape: shape,
-                settings: settings,
+                child: CustomPaint(
+                  painter: _SpecularRimPainter(
+                    shape: shape,
+                    settings: settings,
+                  ),
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
+  }
+
+  /// Returns true when [shape] has no rounded corners (borderRadius == 0).
+  ///
+  /// Full-width surfaces (app bars, bottom bars) use `borderRadius: 0` and
+  /// the specular rim on their straight edges looks like a Material divider
+  /// rather than an internal glass reflection.
+  static bool _isFlatEdge(LiquidShape shape) {
+    if (shape is LiquidRoundedRectangle && shape.borderRadius == 0) return true;
+    if (shape is LiquidRoundedSuperellipse && shape.borderRadius == 0) {
+      return true;
+    }
+    if (shape is LiquidVerticalRoundedRectangle &&
+        shape.topRadius == 0 &&
+        shape.bottomRadius == 0) {
+      return true;
+    }
+    if (shape is LiquidVerticalRoundedSuperellipse &&
+        shape.topRadius == 0 &&
+        shape.bottomRadius == 0) {
+      return true;
+    }
+    return false;
   }
 }
 
@@ -573,28 +606,30 @@ class _SpecularRimPainter extends CustomPainter {
 
     final path = shape.getOuterPath(bounds);
 
-    // Pass 1: soft base stroke (solid alpha compositing, NO hardware readback)
-    //
-    // Deliberately subtle — matches the thin refraction edge that Impeller's
-    // native LiquidGlassLayer produces on premium quality. Thicker strokes
-    // make standard quality look "drawn" rather than optically simulated.
+    // Pass 1: soft base stroke.
+    // Doubled width since it is now clipped to the inner half.
+    // BlendMode.overlay ensures the highlight reacts organically to the
+    // background color underneath, rather than looking like a flat white line.
     canvas.drawPath(
       path,
       Paint()
         ..shader = gradient
-        ..color = white.withValues(alpha: white.a * 0.12)
+        ..color = white.withValues(alpha: white.a * 0.4)
+        ..blendMode = BlendMode.overlay
         ..style = PaintingStyle.stroke
-        ..strokeWidth = ui.lerpDouble(0.5, 1.0, lightIntensity)!,
+        ..strokeWidth = ui.lerpDouble(1.0, 2.0, lightIntensity)!,
     );
 
-    // Pass 2: sharp inner rim (solid alpha compositing, NO hardware readback)
+    // Pass 2: sharp inner rim.
+    // Doubled width since it is clipped to the inner half.
     canvas.drawPath(
       path,
       Paint()
         ..shader = gradient
-        ..color = white.withValues(alpha: white.a * 0.18)
+        ..color = white.withValues(alpha: white.a * 0.6)
+        ..blendMode = BlendMode.overlay
         ..style = PaintingStyle.stroke
-        ..strokeWidth = (settings.effectiveThickness / 40).clamp(0.25, 1.0),
+        ..strokeWidth = (settings.effectiveThickness / 20).clamp(0.5, 2.0),
     );
   }
 
