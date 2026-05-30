@@ -279,35 +279,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       body: Stack(
         children: [
           // ── Conversation list with edge fades ─────────────────────────
-          // ShaderMask fades scroll content at both edges using alpha mask —
-          // no clipping artefacts, content fades smoothly into/out of view.
-          ShaderMask(
-            blendMode: BlendMode.dstIn,
-            shaderCallback: (Rect bounds) {
-              // Top fade zone: from y=0 to (topPad+52+50) — covers nav bar
-              // + 50px fade into the first rows.
-              // Bottom fade zone: covers the search bar height + safe area.
-              final topZone = topPad + 52 + 50;
-              final bottomZone =
-                  60.0 + botPad; // Fade only below the search bar
-              return LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: const [
-                  Colors.transparent,
-                  Colors.black,
-                  Colors.black,
-                  Colors
-                      .transparent, // Fades out smoothly at the bottom like the top
-                ],
-                stops: [
-                  0.0,
-                  topZone / bounds.height,
-                  (bounds.height - bottomZone) / bounds.height,
-                  1.0,
-                ],
-              ).createShader(bounds);
-            },
+          GlassScrollEdgeEffect(
+            topFadeHeight: topPad + 52 + 50,
+            bottomFadeHeight: 60.0 + botPad,
             child: CustomScrollView(
               controller: _scrollController,
               slivers: [
@@ -344,11 +318,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   ),
                 ),
 
-                // Bottom padding — minimal; content reaches the fade zone.
-                // The _SearchBar ColoredBox covers the safe area visually.
-                // Ensure last row scrolls fully above the search bar overlay.
-                // 92 = top padding (8) + bar height (44) + min bottom padding (32)
-                // + buffer (8); botPad covers the device safe area.
+                // Bottom padding — ensure last row scrolls above search bar.
                 SliverToBoxAdapter(child: SizedBox(height: 92 + botPad)),
               ],
             ),

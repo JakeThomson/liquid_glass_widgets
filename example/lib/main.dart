@@ -7,6 +7,7 @@ import 'package:liquid_glass_widgets_example/apple_music/apple_music_demo.dart';
 import 'package:liquid_glass_widgets_example/apple_news/apple_news_demo.dart';
 import 'package:liquid_glass_widgets_example/apple_podcasts/apple_podcasts_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/keypad_lock_screen_demo.dart';
+import 'package:liquid_glass_widgets_example/demos/nav_bar_patterns_demo.dart';
 import 'package:liquid_glass_widgets_example/pages/containers_page.dart';
 import 'package:liquid_glass_widgets_example/pages/feedback_page.dart';
 import 'package:liquid_glass_widgets_example/pages/input_page.dart';
@@ -644,6 +645,22 @@ class _DemosTab extends StatelessWidget {
                           destination: const KeypadLockScreenDemo(),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SmallDemoCard(
+                          title: 'Nav Bars',
+                          icon: CupertinoIcons.rectangle_split_3x1,
+                          color: const Color(0xFF007AFF),
+                          destination: const NavBarPatternsDemo(),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(child: SizedBox()),
                     ],
                   ),
 

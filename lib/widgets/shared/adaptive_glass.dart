@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../types/glass_quality.dart';
 import '../../utils/glass_performance_monitor.dart';
 import 'glass_accessibility_scope.dart';
+import 'glass_isolation_scope.dart';
 import 'lightweight_liquid_glass.dart';
 import 'inherited_liquid_glass.dart';
 
@@ -288,7 +289,13 @@ class AdaptiveGlass extends StatelessWidget {
     // Impeller + Premium Path: Use the renderer's native path.
     // Wrap in PremiumGlassTracker so GlassPerformanceMonitor can correlate
     // slow raster frames with active premium surfaces.
-    if (useOwnLayer) {
+    // Force useOwnLayer when inside a GlassIsolationScope (e.g. GlassScaffold
+    // app bar / bottom bar). This prevents body glass cards from compositing
+    // over the bar's glass buttons in the shared page-level layer.
+    final effectiveUseOwnLayer =
+        useOwnLayer || GlassIsolationScope.isIsolated(context);
+
+    if (effectiveUseOwnLayer) {
       Widget premium = LiquidGlass.withOwnLayer(
         shape: shape,
         settings: settings,

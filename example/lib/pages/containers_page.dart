@@ -14,15 +14,8 @@ class ContainersPage extends StatelessWidget {
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.light,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: GlassAppBar(
-          title: const Text(
-            'Containers',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
           leading: GlassButton(
             quality: GlassQuality.premium,
             icon: const Icon(CupertinoIcons.back),
@@ -34,8 +27,33 @@ class ContainersPage extends StatelessWidget {
         ),
         body: Material(
           type: MaterialType.transparency,
-          child: CustomScrollView(
+          child: GlassScrollEdgeEffect(
+            topFadeHeight:
+                MediaQuery.paddingOf(context).top + 44 + 40,
+            fadeBottom: false,
+            child: CustomScrollView(
             slivers: [
+              // Space for the app bar + safe area
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.paddingOf(context).top + 44,
+                ),
+              ),
+              // ── Large page title (iOS 26 inline style) ────────────
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
+                  child: Text(
+                    'Containers',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -318,6 +336,7 @@ class ContainersPage extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

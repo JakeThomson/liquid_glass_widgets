@@ -733,13 +733,32 @@ class _GlassButtonState extends State<GlassButton>
     final bool skipBoundary = effectiveQuality == GlassQuality.minimal ||
         (effectiveQuality == GlassQuality.premium && hasStretch);
 
+    // Resolve interaction settings: explicit widget param > theme > default
+    final themeInteraction = GlassThemeData.of(context).interaction;
+
     final stretchContent = LiquidStretch(
-      interactionScale: widget.interactionScale,
-      stretch: widget.stretch,
-      resistance: widget.resistance,
+      interactionScale:
+          widget.interactionScale != 1.05
+              ? widget.interactionScale
+              : themeInteraction.interactionScale ?? widget.interactionScale,
+      stretch:
+          widget.stretch != 0.5
+              ? widget.stretch
+              : themeInteraction.stretch ?? widget.stretch,
+      resistance:
+          widget.resistance != 0.01
+              ? widget.resistance
+              : themeInteraction.resistance ?? widget.resistance,
       hitTestBehavior: widget.stretchHitTestBehavior,
-      anchorStretch: widget.anchorStretch,
-      anchorStretchSettings: widget.anchorStretchSettings,
+      anchorStretch:
+          widget.anchorStretch != true
+              ? widget.anchorStretch
+              : themeInteraction.anchorStretch ?? widget.anchorStretch,
+      anchorStretchSettings:
+          !identical(widget.anchorStretchSettings, const AnchorStretchSettings())
+              ? widget.anchorStretchSettings
+              : themeInteraction.anchorStretchSettings ??
+                    widget.anchorStretchSettings,
       child: Semantics(
         button: true,
         label: widget.label.isNotEmpty ? widget.label : null,

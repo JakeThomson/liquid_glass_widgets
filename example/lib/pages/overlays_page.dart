@@ -212,15 +212,8 @@ class _OverlaysPageState extends State<OverlaysPage> {
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.light,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: GlassAppBar(
-          title: const Text(
-            'Overlays',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
           leading: GlassButton(
             quality: GlassQuality.premium,
             icon: const Icon(CupertinoIcons.back),
@@ -230,8 +223,32 @@ class _OverlaysPageState extends State<OverlaysPage> {
             iconSize: 20,
           ),
         ),
-        body: CustomScrollView(
+        body: GlassScrollEdgeEffect(
+          topFadeHeight: MediaQuery.paddingOf(context).top + 44 + 40,
+          fadeBottom: false,
+          child: CustomScrollView(
           slivers: [
+            // Space for the app bar + safe area
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: MediaQuery.paddingOf(context).top + 44,
+              ),
+            ),
+            // ── Large page title (iOS 26 inline style) ──────────────
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
+                child: Text(
+                  'Overlays',
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -383,6 +400,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
