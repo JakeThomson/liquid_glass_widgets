@@ -116,8 +116,9 @@ class GlassScrollEdgeEffect extends StatelessWidget {
         // tighter transition zone (1/3 of the soft height).
         final effectiveTopHeight =
             fadeTop ? _effectiveHeight(topFadeHeight, bounds.height) : 0.0;
-        final effectiveBottomHeight =
-            fadeBottom ? _effectiveHeight(bottomFadeHeight, bounds.height) : 0.0;
+        final effectiveBottomHeight = fadeBottom
+            ? _effectiveHeight(bottomFadeHeight, bounds.height)
+            : 0.0;
 
         final topStop = effectiveTopHeight / bounds.height;
         final bottomStop =

@@ -1,8 +1,6 @@
-import 'package:liquid_glass_widgets/widgets/interactive/glass_button.dart';
-import 'package:liquid_glass_widgets/widgets/surfaces/glass_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:liquid_glass_widgets/widgets/shared/adaptive_liquid_glass_layer.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../shared/test_helpers.dart';
 
@@ -125,20 +123,28 @@ void main() {
       expect(find.byType(GlassAppBar), findsOneWidget);
     });
 
-    testWidgets('works in standalone mode', (tester) async {
+    testWidgets('applies background color', (tester) async {
       await tester.pumpWidget(
         createTestApp(
-          child: const Scaffold(
-            appBar: GlassAppBar(
-              useOwnLayer: true,
-              settings: defaultTestGlassSettings,
-              title: Text('Standalone'),
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const Scaffold(
+              appBar: GlassAppBar(
+                backgroundColor: Color(0xFF2C2C2E),
+                title: Text('Solid'),
+              ),
             ),
           ),
         ),
       );
 
-      expect(find.byType(GlassAppBar), findsOneWidget);
+      final coloredBox = tester.widget<ColoredBox>(
+        find.descendant(
+          of: find.byType(GlassAppBar),
+          matching: find.byType(ColoredBox),
+        ),
+      );
+      expect(coloredBox.color, equals(const Color(0xFF2C2C2E)));
     });
 
     testWidgets('implements PreferredSizeWidget', (tester) async {
@@ -152,233 +158,83 @@ void main() {
       expect(appBar.centerTitle, isTrue);
       expect(appBar.backgroundColor, equals(Colors.transparent));
       expect(appBar.preferredSize, equals(const Size.fromHeight(44.0)));
-      expect(appBar.useOwnLayer, isFalse);
-      expect(appBar.quality, isNull);
-      expect(appBar.scrollController, isNull);
-      expect(appBar.scrollEdgeThreshold, equals(50.0));
     });
 
-    // ── Scroll-driven glass tests ───────────────────────────────────────
-
-    group('scroll-driven glass', () {
-      testWidgets('is transparent at scroll offset 0', (tester) async {
-        final controller = ScrollController();
-        addTearDown(controller.dispose);
-
-        await tester.pumpWidget(
-          createTestApp(
-            child: AdaptiveLiquidGlassLayer(
-              settings: defaultTestGlassSettings,
-              child: Scaffold(
-                extendBodyBehindAppBar: true,
-                appBar: GlassAppBar(
-                  title: const Text('Title'),
-                  scrollController: controller,
-                  settings: defaultTestGlassSettings,
-                ),
-                body: ListView.builder(
-                  controller: controller,
-                  itemBuilder: (_, i) => SizedBox(height: 50, child: Text('Item $i')),
-                  itemCount: 100,
-                ),
-              ),
+    testWidgets('renders as StatelessWidget (no glass rendering)',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: const Scaffold(
+            appBar: GlassAppBar(
+              title: Text('No Glass'),
             ),
           ),
-        );
+        ),
+      );
 
-        // At offset 0, the glass widget is not built at all (performance).
-        expect(
-          find.descendant(
-            of: find.byType(GlassAppBar),
-            matching: find.byType(Opacity),
-          ),
-          findsNothing,
-        );
-      });
+      // Should render without Opacity or Stack (no glass)
+      expect(find.byType(GlassAppBar), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(GlassAppBar),
+          matching: find.byType(Opacity),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(GlassAppBar),
+          matching: find.byType(Stack),
+        ),
+        findsNothing,
+      );
+    });
 
-      testWidgets('is fully visible at scroll offset >= threshold',
-          (tester) async {
-        final controller = ScrollController();
-        addTearDown(controller.dispose);
-
-        await tester.pumpWidget(
-          createTestApp(
-            child: AdaptiveLiquidGlassLayer(
-              settings: defaultTestGlassSettings,
-              child: Scaffold(
-                extendBodyBehindAppBar: true,
-                appBar: GlassAppBar(
-                  title: const Text('Title'),
-                  scrollController: controller,
-                  scrollEdgeThreshold: 50.0,
-                  settings: defaultTestGlassSettings,
-                ),
-                body: ListView.builder(
-                  controller: controller,
-                  itemBuilder: (_, i) =>
-                      SizedBox(height: 50, child: Text('Item $i')),
-                  itemCount: 100,
-                ),
-              ),
+    testWidgets('wraps itself in GlassIsolationScope with isolated: true',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const Scaffold(
+              appBar: GlassAppBar(title: Text('Test')),
             ),
           ),
-        );
+        ),
+      );
 
-        // Scroll past threshold
-        controller.jumpTo(100);
-        await tester.pump();
+      // Find the GlassIsolationScope that is a descendant of GlassAppBar.
+      final scope = tester.widget<GlassIsolationScope>(
+        find.descendant(
+          of: find.byType(GlassAppBar),
+          matching: find.byType(GlassIsolationScope),
+        ),
+      );
+      expect(scope.isolated, isTrue,
+          reason: 'GlassAppBar should self-isolate for Z-order correctness');
+    });
 
-        final opacity = tester.widget<Opacity>(
-          find.descendant(
-            of: find.byType(GlassAppBar),
-            matching: find.byType(Opacity),
-          ),
-        );
-        expect(opacity.opacity, equals(1.0));
-      });
-
-      testWidgets('intermediate scroll shows partial opacity',
-          (tester) async {
-        final controller = ScrollController();
-        addTearDown(controller.dispose);
-
-        await tester.pumpWidget(
-          createTestApp(
-            child: AdaptiveLiquidGlassLayer(
-              settings: defaultTestGlassSettings,
-              child: Scaffold(
-                extendBodyBehindAppBar: true,
-                appBar: GlassAppBar(
-                  title: const Text('Title'),
-                  scrollController: controller,
-                  scrollEdgeThreshold: 100.0,
-                  settings: defaultTestGlassSettings,
-                ),
-                body: ListView.builder(
-                  controller: controller,
-                  itemBuilder: (_, i) =>
-                      SizedBox(height: 50, child: Text('Item $i')),
-                  itemCount: 100,
-                ),
-              ),
+    testWidgets('provides defaultQuality: premium via isolation scope',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const Scaffold(
+              appBar: GlassAppBar(title: Text('Test')),
             ),
           ),
-        );
+        ),
+      );
 
-        // Scroll to 50% of threshold
-        controller.jumpTo(50);
-        await tester.pump();
-
-        final opacity = tester.widget<Opacity>(
-          find.descendant(
-            of: find.byType(GlassAppBar),
-            matching: find.byType(Opacity),
-          ),
-        );
-        expect(opacity.opacity, closeTo(0.5, 0.01));
-      });
-
-      testWidgets('works without scrollController (backward compatible)',
-          (tester) async {
-        await tester.pumpWidget(
-          createTestApp(
-            child: AdaptiveLiquidGlassLayer(
-              settings: defaultTestGlassSettings,
-              child: const Scaffold(
-                appBar: GlassAppBar(
-                  title: Text('No Scroll'),
-                  settings: defaultTestGlassSettings,
-                ),
-              ),
-            ),
-          ),
-        );
-
-        // Should render without Opacity wrapper (static glass)
-        expect(find.byType(GlassAppBar), findsOneWidget);
-        // No Opacity widget should be used for static glass
-        expect(
-          find.descendant(
-            of: find.byType(GlassAppBar),
-            matching: find.byType(Opacity),
-          ),
-          findsNothing,
-        );
-      });
-
-      testWidgets('handles scrollController swap', (tester) async {
-        final controller1 = ScrollController();
-        final controller2 = ScrollController();
-        addTearDown(controller1.dispose);
-        addTearDown(controller2.dispose);
-
-        // Build with controller1
-        await tester.pumpWidget(
-          createTestApp(
-            child: AdaptiveLiquidGlassLayer(
-              settings: defaultTestGlassSettings,
-              child: Scaffold(
-                extendBodyBehindAppBar: true,
-                appBar: GlassAppBar(
-                  title: const Text('Title'),
-                  scrollController: controller1,
-                  settings: defaultTestGlassSettings,
-                ),
-                body: ListView.builder(
-                  controller: controller1,
-                  itemBuilder: (_, i) =>
-                      SizedBox(height: 50, child: Text('Item $i')),
-                  itemCount: 100,
-                ),
-              ),
-            ),
-          ),
-        );
-
-        // Scroll controller1
-        controller1.jumpTo(100);
-        await tester.pump();
-
-        var opacity = tester.widget<Opacity>(
-          find.descendant(
-            of: find.byType(GlassAppBar),
-            matching: find.byType(Opacity),
-          ),
-        );
-        expect(opacity.opacity, equals(1.0));
-
-        // Swap to controller2 (at offset 0)
-        await tester.pumpWidget(
-          createTestApp(
-            child: AdaptiveLiquidGlassLayer(
-              settings: defaultTestGlassSettings,
-              child: Scaffold(
-                extendBodyBehindAppBar: true,
-                appBar: GlassAppBar(
-                  title: const Text('Title'),
-                  scrollController: controller2,
-                  settings: defaultTestGlassSettings,
-                ),
-                body: ListView.builder(
-                  controller: controller2,
-                  itemBuilder: (_, i) =>
-                      SizedBox(height: 50, child: Text('Item $i')),
-                  itemCount: 100,
-                ),
-              ),
-            ),
-          ),
-        );
-
-        // At offset 0, no Opacity widget is built.
-        expect(
-          find.descendant(
-            of: find.byType(GlassAppBar),
-            matching: find.byType(Opacity),
-          ),
-          findsNothing,
-        );
-      });
+      final scope = tester.widget<GlassIsolationScope>(
+        find.descendant(
+          of: find.byType(GlassAppBar),
+          matching: find.byType(GlassIsolationScope),
+        ),
+      );
+      expect(scope.defaultQuality, equals(GlassQuality.premium),
+          reason: 'App bar buttons should default to premium quality');
     });
   });
 }

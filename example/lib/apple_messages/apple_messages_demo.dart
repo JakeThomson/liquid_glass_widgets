@@ -275,6 +275,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
     return GlassScaffold(
       background: const ColoredBox(color: _kBg),
+      settings: _kTriggerGlass,
       statusBarStyle: GlassStatusBarStyle.light,
       appBarHeight: 52,
       bottomBarHeight: 60,
@@ -402,7 +403,7 @@ class _EditMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassMenu(
-      menuWidth: 230,
+      menuWidth: 260,
       glassSettings: _kMenuGlass,
       menuBorderRadius: 16,
       quality: GlassQuality.premium,
@@ -412,9 +413,7 @@ class _EditMenu extends StatelessWidget {
         height: 44,
         // True capsule pill — borderRadius = height/2
         shape: const LiquidRoundedSuperellipse(borderRadius: 22),
-        settings: _kTriggerGlass,
         quality: GlassQuality.premium,
-        useOwnLayer: true, // standalone — outside any LiquidGlassLayer
         child: const Center(
           child: Text(
             'Edit',
@@ -441,6 +440,7 @@ class _EditMenu extends StatelessWidget {
         GlassMenuItem(
           title: 'Set Up Name & Photo',
           icon: const Icon(SFSymbols.person_crop_circle),
+          maxLines: 2,
           onTap: () {},
         ),
       ],
@@ -473,9 +473,7 @@ class _FilterMenu extends StatelessWidget {
         width: 44,
         height: 44,
         shape: const LiquidOval(), // 44×44 = perfect circle
-        settings: _kTriggerGlass,
         quality: GlassQuality.premium,
-        useOwnLayer: true, // standalone — outside any LiquidGlassLayer
         icon: const Icon(
           SFSymbols.line_horizontal_3_decrease,
           color: Colors.white,

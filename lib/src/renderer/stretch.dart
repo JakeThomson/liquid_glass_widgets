@@ -557,10 +557,10 @@ class RenderRawLiquidStretch extends RenderProxyBox {
           // Perpendicular compression (balloon-squeeze): dragging right
           // elongates X and compresses Y, and vice versa.
           // Cap squash at 15% to avoid extreme narrowing on wide buttons.
-          final squashX =
-              1.0 - (relativeY * _anchorSquashFactor * xDamping).clamp(0.0, 0.15);
-          final squashY =
-              1.0 - (relativeX * _anchorSquashFactor * yDamping).clamp(0.0, 0.15);
+          final squashX = 1.0 -
+              (relativeY * _anchorSquashFactor * xDamping).clamp(0.0, 0.15);
+          final squashY = 1.0 -
+              (relativeX * _anchorSquashFactor * yDamping).clamp(0.0, 0.15);
 
           final scaleX = (stretchX * squashX).clamp(0.01, double.infinity);
           final scaleY = (stretchY * squashY).clamp(0.01, double.infinity);
@@ -572,8 +572,10 @@ class RenderRawLiquidStretch extends RenderProxyBox {
           // At ±20px the pivot is fully at the target edge. Near zero it
           // passes through center, and the stretch itself is negligible
           // so the pivot position doesn't produce visible artifacts.
-          final pivotX = size.width * (0.5 - _signedSmoothStep(_stretchPixels.dx, 20.0) * 0.5);
-          final pivotY = size.height * (0.5 - _signedSmoothStep(_stretchPixels.dy, 20.0) * 0.5);
+          final pivotX = size.width *
+              (0.5 - _signedSmoothStep(_stretchPixels.dx, 20.0) * 0.5);
+          final pivotY = size.height *
+              (0.5 - _signedSmoothStep(_stretchPixels.dy, 20.0) * 0.5);
 
           matrix
             ..translateByDouble(pivotX, pivotY, 0.0, 1.0)

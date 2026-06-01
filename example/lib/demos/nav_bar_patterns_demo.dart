@@ -4,12 +4,10 @@
 ///
 ///   1. Transparent + inline title (right of back button)
 ///   2. Transparent + large title below bar (collapsing on scroll)
-///   3. Scroll-driven glass (transparent → glass on scroll)
-///   4. Solid background color (WhatsApp-style)
-///   5. Static glass (always visible)
-///   6. Transparent fade-only (no title in bar)
-///   7. Large title + glass combined
-///   8. Tab bar with bottom fade
+///   3. Solid background color (WhatsApp-style)
+///   4. Transparent fade-only (no title in bar)
+///   5. Tab bar with bottom fade
+///   6. Fade header (no app bar) — Apple Music / Podcasts style
 ///
 /// Run standalone:
 ///   flutter run -t lib/demos/nav_bar_patterns_demo.dart
@@ -47,7 +45,6 @@ class NavBarPatternsDemo extends StatelessWidget {
       statusBarStyle: GlassStatusBarStyle.light,
       appBar: GlassAppBar(
         leading: GlassButton(
-          quality: GlassQuality.premium,
           icon: const Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
@@ -102,24 +99,10 @@ class NavBarPatternsDemo extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _PatternTile(
-                  title: 'Scroll-Driven Glass',
-                  subtitle: 'Transparent at rest, glass materialises on scroll',
-                  icon: CupertinoIcons.sparkles,
-                  onTap: () => _push(context, const _ScrollGlassDemo()),
-                ),
-                const SizedBox(height: 16),
-                _PatternTile(
                   title: 'Solid Background',
                   subtitle: 'Opaque colour bar — WhatsApp conversation style',
                   icon: CupertinoIcons.paintbrush,
                   onTap: () => _push(context, const _SolidBackgroundDemo()),
-                ),
-                const SizedBox(height: 16),
-                _PatternTile(
-                  title: 'Static Glass',
-                  subtitle: 'Always-on glass surface — toolbar / player bar',
-                  icon: CupertinoIcons.rectangle_fill,
-                  onTap: () => _push(context, const _StaticGlassDemo()),
                 ),
                 const SizedBox(height: 16),
                 _PatternTile(
@@ -131,19 +114,18 @@ class NavBarPatternsDemo extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _PatternTile(
-                  title: 'Large Title Glass on Scroll',
-                  subtitle:
-                      'Large title collapses AND glass materialises together',
-                  icon: CupertinoIcons.layers,
-                  onTap: () => _push(context, const _LargeTitleWithGlassDemo()),
-                ),
-                const SizedBox(height: 16),
-                _PatternTile(
                   title: 'Tab Bar + Bottom Fade',
                   subtitle:
                       'Bottom bar with dual edge fade — iOS Settings style',
                   icon: CupertinoIcons.square_grid_2x2,
                   onTap: () => _push(context, const _TabBarBottomFadeDemo()),
+                ),
+                const SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Fade Header (No App Bar)',
+                  subtitle: 'Fixed title fades on scroll — Apple Music style',
+                  icon: CupertinoIcons.music_note_2,
+                  onTap: () => _push(context, const _FadeHeaderDemo()),
                 ),
                 const SizedBox(height: 100),
               ],
@@ -465,69 +447,7 @@ class _LargeTitleCollapseDemoState extends State<_LargeTitleCollapseDemo> {
 }
 
 // =============================================================================
-// 3. Scroll-Driven Glass (transparent → glass)
-// =============================================================================
-
-class _ScrollGlassDemo extends StatefulWidget {
-  const _ScrollGlassDemo();
-
-  @override
-  State<_ScrollGlassDemo> createState() => _ScrollGlassDemoState();
-}
-
-class _ScrollGlassDemoState extends State<_ScrollGlassDemo> {
-  final _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final topPad = MediaQuery.paddingOf(context).top;
-
-    return GlassScaffold(
-      background: buildShowcaseBackground(),
-      settings: RecommendedGlassSettings.standard,
-      statusBarStyle: GlassStatusBarStyle.light,
-      appBar: GlassAppBar(
-        title: const Text(
-          'Messages',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
-        scrollController: _scrollController,
-        settings: RecommendedGlassSettings.surface,
-      ),
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverToBoxAdapter(
-            child: SizedBox(height: topPad + 44 + 16),
-          ),
-          _buildDummyContent(),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 4. Solid Background Colour
+// 3. Solid Background Colour
 // =============================================================================
 
 class _SolidBackgroundDemo extends StatelessWidget {
@@ -547,7 +467,7 @@ class _SolidBackgroundDemo extends StatelessWidget {
       appBar: GlassAppBar(
         backgroundColor: _barColor,
         title: const Text(
-          'Gura Degenaar',
+          'Solid Background',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -594,63 +514,7 @@ class _SolidBackgroundDemo extends StatelessWidget {
 }
 
 // =============================================================================
-// 5. Static Glass (always visible)
-// =============================================================================
-
-class _StaticGlassDemo extends StatelessWidget {
-  const _StaticGlassDemo();
-
-  @override
-  Widget build(BuildContext context) {
-    final topPad = MediaQuery.paddingOf(context).top;
-
-    return GlassScaffold(
-      background: buildShowcaseBackground(),
-      settings: RecommendedGlassSettings.standard,
-      statusBarStyle: GlassStatusBarStyle.light,
-      appBar: GlassAppBar(
-        settings: RecommendedGlassSettings.surface,
-        title: const Text(
-          'Now Playing',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
-        actions: [
-          GlassButton(
-            icon: const Icon(CupertinoIcons.ellipsis),
-            onTap: () {},
-            width: 40,
-            height: 40,
-            iconSize: 20,
-          ),
-        ],
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: SizedBox(height: topPad + 44 + 16),
-          ),
-          _buildDummyContent(),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 6. Fade Only — No Title in Bar
+// 4. Fade Only — No Title in Bar
 // =============================================================================
 
 class _FadeOnlyDemo extends StatelessWidget {
@@ -703,107 +567,7 @@ class _FadeOnlyDemo extends StatelessWidget {
 }
 
 // =============================================================================
-// 7. Large Title + Glass on Scroll (combined)
-// =============================================================================
-
-class _LargeTitleWithGlassDemo extends StatefulWidget {
-  const _LargeTitleWithGlassDemo();
-
-  @override
-  State<_LargeTitleWithGlassDemo> createState() =>
-      _LargeTitleWithGlassDemoState();
-}
-
-class _LargeTitleWithGlassDemoState extends State<_LargeTitleWithGlassDemo> {
-  final _scrollController = ScrollController();
-  double _scrollOffset = 0;
-
-  static const _largeTitleHeight = 52.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    setState(() => _scrollOffset = _scrollController.offset);
-  }
-
-  double get _collapseProgress =>
-      (_scrollOffset / _largeTitleHeight).clamp(0.0, 1.0);
-
-  @override
-  Widget build(BuildContext context) {
-    final topPad = MediaQuery.paddingOf(context).top;
-
-    return GlassScaffold(
-      background: buildShowcaseBackground(),
-      settings: RecommendedGlassSettings.standard,
-      statusBarStyle: GlassStatusBarStyle.light,
-      appBar: GlassAppBar(
-        title: Opacity(
-          opacity: _collapseProgress,
-          child: const Text(
-            'Settings',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
-        scrollController: _scrollController,
-        settings: RecommendedGlassSettings.surface,
-      ),
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverToBoxAdapter(
-            child: SizedBox(height: topPad + 44),
-          ),
-          // Large title that fades out on scroll
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: Text(
-                'Settings',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                  color: Colors.white.withValues(
-                    alpha: 1.0 - _collapseProgress,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          _buildDummyContent(),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 8. Tab Bar + Bottom Fade
+// 5. Tab Bar + Bottom Fade
 // =============================================================================
 
 class _TabBarBottomFadeDemo extends StatefulWidget {
@@ -827,9 +591,8 @@ class _TabBarBottomFadeDemoState extends State<_TabBarBottomFadeDemo> {
       bottomBar: GlassBottomBar(
         selectedIndex: _selectedTab,
         onTabSelected: (index) => setState(() => _selectedTab = index),
-        glassSettings: RecommendedGlassSettings.standard.copyWith(
-        thickness: 20, blur: 3
-        ),
+        glassSettings:
+            RecommendedGlassSettings.standard.copyWith(thickness: 20, blur: 3),
         tabs: const [
           GlassBottomBarTab(
             icon: Icon(CupertinoIcons.house_fill),
@@ -871,6 +634,114 @@ class _TabBarBottomFadeDemoState extends State<_TabBarBottomFadeDemo> {
         slivers: [
           SliverToBoxAdapter(
             child: SizedBox(height: topPad + 44 + 16),
+          ),
+          _buildDummyContent(),
+          const SliverToBoxAdapter(child: SizedBox(height: 120)),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Pattern 6 — Fade Header (No App Bar)
+//
+// Fixed large title positioned below the status bar that fades out as the
+// user scrolls. Uses GlassScaffold.header + headerScrollController.
+// This is the pattern Apple Music and Podcasts use for their home screens.
+// =============================================================================
+
+class _FadeHeaderDemo extends StatefulWidget {
+  const _FadeHeaderDemo();
+
+  @override
+  State<_FadeHeaderDemo> createState() => _FadeHeaderDemoState();
+}
+
+class _FadeHeaderDemoState extends State<_FadeHeaderDemo> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+
+    return GlassScaffold(
+      background: buildShowcaseBackground(),
+      settings: RecommendedGlassSettings.standard,
+      statusBarStyle: GlassStatusBarStyle.light,
+      topEdgeFade: true,
+      bottomEdgeFade: true,
+
+      // ── Fixed header — fades out on scroll ──────────────────────────────
+      header: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 16, 0),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Listen Now',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Color(0xFF4C4556),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'SD',
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+      headerScrollController: _scrollController,
+      headerFadeDistance: 30,
+
+      // ── Bottom bar (no app bar in this pattern) ─────────────────────────
+      bottomBar: GlassBottomBar(
+        selectedIndex: 0,
+        onTabSelected: (_) {},
+        glassSettings:
+            RecommendedGlassSettings.standard.copyWith(thickness: 20, blur: 3),
+        tabs: const [
+          GlassBottomBarTab(
+            icon: Icon(CupertinoIcons.house_fill),
+            label: 'Home',
+          ),
+          GlassBottomBarTab(
+            icon: Icon(CupertinoIcons.antenna_radiowaves_left_right),
+            label: 'Radio',
+          ),
+          GlassBottomBarTab(
+            icon: Icon(CupertinoIcons.music_albums),
+            label: 'Library',
+          ),
+        ],
+      ),
+
+      body: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          // Extra top space for the fixed header overlay.
+          SliverToBoxAdapter(
+            child: SizedBox(height: topPad + 90),
           ),
           _buildDummyContent(),
           const SliverToBoxAdapter(child: SizedBox(height: 120)),

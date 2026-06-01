@@ -7,6 +7,7 @@ import '../../types/glass_quality.dart';
 import '../../types/glass_button_style.dart';
 import '../shared/adaptive_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
+import '../surfaces/glass_app_bar.dart';
 
 /// Glass morphism button with scale animation and glow effects.
 ///
@@ -285,13 +286,14 @@ class GlassButton extends StatefulWidget {
   /// Defaults to [LiquidOval].
   final LiquidShape shape;
 
-  /// Glass effect settings (only used when [useOwnLayer] is true).
+  /// Glass effect settings for the button.
   ///
   /// Controls the visual appearance of the glass effect including thickness,
   /// blur radius, color tint, lighting, and more.
   ///
-  /// If null when [useOwnLayer] is true, uses [LiquidGlassSettings] defaults.
-  /// Ignored when [useOwnLayer] is false (inherits from parent layer).
+  /// If null, settings are inherited from [DefaultButtonSettings] (set via
+  /// [GlassAppBar.buttonSettings]), then from the page-level glass layer,
+  /// then from the app-level [GlassTheme].
   final LiquidGlassSettings? settings;
 
   /// Whether to create its own layer or use grouped glass within an existing
@@ -663,9 +665,12 @@ class _GlassButtonState extends State<GlassButton>
           return child!;
         }
 
+        // Resolve settings: widget explicit → app bar default → inherited.
+        final effectiveExplicit =
+            widget.settings ?? DefaultButtonSettings.of(context);
         final baseSettings = GlassThemeHelpers.resolveSettings(
           context,
-          explicit: widget.settings,
+          explicit: effectiveExplicit,
         );
 
         // Fix jagged edges on premium glass during stretch animations while
@@ -692,6 +697,10 @@ class _GlassButtonState extends State<GlassButton>
         // The saturation animation is 0.0 at rest, 1.0 when pressed.
         final double clipExpansion =
             needsEdgeClip ? 2.0 * (1.0 - _saturationAnimation.value) : 0.0;
+
+        // useOwnLayer is passed through to AdaptiveGlass, which automatically
+        // promotes interactive elements to own-layer in premium mode (via
+        // isInteractive: true). No need to auto-promote here.
 
         // Pass glow intensity directly to AdaptiveGlass for Skia shader feedback.
         // On Impeller, GlassGlow widget is used instead (separate from glass effect).
@@ -745,28 +754,24 @@ class _GlassButtonState extends State<GlassButton>
     final themeInteraction = GlassThemeData.of(context).interaction;
 
     final stretchContent = LiquidStretch(
-      interactionScale:
-          widget.interactionScale != 1.05
-              ? widget.interactionScale
-              : themeInteraction.interactionScale ?? widget.interactionScale,
-      stretch:
-          widget.stretch != 0.5
-              ? widget.stretch
-              : themeInteraction.stretch ?? widget.stretch,
-      resistance:
-          widget.resistance != 0.01
-              ? widget.resistance
-              : themeInteraction.resistance ?? widget.resistance,
+      interactionScale: widget.interactionScale != 1.05
+          ? widget.interactionScale
+          : themeInteraction.interactionScale ?? widget.interactionScale,
+      stretch: widget.stretch != 0.5
+          ? widget.stretch
+          : themeInteraction.stretch ?? widget.stretch,
+      resistance: widget.resistance != 0.01
+          ? widget.resistance
+          : themeInteraction.resistance ?? widget.resistance,
       hitTestBehavior: widget.stretchHitTestBehavior,
-      anchorStretch:
-          widget.anchorStretch != true
-              ? widget.anchorStretch
-              : themeInteraction.anchorStretch ?? widget.anchorStretch,
-      anchorStretchSettings:
-          !identical(widget.anchorStretchSettings, const AnchorStretchSettings())
-              ? widget.anchorStretchSettings
-              : themeInteraction.anchorStretchSettings ??
-                    widget.anchorStretchSettings,
+      anchorStretch: widget.anchorStretch != true
+          ? widget.anchorStretch
+          : themeInteraction.anchorStretch ?? widget.anchorStretch,
+      anchorStretchSettings: !identical(
+              widget.anchorStretchSettings, const AnchorStretchSettings())
+          ? widget.anchorStretchSettings
+          : themeInteraction.anchorStretchSettings ??
+              widget.anchorStretchSettings,
       child: Semantics(
         button: true,
         label: widget.label.isNotEmpty ? widget.label : null,

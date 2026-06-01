@@ -70,8 +70,7 @@ class GlassInteractionSettings {
 
   /// Default interaction settings — all null, meaning each widget uses
   /// its own hardcoded default.
-  static const GlassInteractionSettings defaults =
-      GlassInteractionSettings();
+  static const GlassInteractionSettings defaults = GlassInteractionSettings();
 
   /// The factor to multiply the drag offset by to determine the stretch
   /// amount in pixels.

@@ -289,9 +289,21 @@ class AdaptiveGlass extends StatelessWidget {
     // Impeller + Premium Path: Use the renderer's native path.
     // Wrap in PremiumGlassTracker so GlassPerformanceMonitor can correlate
     // slow raster frames with active premium surfaces.
+    //
     // Force useOwnLayer when inside a GlassIsolationScope (e.g. GlassScaffold
-    // app bar / bottom bar). This prevents body glass cards from compositing
-    // over the bar's glass buttons in the shared page-level layer.
+    // bottom bar). This gives bars their own compositing layer so body glass
+    // cards don't composite over bar buttons.
+    //
+    // NOTE: isInteractive is NOT included here. It only controls
+    // RepaintBoundary wrapping (lines below). Including it would force
+    // every GlassButton into its own compositing layer, breaking grouped
+    // rendering inside bars (e.g. BottomBarExtraBtn must blend with the
+    // tab pill, not render as a separate glass surface). Buttons that need
+    // independent refraction should set useOwnLayer: true explicitly.
+    //
+    // De-isolate children of the own-layer so nested glass (e.g. tab
+    // items inside a bottom bar) groups with this layer rather than
+    // creating additional own-layers (which would cause double-glass).
     final effectiveUseOwnLayer =
         useOwnLayer || GlassIsolationScope.isIsolated(context);
 
@@ -300,7 +312,15 @@ class AdaptiveGlass extends StatelessWidget {
         shape: shape,
         settings: settings,
         clipBehavior: clipBehavior,
-        child: child,
+        // De-isolate children so nested glass groups with this own-layer
+        // rather than creating its own (which causes double-glass).
+        // Carry the parent's defaultQuality through so quality hints
+        // (e.g. premium for bars) are preserved even when de-isolated.
+        child: GlassIsolationScope(
+          isolated: false,
+          defaultQuality: GlassIsolationScope.defaultQualityOf(context),
+          child: child,
+        ),
       );
 
       // Wrap in RepaintBoundary to give Impeller hints for tile-based rendering.

@@ -320,15 +320,13 @@ class GlassChip extends StatelessWidget {
         : chipContent;
 
     // Resolve interaction settings: explicit widget param > theme > chip default
-    final themeInteraction =
-        GlassThemeData.of(context).interaction;
+    final themeInteraction = GlassThemeData.of(context).interaction;
 
     final effectiveInteractionScale = interactionScale != 1.03
         ? interactionScale
         : themeInteraction.interactionScale ?? interactionScale;
-    final effectiveStretch = stretch != 0.3
-        ? stretch
-        : themeInteraction.stretch ?? stretch;
+    final effectiveStretch =
+        stretch != 0.3 ? stretch : themeInteraction.stretch ?? stretch;
     final effectiveAnchorStretch = anchorStretch != true
         ? anchorStretch
         : themeInteraction.anchorStretch ?? anchorStretch;

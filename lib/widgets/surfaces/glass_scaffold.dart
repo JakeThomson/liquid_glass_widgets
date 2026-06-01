@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../types/glass_quality.dart';
 import '../../theme/glass_theme_data.dart';
 import '../shared/glass_isolation_scope.dart';
 import '../shared/glass_page.dart';
@@ -91,8 +93,9 @@ import '../shared/glass_scroll_edge_effect.dart';
 ///     body: Stack(
 ///       children: [
 ///         // 1. Body with edge fading (bottom of stack)
-///         // 2. App bar (top of stack — always above body)
-///         // 3. Bottom bar (top of stack — always above body)
+///         // 2. Body overlays (between body and bars)
+///         // 3. App bar (top of stack — always above body)
+///         // 4. Bottom bar (top of stack — always above body)
 ///       ],
 ///     ),
 ///   ),
@@ -119,14 +122,18 @@ class GlassScaffold extends StatelessWidget {
     this.edgeFade = true,
     this.topEdgeFade,
     this.bottomEdgeFade,
-    this.topEdgeFadeExtent = 40.0,
-    this.bottomEdgeFadeExtent = 40.0,
+    this.topEdgeFadeExtent = 20.0,
+    this.bottomEdgeFadeExtent = 20.0,
     this.edgeStyle = GlassScrollEdgeStyle.soft,
     this.extendBody = true,
     this.appBarHeight = 44.0,
     this.bottomBarHeight,
     this.floatingActionButton,
     this.resizeToAvoidBottomInset,
+    this.bodyOverlays,
+    this.header,
+    this.headerScrollController,
+    this.headerFadeDistance = 60.0,
   });
 
   // ===========================================================================
@@ -205,13 +212,13 @@ class GlassScaffold extends StatelessWidget {
   /// Extra fade height beyond the auto-calculated app bar area.
   ///
   /// The total top fade height = safe area top + [appBarHeight] +
-  /// [topEdgeFadeExtent]. Defaults to 40.0.
+  /// [topEdgeFadeExtent]. Defaults to 20.0.
   final double topEdgeFadeExtent;
 
   /// Extra fade height beyond the auto-calculated bottom bar area.
   ///
   /// The total bottom fade height = [bottomBarHeight] + safe area bottom +
-  /// [bottomEdgeFadeExtent]. Defaults to 40.0.
+  /// [bottomEdgeFadeExtent]. Defaults to 20.0.
   final double bottomEdgeFadeExtent;
 
   /// The edge fade style. See [GlassScrollEdgeStyle].
@@ -248,6 +255,61 @@ class GlassScaffold extends StatelessWidget {
   /// When null, uses Scaffold's default (true).
   final bool? resizeToAvoidBottomInset;
 
+  /// Optional overlay widgets placed between the body and the bars in the
+  /// z-order Stack.
+  ///
+  /// Use this for floating elements that should render above the body content
+  /// but below the app bar and bottom bar. Each widget is typically wrapped
+  /// in an [AnimatedPositioned] or [Positioned].
+  ///
+  /// Example: Apple Music's floating play bar pill:
+  /// ```dart
+  /// GlassScaffold(
+  ///   bodyOverlays: [
+  ///     AnimatedPositioned(
+  ///       bottom: isMiniMode ? miniBottom : aboveBarBottom,
+  ///       left: 20, right: 20,
+  ///       child: PlayBarPill(),
+  ///     ),
+  ///   ],
+  ///   bottomBar: GlassSearchableBottomBar(...),
+  ///   body: scrollContent,
+  /// )
+  /// ```
+  final List<Widget>? bodyOverlays;
+
+  /// A fixed header widget positioned below the status bar that fades out
+  /// as the user scrolls.
+  ///
+  /// Use this for iOS-style large title headers (e.g. Apple Music's
+  /// "Listen Now") that are not part of the scroll view but fade to
+  /// transparent as content scrolls up.
+  ///
+  /// Requires [headerScrollController] to drive the fade animation.
+  /// The fade is computed as `1.0 - (scrollOffset / headerFadeDistance)`.
+  ///
+  /// ```dart
+  /// GlassScaffold(
+  ///   header: Text('Listen Now', style: largeTitle),
+  ///   headerScrollController: _scrollController,
+  ///   headerFadeDistance: 60.0,
+  ///   body: CustomScrollView(
+  ///     controller: _scrollController,
+  ///     slivers: [...],
+  ///   ),
+  /// )
+  /// ```
+  final Widget? header;
+
+  /// The scroll controller that drives the [header] fade animation.
+  ///
+  /// Required when [header] is provided.
+  final ScrollController? headerScrollController;
+
+  /// The scroll distance (in pixels) over which the [header] fades from
+  /// fully opaque to fully transparent. Defaults to 60.0.
+  final double headerFadeDistance;
+
   // ===========================================================================
   // Build
   // ===========================================================================
@@ -272,7 +334,11 @@ class GlassScaffold extends StatelessWidget {
     final doFadeBottom = bottomEdgeFade ?? (edgeFade && bottomBar != null);
 
     // Calculate fade heights.
-    final topFadeHeight = topPad + effectiveAppBarHeight + topEdgeFadeExtent;
+    // Only include appBarHeight when an appBar is present — without one, the
+    // fade covers just the status bar area + extent.
+    final topFadeHeight = topPad +
+        (appBar != null ? effectiveAppBarHeight : 0.0) +
+        topEdgeFadeExtent;
     final bottomFadeHeight =
         effectiveBottomBarHeight + botPad + bottomEdgeFadeExtent;
 
@@ -292,6 +358,10 @@ class GlassScaffold extends StatelessWidget {
     }
 
     // Build the Stack with guaranteed z-ordering.
+    // All conditional children have explicit Keys so that Flutter can track
+    // them by identity rather than position. Without keys, toggling header
+    // (null → widget → null) shifts the index of appBar and bottomBar,
+    // causing Flutter to unmount/remount them — losing animation state.
     final stackChildren = <Widget>[
       // 1. Body (bottom of stack — always below bars).
       if (extendBody)
@@ -305,30 +375,111 @@ class GlassScaffold extends StatelessWidget {
           child: bodyContent,
         ),
 
+      // 2. Body overlays (between body and bars — e.g. floating play pill).
+      if (bodyOverlays != null) ...bodyOverlays!,
+
+      // 2b. Fixed header — fades on scroll (e.g. "Listen Now" in Apple Music).
+      // IgnorePointer is only active when opacity == 0 (fully faded) so that
+      // tappable elements inside the header work at full visibility.
+      if (header != null)
+        Positioned(
+          key: const ValueKey('glass_scaffold_header'),
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            bottom: false,
+            child: headerScrollController != null
+                ? AnimatedBuilder(
+                    animation: headerScrollController!,
+                    builder: (context, child) {
+                      final offset = headerScrollController!.hasClients
+                          ? headerScrollController!.offset
+                          : 0.0;
+                      // Guard against divide-by-zero if headerFadeDistance == 0.
+                      final opacity = headerFadeDistance > 0
+                          ? (1.0 - offset / headerFadeDistance).clamp(0.0, 1.0)
+                          : (offset > 0 ? 0.0 : 1.0);
+                      return IgnorePointer(
+                        // Disable hit-testing only when fully invisible.
+                        ignoring: opacity == 0.0,
+                        child: Opacity(opacity: opacity, child: child),
+                      );
+                    },
+                    child: header!,
+                  )
+                : header!,
+          ),
+        ),
+
       // 2. App bar (above body — painted after body in Stack).
       // Uses _GlassIsolationScope to tell descendant glass widgets
       // (GlassButton, AdaptiveGlass) to render with their own independent
       // glass layer instead of sharing the page-level layer. This prevents
-      // body glass cards from compositing over the app bar's glass buttons.
-      // Zero shader overhead — no extra glass layer is created. Each button
-      // simply renders its own small glass surface independently.
+      // body glass cards from compositing over the app bar's glass buttons,
+      // and ensures the glass background paints in the correct Z-order.
+      // If isolated were false, the button's background would paint in the
+      // page's blend group (which is behind the body text), while the button's
+      // foreground would paint here, causing visual tearing.
       if (appBar != null)
         Positioned(
+          key: const ValueKey('glass_scaffold_app_bar'),
           top: 0,
           left: 0,
           right: 0,
-          child: GlassIsolationScope(child: appBar!),
+          child: GlassIsolationScope(
+            isolated: true,
+            defaultQuality: GlassQuality.premium,
+            child: appBar!,
+          ),
         ),
 
       // 3. Bottom bar (above body — painted after body in Stack).
       if (bottomBar != null)
         Positioned(
+          key: const ValueKey('glass_scaffold_bottom_bar'),
           left: 0,
           right: 0,
           bottom: 0,
-          child: GlassIsolationScope(child: bottomBar!),
+          child: GlassIsolationScope(
+            isolated: true,
+            defaultQuality: GlassQuality.premium,
+            child: bottomBar!,
+          ),
         ),
     ];
+
+    // Resolve the system UI overlay style for the AnnotatedRegion.
+    // This ensures the status bar icons are correctly styled even on routes
+    // pushed via CupertinoPageRoute (which manages its own AnnotatedRegion).
+    // Without this, pages without a GlassAppBar lose the status bar icons
+    // because CupertinoPageRoute's default region overrides the imperative
+    // SystemChrome call from GlassPage.
+    final bool useLightIcons = switch (statusBarStyle) {
+      GlassStatusBarStyle.light => true,
+      GlassStatusBarStyle.dark => false,
+      GlassStatusBarStyle.auto =>
+        MediaQuery.platformBrightnessOf(context) == Brightness.dark,
+      GlassStatusBarStyle.none => true, // doesn't matter — no region
+    };
+
+    Widget scaffold = Scaffold(
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+      floatingActionButton: floatingActionButton,
+      body: Stack(children: stackChildren),
+    );
+
+    // Wrap in AnnotatedRegion so the status bar style sticks even on
+    // CupertinoPageRoute transitions that manage their own region.
+    if (statusBarStyle != GlassStatusBarStyle.none) {
+      scaffold = AnnotatedRegion<SystemUiOverlayStyle>(
+        value: useLightIcons
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        child: scaffold,
+      );
+    }
 
     return GlassPage(
       background: background,
@@ -337,13 +488,7 @@ class GlassScaffold extends StatelessWidget {
       edgeToEdge: edgeToEdge,
       themeOverride: themeOverride,
       enableBackgroundSampling: enableBackgroundSampling,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        resizeToAvoidBottomInset: resizeToAvoidBottomInset,
-        floatingActionButton: floatingActionButton,
-        body: Stack(children: stackChildren),
-      ),
+      child: scaffold,
     );
   }
 }
-
