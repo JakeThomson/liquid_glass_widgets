@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -147,9 +148,38 @@ void main() {
       expect(coloredBox.color, equals(const Color(0xFF2C2C2E)));
     });
 
-    testWidgets('implements PreferredSizeWidget', (tester) async {
+    testWidgets('implements ObstructingPreferredSizeWidget', (tester) async {
       const appBar = GlassAppBar();
       expect(appBar, isA<PreferredSizeWidget>());
+      expect(appBar, isA<ObstructingPreferredSizeWidget>());
+    });
+
+    testWidgets(
+        'shouldFullyObstruct returns false for transparent background (default)',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(child: const Scaffold(appBar: GlassAppBar())),
+      );
+
+      final appBar = tester.widget<GlassAppBar>(find.byType(GlassAppBar));
+      final context = tester.element(find.byType(GlassAppBar));
+      expect(appBar.shouldFullyObstruct(context), isFalse);
+    });
+
+    testWidgets(
+        'shouldFullyObstruct returns true for fully opaque background',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: const Scaffold(
+            appBar: GlassAppBar(backgroundColor: Colors.black),
+          ),
+        ),
+      );
+
+      final appBar = tester.widget<GlassAppBar>(find.byType(GlassAppBar));
+      final context = tester.element(find.byType(GlassAppBar));
+      expect(appBar.shouldFullyObstruct(context), isTrue);
     });
 
     test('defaults are correct', () {

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
@@ -50,8 +51,10 @@ import '../shared/glass_isolation_scope.dart';
 /// )
 /// ```
 ///
-/// This widget implements [PreferredSizeWidget] for use in [Scaffold.appBar].
-class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
+/// This widget implements [ObstructingPreferredSizeWidget] for use in both
+/// [Scaffold.appBar] and [CupertinoPageScaffold.navigationBar].
+class GlassAppBar extends StatelessWidget
+    implements ObstructingPreferredSizeWidget {
   /// Creates a glass app bar.
   ///
   /// The bar itself is a simple layout container with a [backgroundColor].
@@ -95,6 +98,15 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// The preferred height of the app bar.
   @override
   final Size preferredSize;
+
+  /// Whether this app bar fully obstructs the content behind it.
+  ///
+  /// Returns `true` only when [backgroundColor] is fully opaque (alpha = 1.0).
+  /// With the default transparent background, this returns `false`, which
+  /// tells [CupertinoPageScaffold] to extend the body behind the bar —
+  /// matching the iOS 26 transparent navigation bar pattern.
+  @override
+  bool shouldFullyObstruct(BuildContext context) => backgroundColor.a >= 1.0;
 
   /// Padding around the app bar content.
   final EdgeInsetsGeometry padding;
