@@ -99,7 +99,7 @@ class AdaptiveGlass extends StatelessWidget {
   static bool get _canUseImpeller => ui.ImageFilter.isShaderFilterSupported;
 
   /// Static helper to render glass in a grouped context without creating a new layer.
-  /// This is the adaptive replacement for [LiquidGlass.grouped].
+  /// This is the adaptive replacement for [LiquidGlass.withOwnLayer].
   static Widget grouped({
     required LiquidShape shape,
     required Widget child,
@@ -174,7 +174,7 @@ class AdaptiveGlass extends StatelessWidget {
       );
     }
 
-    // If we are on Skia/Web, we CANNOT use LiquidGlass.grouped or withOwnLayer
+    // If we are on Skia/Web, we CANNOT use LiquidGlass.withOwnLayer or withOwnLayer
     // because those will fall back to FakeGlass (solid color) inside the renderer.
     // We MUST use our LightweightLiquidGlass to get actual glass effects.
 
@@ -279,11 +279,7 @@ class AdaptiveGlass extends StatelessWidget {
         child: child,
       );
 
-      Widget result = lightweightWidget;
-      if (!isInteractive) {
-        result = RepaintBoundary(child: result);
-      }
-      return result;
+      return lightweightWidget;
     }
 
     // Impeller + Premium Path: Use the renderer's native path.
@@ -323,17 +319,12 @@ class AdaptiveGlass extends StatelessWidget {
         ),
       );
 
-      // Wrap in RepaintBoundary to give Impeller hints for tile-based rendering.
-      // This allows Impeller to skip rasterizing unchanged tiles, improving
-      // performance for static surfaces (app bars, bottom bars, etc.)
-      if (!isInteractive) {
-        premium = RepaintBoundary(child: premium);
-      }
-
       return PremiumGlassTracker(
         child: premium,
       );
     } else {
+      // Grouped elements (e.g. inside GlassBottomBar) rely on the ancestor's
+      // LiquidGlassLayer to provide the RepaintBoundary and BackdropGroup.
       return PremiumGlassTracker(
         child: LiquidGlass.grouped(
           shape: shape,

@@ -1,4 +1,10 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+
+import '../interactive/liquid_glass_scope.dart';
 
 /// Edge effect style matching iOS 26's `.scrollEdgeEffectStyle`.
 ///
@@ -20,10 +26,28 @@ enum GlassScrollEdgeStyle {
 
 /// A widget that fades scroll content at the top and/or bottom edges.
 ///
-/// Matches iOS 26's `.scrollEdgeEffectStyle(_:for:)` modifier. Wraps a
-/// scrollable child in a [ShaderMask] that applies alpha gradient fades
-/// at the specified edges, creating the effect of content dissolving into
-/// navigation bars or bottom bars rather than clipping sharply.
+/// Matches iOS 26's `.scrollEdgeEffectStyle(_:for:)` modifier. Places gradient
+/// overlays at the specified edges, creating the effect of content dissolving
+/// into navigation bars or bottom bars rather than clipping sharply.
+///
+/// ## How it works
+///
+/// **Inside [GlassPage]** (recommended): Automatically captures the page's
+/// background texture and paints it over the scroll edges with a gradient
+/// alpha mask. This produces a pixel-perfect fade for ANY background —
+/// images, patterns, mesh gradients, anything. No configuration needed.
+///
+/// **Outside [GlassPage]**: Falls back to a solid-colour gradient overlay
+/// using [fadeColor] (or the scaffold background colour from the theme).
+/// Works perfectly for solid-colour and simple gradient backgrounds.
+///
+/// ## Why not ShaderMask?
+///
+/// `ShaderMask(blendMode: BlendMode.dstIn)` creates a `saveLayer` that
+/// breaks `BackdropFilterLayer` (premium glass) on Impeller — glass widgets
+/// inside it render as opaque black because `BackdropFilterLayer` samples an
+/// empty backdrop within the `saveLayer` boundary. This widget avoids that
+/// by placing overlays ON TOP of the content rather than wrapping it.
 ///
 /// ## Usage
 ///
@@ -53,8 +77,15 @@ enum GlassScrollEdgeStyle {
 ///
 /// The [topFadeHeight] should typically cover the safe area + app bar height
 /// + a buffer zone so content fades before reaching the navigation buttons.
-class GlassScrollEdgeEffect extends StatelessWidget {
+class GlassScrollEdgeEffect extends StatefulWidget {
   /// Creates a scroll edge effect that fades content at the edges.
+  ///
+  /// When used inside a [GlassPage] with a background widget, the fade
+  /// automatically uses the page's background texture for a pixel-perfect
+  /// effect. No [fadeColor] is needed.
+  ///
+  /// When used outside [GlassPage], provide [fadeColor] to match your
+  /// background, or let it default to the scaffold background colour.
   const GlassScrollEdgeEffect({
     super.key,
     required this.child,
@@ -63,6 +94,7 @@ class GlassScrollEdgeEffect extends StatelessWidget {
     this.fadeTop = true,
     this.fadeBottom = true,
     this.style = GlassScrollEdgeStyle.soft,
+    this.fadeColor,
   });
 
   /// The scrollable content to apply edge fading to.
@@ -103,53 +135,241 @@ class GlassScrollEdgeEffect extends StatelessWidget {
   /// Matches iOS 26's `.scrollEdgeEffectStyle(.soft/.hard, for: .top)`.
   final GlassScrollEdgeStyle style;
 
+  /// Fallback colour used when no background texture is available.
+  ///
+  /// This is only used outside [GlassPage] (i.e. when there is no
+  /// [LiquidGlassScope] ancestor providing a background texture).
+  ///
+  /// When `null`, falls back to the scaffold background colour from the
+  /// current theme.
+  final Color? fadeColor;
+
+  @override
+  State<GlassScrollEdgeEffect> createState() => _GlassScrollEdgeEffectState();
+}
+
+class _GlassScrollEdgeEffectState extends State<GlassScrollEdgeEffect> {
+  GlobalKey? _backgroundKey;
+  ui.Image? _backgroundImage;
+  bool _hasAttemptedCapture = false;
+  bool _capturePending = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _backgroundKey = LiquidGlassScope.of(context);
+    _captureBackground();
+  }
+
+  void _captureBackground() {
+    if (_backgroundKey == null) {
+      _hasAttemptedCapture = true;
+      return;
+    }
+
+    final boundary = _backgroundKey!.currentContext?.findRenderObject()
+        as RenderRepaintBoundary?;
+
+    if (boundary == null || !boundary.hasSize || boundary.size.isEmpty) {
+      // Boundary not ready yet — retry after the first frame.
+      if (!_hasAttemptedCapture) {
+        _hasAttemptedCapture = true;
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _captureBackground();
+        });
+      }
+      return;
+    }
+
+    _hasAttemptedCapture = true;
+
+    // In debug mode, toImageSync asserts if the boundary is marked as needing paint.
+    // If it needs paint, wait for the next frame.
+    bool needsPaint = false;
+    assert(() {
+      needsPaint = boundary.debugNeedsPaint;
+      return true;
+    }());
+
+    if (needsPaint) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _captureBackground();
+      });
+      return;
+    }
+
+    if (_capturePending) return; // Already in-flight — don't stack captures.
+    _capturePending = true;
+    boundary.toImage(pixelRatio: 1.0).then((image) {
+      _capturePending = false;
+      if (!mounted) {
+        image.dispose();
+        return;
+      }
+      _backgroundImage?.dispose();
+      _backgroundImage = image;
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _backgroundImage?.dispose();
+    _backgroundImage = null;
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     // No fading needed — return child directly.
-    if (!fadeTop && !fadeBottom) return child;
+    if (!widget.fadeTop && !widget.fadeBottom) return widget.child;
 
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (Rect bounds) {
-        // Compute fractional stops based on fade heights relative to the
-        // total bounds. Soft uses a smooth linear gradient; hard uses a
-        // tighter transition zone (1/3 of the soft height).
-        final effectiveTopHeight =
-            fadeTop ? _effectiveHeight(topFadeHeight, bounds.height) : 0.0;
-        final effectiveBottomHeight = fadeBottom
-            ? _effectiveHeight(bottomFadeHeight, bounds.height)
-            : 0.0;
+    final screenSize = MediaQuery.sizeOf(context);
+    final hasTexture = _backgroundImage != null;
 
-        final topStop = effectiveTopHeight / bounds.height;
-        final bottomStop =
-            (bounds.height - effectiveBottomHeight) / bounds.height;
+    return Stack(
+      children: [
+        // 1. Scroll content — no compositing layer wrapping it.
+        widget.child,
 
-        return LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            if (fadeTop) Colors.transparent,
-            Colors.black,
-            Colors.black,
-            if (fadeBottom) Colors.transparent,
-          ],
-          stops: [
-            if (fadeTop) 0.0,
-            fadeTop ? topStop : 0.0,
-            fadeBottom ? bottomStop : 1.0,
-            if (fadeBottom) 1.0,
-          ],
-        ).createShader(bounds);
-      },
-      child: child,
+        // 2. Top fade overlay.
+        if (widget.fadeTop)
+          _buildOverlay(
+            isTop: true,
+            height: _effectiveHeight(widget.topFadeHeight, screenSize.height),
+            screenSize: screenSize,
+            hasTexture: hasTexture,
+          ),
+
+        // 3. Bottom fade overlay.
+        if (widget.fadeBottom)
+          _buildOverlay(
+            isTop: false,
+            height:
+                _effectiveHeight(widget.bottomFadeHeight, screenSize.height),
+            screenSize: screenSize,
+            hasTexture: hasTexture,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildOverlay({
+    required bool isTop,
+    required double height,
+    required Size screenSize,
+    required bool hasTexture,
+  }) {
+    return Positioned(
+      top: isTop ? 0 : null,
+      bottom: isTop ? null : 0,
+      left: 0,
+      right: 0,
+      height: height,
+      child: IgnorePointer(
+        child: hasTexture
+            ? CustomPaint(
+                size: Size(screenSize.width, height),
+                painter: _TextureFadePainter(
+                  image: _backgroundImage!,
+                  isTop: isTop,
+                  screenHeight: screenSize.height,
+                ),
+              )
+            : _buildColorOverlay(isTop: isTop),
+      ),
+    );
+  }
+
+  /// Fallback: solid-colour gradient overlay for use outside [GlassPage].
+  Widget _buildColorOverlay({required bool isTop}) {
+    final color = widget.fadeColor ?? Theme.of(context).scaffoldBackgroundColor;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: isTop ? Alignment.topCenter : Alignment.bottomCenter,
+          end: isTop ? Alignment.bottomCenter : Alignment.topCenter,
+          colors: [color, color.withValues(alpha: 0)],
+        ),
+      ),
     );
   }
 
   double _effectiveHeight(double height, double boundsHeight) {
     // Hard style uses a tighter transition (1/3 of soft).
     final adjusted =
-        style == GlassScrollEdgeStyle.hard ? height * 0.33 : height;
+        widget.style == GlassScrollEdgeStyle.hard ? height * 0.33 : height;
     // Clamp to half the available height to avoid overlapping zones.
     return adjusted.clamp(0.0, boundsHeight * 0.4);
   }
+}
+
+/// Paints a slice of the background texture with a gradient alpha mask.
+///
+/// This is the core of the texture overlay approach: it takes the background
+/// image captured by [GlassBackgroundSource], extracts the top or bottom
+/// strip, and paints it with a gradient from fully opaque (at the edge) to
+/// fully transparent (towards the content). Visually, this is identical to
+/// fading the content to transparent and revealing the background.
+///
+/// Uses [BlendMode.dstIn] inside a [Canvas.saveLayer] to apply the gradient
+/// mask. Since this painter only draws a static image (no [BackdropFilterLayer]),
+/// the `saveLayer` is safe and does not interfere with glass rendering.
+class _TextureFadePainter extends CustomPainter {
+  _TextureFadePainter({
+    required this.image,
+    required this.isTop,
+    required this.screenHeight,
+  });
+
+  final ui.Image image;
+  final bool isTop;
+  final double screenHeight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+
+    // The image is captured at pixelRatio: 1.0, so its pixel dimensions
+    // match logical dimensions. Calculate the source strip from the
+    // corresponding edge of the background.
+    final double scaleY = image.height / screenHeight;
+
+    final Rect srcRect = isTop
+        ? Rect.fromLTWH(0, 0, image.width.toDouble(), size.height * scaleY)
+        : Rect.fromLTWH(
+            0,
+            image.height - size.height * scaleY,
+            image.width.toDouble(),
+            size.height * scaleY,
+          );
+
+    final Rect dstRect = Offset.zero & size;
+
+    // Paint the background strip with gradient alpha.
+    // saveLayer is safe here — no BackdropFilterLayer inside.
+    canvas.saveLayer(dstRect, Paint());
+
+    // Draw the background texture slice.
+    canvas.drawImageRect(image, srcRect, dstRect, Paint());
+
+    // Apply gradient alpha mask: opaque at the edge, transparent towards
+    // the content.
+    final gradientPaint = Paint()
+      ..blendMode = BlendMode.dstIn
+      ..shader = LinearGradient(
+        begin: isTop ? Alignment.topCenter : Alignment.bottomCenter,
+        end: isTop ? Alignment.bottomCenter : Alignment.topCenter,
+        colors: const [Color(0xFF000000), Color(0x00000000)],
+      ).createShader(dstRect);
+
+    canvas.drawRect(dstRect, gradientPaint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_TextureFadePainter oldDelegate) =>
+      image != oldDelegate.image ||
+      isTop != oldDelegate.isTop ||
+      screenHeight != oldDelegate.screenHeight;
 }

@@ -18,7 +18,8 @@ void main() {
       expect(find.text('Hello'), findsOneWidget);
     });
 
-    testWidgets('wraps child in ShaderMask when fading', (tester) async {
+    testWidgets('wraps child in Stack with fade overlays when fading',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: GlassScrollEdgeEffect(
@@ -32,13 +33,13 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(GlassScrollEdgeEffect),
-          matching: find.byType(ShaderMask),
+          matching: find.byType(Stack),
         ),
         findsOneWidget,
       );
     });
 
-    testWidgets('skips ShaderMask when both fades disabled', (tester) async {
+    testWidgets('skips Stack when both fades disabled', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: GlassScrollEdgeEffect(
@@ -51,11 +52,11 @@ void main() {
         ),
       );
 
-      // Should not have a ShaderMask
+      // Should not have a Stack
       expect(
         find.descendant(
           of: find.byType(GlassScrollEdgeEffect),
-          matching: find.byType(ShaderMask),
+          matching: find.byType(Stack),
         ),
         findsNothing,
       );
@@ -79,7 +80,7 @@ void main() {
       expect(GlassScrollEdgeStyle.values, contains(GlassScrollEdgeStyle.hard));
     });
 
-    testWidgets('top-only fade still renders ShaderMask', (tester) async {
+    testWidgets('top-only fade renders one overlay', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: GlassScrollEdgeEffect(
@@ -92,16 +93,17 @@ void main() {
         ),
       );
 
+      // One Stack and one Positioned for the top fade
       expect(
         find.descendant(
           of: find.byType(GlassScrollEdgeEffect),
-          matching: find.byType(ShaderMask),
+          matching: find.byType(Positioned),
         ),
         findsOneWidget,
       );
     });
 
-    testWidgets('bottom-only fade still renders ShaderMask', (tester) async {
+    testWidgets('bottom-only fade renders one overlay', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: GlassScrollEdgeEffect(
@@ -117,7 +119,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(GlassScrollEdgeEffect),
-          matching: find.byType(ShaderMask),
+          matching: find.byType(Positioned),
         ),
         findsOneWidget,
       );

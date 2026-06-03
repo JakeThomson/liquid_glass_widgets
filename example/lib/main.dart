@@ -13,6 +13,7 @@ import 'package:liquid_glass_widgets_example/demos/glass_modal_sheet_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/video_player_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/text_field_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/bottom_bar_tab_width_demo.dart';
+import 'package:liquid_glass_widgets_example/demos/stretch_test_demo.dart';
 import 'package:liquid_glass_widgets_example/pages/containers_page.dart';
 import 'package:liquid_glass_widgets_example/pages/feedback_page.dart';
 import 'package:liquid_glass_widgets_example/pages/input_page.dart';
@@ -689,6 +690,22 @@ class _DemosTab extends StatelessWidget {
                           destination: const KeypadLockScreenDemo(),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SmallDemoCard(
+                          title: 'Stretch Test',
+                          icon: CupertinoIcons.hand_draw,
+                          color: const Color(0xFF007AFF),
+                          destination: const StretchTestDemo(),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(child: SizedBox()),
                     ],
                   ),
 

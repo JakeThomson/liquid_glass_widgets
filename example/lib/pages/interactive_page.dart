@@ -30,19 +30,12 @@ class _InteractivePageState extends State<InteractivePage> {
   @override
   Widget build(BuildContext context) {
     return GlassPage(
-      background: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.lightBlueAccent, Colors.pinkAccent],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      ),
+      background: buildShowcaseBackground(),
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.light,
       child: Scaffold(
         extendBodyBehindAppBar: true,
+        backgroundColor: Colors.transparent,
         appBar: GlassAppBar(
           leading: GlassButton(
             quality: GlassQuality.premium,
@@ -56,6 +49,7 @@ class _InteractivePageState extends State<InteractivePage> {
         body: GlassScrollEdgeEffect(
           topFadeHeight: MediaQuery.paddingOf(context).top + 44 + 40,
           fadeBottom: false,
+          fadeColor: const Color(0xFF020715),
           child: CustomScrollView(
             slivers: [
               // Space for the app bar + safe area

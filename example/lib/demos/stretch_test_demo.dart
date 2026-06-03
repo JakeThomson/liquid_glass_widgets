@@ -18,13 +18,20 @@ class _StretchDemoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const _StretchDemoPage(),
+      home: const StretchTestDemo(),
     );
   }
 }
 
-class _StretchDemoPage extends StatelessWidget {
-  const _StretchDemoPage();
+class StretchTestDemo extends StatefulWidget {
+  const StretchTestDemo({super.key});
+
+  @override
+  State<StretchTestDemo> createState() => _StretchDemoPageState();
+}
+
+class _StretchDemoPageState extends State<StretchTestDemo> {
+  bool switch2 = true;
 
   @override
   Widget build(BuildContext context) {
@@ -45,46 +52,179 @@ class _StretchDemoPage extends StatelessWidget {
         ),
       ),
       child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                // Left circle button — back chevron
-                GlassButton(
-                  quality: GlassQuality.premium,
-                  icon: const Icon(CupertinoIcons.chevron_left),
-                  onTap: () {},
-                  width: 56,
-                  height: 56,
-                  iconSize: 22,
+        extendBodyBehindAppBar: true,
+        // backgroundColor: Colors.transparent,
+        appBar: GlassAppBar(
+          leading: GlassButton(
+            quality: GlassQuality.premium,
+            icon: const Icon(CupertinoIcons.back),
+            onTap: () => Navigator.of(context).pop(),
+            width: 40,
+            height: 40,
+            iconSize: 20,
+            useOwnLayer: true,
+          ),
+        ),
+        body: GlassScrollEdgeEffect(
+          topFadeHeight: MediaQuery.paddingOf(context).top + 44 + 40,
+          fadeBottom: false,
+          fadeColor: const Color(0xFF1a1a2e),
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.paddingOf(context).top + 44,
                 ),
-                const SizedBox(width: 12),
-                // Wide pill button — text only
-                Expanded(
-                  child: GlassButton(
-                    quality: GlassQuality.premium,
-                    icon: const SizedBox.shrink(),
-                    label: 'Test',
-                    onTap: () {},
-                    height: 56,
-                    iconSize: 0,
-                    shape: const LiquidRoundedSuperellipse(borderRadius: 32),
+              ),
+              // Filler content to force scrolling
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Section 1',
+                          style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      SizedBox(height: 12),
+                      Text(
+                          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+                          style:
+                              TextStyle(fontSize: 15, color: Colors.white70)),
+                      SizedBox(height: 24),
+                      Text('Section 2',
+                          style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      SizedBox(height: 12),
+                      Text(
+                          'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+                          style:
+                              TextStyle(fontSize: 15, color: Colors.white70)),
+                      SizedBox(height: 24),
+                      Text('Section 3',
+                          style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      SizedBox(height: 12),
+                      Text(
+                          'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
+                          style:
+                              TextStyle(fontSize: 15, color: Colors.white70)),
+                      SizedBox(height: 24),
+                      Text('Section 4',
+                          style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      SizedBox(height: 12),
+                      Text(
+                          'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
+                          style:
+                              TextStyle(fontSize: 15, color: Colors.white70)),
+                      SizedBox(height: 24),
+                      Text('Section 5',
+                          style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      SizedBox(height: 12),
+                      Text(
+                          'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.',
+                          style:
+                              TextStyle(fontSize: 15, color: Colors.white70)),
+                      SizedBox(height: 24),
+                      Text('Section 6',
+                          style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      SizedBox(height: 12),
+                      Text(
+                          'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores.',
+                          style:
+                              TextStyle(fontSize: 15, color: Colors.white70)),
+                      SizedBox(height: 32),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                // Right circle button — forward chevron
-                GlassButton(
-                  quality: GlassQuality.premium,
-                  icon: const Icon(CupertinoIcons.chevron_right),
-                  onTap: () {},
-                  width: 56,
-                  height: 56,
-                  iconSize: 22,
+              ),
+              SliverToBoxAdapter(
+                  child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: AdaptiveLiquidGlassLayer(
+                  child: Column(children: [
+                    Row(
+                      children: [
+                        // Left circle button — back chevron
+
+                        GlassButton(
+                          quality: GlassQuality.premium,
+                          icon: const Icon(CupertinoIcons.chevron_left),
+                          onTap: () {},
+                          width: 56,
+                          height: 56,
+                          iconSize: 22,
+                          //  useOwnLayer: true,
+                        ),
+                        const SizedBox(width: 12),
+                        // Wide pill button — text only
+                        Expanded(
+                          child: GlassButton(
+                            quality: GlassQuality.premium,
+                            icon: const SizedBox.shrink(),
+                            label: 'Test',
+                            onTap: () {},
+                            height: 56,
+                            iconSize: 0,
+                            //  useOwnLayer: true,
+                            shape: const LiquidRoundedSuperellipse(
+                                borderRadius: 32),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Right square button — options
+                        GlassButton(
+                          quality: GlassQuality.premium,
+                          icon: const Icon(CupertinoIcons.ellipsis),
+                          onTap: () {},
+                          width: 56,
+                          height: 56,
+                          iconSize: 22,
+                          //  useOwnLayer: true,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 30),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Test Premium toggle scroll',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        // Premium
+                        GlassSwitch(
+                          value: switch2,
+                          onChanged: (v) => setState(() => switch2 = v),
+                          quality: GlassQuality.premium,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 60)
+                  ]),
                 ),
-              ],
-            ),
+              )),
+            ],
           ),
         ),
       ),

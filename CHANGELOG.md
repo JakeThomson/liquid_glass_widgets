@@ -157,7 +157,25 @@ The `keypad_lock_screen_demo.dart` has been deleted (466 lines). This demo was a
 - `stretch.dart` — formatting cleanup
 - Docs: Replaced `GlassAppBar` references with `GlassBottomBar` in `resolveQuality` table and examples
 
-## 🧪 Tests — 1939 passing
+## 🐛 Fix — Impeller backdrop visual corruption
+
+Fixed a critical rendering issue where `GlassAppBar` buttons would lose their glass background (rendering as invisible) when multiple `LiquidGlassLayer`s shared a single root `BackdropGroup` (via `GlassBackdropScope`). On Impeller, sharing a `BackdropKey` across multiple `RepaintBoundary` layers caused the engine to bind stale or incorrect backdrop textures.
+
+**Root cause:** The shared `BackdropGroup` architecture assumed that all glass surfaces could safely share a single GPU backdrop capture. On Impeller's tile-based renderer, this created a race between layers trying to use the same `BackdropKey`, causing visual corruption (backgrounds vanishing, ghost artifacts during route transitions).
+
+**Fix:** Each `LiquidGlassLayer` now creates its own isolated `BackdropGroup` → `RepaintBoundary` subtree. This ensures every glass surface captures only its own clipped bounding box — a ~30× reduction in GPU bandwidth compared to the previous full-screen capture, and eliminates cross-layer texture conflicts entirely.
+
+## ⚠️ Deprecated — `GlassBackdropScope`
+
+`GlassBackdropScope` is now a no-op and can be safely removed from your widget tree. Each glass layer manages its own backdrop isolation automatically. `GlassPage` continues to work exactly as before — no migration needed for apps using `GlassPage`.
+
+Apps using `GlassBackdropScope` directly will see a deprecation warning but will compile and run without issues. Remove the widget at your convenience; it will be deleted in 1.0.0.
+
+## 🐛 Fix — `GlassScrollEdgeEffect` crash in profile/release mode
+
+Fixed a `LateInitializationError` crash when running in `--profile` or `--release` mode. `RenderObject.debugNeedsPaint` is a `late` getter only initialized in debug builds — unguarded calls in `GlassScrollEdgeEffect._captureBackground()` and `LightweightLiquidGlass._handleTick()` would crash immediately on app startup. Both have been replaced with assert-guarded local variables, and the synchronous `toImageSync()` pipeline in `GlassScrollEdgeEffect` was upgraded to the async `toImage()` pipeline to safely support release mode execution.
+
+## 🧪 Tests — 1963 passing
 
 - **New**: 2 tests for `GlassIsolationScope.defaultQuality` interaction with `resolveQuality` (bar quality regression prevention).
 - **Updated**: `GlassAppBar` tests stripped down to match the new `StatelessWidget` API — scroll-driven glass tests removed, replaced with a simple "renders as StatelessWidget" test.
