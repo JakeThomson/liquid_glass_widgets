@@ -53,7 +53,6 @@ class _StretchDemoPageState extends State<StretchTestDemo> {
       ),
       child: Scaffold(
         extendBodyBehindAppBar: true,
-        // backgroundColor: Colors.transparent,
         appBar: GlassAppBar(
           leading: GlassButton(
             quality: GlassQuality.premium,

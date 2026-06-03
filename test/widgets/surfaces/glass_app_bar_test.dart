@@ -166,8 +166,7 @@ void main() {
       expect(appBar.shouldFullyObstruct(context), isFalse);
     });
 
-    testWidgets(
-        'shouldFullyObstruct returns true for fully opaque background',
+    testWidgets('shouldFullyObstruct returns true for fully opaque background',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(

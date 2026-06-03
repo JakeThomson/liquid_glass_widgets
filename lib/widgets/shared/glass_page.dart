@@ -422,6 +422,26 @@ class _GlassPageState extends State<GlassPage> {
       );
     }
 
+    // Wrap in AnnotatedRegion so the status bar style sticks even on
+    // routes where a parent Scaffold's own AnnotatedRegion would otherwise
+    // override our imperative SystemChrome.setSystemUIOverlayStyle() call.
+    if (widget.statusBarStyle != GlassStatusBarStyle.none) {
+      final Brightness brightness = MediaQuery.platformBrightnessOf(context);
+      final bool isDark = brightness == Brightness.dark;
+      final bool useLightIcons = switch (widget.statusBarStyle) {
+        GlassStatusBarStyle.light => true,
+        GlassStatusBarStyle.dark => false,
+        GlassStatusBarStyle.auto => isDark,
+        GlassStatusBarStyle.none => false,
+      };
+      content = AnnotatedRegion<SystemUiOverlayStyle>(
+        value: useLightIcons
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        child: content,
+      );
+    }
+
     return content;
   }
 }

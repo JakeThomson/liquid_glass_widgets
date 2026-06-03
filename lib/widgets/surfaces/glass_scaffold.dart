@@ -484,7 +484,9 @@ class GlassScaffold extends StatelessWidget {
     return GlassPage(
       background: background,
       settings: settings,
-      statusBarStyle: statusBarStyle,
+      // GlassScaffold handles AnnotatedRegion itself (line 476), so tell
+      // GlassPage to skip its own wrap + imperative SystemChrome call.
+      statusBarStyle: GlassStatusBarStyle.none,
       edgeToEdge: edgeToEdge,
       themeOverride: themeOverride,
       enableBackgroundSampling: enableBackgroundSampling,

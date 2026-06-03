@@ -90,9 +90,7 @@ GlassScaffold(
 
 All conditional children (header, app bar, bottom bar) now have explicit `ValueKey`s so Flutter tracks them by identity rather than position. This prevents unmount/remount cycles (and loss of animation state) when toggling the header on and off.
 
-### Top fade height calculation fix
-
-The top fade height now correctly omits `appBarHeight` when no `appBar` is provided — previously it always included the app bar height, creating excess fading below the status bar.
+> See `example/lib/demos/nav_bar_patterns_demo.dart` for complete `GlassScaffold` usage patterns.
 
 ## ✨ New — `GlassIsolationScope.defaultQuality`
 
@@ -145,17 +143,6 @@ All four Apple demo apps have been migrated from manual `Scaffold` + `Stack` + `
 ### Category pages re-indented
 All 6 showcase category pages (containers, feedback, input, interactive, overlays, surfaces) have been re-indented for consistency. No functional changes.
 
-### Keypad lock screen demo removed
-The `keypad_lock_screen_demo.dart` has been deleted (466 lines). This demo was a 0.13.0 addition that demonstrated `persistPressOnDrag: false`; the pattern is now covered in other demos.
-
-## 🔄 Changed — Minor formatting and doc updates
-
-- `GlassInteractionSettings` — minor formatting cleanup
-- `GlassChip` — formatting cleanup
-- `GlassMenuItem` / `GlassMenuInternal` — formatting cleanup
-- `GlassScrollEdgeEffect` — minor cleanup
-- `stretch.dart` — formatting cleanup
-- Docs: Replaced `GlassAppBar` references with `GlassBottomBar` in `resolveQuality` table and examples
 
 ## 🐛 Fix — Impeller backdrop visual corruption
 
@@ -170,17 +157,6 @@ Fixed a critical rendering issue where `GlassAppBar` buttons would lose their gl
 `GlassBackdropScope` is now a no-op and can be safely removed from your widget tree. Each glass layer manages its own backdrop isolation automatically. `GlassPage` continues to work exactly as before — no migration needed for apps using `GlassPage`.
 
 Apps using `GlassBackdropScope` directly will see a deprecation warning but will compile and run without issues. Remove the widget at your convenience; it will be deleted in 1.0.0.
-
-## 🐛 Fix — `GlassScrollEdgeEffect` crash in profile/release mode
-
-Fixed a `LateInitializationError` crash when running in `--profile` or `--release` mode. `RenderObject.debugNeedsPaint` is a `late` getter only initialized in debug builds — unguarded calls in `GlassScrollEdgeEffect._captureBackground()` and `LightweightLiquidGlass._handleTick()` would crash immediately on app startup. Both have been replaced with assert-guarded local variables, and the synchronous `toImageSync()` pipeline in `GlassScrollEdgeEffect` was upgraded to the async `toImage()` pipeline to safely support release mode execution.
-
-## 🧪 Tests — 1963 passing
-
-- **New**: 2 tests for `GlassIsolationScope.defaultQuality` interaction with `resolveQuality` (bar quality regression prevention).
-- **Updated**: `GlassAppBar` tests stripped down to match the new `StatelessWidget` API — scroll-driven glass tests removed, replaced with a simple "renders as StatelessWidget" test.
-- **Updated**: `GlassInteractionBehavior` test: tab-tap target changed from 'Search' (index 1) to 'Profile' (index 2) to avoid text conflict with the collapsed search pill `GlassButton`.
-- `dart analyze lib/`: **No issues found.**
 
 ---
 
@@ -236,7 +212,24 @@ A new structural widget that coordinates interactions between `GlassAppBar`, `Gl
 
 ### `GlassInteractionSettings` Theme
 
-Added a dedicated theme extension to globally configure interaction physics (glow, scale, bounce) across all glass widgets. You can now ensure a consistent interaction feel across your entire app without having to pass `interactionBehavior` and glow parameters to every single widget manually.
+Added a dedicated theme extension to globally configure interaction physics across all glass widgets — stretch, press scale, drag resistance, anchor stretch, and anchor stretch fine-tuning. No more passing interaction parameters to every widget manually.
+
+```dart
+GlassThemeData(
+  interaction: GlassInteractionSettings(
+    stretch: 0.2,              // subtler drag-following globally
+    interactionScale: 1.03,    // less scale-up on press
+    resistance: 0.01,          // drag damping factor
+    anchorStretch: true,       // iOS 26 rubber-band from anchor
+    anchorStretchSettings: AnchorStretchSettings(
+      intensity: 0.8,
+      squash: 0.15,
+    ),
+  ),
+)
+```
+
+Set `stretch: 0.0` to disable drag-following app-wide while keeping press-scale. Individual widgets can still override any value.
 
 ## 🐛 Fixes & Improvements
 

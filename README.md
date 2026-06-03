@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
 - **Adaptive quality** *(experimental)* — `GlassAdaptiveScope` benchmarks the device at startup and adjusts quality in real time: `minimal` on slow hardware, `standard` on mid-range, `premium` on fast devices. Degrades on thermal throttle, recovers when cool
 - **Zero dependencies** — no third-party runtime libraries, just the Flutter SDK
-- **One-line setup** — `LiquidGlassWidgets.wrap(child: myApp)` handles accessibility bridging, adaptive quality, and global theming; use `GlassPage` per screen for automatic backdrop isolation, status bar styling, and background sampling
+- **One-line setup** — `LiquidGlassWidgets.wrap(child: myApp)` handles accessibility bridging, adaptive quality, and global theming; use `GlassScaffold` per screen for automatic backdrop isolation, z-ordering, edge fading, and status bar styling
 - **Gyroscope lighting** — `GlassMotionScope` drives specular highlights from any `Stream<double>`
 - **WCAG-compliant by default** — Reduce Motion and Reduce Transparency are respected automatically; no setup required
 
@@ -92,6 +92,7 @@ Eight focused, self-contained demos — one widget, one file, runnable standalon
 | `searchable_bar_demo.dart` — searchable bar edge cases | `cd example && flutter run -t lib/demos/searchable_bar_demo.dart` |
 | `shape_debug_demo.dart` — GlassButton shapes | `cd example && flutter run -t lib/demos/shape_debug_demo.dart` |
 | `quality_comparison_demo.dart` — premium & standard quality comparison playground | `cd example && flutter run -t lib/demos/quality_comparison_demo.dart` |
+| `nav_bar_patterns_demo.dart` — GlassScaffold layout patterns | `cd example && flutter run -t lib/demos/nav_bar_patterns_demo.dart` |
 
 
 ## Widget Categories
@@ -112,14 +113,14 @@ Eight focused, self-contained demos — one widget, one file, runnable standalon
 `GlassDialog` · `GlassSheet` · `GlassModalSheet` · `showGlassActionSheet` · `GlassMenu` · `GlassMenuItem`
 
 ### Surfaces
-`GlassAppBar` · `GlassBottomBar` · `GlassSearchableBottomBar` · `GlassTabBar` · `GlassSideBar` · `GlassToolbar`
+`GlassScaffold` · `GlassAppBar` · `GlassBottomBar` · `GlassSearchableBottomBar` · `GlassTabBar` · `GlassSideBar` · `GlassToolbar`
 
 
 ## Installation
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.13.0
+  liquid_glass_widgets: ^0.14.0
 ```
 
 ```bash
@@ -147,14 +148,18 @@ void main() async {
 }
 ```
 
-That's it. Then add any glass widget to your tree — no per-widget configuration needed:
+That's it. Then use `GlassScaffold` on each screen — it handles background, status bar, z-ordering, and edge fading automatically:
 
 ```dart
-Scaffold(
+GlassScaffold(
+  background: Image.asset('assets/wallpaper.jpg', fit: BoxFit.cover),
+  statusBarStyle: GlassStatusBarStyle.auto,
   appBar: GlassAppBar(title: const Text('My App')),
-  body: const Center(child: GlassCard(child: Text('Hello, Glass!'))),
+  body: Center(child: GlassCard(child: Text('Hello, Glass!'))),
 )
 ```
+
+> **Why `GlassScaffold`?** Glass effects refract and blur against whatever is behind them. Without a controlled background, glass surfaces can appear flat, incorrectly tinted, or invisible. `GlassScaffold` wires up the background source, glass rendering layer, and bar isolation automatically — one widget instead of five.
 
 > **Accessibility is on by default.** The library automatically reads the
 > device's Reduce Motion and Reduce Transparency settings — no extra setup
@@ -286,13 +291,13 @@ GlassContainer(
 Enables the full Impeller shader pipeline with texture capture and chromatic aberration. On Skia/Web, automatically falls back to Standard.
 
 ```dart
-GlassAppBar(
+GlassCard(
   quality: GlassQuality.premium,
-  title: const Text('Static header'),
+  child: const Text('Static hero section'),
 )
 ```
 
-> **Use Premium only for static, non-scrolling surfaces** (app bars, bottom bars, hero sections). It may not render correctly inside `ListView` or `CustomScrollView` on Impeller.
+> **Use Premium only for static, non-scrolling surfaces** (hero sections, feature cards). It may not render correctly inside `ListView` or `CustomScrollView` on Impeller. `GlassScaffold` automatically promotes app bars and bottom bars to premium quality via `GlassIsolationScope`.
 
 ### Minimal — Shader-Free
 
@@ -312,9 +317,55 @@ Two ideal use cases:
 > **Theme shorthand**: `GlassThemeVariant.minimal` applies `minimal` quality globally via `GlassThemeData`.
 
 
+## GlassScaffold
+
+`GlassScaffold` is the recommended way to build any screen that uses glass surfaces. It replaces the manual assembly of `GlassPage` + `Scaffold` + `GlassScrollEdgeEffect` + `Stack` with a single widget:
+
+```dart
+GlassScaffold(
+  background: Image.asset('assets/wallpaper.jpg', fit: BoxFit.cover),
+  statusBarStyle: GlassStatusBarStyle.light,
+  appBar: GlassAppBar(
+    title: const Text('Messages'),
+    trailing: GlassButton(
+      icon: const Icon(CupertinoIcons.compose),
+      onTap: () {},
+    ),
+  ),
+  bottomBar: GlassBottomBar(
+    selectedIndex: 0,
+    onTabSelected: (_) {},
+    tabs: const [
+      GlassBottomBarTab(icon: Icon(Icons.home), label: 'Home'),
+      GlassBottomBarTab(icon: Icon(Icons.search), label: 'Search'),
+    ],
+  ),
+  body: CustomScrollView(
+    slivers: [...],
+  ),
+)
+```
+
+| What it handles | Without `GlassScaffold` |
+|---|---|
+| Background + glass layer | Must wrap in `GlassPage` + set `scaffoldBackgroundColor: transparent` |
+| Z-ordering (bars above body) | Must build a manual `Stack` with correct paint order |
+| Edge fading | Must add `GlassScrollEdgeEffect` and calculate fade heights |
+| Safe-area padding | Must calculate top/bottom padding for app bar and bottom bar |
+| Bar isolation | Must wrap bars in `GlassIsolationScope` manually |
+| Status bar icons | Must call `SystemChrome.setSystemUIOverlayStyle` and restore it |
+
+> See `example/lib/demos/nav_bar_patterns_demo.dart` for complete `GlassScaffold` usage patterns.
+
+---
+
 ## GlassPage
 
-`GlassPage` is the recommended root widget for any screen that uses glass surfaces. It eliminates several common setup mistakes in one widget:
+`GlassPage` is the lower-level building block that `GlassScaffold` uses internally. Use it directly when you need full manual control over your layout — custom `Stack` ordering, non-standard bar placements, or screens without a traditional scaffold structure.
+
+> **For most apps, `GlassScaffold` is simpler** — it handles background, bars, edge fading, and isolation automatically. Use `GlassPage` only when you need to build a custom layout that `GlassScaffold` doesn't support.
+
+`GlassPage` eliminates several common setup mistakes in one widget:
 
 ```dart
 // Minimum — just wrap your Scaffold, GlassPage handles everything else:

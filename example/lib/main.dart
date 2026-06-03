@@ -88,7 +88,7 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
   Widget build(BuildContext context) {
     return GlassScaffold(
       background: _buildBackground(),
-      statusBarStyle: GlassStatusBarStyle.dark,
+      statusBarStyle: GlassStatusBarStyle.light,
       settings: RecommendedGlassSettings.standard,
       topEdgeFade: true,
       bottomBar: GlassBottomBar(
