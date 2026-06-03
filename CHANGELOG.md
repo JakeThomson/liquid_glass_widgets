@@ -158,6 +158,30 @@ Fixed a critical rendering issue where `GlassAppBar` buttons would lose their gl
 
 Apps using `GlassBackdropScope` directly will see a deprecation warning but will compile and run without issues. Remove the widget at your convenience; it will be deleted in 1.0.0.
 
+## 🔄 Changed — `GlassInteractionSettings` is now the canonical interaction API
+
+`GlassInteractionSettings` (introduced in 0.13.0) is now the recommended way to configure all interaction physics app-wide. Pass it via `GlassThemeData.interaction` inside `LiquidGlassWidgets.wrap()`:
+
+```dart
+runApp(LiquidGlassWidgets.wrap(
+  child: const MyApp(),
+  theme: GlassThemeData(
+    interaction: GlassInteractionSettings(
+      stretch: 0.2,              // subtler drag-following globally
+      interactionScale: 1.03,    // less scale-up on press
+      resistance: 0.01,          // drag damping factor
+      anchorStretch: true,       // iOS 26 rubber-band from anchor
+      anchorStretchSettings: AnchorStretchSettings(
+        intensity: 0.8,
+        squashFactor: 0.15,
+      ),
+    ),
+  ),
+));
+```
+
+Set `stretch: 0.0` to disable drag-following app-wide while keeping press-scale. Individual widgets can still override any value via their own `stretch:` / `interactionScale:` parameters.
+
 ---
 
 # 0.13.0
@@ -223,7 +247,7 @@ GlassThemeData(
     anchorStretch: true,       // iOS 26 rubber-band from anchor
     anchorStretchSettings: AnchorStretchSettings(
       intensity: 0.8,
-      squash: 0.15,
+      squashFactor: 0.15,
     ),
   ),
 )
