@@ -183,7 +183,7 @@ class GlassButton extends StatefulWidget {
     required this.onTap,
     super.key,
     this.label = '',
-    this.width = 56,
+    this.width,
     this.height = 56,
     this.shape = const LiquidOval(),
     this.settings,
@@ -266,8 +266,13 @@ class GlassButton extends StatefulWidget {
 
   /// Width of the button in logical pixels.
   ///
-  /// Defaults to 56.0.
-  final double width;
+  /// When `null`, the button will size itself based on parent constraints
+  /// (e.g. expanding to fill an [Expanded] widget).
+  ///
+  /// The default [GlassButton] constructor sets this to 56.0 for icon buttons.
+  /// The [GlassButton.custom] constructor defaults to `null` so the button
+  /// respects flexible parent layouts.
+  final double? width;
 
   /// Height of the button in logical pixels.
   ///
