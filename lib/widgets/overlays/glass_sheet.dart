@@ -514,11 +514,9 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
         );
 
         // The core inner content of the sheet
-        Widget innerContent = Material(
-          color: Colors.transparent,
-          child: SafeArea(
-            bottom: true,
-            child: Column(
+        Widget innerContent = SafeArea(
+          bottom: true,
+          child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -551,8 +549,7 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
                 const SizedBox(height: 24),
               ],
             ),
-          ),
-        );
+          );
 
         Widget result = AdaptiveGlass(
           shape: shape,

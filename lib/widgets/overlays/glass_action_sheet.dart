@@ -260,8 +260,8 @@ class _GlassActionSheetContent extends StatelessWidget {
           if (title != null)
             Text(
               title!,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: CupertinoColors.label.resolveFrom(context),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -272,7 +272,7 @@ class _GlassActionSheetContent extends StatelessWidget {
             Text(
               message!,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
               ),
@@ -392,7 +392,7 @@ class _ActionSheetButtonState extends State<_ActionSheetButton> {
     switch (style) {
       case GlassActionSheetStyle.defaultStyle:
       case GlassActionSheetStyle.cancel:
-        return Colors.white;
+        return CupertinoColors.label.resolveFrom(context);
       case GlassActionSheetStyle.destructive:
         return widget.glowColors?.danger ?? CupertinoColors.destructiveRed;
     }

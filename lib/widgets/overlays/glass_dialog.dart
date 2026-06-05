@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
@@ -311,10 +311,10 @@ class GlassDialog extends StatelessWidget {
                 if (title != null) ...[
                   Text(
                     title!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: CupertinoColors.label,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -409,7 +409,7 @@ class GlassDialog extends StatelessWidget {
           fontWeight: action.isPrimary ? FontWeight.bold : FontWeight.w600,
           color: action.isDestructive
               ? CupertinoColors.destructiveRed
-              : Colors.white,
+              : CupertinoColors.label,
         ),
       ),
     );

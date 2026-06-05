@@ -38,6 +38,15 @@ Removed dead Material parameters from `GlassSheet.show()` that have no effect in
 
 **Migration:** Remove these parameters from your `GlassSheet.show()` calls. Use `settings` to configure the glass visual appearance, and `margin` / `padding` / `borderRadius` to control the layout and shape.
 
+## 🎨 Content Colour Audit — Adaptive Light/Dark Mode
+
+All hardcoded `Colors.white` / `Colors.black` in widget content layers replaced with `CupertinoColors` adaptive equivalents. Widgets now render correctly in both light and dark mode without requiring a `MaterialApp` ancestor.
+
+**Affected widgets:** `GlassDialog`, `GlassActionSheet`, all interactive and surface widgets.
+
+`GlassPage` is now fully safe to use inside a pure `CupertinoApp` — the `Theme.of` guard no longer throws when no Material ancestor is present.
+
+
 ## ✨ New — `GlassButtonStyle.prominent`
 
 A new button style matching iOS 26's `.prominentGlass` / `.glassProminent`
