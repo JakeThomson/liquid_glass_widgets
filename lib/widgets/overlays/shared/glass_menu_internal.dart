@@ -458,12 +458,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // Without this, increased text size causes items to render taller than
     // the height budget, triggering unwanted scrolling (GitHub issue).
     final mediaQuery = MediaQuery.maybeOf(context);
-    final textScaler = mediaQuery?.textScaler ?? TextScaler.noScaling;
 
     // Sum all menu item heights, scaled by text scaler
     final itemHeights = widget.items.fold<double>(
       0.0,
-      (sum, item) => sum + _getScaledItemHeight(item, textScaler),
+      (sum, item) => sum + _getScaledItemHeight(item, context),
     );
 
     // Add vertical padding (12px top + 12px bottom = 24px total)
@@ -615,11 +614,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                             curve: Curves.easeOutCubic,
                             left: 12,
                             right: 12,
-                            top: _getItemOffset(hoveredIndex) -
+                            top: _getItemOffset(hoveredIndex, context) -
                                 (_scrollController.hasClients
                                     ? _scrollController.offset
                                     : 0.0),
-                            height: _getItemHeight(widget.items[hoveredIndex]),
+                            height: _getScaledItemHeight(widget.items[hoveredIndex], context),
                             child: Container(
                               decoration: BoxDecoration(
                                 color: widget.selectionColor,
@@ -668,7 +667,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                                 !_isScrollable) {
                               final indexToTap = _hoveredIndex ??
                                   _calculateIndexFromPosition(
-                                      event.localPosition);
+                                      event.localPosition, context);
                               if (indexToTap != null) {
                                 final item = widget.items[indexToTap];
                                 if (item is GlassMenuItem && item.enabled) {
@@ -789,32 +788,25 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final visibleHeight = _calculateMenuHeight();
     final itemHeights = widget.items.fold<double>(
       0.0,
-      (sum, item) => sum + _getItemHeight(item),
+      (sum, item) => sum + _getScaledItemHeight(item, context),
     );
     final gaps = (widget.items.length - 1) * 2.0;
     final naturalHeight = itemHeights + 24.0 + gaps;
     return widget.menuHeight != null || visibleHeight < naturalHeight - 1.0;
   }
 
-  double _getItemHeight(Widget item) {
-    if (item is GlassMenuItem) {
-      // Account for multi-line titles: add ~20px per extra line
-      final extraLines = (item.maxLines > 1) ? (item.maxLines - 1) * 20.0 : 0.0;
-      return item.height + extraLines;
-    }
-    if (item is GlassMenuDivider) return item.height;
-    if (item is GlassMenuLabel) return item.height;
-    return 44.0;
-  }
 
-  /// Like [_getItemHeight] but accounts for system text scaling.
+  /// Accounts for system text scaling.
   ///
   /// When the user increases the system text size, GlassMenuItem renders
   /// with scaled text inside a ConstrainedBox (minHeight). The text content
   /// may push the actual height beyond the nominal [GlassMenuItem.height].
   /// This method estimates the rendered height to prevent the menu from
   /// becoming scrollable when it shouldn't be.
-  double _getScaledItemHeight(Widget item, TextScaler textScaler) {
+  double _getScaledItemHeight(Widget item, BuildContext context) {
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final textScaler = mediaQuery?.textScaler ?? TextScaler.noScaling;
+
     if (item is GlassMenuItem) {
       // The item has 8px vertical padding top + bottom = 16px fixed chrome.
       // The remaining space is text content that scales with system text size.
@@ -836,18 +828,20 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       return math.max(item.height, contentHeight);
     }
     // Dividers and labels don't contain user-facing scaled text
-    return _getItemHeight(item);
+    if (item is GlassMenuDivider) return item.height;
+    if (item is GlassMenuLabel) return item.height;
+    return 44.0;
   }
 
-  double _getItemOffset(int index) {
+  double _getItemOffset(int index, BuildContext context) {
     double offset = 12.0; // Top padding
     for (int i = 0; i < index; i++) {
-      offset += _getItemHeight(widget.items[i]) + 2.0; // height + 2px gap
+      offset += _getScaledItemHeight(widget.items[i], context) + 2.0; // height + 2px gap
     }
     return offset;
   }
 
-  int? _calculateIndexFromPosition(Offset localPosition) {
+  int? _calculateIndexFromPosition(Offset localPosition, BuildContext context) {
     final visibleHeight = _calculateMenuHeight();
     final x = localPosition.dx;
     final dy = localPosition.dy;
@@ -864,7 +858,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     double currentOffset = 12.0;
     for (int i = 0; i < widget.items.length; i++) {
       final item = widget.items[i];
-      final itemHeight = _getItemHeight(item);
+      final itemHeight = _getScaledItemHeight(item, context);
 
       if (y >= currentOffset && y <= currentOffset + itemHeight) {
         if (item is GlassMenuItem && item.enabled) {
@@ -899,7 +893,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
     // Only calculate hover selection for non-scrollable menus (slide-to-select).
     if (!_isScrollable) {
-      detectedIndex = _calculateIndexFromPosition(localPosition);
+      detectedIndex = _calculateIndexFromPosition(localPosition, context);
     }
 
     _hoveredIndex = detectedIndex;

@@ -117,6 +117,15 @@ When the user increased system text size, `GlassMenu` would become scrollable
 even without `menuHeight` being set. The height calculation now accounts for
 `textScaler` so the menu sizes correctly at any accessibility text scale.
 
+## 🐛 Fix — `GlassMenu` selection pill misalignment at large text scale
+
+The sliding selection highlight and hit-test math used the nominal `44px` item
+height for positioning, while the actual `GlassMenuItem` widgets grew taller
+via `ConstrainedBox` when system text was scaled up. This caused the pill to
+drift out of alignment and sometimes produce a "double highlight" effect. All
+layout math (`_getItemOffset`, `_calculateIndexFromPosition`, `_isScrollable`)
+now uses the `TextScaler`-aware height calculation.
+
 ## 🐛 Fix — `GlassMenuItem` / `GlassMenuDivider` / `GlassMenuLabel` Light Mode
 
 These widgets previously hardcoded `Colors.white` for text, icons, and divider
