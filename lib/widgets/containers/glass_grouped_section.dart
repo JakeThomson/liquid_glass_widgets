@@ -20,21 +20,21 @@ import 'glass_list_tile.dart';
 ///
 /// ```dart
 /// GlassGroupedSection(
-///   header: Text('Network', style: TextStyle(color: Colors.white70)),
+///   header: Text('Network', style: TextStyle(color: CupertinoColors.white.withOpacity(0.7))),
 ///   children: [
 ///     GlassListTile(
-///       leading: Icon(CupertinoIcons.wifi, color: Colors.white),
+///       leading: Icon(CupertinoIcons.wifi, color: CupertinoColors.white),
 ///       title: Text('Wi-Fi'),
 ///       trailing: GlassListTile.chevron,
 ///     ),
 ///     GlassListTile(
-///       leading: Icon(CupertinoIcons.bluetooth, color: Colors.white),
+///       leading: Icon(CupertinoIcons.bluetooth, color: CupertinoColors.white),
 ///       title: Text('Bluetooth'),
 ///       trailing: GlassListTile.chevron,
 ///     ),
 ///     GlassListTile(
 ///       leading: Icon(CupertinoIcons.antenna_radiowaves_left_right,
-///           color: Colors.white),
+///           color: CupertinoColors.white),
 ///       title: Text('VPN'),
 ///       trailing: GlassListTile.chevron,
 ///       // No need to set isLast — GlassGroupedSection handles it.
@@ -52,7 +52,7 @@ import 'glass_list_tile.dart';
 ///     child: Text(
 ///       'GENERAL',
 ///       style: TextStyle(
-///         color: Colors.white54,
+///         color: CupertinoColors.white.withOpacity(0.54),
 ///         fontSize: 13,
 ///         fontWeight: FontWeight.w600,
 ///         letterSpacing: 0.5,

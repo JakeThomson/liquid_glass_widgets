@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../../types/glass_quality.dart';
@@ -115,7 +115,7 @@ class GlassToolbar extends StatelessWidget {
     lightIntensity: 0.35,
     refractiveIndex: 1.5,
     saturation: 1.2,
-    glassColor: Colors.white10,
+    glassColor: Color(0x1AFFFFFF), // white10
   );
 
   @override
@@ -132,16 +132,20 @@ class GlassToolbar extends StatelessWidget {
     // Background color blending
     // iOS toolbars often have a very subtle tint
     final effectiveBackgroundColor =
-        backgroundColor ?? Colors.grey.withAlpha(20);
+        backgroundColor ?? CupertinoColors.systemGrey.withValues(alpha: 0.08);
+
+    final dividerColor = CupertinoTheme.brightnessOf(context) == Brightness.light
+        ? CupertinoColors.black.withValues(alpha: 0.12)
+        : CupertinoColors.white.withValues(alpha: 0.12);
 
     return AdaptiveLiquidGlassLayer(
       settings: effectiveSettings,
       quality: effectiveQuality,
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: Colors.white12, // Subtle top divider
+              color: dividerColor, // Subtle top divider
               width: 0.5,
             ),
           ),

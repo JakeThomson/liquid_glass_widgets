@@ -3,8 +3,7 @@
 
 import 'dart:math' as math;
 import 'dart:ui' as ui;
-
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/physics.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
@@ -74,8 +73,8 @@ class GlassSearchableBottomBar extends StatefulWidget {
     this.showIndicator = true,
     this.indicatorColor,
     this.indicatorSettings,
-    this.selectedIconColor = Colors.white,
-    this.unselectedIconColor = Colors.white,
+    this.selectedIconColor,
+    this.unselectedIconColor,
     this.iconSize = 24,
     this.labelFontSize = 11,
     this.textStyle,
@@ -242,11 +241,11 @@ class GlassSearchableBottomBar extends StatefulWidget {
   final LiquidGlassSettings? indicatorSettings;
 
   // ── Tab style ────────────────────────────────────────────────────────────────
-  /// Icon color when a tab is selected. Defaults to white.
-  final Color selectedIconColor;
+  /// Icon color when a tab is selected. Defaults to dynamic label color.
+  final Color? selectedIconColor;
 
-  /// Icon color when a tab is unselected. Defaults to white.
-  final Color unselectedIconColor;
+  /// Icon color when a tab is unselected. Defaults to dynamic label color.
+  final Color? unselectedIconColor;
 
   /// Size of tab icons. Defaults to 24.
   final double iconSize;
@@ -501,6 +500,14 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
     final effectiveInteractionGlowColor =
         widget.interactionGlowColor ?? resolvedGlowColors.primary;
 
+    final dynamicLabelColor =
+        CupertinoTheme.of(context).textTheme.textStyle.color ??
+            CupertinoColors.label;
+    final resolvedSelectedIconColor =
+        widget.selectedIconColor ?? dynamicLabelColor;
+    final resolvedUnselectedIconColor =
+        widget.unselectedIconColor ?? dynamicLabelColor;
+
     // Glow appearance fields come from the theme palette.
     final effectiveGlowBlurRadius = resolvedGlowColors.glowBlurRadius;
     final effectiveGlowSpreadRadius = resolvedGlowColors.glowSpreadRadius;
@@ -726,7 +733,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                           interactionGlowColor:
                               widget.interactionBehavior.hasGlow
                                   ? effectiveInteractionGlowColor
-                                  : Colors.transparent,
+                                  : const Color(0x00000000),
                           interactionGlowRadius: widget.interactionGlowRadius,
                           interactionGlowBlurRadius: effectiveGlowBlurRadius,
                           interactionGlowSpreadRadius:
@@ -782,7 +789,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                                   config: widget.extraButton!,
                                   quality: effectiveQuality,
                                   iconColor: widget.extraButton!.iconColor ??
-                                      widget.unselectedIconColor,
+                                      resolvedUnselectedIconColor,
                                   borderRadius: widget.barBorderRadius ==
                                           GlassSearchableBottomBar
                                               ._kDefaultBorderRadius
@@ -825,7 +832,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                           interactionGlowColor:
                               widget.interactionBehavior.hasGlow
                                   ? effectiveInteractionGlowColor
-                                  : Colors.transparent,
+                                  : const Color(0x00000000),
                           interactionGlowRadius: widget.interactionGlowRadius,
                           interactionGlowBlurRadius: effectiveGlowBlurRadius,
                           interactionGlowSpreadRadius:
@@ -852,12 +859,18 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                                   },
                           onDismissSearch: () =>
                               widget.searchConfig.onSearchToggle(false),
-                          childUnselected: _buildTabRow(selected: false),
+                          childUnselected: _buildTabRow(
+                            selected: false,
+                            resolvedSelectedIconColor: resolvedSelectedIconColor,
+                            resolvedUnselectedIconColor: resolvedUnselectedIconColor,
+                          ),
                           selectedTabBuilder: (ctx, intensity, alignment) =>
                               _buildTabRow(
                             selected: true,
                             intensity: intensity,
                             alignment: alignment,
+                            resolvedSelectedIconColor: resolvedSelectedIconColor,
+                            resolvedUnselectedIconColor: resolvedUnselectedIconColor,
                           ),
                         ),
                       ),
@@ -919,6 +932,8 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
 
   Widget _buildTabRow({
     required bool selected,
+    required Color resolvedSelectedIconColor,
+    required Color resolvedUnselectedIconColor,
     double intensity = 0,
     Alignment alignment = Alignment.center,
   }) {
@@ -940,8 +955,8 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                       child: BottomBarTabItem(
                         tab: widget.tabs[i],
                         selected: true,
-                        selectedIconColor: widget.selectedIconColor,
-                        unselectedIconColor: widget.unselectedIconColor,
+                        selectedIconColor: resolvedSelectedIconColor,
+                        unselectedIconColor: resolvedUnselectedIconColor,
                         iconSize: widget.iconSize,
                         labelFontSize: widget.labelFontSize,
                         textStyle: widget.textStyle,
@@ -970,8 +985,8 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
             child: BottomBarTabItem(
               tab: widget.tabs[i],
               selected: false,
-              selectedIconColor: widget.selectedIconColor,
-              unselectedIconColor: widget.unselectedIconColor,
+              selectedIconColor: resolvedSelectedIconColor,
+              unselectedIconColor: resolvedUnselectedIconColor,
               iconSize: widget.iconSize,
               labelFontSize: widget.labelFontSize,
               textStyle: widget.textStyle,
