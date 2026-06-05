@@ -71,7 +71,6 @@ class _OverlaysPageState extends State<OverlaysPage> {
                 itemCount: 15,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) => GlassCard(
-                  settings: RecommendedGlassSettings.overlay,
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
@@ -238,6 +237,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
               onTap: () => Navigator.pop(context),
               width: double.infinity,
               height: 48,
+              useOwnLayer: true,
               settings: RecommendedGlassSettings.overlay,
               shape: const LiquidRoundedSuperellipse(borderRadius: 12),
               child: const Text(
@@ -756,6 +756,7 @@ class _SheetButton extends StatelessWidget {
       onTap: onTap,
       width: double.infinity,
       height: 48,
+      useOwnLayer: true,
       settings: RecommendedGlassSettings.overlay,
       shape: const LiquidRoundedSuperellipse(borderRadius: 12),
       child: Text(
