@@ -270,10 +270,9 @@ class GlassDialog extends StatelessWidget {
     Color? barrierColor,
     double maxWidth = 280,
   }) {
-    return showDialog<T>(
+    return showCupertinoDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
-      barrierColor: barrierColor,
       builder: (context) => GlassDialog(
         title: title,
         message: message,
@@ -294,9 +293,7 @@ class GlassDialog extends StatelessWidget {
       widgetQuality: quality,
     );
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
+    return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: GlassCard(

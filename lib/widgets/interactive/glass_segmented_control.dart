@@ -25,7 +25,7 @@ import 'shared/segmented_control_internal.dart';
 ///
 /// ## Performance Note
 ///
-/// When placing inside glass containers (GlassCard, GlassPanel) with blur,
+/// When placing inside glass containers (GlassCard) with blur,
 /// use one of these approaches for best performance:
 /// - Set parent container to `quality: GlassQuality.premium` (no BackdropFilter)
 /// - Or set parent settings to `blur: 0` (skips BackdropFilter)
@@ -124,7 +124,7 @@ class GlassSegmentedControl extends StatefulWidget {
     this.backgroundColor,
     this.indicatorColor,
     this.indicatorSettings,
-    this.glassSettings,
+    this.settings,
     this.useOwnLayer = false,
     this.quality,
     this.backgroundKey,
@@ -235,7 +235,7 @@ class GlassSegmentedControl extends StatefulWidget {
   /// - chromaticAberration: 0.5
   /// - lightIntensity: 2
   /// - refractiveIndex: 1.15
-  final LiquidGlassSettings? glassSettings;
+  final LiquidGlassSettings? settings;
 
   /// Whether to create its own layer or use grouped glass.
   ///
@@ -295,7 +295,7 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
     );
 
     // Use custom glass settings or optimized defaults
-    final glassSettings = widget.glassSettings ??
+    final effectiveSettings = widget.settings ??
         const LiquidGlassSettings(
           thickness: GlassDefaults.thickness,
           blur: GlassDefaults.blur,
@@ -339,7 +339,7 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
     // Wrap with layer if needed
     if (widget.useOwnLayer) {
       return AdaptiveLiquidGlassLayer(
-        settings: glassSettings,
+        settings: effectiveSettings,
         quality: effectiveQuality,
         child: isolatedControl,
       );

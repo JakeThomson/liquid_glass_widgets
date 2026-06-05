@@ -340,7 +340,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final currentWidth = lerpDouble(tw, widget.menuWidth, state.sizeT)!;
 
     final inheritedSettings = InheritedLiquidGlass.of(context);
-    final effectiveSettings = widget.glassSettings ??
+    final effectiveSettings = widget.settings ??
         inheritedSettings ??
         const LiquidGlassSettings(
           blur: 10,
@@ -454,10 +454,16 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       return widget.menuHeight!;
     }
 
-    // Sum all menu item heights (each defaults to 44.0)
+    // Account for system text scaling when calculating natural height.
+    // Without this, increased text size causes items to render taller than
+    // the height budget, triggering unwanted scrolling (GitHub issue).
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final textScaler = mediaQuery?.textScaler ?? TextScaler.noScaling;
+
+    // Sum all menu item heights, scaled by text scaler
     final itemHeights = widget.items.fold<double>(
       0.0,
-      (sum, item) => sum + _getItemHeight(item),
+      (sum, item) => sum + _getScaledItemHeight(item, textScaler),
     );
 
     // Add vertical padding (12px top + 12px bottom = 24px total)
@@ -466,7 +472,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final naturalHeight = itemHeights + 24.0 + gaps;
 
     if (widget.autoAdjustToScreen) {
-      final mediaQuery = MediaQuery.maybeOf(context);
       if (mediaQuery != null) {
         final flutterView = View.of(context);
         final mqPadding = EdgeInsets.fromViewPadding(
@@ -535,7 +540,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // settings from parent layer. If none, use subtle overlay defaults.
     // This matches the pattern used by all other glass widgets.
     final inheritedSettings = InheritedLiquidGlass.of(context);
-    final effectiveSettings = widget.glassSettings ??
+    final effectiveSettings = widget.settings ??
         inheritedSettings ??
         const LiquidGlassSettings(
           blur: 10,
@@ -800,6 +805,38 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     if (item is GlassMenuDivider) return item.height;
     if (item is GlassMenuLabel) return item.height;
     return 44.0;
+  }
+
+  /// Like [_getItemHeight] but accounts for system text scaling.
+  ///
+  /// When the user increases the system text size, GlassMenuItem renders
+  /// with scaled text inside a ConstrainedBox (minHeight). The text content
+  /// may push the actual height beyond the nominal [GlassMenuItem.height].
+  /// This method estimates the rendered height to prevent the menu from
+  /// becoming scrollable when it shouldn't be.
+  double _getScaledItemHeight(Widget item, TextScaler textScaler) {
+    if (item is GlassMenuItem) {
+      // The item has 8px vertical padding top + bottom = 16px fixed chrome.
+      // The remaining space is text content that scales with system text size.
+      const fixedPadding = 16.0;
+      final baseFontSize = item.titleStyle?.fontSize ?? 17.0;
+      final scaledFontSize = textScaler.scale(baseFontSize);
+      final lineHeight = scaledFontSize * 1.2; // Approximate line height
+      final textHeight = lineHeight * item.maxLines;
+
+      // Subtitle adds another scaled line
+      double subtitleHeight = 0;
+      if (item.subtitle != null) {
+        final subFontSize = item.subtitleStyle?.fontSize ?? 13.0;
+        subtitleHeight = textScaler.scale(subFontSize) * 1.2;
+      }
+
+      final contentHeight = textHeight + subtitleHeight + fixedPadding;
+      // Use the larger of nominal height or scaled content height
+      return math.max(item.height, contentHeight);
+    }
+    // Dividers and labels don't contain user-facing scaled text
+    return _getItemHeight(item);
   }
 
   double _getItemOffset(int index) {

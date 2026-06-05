@@ -70,7 +70,7 @@ class GlassSearchableBottomBar extends StatefulWidget {
     this.iconLabelSpacing = 4,
     this.enableBlend = true,
     this.blendAmount = 10,
-    this.glassSettings,
+    this.settings,
     this.showIndicator = true,
     this.indicatorColor,
     this.indicatorSettings,
@@ -226,7 +226,7 @@ class GlassSearchableBottomBar extends StatefulWidget {
 
   // ── Glass ────────────────────────────────────────────────────────────────────
   /// Custom glass settings. Falls back to identical defaults as [GlassBottomBar].
-  final LiquidGlassSettings? glassSettings;
+  final LiquidGlassSettings? settings;
 
   /// Rendering quality. Inherits from parent or defaults to [GlassQuality.premium].
   final GlassQuality? quality;
@@ -506,7 +506,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
     final effectiveGlowSpreadRadius = resolvedGlowColors.glowSpreadRadius;
     final effectiveGlowOpacity = resolvedGlowColors.glowOpacity;
 
-    final glassSettings = widget.glassSettings ?? _defaultGlassSettings;
+    final effectiveSettings = widget.settings ?? _defaultGlassSettings;
     final searching = widget.isSearchActive;
 
     final barContent = TweenAnimationBuilder<double>(
@@ -519,7 +519,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
       curve: Curves.easeOut,
       builder: (context, animH, child) {
         return AdaptiveLiquidGlassLayer(
-          settings: glassSettings,
+          settings: effectiveSettings,
           quality: effectiveQuality,
           blendAmount: widget.enableBlend ? widget.blendAmount : 0,
           child: Padding(
@@ -890,7 +890,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                             barBorderRadius: widget.barBorderRadius,
                             quality: effectiveQuality,
                             indicatorColor: widget.indicatorColor,
-                            glassSettings: widget.glassSettings,
+                            settings: widget.settings,
                             cancelButtonColor:
                                 widget.searchConfig.cancelButtonColor,
                             cancelIcon: widget.searchConfig.cancelIcon,

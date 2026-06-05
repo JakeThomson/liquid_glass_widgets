@@ -51,7 +51,6 @@ class _OverlaysPageState extends State<OverlaysPage> {
     GlassSheet.show(
       context: context,
       settings: RecommendedGlassSettings.sheet,
-      isScrollControlled: true,
       builder: (context) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.7,
         child: Column(
@@ -202,6 +201,58 @@ class _OverlaysPageState extends State<OverlaysPage> {
           onPressed: () {},
         ),
       ],
+    );
+  }
+
+  // ── Modal Sheet methods ────────────────────────────────────────────
+
+  void _showModalSheet() {
+    GlassModalSheet.show(
+      context: context,
+      settings: RecommendedGlassSettings.sheet,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            const Text(
+              'Modal Sheet',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Drag up for full, down to dismiss. '
+              'Multi-state: peek → half → full.',
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.white.withValues(alpha: 0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const Spacer(),
+            GlassButton.custom(
+              onTap: () => Navigator.pop(context),
+              width: double.infinity,
+              height: 48,
+              settings: RecommendedGlassSettings.overlay,
+              shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+              child: const Text(
+                'Dismiss',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 
@@ -617,6 +668,17 @@ class _OverlaysPageState extends State<OverlaysPage> {
                         label: 'Photo Options',
                         glowColor: Colors.purple,
                         onTap: _showPhotoActionSheet,
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // ── GlassModalSheet ────────────────────────────
+                      const _SectionTitle(title: 'GlassModalSheet'),
+                      const SizedBox(height: 16),
+                      _ActionButton(
+                        label: 'Multi-State Modal Sheet',
+                        glowColor: Colors.teal,
+                        onTap: _showModalSheet,
                       ),
 
                       const SizedBox(height: 100),

@@ -673,10 +673,20 @@ class _GlassButtonState extends State<GlassButton>
         // Resolve settings: widget explicit → app bar default → inherited.
         final effectiveExplicit =
             widget.settings ?? DefaultButtonSettings.of(context);
-        final baseSettings = GlassThemeHelpers.resolveSettings(
+        var baseSettings = GlassThemeHelpers.resolveSettings(
           context,
           explicit: effectiveExplicit,
         );
+
+        // Prominent style: thicker, more opaque glass for primary CTAs.
+        // Matches iOS 26's `.prominentGlass` / `.glassProminent` button config.
+        if (widget.style == GlassButtonStyle.prominent) {
+          baseSettings = baseSettings.copyWith(
+            thickness: (baseSettings.effectiveThickness * 1.8).clamp(20, 80),
+            glassColor: baseSettings.glassColor.withValues(
+                alpha: (baseSettings.glassColor.a * 1.6).clamp(0.0, 0.85)),
+          );
+        }
 
         // Fix jagged edges on premium glass during stretch animations while
         // preserving crisp rim rendering at rest.

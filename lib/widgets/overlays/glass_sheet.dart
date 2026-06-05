@@ -82,13 +82,13 @@ import 'shared/glass_sheet_defaults.dart';
 /// ```
 ///
 /// ### Solid Color Mode
-/// Disable glass effect and use a solid background color:
+/// Customize barrier and glass effect:
 /// ```dart
 /// GlassSheet.show(
 ///   context: context,
-///   settings: const LiquidGlassSettings(blur: 0),
-///   backgroundColor: Colors.blue.withOpacity(0.9),
-///   builder: (context) => const Text('Solid Background'),
+///   settings: const LiquidGlassSettings(blur: 20, thickness: 40),
+///   barrierColor: Colors.black87,
+///   builder: (context) => const Text('Custom Glass'),
 /// );
 /// ```
 
@@ -260,14 +260,8 @@ class GlassSheet extends StatefulWidget {
   /// - [enableSaturationGlow]: Whether to pulse saturation/lighting on touch (default: true)
   /// - [suppressInteractionOnChildren]: Enable "Smart Silence" for child interactions
   /// - [isDismissible]: Whether tapping outside dismisses the sheet (default: true)
-  /// - [enableDrag]: Whether the sheet can be dragged down (default: true)
-  /// - [isScrollControlled]: Whether the sheet can occupy more than 50% screen height (default: true)
-  /// - [backgroundColor]: Background color of the modal container (default: transparent)
+  /// - [enableDrag]: Whether the sheet can be dragged down to dismiss (default: true)
   /// - [barrierColor]: Color of the modal barrier (defaults to black54)
-  /// - [elevation]: Material elevation of the sheet (default: 0)
-  /// - [shape]: Custom shape for the modal (defaults to rounded top corners)
-  /// - [clipBehavior]: Clipping behavior for the modal (default: null)
-  /// - [constraints]: Size constraints for the sheet
   /// - [useRootNavigator]: Whether to show the sheet in the root navigator (default: false)
   /// - [useSafeArea]: Whether to wrap the content in a safe area (default: true)
   ///
@@ -301,50 +295,65 @@ class GlassSheet extends StatefulWidget {
     bool suppressInteractionOnChildren = false,
     bool isDismissible = true,
     bool enableDrag = true,
-    bool isScrollControlled = true,
-    Color? backgroundColor,
     Color? barrierColor,
-    double? elevation,
-    ShapeBorder? shape,
-    Clip? clipBehavior,
-    BoxConstraints? constraints,
     bool useRootNavigator = false,
     bool useSafeArea = true,
     bool enableSaturationGlow = true,
   }) {
-    return showModalBottomSheet<T>(
+    return showGeneralDialog<T>(
       context: context,
-      backgroundColor: backgroundColor ?? Colors.transparent,
-      elevation: elevation ?? 0,
-      isScrollControlled: isScrollControlled,
-      isDismissible: isDismissible,
-      enableDrag: enableDrag,
+      barrierDismissible: isDismissible,
+      barrierLabel: 'Dismiss',
+      barrierColor: barrierColor ?? Colors.black54,
       useRootNavigator: useRootNavigator,
-      useSafeArea: useSafeArea,
-      barrierColor: barrierColor,
-      clipBehavior: Clip.none,
-      builder: (context) {
-        return GlassSheet(
-          settings: settings,
-          quality: quality,
-          showDragIndicator: showDragIndicator,
-          dragIndicatorColor: dragIndicatorColor,
-          padding: padding,
-          borderRadius: borderRadius,
-          margin: margin,
-          isScrollable: isScrollable,
-          interactionScale: interactionScale,
-          stretch: stretch,
-          resistance: resistance,
-          stretchAxis: stretchAxis,
-          allowPositiveStretch: allowPositiveStretch,
-          allowNegativeStretch: allowNegativeStretch,
-          enableInteractionGlow: enableInteractionGlow,
-          glowColor: glowColor,
-          glowRadius: glowRadius,
-          enableSaturationGlow: enableSaturationGlow,
-          suppressInteractionOnChildren: suppressInteractionOnChildren,
-          child: builder(context),
+      transitionDuration: const Duration(milliseconds: 350),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          )),
+          child: child,
+        );
+      },
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return SafeArea(
+          bottom: useSafeArea,
+          top: false,
+          left: false,
+          right: false,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: _DismissibleSheetWrapper(
+              enableDrag: enableDrag,
+              child: GlassSheet(
+                settings: settings,
+                quality: quality,
+                showDragIndicator: showDragIndicator,
+                dragIndicatorColor: dragIndicatorColor,
+                padding: padding,
+                borderRadius: borderRadius,
+                margin: margin,
+                isScrollable: isScrollable,
+                interactionScale: interactionScale,
+                stretch: stretch,
+                resistance: resistance,
+                stretchAxis: stretchAxis,
+                allowPositiveStretch: allowPositiveStretch,
+                allowNegativeStretch: allowNegativeStretch,
+                enableInteractionGlow: enableInteractionGlow,
+                glowColor: glowColor,
+                glowRadius: glowRadius,
+                enableSaturationGlow: enableSaturationGlow,
+                suppressInteractionOnChildren: suppressInteractionOnChildren,
+                child: builder(context),
+              ),
+            ),
+          ),
         );
       },
     );
@@ -352,6 +361,74 @@ class GlassSheet extends StatefulWidget {
 
   @override
   State<GlassSheet> createState() => _GlassSheetState();
+}
+
+/// Wraps a sheet child with vertical drag-to-dismiss behaviour.
+/// Translates the sheet downward as the user drags, and pops the route
+/// when released past a threshold (25% of the child's height).
+class _DismissibleSheetWrapper extends StatefulWidget {
+  const _DismissibleSheetWrapper({
+    required this.child,
+    required this.enableDrag,
+  });
+
+  final Widget child;
+  final bool enableDrag;
+
+  @override
+  State<_DismissibleSheetWrapper> createState() =>
+      _DismissibleSheetWrapperState();
+}
+
+class _DismissibleSheetWrapperState extends State<_DismissibleSheetWrapper> {
+  double _dragOffset = 0;
+  bool _isDragging = false;
+
+  void _onDragStart(DragStartDetails details) {
+    _isDragging = true;
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    if (!_isDragging) return;
+    setState(() {
+      // Only allow downward dragging (positive offset).
+      _dragOffset = (_dragOffset + details.delta.dy).clamp(0.0, double.infinity);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    _isDragging = false;
+    final velocity = details.primaryVelocity ?? 0;
+    // Dismiss if dragged past 25% of the sheet height or flung downward.
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final threshold = (renderBox?.size.height ?? 300) * 0.25;
+    if (_dragOffset > threshold || velocity > 500) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() => _dragOffset = 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget child = widget.child;
+    if (widget.enableDrag) {
+      child = GestureDetector(
+        onVerticalDragStart: _onDragStart,
+        onVerticalDragUpdate: _onDragUpdate,
+        onVerticalDragEnd: _onDragEnd,
+        child: AnimatedContainer(
+          duration: _isDragging
+              ? Duration.zero
+              : const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          transform: Matrix4.translationValues(0, _dragOffset, 0),
+          child: widget.child,
+        ),
+      );
+    }
+    return child;
+  }
 }
 
 class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {

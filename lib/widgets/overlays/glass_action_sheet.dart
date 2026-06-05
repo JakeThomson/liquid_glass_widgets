@@ -146,13 +146,10 @@ Future<T?> showGlassActionSheet<T>({
   LiquidGlassSettings? settings,
   GlassQuality? quality,
 }) {
-  return showModalBottomSheet<T>(
+  return showCupertinoModalPopup<T>(
     context: context,
-    backgroundColor: Colors.transparent,
+    barrierDismissible: barrierDismissible,
     barrierColor: Colors.black54,
-    isDismissible: barrierDismissible,
-    enableDrag: true,
-    isScrollControlled: false,
     builder: (context) => _GlassActionSheetContent(
       title: title,
       message: message,

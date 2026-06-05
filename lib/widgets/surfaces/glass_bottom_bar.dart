@@ -132,7 +132,7 @@ import 'shared/bar_layout_utils.dart';
 ///   unselectedIconColor: Colors.white.withOpacity(0.6),
 ///   iconSize: 28,
 ///   textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-///   glassSettings: LiquidGlassSettings(
+///   settings: LiquidGlassSettings(
 ///     thickness: 40,
 ///     blur: 5,
 ///     refractiveIndex: 1.7,
@@ -200,7 +200,7 @@ class GlassBottomBar extends StatefulWidget {
     this.iconLabelSpacing = 4,
     this.enableBlend = true,
     this.blendAmount = 10,
-    this.glassSettings,
+    this.settings,
     this.showIndicator = true,
     this.indicatorColor,
     this.indicatorSettings,
@@ -438,7 +438,7 @@ class GlassBottomBar extends StatefulWidget {
   /// - ambientStrength: 1
   /// - lightAngle: 0.75 * π (135°, Apple standard — upper-left)
   /// - glassColor: Colors.white24
-  final LiquidGlassSettings? glassSettings;
+  final LiquidGlassSettings? settings;
 
   /// Rendering quality for the glass effect.
   ///
@@ -571,10 +571,10 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
     final effectiveGlowOpacity = resolvedGlowColors.glowOpacity;
 
     // Use custom glass settings or cached defaults for bottom bars
-    final glassSettings = widget.glassSettings ?? _defaultGlassSettings;
+    final effectiveSettings = widget.settings ?? _defaultGlassSettings;
 
     return AdaptiveLiquidGlassLayer(
-      settings: glassSettings,
+      settings: effectiveSettings,
       quality: effectiveQuality,
       blendAmount: widget.enableBlend
           ? widget.blendAmount

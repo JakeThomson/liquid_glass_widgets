@@ -266,7 +266,7 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
                         indicatorColor: indicatorColor,
                         isBackgroundIndicator: false,
                         borderRadius: indicatorRadius,
-                        glassSettings: widget.indicatorSettings,
+                        settings: widget.indicatorSettings,
                         backgroundKey: widget.backgroundKey,
                       ),
                       // Segment labels always paint above the glass indicator.

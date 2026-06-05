@@ -1,3 +1,132 @@
+# 0.15.0
+
+## ⚠️ Breaking — API Cleanup & Standardisation
+
+Removes Material-leaning widgets and thin wrappers that don't map to real
+iOS 26 components. Standardises the public API for v1.0 readiness. This is a
+breaking release — users on `^0.14.0` will not auto-upgrade.
+
+### Deleted widgets
+
+| Widget | Migration |
+|---|---|
+| `GlassPanel` | Replace with `GlassCard(padding: EdgeInsets.all(24))` |
+| `GlassWizard` / `GlassWizardStep` | No direct replacement — use `GlassStepper` for sequential steps |
+| `GlassSideBar` / `GlassSideBarItem` | No direct replacement — a proper `UISplitViewController`-style sidebar is planned for post-1.0 |
+| `GlassSnackBar` | Replace with `GlassToast` (identical API — `GlassSnackBar` was documented as an alias) |
+
+### `glassSettings` → `settings` rename
+
+The `glassSettings` parameter on 8 widgets has been renamed to `settings` for
+consistency. The `Glass` prefix on the widget name already identifies the
+settings type — `glassSettings` was redundant.
+
+**Affected widgets:** `GlassBottomBar`, `GlassSearchableBottomBar`,
+`GlassSegmentedControl`, `GlassButtonGroup`, `GlassMenu`, `GlassPopover`,
+`GlassToolbar`, `GlassPicker`.
+
+**Migration:** Find-and-replace `glassSettings:` → `settings:` in your code.
+
+## ✨ New — `GlassButtonStyle.prominent`
+
+A new button style matching iOS 26's `.prominentGlass` / `.glassProminent`
+configuration — thicker, more opaque glass for primary call-to-action buttons.
+
+```dart
+GlassButton(
+  style: GlassButtonStyle.prominent,
+  icon: Icon(CupertinoIcons.plus),
+  onTap: () {},
+)
+```
+
+## ✨ New — `GlassGroupedSection`
+
+A convenience wrapper that groups `GlassListTile`s inside a `GlassCard`,
+automatically applying `isLast: true` to the final tile to suppress its
+bottom divider — the most common source of bugs.
+
+```dart
+GlassGroupedSection(
+  header: Text('Network'),
+  children: [
+    GlassListTile(title: Text('Wi-Fi')),
+    GlassListTile(title: Text('Bluetooth')),
+    GlassListTile(title: Text('VPN')), // isLast applied automatically
+  ],
+)
+```
+
+## ✨ New — `GlassPageControl`
+
+iOS `UIPageControl` equivalent — dot indicators for paged content (carousels,
+onboarding, gallery pages). Features animated capsule-shaped active dot with
+glass treatment and optional tap-to-navigate.
+
+```dart
+GlassPageControl(
+  count: 5,
+  currentPage: _currentPage,
+  onPageChanged: (page) => _pageController.animateToPage(page,
+    duration: Duration(milliseconds: 300),
+    curve: Curves.easeInOut,
+  ),
+)
+```
+
+## 📖 README — Glass vs Content design guide
+
+Added a design philosophy section explaining iOS 26's glass hierarchy:
+glass for navigation chrome and controls, opaque for content areas.
+Repositioned `GlassContainer` as an advanced primitive in the widget catalogue.
+
+### What stays
+
+- **`GlassBackdropScope`** — deprecated no-op stays until 1.0.0 as previously
+  committed in the 0.14.0 changelog. Zero cost to keep.
+- All other widgets — no changes.
+
+## 🐛 Fix — `GlassMenu` auto-scrolling with large system text
+
+When the user increased system text size, `GlassMenu` would become scrollable
+even without `menuHeight` being set. The height calculation now accounts for
+`textScaler` so the menu sizes correctly at any accessibility text scale.
+
+## 🐛 Fix — `GlassMenuItem` / `GlassMenuDivider` / `GlassMenuLabel` Light Mode
+
+These widgets previously hardcoded `Colors.white` for text, icons, and divider
+colours, making them invisible on light backgrounds. They now inherit from
+`CupertinoTheme.of(context)`:
+
+| Widget | Colour Source |
+|---|---|
+| `GlassMenuItem` | `theme.textTheme.textStyle.color` → `CupertinoColors.label` |
+| `GlassMenuDivider` | `theme.textTheme.tabLabelTextStyle.color` at 15 % opacity |
+| `GlassMenuLabel` | `theme.textTheme.tabLabelTextStyle.color` at 45 % opacity |
+
+Custom `iconColor`, `titleStyle`, and `color` parameters still take priority
+over the theme default — zero breaking changes.
+
+## 🧹 Example app — `CupertinoApp` migration
+
+All 16 standalone demos and the main showcase app have been migrated from
+`MaterialApp` to `CupertinoApp`. This is the correct root widget for an iOS 26
+glass library — it provides `CupertinoTheme` to the entire widget tree, which
+glass widgets depend on for colour resolution.
+
+A `Theme(data: ThemeData.dark(...))` builder is injected below `CupertinoApp`
+so that any `Scaffold` widgets in demo pages continue to receive proper Material
+theming (background colour, text defaults).
+
+## 🧹 Example app — `GlassMenu` demo controls
+
+Added text-scale slider (1.0×–3.0×) and light/dark theme toggle to the menu
+demo. Also added `GlassMenuLabel`, `GlassMenuDivider`, and a destructive
+`GlassMenuItem` to the menu items so their theme colour inheritance can be
+visually verified.
+
+---
+
 # 0.14.2
 
 ## 🧹 Material Artifact Purge

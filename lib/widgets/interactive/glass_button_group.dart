@@ -18,7 +18,7 @@ class GlassButtonGroup extends StatelessWidget {
     required this.children,
     super.key,
     this.direction = Axis.horizontal,
-    this.glassSettings,
+    this.settings,
     this.quality,
     this.borderRadius = 16.0,
     this.borderColor = Colors.white12,
@@ -34,7 +34,7 @@ class GlassButtonGroup extends StatelessWidget {
   final Axis direction;
 
   /// Custom glass settings.
-  final LiquidGlassSettings? glassSettings;
+  final LiquidGlassSettings? settings;
 
   /// Quality of glass effect.
   final GlassQuality? quality;
@@ -67,7 +67,7 @@ class GlassButtonGroup extends StatelessWidget {
       child: GlassContainer(
         useOwnLayer: useOwnLayer,
         quality: effectiveQuality,
-        settings: glassSettings,
+        settings: settings,
         shape: LiquidRoundedSuperellipse(borderRadius: borderRadius),
         padding: EdgeInsets.zero,
         child: IntrinsicHeight(

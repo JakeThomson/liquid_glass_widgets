@@ -62,7 +62,7 @@ class GlassToolbar extends StatelessWidget {
     super.key,
     this.height = 44.0, // Standard iOS toolbar height (usually + safe area)
     this.alignment = MainAxisAlignment.spaceBetween,
-    this.glassSettings,
+    this.settings,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     this.quality,
     this.backgroundColor,
@@ -89,7 +89,7 @@ class GlassToolbar extends StatelessWidget {
   /// Glass effect settings.
   ///
   /// If null, uses optimized defaults for toolbars.
-  final LiquidGlassSettings? glassSettings;
+  final LiquidGlassSettings? settings;
 
   /// Padding around the content.
   ///
@@ -127,7 +127,7 @@ class GlassToolbar extends StatelessWidget {
     );
 
     // Standard iOS toolbar glass settings with high blur
-    final effectiveSettings = glassSettings ?? _defaultSettings;
+    final effectiveSettings = settings ?? _defaultSettings;
 
     // Background color blending
     // iOS toolbars often have a very subtle tint

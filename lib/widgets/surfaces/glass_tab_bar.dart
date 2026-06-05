@@ -268,7 +268,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
       widgetQuality: widget.quality,
     );
 
-    final glassSettings = widget.settings ?? _defaultGlassSettings;
+    final effectiveSettings = widget.settings ?? _defaultGlassSettings;
 
     final backgroundColor = widget.backgroundColor == Colors.transparent
         ? _defaultBackgroundColor
@@ -313,7 +313,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
 
     if (widget.useOwnLayer) {
       return AdaptiveLiquidGlassLayer(
-        settings: glassSettings,
+        settings: effectiveSettings,
         quality: effectiveQuality,
         child: content,
       );

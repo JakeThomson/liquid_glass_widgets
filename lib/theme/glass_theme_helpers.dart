@@ -126,7 +126,6 @@ class GlassThemeHelpers {
   /// |---|---|---|
   /// | [GlassBottomBar] | `premium` | Static footer — full quality expected |
   /// | [GlassToolbar] | `premium` | Static surface |
-  /// | [GlassSideBar] | `premium` | Static surface |
   /// | [GlassTabBar] | `standard` | May be in a scrollable context |
   /// | [GlassButton] | `standard` | Interactive, potentially many on screen |
   /// | [GlassTextField] | `standard` | Interactive |
