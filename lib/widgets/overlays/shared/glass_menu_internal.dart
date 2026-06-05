@@ -18,6 +18,16 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   double _horizontalOffset = 0.0;
   double _verticalOffset = 0.0;
 
+  /// Live screen-space nudge added to the captured trigger position while the
+  /// menu is OPEN, so an external owner can keep the floating menu glued to a
+  /// moving anchor (e.g. a canvas tile trailing under a rubberband) WITHOUT
+  /// re-opening. Reset to zero on each [_openMenu]. Applied to both morph blobs
+  /// in [_buildMorphingOverlay]. It deliberately does NOT recompute the
+  /// screen-edge clamping ([_horizontalOffset]/[_verticalOffset]) — trails are
+  /// small and bounded, and recomputing per-frame is not worth the cost. Driven
+  /// via [GlassMenuController.setFollowOffset] / [setFollowOffset].
+  Offset _followOffset = Offset.zero;
+
   // --- Granular Update System (Performance + No flicker) ---
   // We cache the outer list but use notifiers to update selection state
   // without rebuilding the entire menu tree.
@@ -197,6 +207,15 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     }
   }
 
+  /// Nudges the OPEN menu by [offset] (screen px) on top of its captured trigger
+  /// position, so an external owner can track a moving anchor live. A no-op
+  /// delta is skipped to avoid needless rebuilds. Has no visible effect while
+  /// closed; the next [_openMenu] resets it to zero.
+  void setFollowOffset(Offset offset) {
+    if (_followOffset == offset) return;
+    setState(() => _followOffset = offset);
+  }
+
   void _openMenu() {
     // Capture geometry and screen position for morphing
     final renderBox = context.findRenderObject() as RenderBox?;
@@ -209,6 +228,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     _triggerBorderRadius = _triggerSize!.height / 2;
     _triggerGlobalPosition =
         renderBox.localToGlobal(Offset.zero); // store for overlay
+    // A fresh open must never inherit a previous open's live anchor nudge.
+    _followOffset = Offset.zero;
     final position = _triggerGlobalPosition;
     final mediaQuery = MediaQuery.maybeOf(context);
     final screenWidth = mediaQuery?.size.width ?? double.infinity;
@@ -412,8 +433,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                       // Shrinks to 0 scale over the first 40% of the animation to
                       // smoothly break the liquid bridge.
                       Positioned(
-                        left: _triggerGlobalPosition.dx + state.pushDx,
-                        top: _triggerGlobalPosition.dy + state.pushDy,
+                        left: _triggerGlobalPosition.dx +
+                            _followOffset.dx +
+                            state.pushDx,
+                        top: _triggerGlobalPosition.dy +
+                            _followOffset.dy +
+                            state.pushDy,
                         child: Transform.scale(
                           scale: state.anchorScale,
                           child: GlassContainer(
@@ -436,11 +461,13 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                       // its edges stay perfectly pinned while it grows!
                       Positioned(
                         left: _triggerGlobalPosition.dx +
+                            _followOffset.dx +
                             tw / 2.0 +
                             state.currentDx -
                             currentWidth / 2.0 +
                             (_horizontalOffset * clampedValue),
                         top: _triggerGlobalPosition.dy +
+                            _followOffset.dy +
                             th / 2.0 +
                             state.currentDy -
                             currentHeight / 2.0 +

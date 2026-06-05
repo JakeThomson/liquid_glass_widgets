@@ -274,4 +274,11 @@ class GlassMenuController {
   /// Closes the menu with the rubber-band morph. Deterministic for any timing:
   /// unlike a trigger tap, it never re-opens a still-expanding menu.
   void close() => _state?._closeMenu();
+
+  /// Nudges the open menu to track a moving anchor: [offset] (screen px) is added
+  /// to the menu's captured trigger position every frame until reset. A no-op
+  /// while closed; cleared on the next [open]. Used by external gesture owners
+  /// that move the anchor AFTER opening — e.g. a canvas tile trailing under a
+  /// rubberband, where the menu should stay glued to the tile.
+  void setFollowOffset(Offset offset) => _state?.setFollowOffset(offset);
 }
