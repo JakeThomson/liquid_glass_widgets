@@ -363,15 +363,21 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     );
 
     final targetHeight = widget.menuHeight ?? menuHeight;
+    // Under morphFromZero the body lerps from a zero-size point at the trigger
+    // center (collapse-to-point) rather than from the trigger's own size; the
+    // false path keeps tw/th so the spawn-blob behavior is byte-identical.
+    final double sizeStartW = widget.morphFromZero ? 0.0 : tw;
+    final double sizeStartH = widget.morphFromZero ? 0.0 : th;
     // Clamp to >= 0: the rubber-band close drives sizeT slightly negative during
     // the undershoot, which lerps the size below zero for a tiny trigger and
     // trips a debug BoxConstraints assert. A size can't be negative; 0 (fully
     // collapsed) is the correct floor and is visually identical to the intended
-    // shrink-to-nothing at the close tail.
-    final currentHeight =
-        lerpDouble(th, targetHeight, state.sizeT)!.clamp(0.0, double.infinity);
-    final currentWidth =
-        lerpDouble(tw, widget.menuWidth, state.sizeT)!.clamp(0.0, double.infinity);
+    // shrink-to-nothing at the close tail. Under morphFromZero the lerp already
+    // starts at 0, so this same clamp still floors the close undershoot.
+    final currentHeight = lerpDouble(sizeStartH, targetHeight, state.sizeT)!
+        .clamp(0.0, double.infinity);
+    final currentWidth = lerpDouble(sizeStartW, widget.menuWidth, state.sizeT)!
+        .clamp(0.0, double.infinity);
 
     final inheritedSettings = InheritedLiquidGlass.of(context);
     final effectiveSettings = widget.settings ??
@@ -432,28 +438,30 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                       // closing momentum (pushDx/pushDy) to bounce when slammed.
                       // Shrinks to 0 scale over the first 40% of the animation to
                       // smoothly break the liquid bridge.
-                      Positioned(
-                        left: _triggerGlobalPosition.dx +
-                            _followOffset.dx +
-                            state.pushDx,
-                        top: _triggerGlobalPosition.dy +
-                            _followOffset.dy +
-                            state.pushDy,
-                        child: Transform.scale(
-                          scale: state.anchorScale,
-                          child: GlassContainer(
-                            useOwnLayer: false,
-                            settings: effectiveSettings,
-                            quality: effectiveQuality,
-                            width: tw,
-                            height: th,
-                            shape: LiquidRoundedSuperellipse(
-                              borderRadius: _triggerBorderRadius ??
-                                  _triggerSize!.shortestSide / 2.0,
+                      // Blob A is the spawn blob; under morphFromZero there is no trigger to ghost.
+                      if (!widget.morphFromZero)
+                        Positioned(
+                          left: _triggerGlobalPosition.dx +
+                              _followOffset.dx +
+                              state.pushDx,
+                          top: _triggerGlobalPosition.dy +
+                              _followOffset.dy +
+                              state.pushDy,
+                          child: Transform.scale(
+                            scale: state.anchorScale,
+                            child: GlassContainer(
+                              useOwnLayer: false,
+                              settings: effectiveSettings,
+                              quality: effectiveQuality,
+                              width: tw,
+                              height: th,
+                              shape: LiquidRoundedSuperellipse(
+                                borderRadius: _triggerBorderRadius ??
+                                    _triggerSize!.shortestSide / 2.0,
+                              ),
                             ),
                           ),
                         ),
-                      ),
 
                       // ── Blob B: Menu Body ───────────────────────────────────
                       // Its center travels diagonally relative to the trigger.
@@ -530,6 +538,17 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
   Widget _buildMorphingContainer(LiquidMorphState state, double clampedValue,
       double currentWidth, double currentHeight) {
+    // Sub-pixel blob registers no blend-group shape: skip it so the premium
+    // Impeller geometry never rasterizes a 0-area matte (Invalid image dimensions).
+    // The 1.0 logical-px floor is provably safe at every devicePixelRatio: a
+    // logical size in [0.5, 1.0) can still snap to a 0-area matte at dpr=1.0
+    // (matteBounds = (bounds * dpr).snapToPixels(1); ceil() == 0), which would
+    // reach the unclamped toImageSync in the geometry raster. Below 1.0 px is
+    // invisible on any display, so flooring here costs nothing visually.
+    if (currentWidth < 1.0 || currentHeight < 1.0) {
+      return const SizedBox.shrink();
+    }
+
     // Inherit quality from parent layer if not explicitly set
     final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,

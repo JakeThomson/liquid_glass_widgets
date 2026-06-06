@@ -207,6 +207,21 @@ class GlassMenu extends StatefulWidget {
   /// everything and swallows all input. Pairs with [controller]-driven open/close.
   final bool showDismissBarrier;
 
+  /// Whether the open/close morph blooms from a zero-size point at the trigger
+  /// center instead of from a glass blob the size of the trigger. Defaults to
+  /// `false` (the menu spawns as a small rounded "metaball" matching the trigger
+  /// and morphs outward — the standard iOS-26 liquid-glass behavior).
+  ///
+  /// Set to `true` when the trigger is invisible or zero-sized (e.g. an
+  /// imperatively-driven menu positioned by an external gesture owner via
+  /// [controller]), so there is no button for the spawn blob to grow from. In
+  /// that case the trigger ghost (Blob A) is suppressed entirely and the menu
+  /// body lerps its size from 0 → full while keeping the identical teardrop
+  /// shape morph (radius circle→rounded-rect, J-curve travel, and spring). The
+  /// shape still spawns at — and collapses back to — the trigger center, so a
+  /// zero-sized trigger reads as a point bloom rather than an 8px glass dot.
+  final bool morphFromZero;
+
   /// Creates a liquid glass menu.
   const GlassMenu({
     super.key,
@@ -239,6 +254,7 @@ class GlassMenu extends StatefulWidget {
     this.onClose,
     this.controller,
     this.showDismissBarrier = true,
+    this.morphFromZero = false,
   }) : assert(trigger != null || triggerBuilder != null,
             'Either trigger or triggerBuilder must be provided');
 
