@@ -1,3 +1,21 @@
+# 0.15.1
+
+## Light-Mode Shadows & Configurable Shadow API
+
+### New features
+
+- **Configurable glass shadow** — `LiquidGlassSettings.shadowElevation` scales the light-mode drop shadow (`0.0` = off, `1.0` = default, `2.0` = double). `LiquidGlassSettings.shadow` accepts a custom `List<BoxShadow>` for full control. Both flow through `globalSettings` (theme-level) and per-widget `settings:`.
+- **`GlassShadow` constants** — centralised shadow values (`GlassShadow.elevation`, `.contact`, `.defaults`, `.scaled(double)`) exported for custom widget authors.
+
+### Improvements
+
+- **Light-mode drop shadows** on all glass surfaces (cards, buttons, bottom bars, search pills) using inverse clipping — shadows render outside the glass boundary so the backdrop filter doesn't blur them.
+- **Standard glass white frost** — standard quality glass in light mode now renders as clean frosted white instead of grey. Dark mode unchanged.
+
+### Bug fixes
+
+- Fixed missing `} else {` in `lightweight_glass.frag` that caused PATH B (standard widgets) to run inside PATH A.
+
 # 0.15.0
 
 ## ⚠️ Breaking — API Cleanup & Standardisation

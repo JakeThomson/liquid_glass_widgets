@@ -18,6 +18,7 @@ import 'tab_drag_gesture_mixin.dart';
 import '../../interactive/glass_button.dart';
 import '../../shared/adaptive_glass.dart';
 import '../../shared/animated_glass_indicator.dart';
+import '../../shared/inherited_liquid_glass.dart';
 import '../glass_bottom_bar.dart' show MaskingQuality, JellyClipper;
 import 'glass_search_bar_config.dart';
 
@@ -345,6 +346,42 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
         ));
   }
 
+  /// Wraps the bar pill with a light-mode drop shadow using inverse clipping.
+  Widget _wrapWithBarShadow(BuildContext context, Widget bar) {
+    final isDark =
+        CupertinoTheme.of(context).brightness == Brightness.dark;
+    if (isDark) return bar;
+
+    // Resolve shadow from settings (inherited or global).
+    final effectiveSettings =
+        InheritedLiquidGlass.ofOrDefault(context);
+    final shadows = effectiveSettings.effectiveShadow;
+    if (shadows.isEmpty) return bar;
+
+    return Stack(
+      fit: StackFit.passthrough,
+      clipBehavior: Clip.none,
+      children: [
+        bar,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ClipPath(
+              clipBehavior: Clip.antiAlias,
+              clipper: _InverseSearchBarClipper(_barShape),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius:
+                      BorderRadius.circular(widget.barBorderRadius),
+                  boxShadow: shadows,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Wraps [child] in [GlassGlow] only when the resolved glow color is
   /// non-transparent. Skips the wrapper entirely for
   /// [GlassInteractionBehavior.none] and [scaleOnly], avoiding three extra
@@ -373,7 +410,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
     required double glassRadius,
     required Color indicatorColor,
   }) {
-    return SizedBox(
+    return _wrapWithBarShadow(
+      context,
+      SizedBox(
         height: widget.barHeight,
         child: _wrapWithGlow(
           child: Stack(
@@ -432,7 +471,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                 ),
             ],
           ),
-        ));
+        )),
+    );
   }
 
   Widget _buildHighQuality({
@@ -445,7 +485,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
     required Color indicatorColor,
   }) {
     final effRadius = thickness < 1 ? backgroundRadius : glassRadius;
-    return SizedBox(
+    return _wrapWithBarShadow(
+      context,
+      SizedBox(
         height: widget.barHeight,
         child: _wrapWithGlow(
           child: Stack(
@@ -542,7 +584,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
               ),
             ],
           ),
-        ));
+        )),
+    );
   }
 }
 
@@ -681,6 +724,7 @@ class SearchPillState extends State<SearchPill> {
     }
   }
 
+
   /// Wraps [child] in [GlassGlow] only when the resolved glow color is
   /// non-transparent. Skips the wrapper entirely for
   /// [GlassInteractionBehavior.none] and [scaleOnly], avoiding three extra
@@ -719,49 +763,49 @@ class SearchPillState extends State<SearchPill> {
 
         if (!widget.isActive || w < kExpandThreshold) {
           return Stack(
-            fit: StackFit.expand,
-            children: [
-              GlassButton(
-                key: const ValueKey('pill-collapsed'),
-                // Use caller-supplied search icon when provided;
-                // otherwise fall back to the upstream default
-                // CupertinoIcons.search glyph. Letting callers
-                // override here lets apps that need a higher-fidelity
-                // glyph (real SF Symbols, Material Symbols at a
-                // specific weight, etc.) supply their own without
-                // forking — see GlassSearchBarConfig.searchIcon.
-                icon: widget.config.searchIcon ??
-                    Icon(CupertinoIcons.search, color: iconColor),
-                // No-op while mid-animation to avoid double-toggling, EXCEPT
-                // if expandWhenActive is false, which means this is a persistent
-                // collapsed search button that needs to be tappable to activate search.
-                onTap: (widget.isActive && widget.config.expandWhenActive)
-                    ? () {}
-                    : () => widget.config.onSearchToggle(true),
-                width: double.infinity,
-                height: double.infinity,
-                quality: widget.quality,
-                iconColor: iconColor,
-                // When fully collapsed (square), LiquidOval gives a perfect
-                // circle that stretches uniformly. During the collapse
-                // animation the width is still wider than height — use the
-                // superellipse there so it doesn't render as a squashed oval.
-                shape: (w - constraints.maxHeight).abs() < 2
-                    ? const LiquidOval()
-                    : shape,
-              ),
-              // IgnorePointer+Opacity(0): forces Dart to JIT-compile the
-              // expanded widget tree on first frame. Unlike Offstage, this
-              // does NOT interact with the focus/IME system so there is no
-              // risk of hidden TextFields stealing keyboard input.
-              IgnorePointer(
-                child: Opacity(
-                  opacity: 0,
-                  child: _buildExpanded(iconColor, micColor),
+              fit: StackFit.expand,
+              children: [
+                GlassButton(
+                  key: const ValueKey('pill-collapsed'),
+                  // Use caller-supplied search icon when provided;
+                  // otherwise fall back to the upstream default
+                  // CupertinoIcons.search glyph. Letting callers
+                  // override here lets apps that need a higher-fidelity
+                  // glyph (real SF Symbols, Material Symbols at a
+                  // specific weight, etc.) supply their own without
+                  // forking — see GlassSearchBarConfig.searchIcon.
+                  icon: widget.config.searchIcon ??
+                      Icon(CupertinoIcons.search, color: iconColor),
+                  // No-op while mid-animation to avoid double-toggling, EXCEPT
+                  // if expandWhenActive is false, which means this is a persistent
+                  // collapsed search button that needs to be tappable to activate search.
+                  onTap: (widget.isActive && widget.config.expandWhenActive)
+                      ? () {}
+                      : () => widget.config.onSearchToggle(true),
+                  width: double.infinity,
+                  height: double.infinity,
+                  quality: widget.quality,
+                  iconColor: iconColor,
+                  // When fully collapsed (square), LiquidOval gives a perfect
+                  // circle that stretches uniformly. During the collapse
+                  // animation the width is still wider than height — use the
+                  // superellipse there so it doesn't render as a squashed oval.
+                  shape: (w - constraints.maxHeight).abs() < 2
+                      ? const LiquidOval()
+                      : shape,
                 ),
-              ),
-            ],
-          );
+                // IgnorePointer+Opacity(0): forces Dart to JIT-compile the
+                // expanded widget tree on first frame. Unlike Offstage, this
+                // does NOT interact with the focus/IME system so there is no
+                // risk of hidden TextFields stealing keyboard input.
+                IgnorePointer(
+                  child: Opacity(
+                    opacity: 0,
+                    child: _buildExpanded(iconColor, micColor),
+                  ),
+                ),
+              ],
+            );
         }
 
         // Wrap with an opaque GestureDetector so taps anywhere inside the
@@ -895,4 +939,24 @@ class SearchPillState extends State<SearchPill> {
       ),
     );
   }
+}
+
+/// Clips out the interior of the bar shape for shadow painting.
+class _InverseSearchBarClipper extends CustomClipper<Path> {
+  const _InverseSearchBarClipper(this.shape);
+
+  final LiquidRoundedSuperellipse shape;
+
+  @override
+  Path getClip(Size size) {
+    final rect = Offset.zero & size;
+    final shapePath = shape.getOuterPath(rect);
+    final outerRect = rect.inflate(50.0);
+    final outerPath = Path()..addRect(outerRect);
+    return Path.combine(PathOperation.difference, outerPath, shapePath);
+  }
+
+  @override
+  bool shouldReclip(_InverseSearchBarClipper oldClipper) =>
+      oldClipper.shape != shape;
 }

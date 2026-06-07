@@ -15,6 +15,7 @@ import '../../../utils/glass_spring.dart';
 import '../../interactive/glass_button.dart';
 import '../../shared/adaptive_glass.dart';
 import '../../shared/animated_glass_indicator.dart';
+import '../../shared/inherited_liquid_glass.dart';
 import '../glass_bottom_bar.dart'
     show
         GlassBottomBarExtraButton,
@@ -272,6 +273,7 @@ class BottomBarExtraBtn extends StatelessWidget {
       height: config.size,
       quality: quality,
       iconColor: iconColor,
+      useOwnLayer: true, // Standalone pill — needs own shadow & compositing
       shape: borderRadius == null
           ? const LiquidOval()
           : LiquidRoundedRectangle(borderRadius: borderRadius!),
@@ -526,6 +528,47 @@ class TabIndicatorState extends State<TabIndicator>
         )); // Listener
   }
 
+  /// Wraps the bar pill with a light-mode drop shadow using inverse clipping.
+  ///
+  /// The shadow is painted ON TOP of the glass content but inverse-clipped
+  /// so it only appears outside the pill boundary. This prevents the glass
+  /// BackdropFilter from sampling its own shadow (which would create a dirty
+  /// dark rim). Skipped in dark mode where shadows are absorbed.
+  Widget _wrapWithBarShadow(BuildContext context, Widget bar) {
+    final isDark =
+        CupertinoTheme.of(context).brightness == Brightness.dark;
+    if (isDark) return bar;
+
+    // Resolve shadow from settings (inherited or global).
+    final effectiveSettings =
+        InheritedLiquidGlass.ofOrDefault(context);
+    final shadows = effectiveSettings.effectiveShadow;
+    if (shadows.isEmpty) return bar;
+
+    return Stack(
+      fit: StackFit.passthrough,
+      clipBehavior: Clip.none,
+      children: [
+        bar,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ClipPath(
+              clipBehavior: Clip.antiAlias,
+              clipper: _InverseBarClipper(_barShape),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius:
+                      BorderRadius.circular(widget.barBorderRadius),
+                  boxShadow: shadows,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Wraps [child] in a [GlassGlow] sensor if the resolved glow color is
   /// non-transparent. When [GlassInteractionBehavior.none] or [scaleOnly] is
   /// active, the parent passes [Colors.transparent] — we skip the wrapper
@@ -557,7 +600,9 @@ class TabIndicatorState extends State<TabIndicator>
     required double glassRadius,
     required Color indicatorColor,
   }) {
-    return SizedBox(
+    return _wrapWithBarShadow(
+      context,
+      SizedBox(
       height: widget.barHeight,
       child: _wrapWithGlow(
         child: Stack(
@@ -622,6 +667,7 @@ class TabIndicatorState extends State<TabIndicator>
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -637,7 +683,9 @@ class TabIndicatorState extends State<TabIndicator>
     required double glassRadius,
     required Color indicatorColor,
   }) {
-    return SizedBox(
+    return _wrapWithBarShadow(
+      context,
+      SizedBox(
       height: widget.barHeight,
       child: _wrapWithGlow(
         child: Stack(
@@ -742,6 +790,28 @@ class TabIndicatorState extends State<TabIndicator>
           ],
         ),
       ),
+    ),
     );
   }
+}
+
+/// Clips out the interior of a bar shape, leaving only the exterior.
+/// Used to prevent bar drop shadows from bleeding under translucent glass.
+class _InverseBarClipper extends CustomClipper<Path> {
+  const _InverseBarClipper(this.shape);
+
+  final LiquidRoundedSuperellipse shape;
+
+  @override
+  Path getClip(Size size) {
+    final rect = Offset.zero & size;
+    final shapePath = shape.getOuterPath(rect);
+    final outerRect = rect.inflate(50.0);
+    final outerPath = Path()..addRect(outerRect);
+    return Path.combine(PathOperation.difference, outerPath, shapePath);
+  }
+
+  @override
+  bool shouldReclip(_InverseBarClipper oldClipper) =>
+      oldClipper.shape != shape;
 }
