@@ -379,6 +379,14 @@ class _InteractivePageState extends State<InteractivePage> {
 
                       // ── GlassButtonGroup ─────────────────────────────────
                       const _SectionTitle(title: 'GlassButtonGroup'),
+                      SizedBox(height: 4),
+                      Text(
+                        'With dividers (children mode)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: CupertinoColors.label.resolveFrom(context).withValues(alpha: 0.5),
+                        ),
+                      ),
                       SizedBox(height: 16),
                       Center(
                         child: GlassButtonGroup(
@@ -403,7 +411,7 @@ class _InteractivePageState extends State<InteractivePage> {
                       ),
                       SizedBox(height: 24),
                       Text(
-                        'Unified toolbars (showDividers: false) with shadows',
+                        'Lightweight items (.icons constructor)',
                         style: TextStyle(
                           fontSize: 13,
                           color: CupertinoColors.label.resolveFrom(context).withValues(alpha: 0.5),
@@ -413,61 +421,49 @@ class _InteractivePageState extends State<InteractivePage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          GlassButtonGroup(
-                            showDividers: false,
+                          GlassButtonGroup.icons(
                             useOwnLayer: true,
-                            settings: const LiquidGlassSettings(shadowElevation: 1.0),
-                            children: [
-                              GlassButton(
+                            items: [
+                              GlassGroupItem(
                                 icon: Icon(CupertinoIcons.text_alignleft),
-                                style: GlassButtonStyle.transparent,
                                 onTap: () {},
                               ),
-                              GlassButton(
+                              GlassGroupItem(
                                 icon: Icon(CupertinoIcons.trash),
-                                style: GlassButtonStyle.transparent,
                                 onTap: () {},
                               ),
-                              GlassButton(
+                              GlassGroupItem(
                                 icon: Icon(CupertinoIcons.add),
-                                style: GlassButtonStyle.transparent,
                                 onTap: () {},
                               ),
                             ],
                           ),
                           GlassButton(
-                            icon: Icon(CupertinoIcons.pencil),
+                            icon: Icon(CupertinoIcons.square_pencil),
                             useOwnLayer: true,
-                            settings: const LiquidGlassSettings(shadowElevation: 1.0),
                             onTap: () {},
                           ),
                         ],
                       ),
                       SizedBox(height: 16),
                       Center(
-                        child: GlassButtonGroup(
-                          showDividers: false,
+                        child: GlassButtonGroup.icons(
                           useOwnLayer: true,
-                          settings: const LiquidGlassSettings(shadowElevation: 1.0),
-                          children: [
-                            GlassButton(
+                          items: [
+                            GlassGroupItem(
                               icon: Icon(CupertinoIcons.arrow_uturn_left),
-                              style: GlassButtonStyle.transparent,
                               onTap: () {},
                             ),
-                            GlassButton(
+                            GlassGroupItem(
                               icon: Icon(CupertinoIcons.arrow_uturn_right),
-                              style: GlassButtonStyle.transparent,
                               onTap: () {},
                             ),
-                            GlassButton(
+                            GlassGroupItem(
                               icon: Icon(CupertinoIcons.pencil_outline),
-                              style: GlassButtonStyle.transparent,
                               onTap: () {},
                             ),
-                            GlassButton(
+                            GlassGroupItem(
                               icon: Icon(CupertinoIcons.ellipsis),
-                              style: GlassButtonStyle.transparent,
                               onTap: () {},
                             ),
                           ],
