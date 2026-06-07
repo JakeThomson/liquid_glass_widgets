@@ -1,6 +1,6 @@
 # 0.15.1
 
-## Light-Mode Shadows & Configurable Shadow API
+## Light-Mode Aesthetics & Shadows
 
 ### New features
 
@@ -9,12 +9,16 @@
 
 ### Improvements
 
-- **Light-mode drop shadows** on all glass surfaces (cards, buttons, bottom bars, search pills) using inverse clipping — shadows render outside the glass boundary so the backdrop filter doesn't blur them.
-- **Standard glass white frost** — standard quality glass in light mode now renders as clean frosted white instead of grey. Dark mode unchanged.
+- **Light-mode rim borders** — removed the heavy dark rim border on glass surfaces in light mode. Dark mode rim lighting remains fully intact and unchanged.
+- **Light-mode drop shadows** — added inverse-clipped drop shadows to glass surfaces in light mode (cards, standalone buttons, bottom bars). Shadows render outside the glass boundary so the backdrop filter doesn't blur them. Note: morphing elements like the search pill do not have shadows to prevent animation artifacts.
+- **Standard glass white frost** — standard quality glass in light mode now correctly renders as clean frosted white instead of muddy grey.
+- **Dynamic color resolution** — improved internal text and icon styling to accurately resolve `CupertinoColors` against the active theme brightness.
 
 ### Bug fixes
 
 - Fixed missing `} else {` in `lightweight_glass.frag` that caused PATH B (standard widgets) to run inside PATH A.
+- Fixed `GlassSheet` sharp corners on macOS by decoupling top and bottom border radius.
+- Fixed `GlassMenu` selection pill alignment and hit-test accuracy when system text scaler is active.
 
 # 0.15.0
 
