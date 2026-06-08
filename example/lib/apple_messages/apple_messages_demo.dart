@@ -25,54 +25,57 @@ import '../constants/sf_symbols.dart';
 // PALETTE  (matches iOS 26 dark Messages)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const _kBg = CupertinoDynamicColor.withBrightness(color: Color(0xFFFFFFFF), darkColor: Color(0xFF000000));
+const _kBg = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFFFFFFFF), darkColor: Color(0xFF000000));
 const _kSeparator = CupertinoColors.separator; // ~20% white
-const _kAvatarBg = CupertinoDynamicColor.withBrightness(color: Color(0xFFE5E5EA), darkColor: Color(0xFF3A3A50)); // muted indigo — iOS default avatar bg
+const _kAvatarBg = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFFE5E5EA),
+    darkColor: Color(0xFF3A3A50)); // muted indigo — iOS default avatar bg
 const _kBlue = CupertinoColors.systemBlue; // iOS 26 blue
 
 // Glass shared by both menu triggers — matches the "Edit" pill aesthetic
 LiquidGlassSettings _kTriggerGlass(BuildContext context) => LiquidGlassSettings(
-  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark 
-      ? Colors.white10 
-      : Colors.black.withValues(alpha: 0.05),
-  thickness: 18,
-  blur: 8,
-  lightIntensity: 0.4,
-  ambientStrength: 0.08,
-  chromaticAberration: 0.01,
-  refractiveIndex: 1.2,
-  saturation: 1.0,
-  shadowElevation: 0.3,
-);
+      glassColor: CupertinoTheme.of(context).brightness == Brightness.dark
+          ? Colors.white10
+          : Colors.white.withValues(alpha: 0.7),
+      thickness: 18,
+      blur: 8,
+      lightIntensity: 0.4,
+      ambientStrength: 0.08,
+      chromaticAberration: 0.01,
+      refractiveIndex: 1.2,
+      saturation: 1.0,
+      shadowElevation: 0.6,
+    );
 
 // Glass for the search+compose bar (blended group — premium needed for merging)
 LiquidGlassSettings _kSearchGlass(BuildContext context) => LiquidGlassSettings(
-  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark 
-      ? Colors.white10 
-      : Colors.black.withValues(alpha: 0.06),
-  thickness: 18,
-  blur: 8,
-  lightIntensity: 0.4,
-  ambientStrength: 0.1,
-  chromaticAberration: 0.1,
-  refractiveIndex: 1.2,
-  saturation: 1.0,
-  shadowElevation: 0.3,
-);
+      glassColor: CupertinoTheme.of(context).brightness == Brightness.dark
+          ? Colors.white10
+          : Colors.white.withValues(alpha: 0.7),
+      thickness: 18,
+      blur: 8,
+      lightIntensity: 0.4,
+      ambientStrength: 0.1,
+      chromaticAberration: 0.1,
+      refractiveIndex: 1.2,
+      saturation: 1.0,
+      shadowElevation: 0.6,
+    );
 
 // Glass for the menus themselves
 LiquidGlassSettings _kMenuGlass(BuildContext context) => LiquidGlassSettings(
-  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark 
-      ? Colors.white12 
-      : Colors.black.withValues(alpha: 0.08),
-  thickness: 18,
-  blur: 12,
-  lightIntensity: 0.6,
-  ambientStrength: 0.1,
-  chromaticAberration: 0.01,
-  refractiveIndex: 1.2,
-  saturation: 1.0,
-);
+      glassColor: CupertinoTheme.of(context).brightness == Brightness.dark
+          ? Colors.white
+          : Colors.black.withValues(alpha: 0.08),
+      thickness: 18,
+      blur: 12,
+      lightIntensity: 0.6,
+      ambientStrength: 0.1,
+      chromaticAberration: 0.01,
+      refractiveIndex: 1.2,
+      saturation: 1.0,
+    );
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA
@@ -289,7 +292,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return GlassScaffold(
       background: ColoredBox(color: _kBg.resolveFrom(context)),
       settings: _kTriggerGlass(context),
-      statusBarStyle: CupertinoTheme.of(context).brightness == Brightness.dark ? GlassStatusBarStyle.light : GlassStatusBarStyle.dark,
+      statusBarStyle: CupertinoTheme.of(context).brightness == Brightness.dark
+          ? GlassStatusBarStyle.light
+          : GlassStatusBarStyle.dark,
       appBarHeight: 52,
       bottomBarHeight: 60,
       appBar: _NavBar(
@@ -498,7 +503,8 @@ class _FilterMenu extends StatelessWidget {
           title: 'Messages',
           icon: Icon(SFSymbols.bubble_left_and_bubble_right),
           trailing: activeFilter == 'Messages'
-              ? Icon(SFSymbols.checkmark, color: CupertinoColors.label.resolveFrom(context), size: 16)
+              ? Icon(SFSymbols.checkmark,
+                  color: CupertinoColors.label.resolveFrom(context), size: 16)
               : null,
           onTap: () => onFilterChanged('Messages'),
         ),
@@ -506,7 +512,8 @@ class _FilterMenu extends StatelessWidget {
           title: 'Spam',
           icon: Icon(SFSymbols.xmark_bin),
           trailing: activeFilter == 'Spam'
-              ? Icon(SFSymbols.checkmark, color: CupertinoColors.label.resolveFrom(context), size: 16)
+              ? Icon(SFSymbols.checkmark,
+                  color: CupertinoColors.label.resolveFrom(context), size: 16)
               : null,
           onTap: () => onFilterChanged('Spam'),
         ),
@@ -514,7 +521,8 @@ class _FilterMenu extends StatelessWidget {
           title: 'Recently Deleted',
           icon: Icon(SFSymbols.trash),
           trailing: activeFilter == 'Recently Deleted'
-              ? Icon(SFSymbols.checkmark, color: CupertinoColors.label.resolveFrom(context), size: 16)
+              ? Icon(SFSymbols.checkmark,
+                  color: CupertinoColors.label.resolveFrom(context), size: 16)
               : null,
           onTap: () => onFilterChanged('Recently Deleted'),
         ),
@@ -580,7 +588,8 @@ class _ConversationRow extends StatelessWidget {
                             child: Text(
                               c.name,
                               style: TextStyle(
-                                color: CupertinoColors.label.resolveFrom(context),
+                                color:
+                                    CupertinoColors.label.resolveFrom(context),
                                 fontSize: 17,
                                 fontWeight: c.isUnread
                                     ? FontWeight.w600
@@ -594,7 +603,8 @@ class _ConversationRow extends StatelessWidget {
                           Text(
                             c.time,
                             style: TextStyle(
-                              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                              color: CupertinoColors.secondaryLabel
+                                  .resolveFrom(context),
                               fontSize: 13,
                             ),
                           ),
@@ -602,7 +612,8 @@ class _ConversationRow extends StatelessWidget {
                           Icon(
                             SFSymbols.chevron_right,
                             size: 12,
-                            color: CupertinoColors.tertiaryLabel.resolveFrom(context),
+                            color: CupertinoColors.tertiaryLabel
+                                .resolveFrom(context),
                           ),
                         ],
                       ),
@@ -610,7 +621,8 @@ class _ConversationRow extends StatelessWidget {
                       Text(
                         c.hasAttachment ? '📷  ${c.preview}' : c.preview,
                         style: TextStyle(
-                          color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                          color: CupertinoColors.secondaryLabel
+                              .resolveFrom(context),
                           fontSize: 15,
                           height: 1.3,
                         ),
@@ -626,7 +638,10 @@ class _ConversationRow extends StatelessWidget {
           // Separator indented past the dot + avatar
           Padding(
             padding: EdgeInsets.only(left: 76),
-            child: Divider(height: 1, color: _kSeparator.resolveFrom(context), thickness: 0.4),
+            child: Divider(
+                height: 1,
+                color: _kSeparator.resolveFrom(context),
+                thickness: 0.4),
           ),
         ],
       ),
@@ -766,7 +781,8 @@ class _SearchBarState extends State<_SearchBar> {
                                 stretch: 0.25,
                                 icon: Icon(
                                   SFSymbols.square_and_pencil,
-                                  color: CupertinoColors.label.resolveFrom(context),
+                                  color: CupertinoColors.label
+                                      .resolveFrom(context),
                                   size: 22,
                                 ),
                               ),
