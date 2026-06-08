@@ -723,27 +723,38 @@ class _GlassTextFieldState extends State<GlassTextField> {
     // create the genuine recessed-tray look. In light mode Apple's text inputs
     // are nearly flat — just a faint hint of depth — so we drop the overlay to
     // black ~3% to avoid washing out the glass surface.
-    final wellBorderRadius = _shapeRadius(widget.shape);
-    final wellFillAlpha = isDark ? 0.12 : 0.03;
-    final wellGradientAlpha = isDark ? 0.08 : 0.02;
-    final frostedWell = DecoratedBox(
-      decoration: BoxDecoration(
-        // Slightly darker than pure glass — creates the "inset tray" feel.
-        color: Colors.black.withValues(alpha: wellFillAlpha),
-        borderRadius: wellBorderRadius,
-        // Inner shadow simulation: a thin gradient darkish at top fading out.
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.center,
-          stops: const [0.0, 1.0],
-          colors: [
-            Colors.black.withValues(alpha: wellGradientAlpha),
-            Colors.transparent,
-          ],
+    //
+    // Standalone bypass: when [useOwnLayer] is true the text field IS the glass
+    // surface — there is no parent glass card for it to be "recessed into."
+    // Applying the well would just darken the surface and create visible nested
+    // borders (the outer superellipse + inner circular BorderRadius don't match).
+    // So we skip the well entirely for standalone fields.
+    final Widget glassChild;
+    if (widget.useOwnLayer) {
+      // Standalone — the glass surface itself is the visual boundary.
+      glassChild = textFieldContent;
+    } else {
+      // Grouped — add frosted well for the recessed-tray look.
+      final wellBorderRadius = _shapeRadius(widget.shape);
+      final wellFillAlpha = isDark ? 0.12 : 0.03;
+      final wellGradientAlpha = isDark ? 0.08 : 0.02;
+      glassChild = DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: wellFillAlpha),
+          borderRadius: wellBorderRadius,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.center,
+            stops: const [0.0, 1.0],
+            colors: [
+              Colors.black.withValues(alpha: wellGradientAlpha),
+              Colors.transparent,
+            ],
+          ),
         ),
-      ),
-      child: textFieldContent,
-    );
+        child: textFieldContent,
+      );
+    }
 
     // Apply glass effect
     // iOS 26: wrap in GlassGlow only when interactionBehavior includes glow.
@@ -757,7 +768,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
       ),
       quality: effectiveQuality,
       useOwnLayer: widget.useOwnLayer,
-      child: _wrapWithGlow(frostedWell, isDark),
+      child: _wrapWithGlow(glassChild, isDark),
     );
 
     // GlassGlowLayer is now automatically provided by GlassGlow internally.
