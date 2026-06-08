@@ -718,11 +718,18 @@ class _GlassTextFieldState extends State<GlassTextField> {
     // the surrounding glass card, matching the "input tray" seen in Messages
     // and Settings search on iOS 26. We achieve this with a slightly darker,
     // more opaque fill + a subtle top-edge inner shadow (depth cue).
+    //
+    // Brightness-aware: in dark mode the overlay is prominent (black12) to
+    // create the genuine recessed-tray look. In light mode Apple's text inputs
+    // are nearly flat — just a faint hint of depth — so we drop the overlay to
+    // black ~3% to avoid washing out the glass surface.
     final wellBorderRadius = _shapeRadius(widget.shape);
+    final wellFillAlpha = isDark ? 0.12 : 0.03;
+    final wellGradientAlpha = isDark ? 0.08 : 0.02;
     final frostedWell = DecoratedBox(
       decoration: BoxDecoration(
         // Slightly darker than pure glass — creates the "inset tray" feel.
-        color: Colors.black.withValues(alpha: 0.12),
+        color: Colors.black.withValues(alpha: wellFillAlpha),
         borderRadius: wellBorderRadius,
         // Inner shadow simulation: a thin gradient darkish at top fading out.
         gradient: LinearGradient(
@@ -730,7 +737,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
           end: Alignment.center,
           stops: const [0.0, 1.0],
           colors: [
-            Colors.black.withValues(alpha: 0.08),
+            Colors.black.withValues(alpha: wellGradientAlpha),
             Colors.transparent,
           ],
         ),
