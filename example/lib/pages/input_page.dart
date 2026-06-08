@@ -145,68 +145,77 @@ class _InputPageState extends State<InputPage> {
                       // ── Example Form ─────────────────────────────────
                       const _SectionTitle(title: 'Example Form'),
                       SizedBox(height: 16),
-                      GlassCard(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Create Account',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: CupertinoColors.label.resolveFrom(context),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemFill.resolveFrom(context),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: CupertinoColors.label.resolveFrom(context),
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 24),
-                            GlassTextField(
-                              placeholder: 'Full Name',
-                              prefixIcon: Icon(CupertinoIcons.person,
-                                  size: 20, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
-                            ),
-                            SizedBox(height: 16),
-                            GlassTextField(
-                              placeholder: 'Email Address',
-                              prefixIcon: Icon(CupertinoIcons.mail,
-                                  size: 20, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                            SizedBox(height: 16),
-                            GlassTextField(
-                              placeholder: 'Password',
-                              prefixIcon: Icon(CupertinoIcons.lock,
-                                  size: 20, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
-                              obscureText: true,
-                            ),
-                            SizedBox(height: 24),
-                            SizedBox(
-                              width: double.infinity,
-                              child: GlassButton.custom(
-                                onTap: () {},
-                                height: 56,
-                                child: Center(
-                                  child: Text(
-                                    'Sign Up',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: CupertinoColors.label.resolveFrom(context),
+                              SizedBox(height: 24),
+                              GlassTextField(
+                                placeholder: 'Full Name',
+                                useOwnLayer: true,
+                                prefixIcon: Icon(CupertinoIcons.person,
+                                    size: 20, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
+                              ),
+                              SizedBox(height: 16),
+                              GlassTextField(
+                                placeholder: 'Email Address',
+                                useOwnLayer: true,
+                                prefixIcon: Icon(CupertinoIcons.mail,
+                                    size: 20, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
+                                keyboardType: TextInputType.emailAddress,
+                              ),
+                              SizedBox(height: 16),
+                              GlassTextField(
+                                placeholder: 'Password',
+                                useOwnLayer: true,
+                                prefixIcon: Icon(CupertinoIcons.lock,
+                                    size: 20, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
+                                obscureText: true,
+                              ),
+                              SizedBox(height: 24),
+                              SizedBox(
+                                width: double.infinity,
+                                child: GlassButton.custom(
+                                  onTap: () {},
+                                  height: 56,
+                                  child: Center(
+                                    child: Text(
+                                      'Sign Up',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: CupertinoColors.label.resolveFrom(context),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            SizedBox(height: 16),
-                            Center(
-                              child: Text(
-                                'Already have an account? Sign In',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: CupertinoColors.label.resolveFrom(context).withValues(alpha: 0.7),
+                              SizedBox(height: 16),
+                              Center(
+                                child: Text(
+                                  'Already have an account? Sign In',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: CupertinoColors.label.resolveFrom(context).withValues(alpha: 0.7),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
 
@@ -263,34 +272,42 @@ class _InputPageState extends State<InputPage> {
                       // ── GlassFormField ─────────────────────────────
                       const _SectionTitle(title: 'GlassFormField'),
                       SizedBox(height: 16),
-                      GlassCard(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          children: [
-                            GlassFormField(
-                              label: 'Account Email',
-                              child: GlassTextField(
-                                placeholder: 'example@email.com',
-                                keyboardType: TextInputType.emailAddress,
-                                prefixIcon: Icon(CupertinoIcons.mail,
-                                    color: CupertinoColors.secondaryLabel.resolveFrom(context), size: 20),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemFill.resolveFrom(context),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            children: [
+                              GlassFormField(
+                                label: 'Account Email',
+                                child: GlassTextField(
+                                  placeholder: 'example@email.com',
+                                  keyboardType: TextInputType.emailAddress,
+                                  useOwnLayer: true,
+                                  prefixIcon: Icon(CupertinoIcons.mail,
+                                      color: CupertinoColors.secondaryLabel.resolveFrom(context), size: 20),
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 16),
-                            const GlassFormField(
-                              label: 'Password',
-                              helperText: 'Must be at least 8 characters',
-                              child: GlassPasswordField(),
-                            ),
-                            SizedBox(height: 16),
-                            GlassFormField(
-                              label: 'Bio / Description',
-                              child: GlassTextArea(
-                                placeholder: 'Write a short description...',
-                                minLines: 3,
+                              SizedBox(height: 16),
+                              const GlassFormField(
+                                label: 'Password',
+                                helperText: 'Must be at least 8 characters',
+                                child: GlassPasswordField(),
                               ),
-                            ),
-                          ],
+                              SizedBox(height: 16),
+                              GlassFormField(
+                                label: 'Bio / Description',
+                                child: GlassTextArea(
+                                  placeholder: 'Write a short description...',
+                                  minLines: 3,
+                                  useOwnLayer: true,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
 

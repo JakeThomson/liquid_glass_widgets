@@ -45,36 +45,44 @@ class InputsPage extends StatelessWidget {
 
               // Form Example
               _SectionHeader('Input Form'),
-              GlassCard(
-                child: Column(
-                  children: [
-                    GlassFormField(
-                      label: 'Account Email',
-                      child: GlassTextField(
-                        placeholder: 'example@email.com',
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: Icon(CupertinoIcons.mail,
-                            color: CupertinoColors.secondaryLabel.resolveFrom(context), size: 20),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemFill.resolveFrom(context),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      GlassFormField(
+                        label: 'Account Email',
+                        child: GlassTextField(
+                          placeholder: 'example@email.com',
+                          keyboardType: TextInputType.emailAddress,
+                          useOwnLayer: true,
+                          prefixIcon: Icon(CupertinoIcons.mail,
+                              color: CupertinoColors.secondaryLabel.resolveFrom(context), size: 20),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    const GlassFormField(
-                      label: 'Password',
-                      helperText: 'Must be at least 8 characters',
-                      child: GlassPasswordField(),
-                    ),
-                    SizedBox(height: 16),
-                    GlassFormField(
-                      label: 'Role',
-                      child: GlassPicker(
-                        value: 'Administrator',
-                        icon: Icon(CupertinoIcons.briefcase),
-                        useOwnLayer: true, // Demo specific layer usage
-                        quality: GlassQuality.premium,
-                        onTap: () {},
+                      SizedBox(height: 16),
+                      const GlassFormField(
+                        label: 'Password',
+                        helperText: 'Must be at least 8 characters',
+                        child: GlassPasswordField(),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 16),
+                      GlassFormField(
+                        label: 'Role',
+                        child: GlassPicker(
+                          value: 'Administrator',
+                          icon: Icon(CupertinoIcons.briefcase),
+                          useOwnLayer: true, // Demo specific layer usage
+                          quality: GlassQuality.premium,
+                          onTap: () {},
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -82,12 +90,20 @@ class InputsPage extends StatelessWidget {
 
               // Text Area Example
               _SectionHeader('Multi-line Text'),
-              GlassCard(
-                child: GlassFormField(
-                  label: 'Bio / Description',
-                  child: GlassTextArea(
-                    placeholder: 'Write a short description...',
-                    minLines: 4,
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemFill.resolveFrom(context),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: GlassFormField(
+                    label: 'Bio / Description',
+                    child: GlassTextArea(
+                      placeholder: 'Write a short description...',
+                      minLines: 4,
+                      useOwnLayer: true,
+                    ),
                   ),
                 ),
               ),
