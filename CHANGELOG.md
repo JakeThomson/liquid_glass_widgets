@@ -14,6 +14,7 @@
 - **Light-mode drop shadows** — added inverse-clipped drop shadows to glass surfaces in light mode (cards, standalone buttons, bottom bars). Shadows render outside the glass boundary so the backdrop filter doesn't blur them. Note: morphing elements like the search pill do not have shadows to prevent animation artifacts.
 - **Standard glass white frost** — standard quality glass in light mode now correctly renders as clean frosted white instead of muddy grey.
 - **Dynamic color resolution** — improved internal text and icon styling to accurately resolve `CupertinoColors` against the active theme brightness.
+- **`GlassSearchBar` and `GlassTextField` default colors now brightness-aware** — default text, icon, and glow colors now resolve dynamically against `CupertinoTheme.brightnessOf(context)` instead of being hardcoded to white. This ensures correct contrast in both light and dark mode.
 
 ### Bug fixes
 
@@ -22,6 +23,22 @@
 - Fixed `GlassMenu` selection pill alignment and hit-test accuracy when system text scaler is active.
 - Fixed `GlassChip` resolving with invisible white text and icons in light mode.
 - Fixed Apple Podcasts demo incorrectly forcing dark-mode glass colors in light mode.
+
+### ⚠️ Breaking — Removed frosted well overlay from `GlassTextField`
+
+`GlassTextField` no longer applies a hidden internal darkening overlay ("frosted well") on top of the glass surface. Previously, a `DecoratedBox` with `Colors.black.withValues(alpha: 0.12)` plus a top-edge gradient was composited inside the glass shape to simulate an iOS 26 recessed input tray. This has been removed entirely.
+
+**Why:** The frosted well fought against user-specified `glassColor`, making text fields appear darker/muddier than buttons with identical settings. It also caused visible nested border artifacts when the overlay's `BorderRadius.circular()` didn't match the glass surface's `LiquidRoundedSuperellipse` shape — especially with `useOwnLayer: true` and `padding: EdgeInsets.zero`.
+
+**Design philosophy:** `GlassTextField` is a hero surface (search bars, compose bars, app bar inputs) — not a form field nested inside glass cards. `glassColor` is now the single source of truth for appearance, consistent with every other glass widget.
+
+**Migration:** If you relied on the frosted well for visual distinction inside a grouped layout, set a slightly darker `glassColor` on the text field explicitly. Most users will see cleaner, more predictable text fields with no action required.
+
+### Example app
+
+- **Input demos** — replaced `GlassCard` wrappers around form fields with flat `CupertinoColors.systemFill` containers. Glass text fields now render as standalone hero surfaces (`useOwnLayer: true`) inside flat-colored form sections, demonstrating the correct pattern. Glass-in-glass nesting is an anti-pattern.
+- **Apple Messages demo** — refined light-mode glass settings with tuned alpha values for a closer match to the real iOS Messages app.
+
 
 # 0.15.0
 
@@ -737,7 +754,7 @@ GlassTextField(
 )
 ```
 
-The panel inherits the frosted-well tinting of the surrounding glass card.
+The panel renders inside the glass surface alongside the text area.
 Callers can add a `Divider` between the text area and the panel if a visual
 separator is desired. Not available on `GlassTextField.search` (that
 constructor is single-line only; `bottom` is always `null` there).
