@@ -9,8 +9,8 @@ rim lighting, shadow, text, and icon values for both **Light** and **Dark**
 mode. No manual configuration required.
 
 This release closes the last remaining light-mode rendering gaps and ships a
-polished reference implementation in the Apple Messages demo that matches the
-real iOS 26 Messages app in both modes.
+reference implementation in the Apple Messages demo that matches the
+iOS 26 Messages app in both modes. Run the example app to toggle light and dark mode for all demo pages.
 
 ### New features
 
