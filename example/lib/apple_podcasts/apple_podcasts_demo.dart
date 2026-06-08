@@ -215,17 +215,23 @@ class ApplePodcastsDemoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoApp(
       title: 'Apple Podcasts',
-      theme: const CupertinoThemeData(brightness: Brightness.dark),
-      builder: (context, child) => Theme(
-        data: ThemeData.dark(useMaterial3: true).copyWith(
-          scaffoldBackgroundColor: _kBackground,
-          colorScheme: const ColorScheme.dark(
-            primary: _kPodcastsPurple,
-            surface: _kBackground,
+      theme: const CupertinoThemeData(),
+      builder: (context, child) {
+        final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+        return Theme(
+          data: ThemeData(
+            useMaterial3: true,
+            brightness: isDark ? Brightness.dark : Brightness.light,
+            scaffoldBackgroundColor: _kBackground.resolveFrom(context),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: _kPodcastsPurple,
+              brightness: isDark ? Brightness.dark : Brightness.light,
+              surface: _kBackground.resolveFrom(context),
+            ),
           ),
-        ),
-        child: child!,
-      ),
+          child: child!,
+        );
+      },
       home: const ApplePodcastsHomeScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -274,12 +280,13 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
   }
 
   void _showNowPlayingSheet(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     GlassModalSheet.show(
       context: context,
       initialState: SheetState.full,
       halfSize: 0,
-      settings: const LiquidGlassSettings(
-        glassColor: Color(0xAA1C1C1E),
+      settings: LiquidGlassSettings(
+        glassColor: isDark ? const Color(0xAA1C1C1E) : const Color(0xAAF2F2F7),
         thickness: 40,
         blur: 15,
         lightIntensity: 0.6,
@@ -370,8 +377,10 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
                 width: double.infinity,
                 height: 50,
                 shape: const LiquidRoundedSuperellipse(borderRadius: 25),
-                settings: const LiquidGlassSettings(
-                  glassColor: Color(0xCC1C1C1E),
+                settings: LiquidGlassSettings(
+                  glassColor: CupertinoTheme.brightnessOf(context) == Brightness.dark 
+                      ? const Color(0xCC1C1C1E) 
+                      : const Color(0xCCF2F2F7),
                   thickness: 30,
                   blur: 3,
                 ),
@@ -411,8 +420,10 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
           iconLabelSpacing: 0,
           quality: GlassQuality.premium,
           interactionBehavior: GlassInteractionBehavior.full,
-          settings: const LiquidGlassSettings(
-            glassColor: Color.fromRGBO(28, 28, 30, 0.8),
+          settings: LiquidGlassSettings(
+            glassColor: CupertinoTheme.brightnessOf(context) == Brightness.dark 
+                ? const Color.fromRGBO(28, 28, 30, 0.8) 
+                : const Color.fromRGBO(242, 242, 247, 0.8),
             thickness: 30,
             blur: 4,
             chromaticAberration: .01,
@@ -1137,8 +1148,12 @@ class _NowPlayingViewState extends State<NowPlayingView> {
                 onTap: () {},
                 useOwnLayer: true,
                 shape: const LiquidRoundedSuperellipse(borderRadius: 40),
-                settings: const LiquidGlassSettings(
-                    thickness: 20, blur: 2, glassColor: Color(0x33FFFFFF)),
+                settings: LiquidGlassSettings(
+                    thickness: 20, 
+                    blur: 2, 
+                    glassColor: CupertinoTheme.brightnessOf(context) == Brightness.dark 
+                        ? const Color(0x33FFFFFF) 
+                        : const Color(0x1A000000)),
                 icon: Padding(
                   padding: EdgeInsets.all(24.0),
                   child: Icon(CupertinoIcons.play_fill,
