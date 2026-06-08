@@ -433,15 +433,13 @@ class _GlassTextFieldState extends State<GlassTextField> {
 
   final GlobalKey _textFieldKey = GlobalKey();
 
-  // Soft default glow colour — visibly more ambient than GlassButton's white24.
-  static const _defaultGlowColor = Color(0x1FFFFFFF); // white ~12%
-
   /// Wraps [child] in a [GlassGlow] sensor only when [interactionBehavior]
   /// includes glow. Skips the widget entirely otherwise — zero allocation cost.
-  Widget _wrapWithGlow(Widget child) {
+  Widget _wrapWithGlow(Widget child, bool isDark) {
     if (!widget.interactionBehavior.hasGlow) return child;
     return GlassGlow(
-      glowColor: widget.glowColor ?? _defaultGlowColor,
+      glowColor: widget.glowColor ?? 
+          (isDark ? const Color(0x1FFFFFFF) : const Color(0x1F000000)),
       glowRadius: widget.glowRadius,
       child: child,
     );
@@ -579,7 +577,14 @@ class _GlassTextFieldState extends State<GlassTextField> {
 
     // Use MediaQuery textScaler for accurate line height calculation.
     final textScaler = MediaQuery.textScalerOf(context);
-    final effectiveStyle = widget.textStyle ?? _defaultTextStyle;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    
+    final defaultTextStyle = TextStyle(
+      color: isDark ? const Color.fromRGBO(255, 255, 255, 0.9) : const Color.fromRGBO(0, 0, 0, 0.9),
+      fontSize: 16,
+      height: 1.2,
+    );
+    final effectiveStyle = widget.textStyle ?? defaultTextStyle;
     final fontSize = effectiveStyle.fontSize ?? 16.0;
     final effectiveLineHeight =
         textScaler.scale(fontSize) * (effectiveStyle.height ?? 1.2);
@@ -593,22 +598,20 @@ class _GlassTextFieldState extends State<GlassTextField> {
     }
   }
 
-  static const _defaultTextStyle = TextStyle(
-    color: Color.fromRGBO(255, 255, 255, 0.9), // Colors.white with 0.9 alpha
-    fontSize: 16,
-    height: 1.2,
-  );
-
-  static const _defaultPlaceholderStyle = TextStyle(
-    color: Color.fromRGBO(255, 255, 255, 0.5), // Colors.white with 0.5 alpha
-    fontSize: 16,
-  );
-
   @override
   Widget build(BuildContext context) {
-    // Use static constants for default styles
-    final defaultTextStyle = _defaultTextStyle;
-    final defaultPlaceholderStyle = _defaultPlaceholderStyle;
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+    
+    final defaultTextStyle = TextStyle(
+      color: isDark ? const Color.fromRGBO(255, 255, 255, 0.9) : const Color.fromRGBO(0, 0, 0, 0.9),
+      fontSize: 16,
+      height: 1.2,
+    );
+
+    final defaultPlaceholderStyle = TextStyle(
+      color: isDark ? const Color.fromRGBO(255, 255, 255, 0.5) : const Color.fromRGBO(0, 0, 0, 0.5),
+      fontSize: 16,
+    );
 
     // In fixed-height mode, force CrossAxisAlignment.center so that icon
     // position is immune to system text scaling. With .center inside
@@ -747,7 +750,7 @@ class _GlassTextFieldState extends State<GlassTextField> {
       ),
       quality: effectiveQuality,
       useOwnLayer: widget.useOwnLayer,
-      child: _wrapWithGlow(frostedWell),
+      child: _wrapWithGlow(frostedWell, isDark),
     );
 
     // GlassGlowLayer is now automatically provided by GlassGlow internally.
