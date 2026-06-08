@@ -37,7 +37,7 @@ const _kBlue = CupertinoColors.systemBlue; // iOS 26 blue
 LiquidGlassSettings _kTriggerGlass(BuildContext context) => LiquidGlassSettings(
       glassColor: CupertinoTheme.of(context).brightness == Brightness.dark
           ? Colors.white10
-          : Colors.white.withValues(alpha: 0.7),
+          : Colors.black.withValues(alpha: 0.04),
       thickness: 18,
       blur: 8,
       lightIntensity: 0.4,
@@ -45,14 +45,13 @@ LiquidGlassSettings _kTriggerGlass(BuildContext context) => LiquidGlassSettings(
       chromaticAberration: 0.01,
       refractiveIndex: 1.2,
       saturation: 1.0,
-      shadowElevation: 0.6,
     );
 
 // Glass for the search+compose bar (blended group — premium needed for merging)
 LiquidGlassSettings _kSearchGlass(BuildContext context) => LiquidGlassSettings(
       glassColor: CupertinoTheme.of(context).brightness == Brightness.dark
           ? Colors.white10
-          : Colors.white.withValues(alpha: 0.7),
+          : Colors.black.withValues(alpha: 0.04),
       thickness: 18,
       blur: 8,
       lightIntensity: 0.4,
@@ -60,7 +59,6 @@ LiquidGlassSettings _kSearchGlass(BuildContext context) => LiquidGlassSettings(
       chromaticAberration: 0.1,
       refractiveIndex: 1.2,
       saturation: 1.0,
-      shadowElevation: 0.6,
     );
 
 // Glass for the menus themselves
