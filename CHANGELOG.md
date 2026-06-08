@@ -6,6 +6,7 @@
 
 - **Configurable glass shadow** — `LiquidGlassSettings.shadowElevation` scales the light-mode drop shadow (`0.0` = off, `1.0` = default, `2.0` = double). `LiquidGlassSettings.shadow` accepts a custom `List<BoxShadow>` for full control. Both flow through `globalSettings` (theme-level) and per-widget `settings:`.
 - **`GlassShadow` constants** — centralised shadow values (`GlassShadow.elevation`, `.contact`, `.defaults`, `.scaled(double)`) exported for custom widget authors.
+- **`GlassButtonGroup.icons()`** — introduced a lightweight group constructor for iOS 26 style segmented icon toolbars. Uses a single `GlassButton` parent to drive cohesive group-level stretch/glow interaction, while children are rendered as zero-overhead stateless tap targets.
 
 ### Improvements
 
@@ -19,6 +20,8 @@
 - Fixed missing `} else {` in `lightweight_glass.frag` that caused PATH B (standard widgets) to run inside PATH A.
 - Fixed `GlassSheet` sharp corners on macOS by decoupling top and bottom border radius.
 - Fixed `GlassMenu` selection pill alignment and hit-test accuracy when system text scaler is active.
+- Fixed `GlassChip` resolving with invisible white text and icons in light mode.
+- Fixed Apple Podcasts demo incorrectly forcing dark-mode glass colors in light mode.
 
 # 0.15.0
 
