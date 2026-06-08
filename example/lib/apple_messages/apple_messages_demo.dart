@@ -32,38 +32,44 @@ const _kBlue = CupertinoColors.systemBlue; // iOS 26 blue
 
 // Glass shared by both menu triggers — matches the "Edit" pill aesthetic
 LiquidGlassSettings _kTriggerGlass(BuildContext context) => LiquidGlassSettings(
-  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12,
+  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark 
+      ? Colors.white10 
+      : Colors.black.withValues(alpha: 0.05),
   thickness: 18,
-  blur: 3,
+  blur: 8,
   lightIntensity: 0.4,
   ambientStrength: 0.08,
   chromaticAberration: 0.01,
   refractiveIndex: 1.2,
-  saturation: 1.15,
+  saturation: 1.0,
 );
 
 // Glass for the search+compose bar (blended group — premium needed for merging)
 LiquidGlassSettings _kSearchGlass(BuildContext context) => LiquidGlassSettings(
-  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12, // slightly lighter, blends as a pair
+  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark 
+      ? Colors.white10 
+      : Colors.black.withValues(alpha: 0.06),
   thickness: 18,
-  blur: 2,
+  blur: 8,
   lightIntensity: 0.4,
-  ambientStrength: 0.2,
+  ambientStrength: 0.1,
   chromaticAberration: 0.1,
   refractiveIndex: 1.2,
-  saturation: 1.15,
+  saturation: 1.0,
 );
 
 // Glass for the menus themselves
 LiquidGlassSettings _kMenuGlass(BuildContext context) => LiquidGlassSettings(
-  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.black12,
+  glassColor: CupertinoTheme.of(context).brightness == Brightness.dark 
+      ? Colors.white12 
+      : Colors.black.withValues(alpha: 0.08),
   thickness: 18,
-  blur: 6,
+  blur: 12,
   lightIntensity: 0.6,
   ambientStrength: 0.1,
   chromaticAberration: 0.01,
   refractiveIndex: 1.2,
-  saturation: 1.15,
+  saturation: 1.0,
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
