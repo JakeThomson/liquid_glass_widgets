@@ -275,8 +275,11 @@ class GlassBottomBar extends StatefulWidget {
   /// Optional background key for Skia/Web refraction.
   final GlobalKey? backgroundKey;
 
-  /// Render the bar's glass via the live BackdropFilter path so it composites
-  /// over a PlatformView.
+  /// Set true when the bar sits over an iOS PlatformView (e.g. a map). The bar
+  /// background renders via live `BackdropFilter` (the premium shader can't
+  /// capture a PlatformView), while the premium indicator refracts the bar's
+  /// own icons — so premium animations survive over the PlatformView with no
+  /// quality swap. Defaults to false.
   final bool platformViewBackdrop;
 
   /// The color of the directional glow effect when interacting with the bar.

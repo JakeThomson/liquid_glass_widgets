@@ -369,6 +369,8 @@ class TabIndicator extends StatefulWidget {
   /// [GlassInteractionBehavior] before being forwarded here.
   final double interactionScale;
 
+  /// When true, forces BackdropFilter rendering and refracts the icon layer
+  /// instead of the backdrop — needed over iOS PlatformViews.
   final bool platformViewBackdrop;
 
   @override

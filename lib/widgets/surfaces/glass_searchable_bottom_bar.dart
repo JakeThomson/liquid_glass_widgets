@@ -544,6 +544,7 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
         return AdaptiveLiquidGlassLayer(
           settings: effectiveSettings,
           quality: effectiveQuality,
+          platformViewBackdrop: widget.platformViewBackdrop,
           blendAmount: widget.enableBlend ? widget.blendAmount : 0,
           child: Padding(
             padding: EdgeInsets.symmetric(
