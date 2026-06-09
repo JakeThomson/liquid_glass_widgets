@@ -770,6 +770,43 @@ class _GlassSearchableBottomBarState extends State<GlassSearchableBottomBar>
                             ),
                           ),
                         ),
+                        // Extra button shadow (if present)
+                        if (widget.extraButton != null)
+                          Positioned(
+                            left: extraPos == ExtraButtonPosition.beforeSearch
+                                ? curSearchLeft - extraWLeft
+                                : null,
+                            right: extraPos == ExtraButtonPosition.afterSearch
+                                ? (dismissVisible ? targetDismissReserve : 0.0)
+                                : null,
+                            bottom: extraCollapsesOnSearch ? 0 : floatY,
+                            width: doCollapseLayout
+                                ? math.min(extraTargetW, animH)
+                                : extraTargetW,
+                            height: animH,
+                            child: IgnorePointer(
+                              child: ClipPath(
+                                clipBehavior: Clip.antiAlias,
+                                clipper: _InverseOvalClipper(),
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    shape: widget.barBorderRadius ==
+                                            GlassSearchableBottomBar
+                                                ._kDefaultBorderRadius
+                                        ? BoxShape.circle
+                                        : BoxShape.rectangle,
+                                    borderRadius: widget.barBorderRadius !=
+                                            GlassSearchableBottomBar
+                                                ._kDefaultBorderRadius
+                                        ? BorderRadius.circular(
+                                            widget.barBorderRadius)
+                                        : null,
+                                    boxShadow: shadows,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                       // ── 1. Search pill (spring-driven left + width) ─────────────
                       // Painted first (bottom of stack) so the tab pill's glass
@@ -1099,4 +1136,21 @@ class _InversePillClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(_InversePillClipper oldClipper) =>
       oldClipper.shape != shape;
+}
+
+/// Clips out the interior of an oval, leaving only the exterior.
+///
+/// Used by the bar-level shadow layer for the extra button (which is circular).
+class _InverseOvalClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final rect = Offset.zero & size;
+    final ovalPath = Path()..addOval(rect);
+    final outerRect = rect.inflate(50.0);
+    final outerPath = Path()..addRect(outerRect);
+    return Path.combine(PathOperation.difference, outerPath, ovalPath);
+  }
+
+  @override
+  bool shouldReclip(_InverseOvalClipper oldClipper) => false;
 }

@@ -283,58 +283,9 @@ class BottomBarExtraBtn extends StatelessWidget {
       shape: effectiveShape,
     );
 
-    // When useOwnLayer is true, AdaptiveGlass handles the shadow internally.
-    // When blending (useOwnLayer: false), the grouped path deliberately skips
-    // shadows to avoid breaking the blend group render tree. Add the shadow
-    // here, *outside* the glass, using the same inverse-clip technique as
-    // TabIndicator._wrapWithBarShadow.
-    if (!enableBlend) return button;
-    return _wrapWithBlendShadow(context, button, effectiveShape);
-  }
-
-  /// Adds a light-mode drop shadow to the extra button when it participates
-  /// in the blend group. Dark mode is skipped (shadows are absorbed).
-  Widget _wrapWithBlendShadow(
-      BuildContext context, Widget button, LiquidShape shape) {
-    final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
-    if (isDark) return button;
-
-    final effectiveSettings = InheritedLiquidGlass.ofOrDefault(context);
-    final shadows = effectiveSettings.effectiveShadow;
-    if (shadows.isEmpty) return button;
-
-    // Extract border radius for BoxDecoration.
-    final BoxDecoration shadowDecoration;
-    if (shape is LiquidOval) {
-      shadowDecoration = BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: shadows,
-      );
-    } else {
-      shadowDecoration = BoxDecoration(
-        borderRadius: borderRadius != null
-            ? BorderRadius.circular(borderRadius!)
-            : null,
-        boxShadow: shadows,
-      );
-    }
-
-    return Stack(
-      fit: StackFit.passthrough,
-      clipBehavior: Clip.none,
-      children: [
-        button,
-        Positioned.fill(
-          child: IgnorePointer(
-            child: ClipPath(
-              clipBehavior: Clip.antiAlias,
-              clipper: _InverseLiquidShapeClipper(shape),
-              child: DecoratedBox(decoration: shadowDecoration),
-            ),
-          ),
-        ),
-      ],
-    );
+    // Shadows are now handled at the parent bar level as sibling Positioned
+    // elements, BELOW the glass layer. No per-widget Stack wrapper needed.
+    return button;
   }
 }
 
@@ -851,25 +802,4 @@ class _InverseBarClipper extends CustomClipper<Path> {
   bool shouldReclip(_InverseBarClipper oldClipper) => oldClipper.shape != shape;
 }
 
-/// Generic inverse clipper for any [LiquidShape].
-///
-/// Used by [BottomBarExtraBtn] to paint light-mode drop shadows outside the
-/// button boundary when it participates in a blend group (useOwnLayer: false).
-class _InverseLiquidShapeClipper extends CustomClipper<Path> {
-  const _InverseLiquidShapeClipper(this.shape);
 
-  final LiquidShape shape;
-
-  @override
-  Path getClip(Size size) {
-    final rect = Offset.zero & size;
-    final shapePath = shape.getOuterPath(rect);
-    final outerRect = rect.inflate(50.0);
-    final outerPath = Path()..addRect(outerRect);
-    return Path.combine(PathOperation.difference, outerPath, shapePath);
-  }
-
-  @override
-  bool shouldReclip(_InverseLiquidShapeClipper oldClipper) =>
-      oldClipper.shape != shape;
-}

@@ -644,6 +644,37 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
                             ),
                           ),
                         ),
+                        // Extra button shadow (if present)
+                        if (widget.extraButton != null)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            child: SizedBox(
+                              width: widget.extraButton!.size,
+                              height: widget.barHeight,
+                              child: IgnorePointer(
+                                child: ClipPath(
+                                  clipBehavior: Clip.antiAlias,
+                                  clipper: _InverseOvalClipper(),
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      shape: widget.barBorderRadius ==
+                                              GlassBottomBar._defaultBarBorderRadius
+                                          ? BoxShape.circle
+                                          : BoxShape.rectangle,
+                                      borderRadius: widget.barBorderRadius !=
+                                              GlassBottomBar._defaultBarBorderRadius
+                                          ? BorderRadius.circular(
+                                              widget.barBorderRadius)
+                                          : null,
+                                      boxShadow: shadows,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                   // 1. Optional extra button — painted first (bottom of z-order).
                   // Pinned to the trailing edge. Painted before the tab pill
@@ -1109,4 +1140,21 @@ class _InversePillClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(_InversePillClipper oldClipper) =>
       oldClipper.shape != shape;
+}
+
+/// Clips out the interior of an oval, leaving only the exterior.
+///
+/// Used by the bar-level shadow layer for the extra button (which is circular).
+class _InverseOvalClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final rect = Offset.zero & size;
+    final ovalPath = Path()..addOval(rect);
+    final outerRect = rect.inflate(50.0);
+    final outerPath = Path()..addRect(outerRect);
+    return Path.combine(PathOperation.difference, outerPath, ovalPath);
+  }
+
+  @override
+  bool shouldReclip(_InverseOvalClipper oldClipper) => false;
 }
