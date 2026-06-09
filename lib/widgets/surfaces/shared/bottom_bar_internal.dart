@@ -645,7 +645,9 @@ class TabIndicatorState extends State<TabIndicator>
                 padding: const EdgeInsets.all(4),
                 expansion: widget.indicatorExpansion,
                 settings: widget.indicatorSettings,
-                backgroundKey: widget.platformViewBackdrop ? _iconLayerKey : widget.backgroundKey,
+                backgroundKey: widget.platformViewBackdrop
+                    ? _iconLayerKey
+                    : widget.backgroundKey,
               ),
 
             // Persistent selected-icon overlay — always rendered at the TARGET
@@ -718,7 +720,9 @@ class TabIndicatorState extends State<TabIndicator>
               padding: const EdgeInsets.all(4),
               expansion: widget.indicatorExpansion,
               settings: widget.indicatorSettings,
-              backgroundKey: widget.platformViewBackdrop ? _iconLayerKey : widget.backgroundKey,
+              backgroundKey: widget.platformViewBackdrop
+                  ? _iconLayerKey
+                  : widget.backgroundKey,
             ),
 
             // 2. Icon Content Layer (Unselected + Selected combined for refraction)
@@ -784,7 +788,9 @@ class TabIndicatorState extends State<TabIndicator>
               padding: const EdgeInsets.all(4),
               expansion: widget.indicatorExpansion,
               settings: widget.indicatorSettings,
-              backgroundKey: widget.platformViewBackdrop ? _iconLayerKey : widget.backgroundKey,
+              backgroundKey: widget.platformViewBackdrop
+                  ? _iconLayerKey
+                  : widget.backgroundKey,
             ),
           ],
         ),

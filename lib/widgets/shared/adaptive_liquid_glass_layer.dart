@@ -130,8 +130,9 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
     }
 
     // Detect if we should use the full Impeller-native rendering pipeline
-    final bool useFullRenderer =
-        _canUseImpeller && effectiveQuality == GlassQuality.premium && !platformViewBackdrop;
+    final bool useFullRenderer = _canUseImpeller &&
+        effectiveQuality == GlassQuality.premium &&
+        !platformViewBackdrop;
 
     // Resolve shadow for SDF rendering. Shadows only apply in light mode.
     final bool isDark =

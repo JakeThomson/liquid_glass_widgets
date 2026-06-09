@@ -81,8 +81,7 @@ void main() {
       expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
     });
 
-    testWidgets(
-        'GlassBottomBar(platformViewBackdrop) refracts the icon layer',
+    testWidgets('GlassBottomBar(platformViewBackdrop) refracts the icon layer',
         (tester) async {
       // Exercises the TabIndicator's `backgroundKey: platformViewBackdrop ?
       // _iconLayerKey : widget.backgroundKey` branch plus the
