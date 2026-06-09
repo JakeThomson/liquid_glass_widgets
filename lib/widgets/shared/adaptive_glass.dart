@@ -44,6 +44,7 @@ class AdaptiveGlass extends StatelessWidget {
     this.allowElevation = true,
     this.glowIntensity = 0.0,
     this.isInteractive = false,
+    this.platformViewBackdrop = false,
     super.key,
   });
 
@@ -91,6 +92,15 @@ class AdaptiveGlass extends StatelessWidget {
   /// Defaults to 0.0 (no glow).
   final double glowIntensity;
 
+  /// When true, this glass renders via the live `BackdropFilter` path (the
+  /// lightweight render) EVEN at [GlassQuality.premium] — because the premium
+  /// shader samples a `toImageSync` texture, which cannot capture an iOS
+  /// PlatformView (map, video). Set this on glass directly over a PlatformView
+  /// so the live view shows through instead of a solid slab. Refraction is lost
+  /// (no texture), but rim/lighting and the live blur remain. Premium children
+  /// that refract Flutter content (e.g. the indicator) should NOT set this.
+  final bool platformViewBackdrop;
+
   /// Detects if Impeller rendering engine is active.
   ///
   /// Returns true when shader filters are supported (Impeller),
@@ -108,6 +118,7 @@ class AdaptiveGlass extends StatelessWidget {
     Clip clipBehavior = Clip.antiAlias,
     double glowIntensity = 0.0,
     bool isInteractive = false,
+    bool platformViewBackdrop = false,
   }) {
     return AdaptiveGlass(
       shape: shape,
@@ -117,6 +128,7 @@ class AdaptiveGlass extends StatelessWidget {
       clipBehavior: clipBehavior,
       glowIntensity: glowIntensity,
       isInteractive: isInteractive,
+      platformViewBackdrop: platformViewBackdrop,
       child: child,
     );
   }
@@ -185,8 +197,13 @@ class AdaptiveGlass extends StatelessWidget {
     // because those will fall back to FakeGlass (solid color) inside the renderer.
     // We MUST use our LightweightLiquidGlass to get actual glass effects.
 
-    final bool canUsePremiumShader =
-        !kIsWeb && _canUseImpeller && quality == GlassQuality.premium;
+    // platformViewBackdrop forces the live BackdropFilter path even at premium:
+    // the premium shader's toImageSync backdrop can't capture a PlatformView, so
+    // over one it must use BackdropFilter (live) instead.
+    final bool canUsePremiumShader = !kIsWeb &&
+        _canUseImpeller &&
+        quality == GlassQuality.premium &&
+        !platformViewBackdrop;
 
     if (!canUsePremiumShader) {
       // 1. Detect Grouped Elevation

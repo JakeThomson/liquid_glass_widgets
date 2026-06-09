@@ -127,6 +127,7 @@ class SearchableTabIndicator extends StatefulWidget {
     this.interactionGlowOpacity = 1,
     required this.enableBackgroundAnimation,
     required this.backgroundPressScale,
+    this.platformViewBackdrop = false,
     super.key,
   });
 
@@ -165,6 +166,11 @@ class SearchableTabIndicator extends StatefulWidget {
   final bool enableBackgroundAnimation;
   final double backgroundPressScale;
 
+  /// When true (bar over an iOS PlatformView): the bar background renders via
+  /// live BackdropFilter, and the premium indicator refracts the bar's own icon
+  /// layer (capturable) instead of the PlatformView backdrop.
+  final bool platformViewBackdrop;
+
   @override
   State<SearchableTabIndicator> createState() => SearchableTabIndicatorState();
 }
@@ -180,6 +186,10 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
   void notifyTabChanged(int index) => widget.onTabChanged(index);
 
   static const _fallbackIndicatorColor = Color(0x1AFFFFFF);
+
+  /// RepaintBoundary key for the merged icon layer, so the premium indicator can
+  /// refract the icons (capturable) over a PlatformView.
+  final GlobalKey _iconLayerKey = GlobalKey();
 
   // Cached shape to avoid recreation on every animation frame
   late LiquidRoundedSuperellipse _barShape =
@@ -303,6 +313,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                         decoration: ShapeDecoration(shape: _barShape),
                         child: AdaptiveGlass.grouped(
                           quality: widget.quality,
+                          platformViewBackdrop: widget.platformViewBackdrop,
                           shape: _barShape,
                           child: Container(
                             padding: widget.tabPadding,
@@ -423,6 +434,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                   child: RepaintBoundary(
                     child: AdaptiveGlass.grouped(
                       quality: widget.quality,
+                      platformViewBackdrop: widget.platformViewBackdrop,
                       shape: _barShape,
                       child: const SizedBox.expand(),
                     ),
@@ -499,6 +511,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                   child: RepaintBoundary(
                     child: AdaptiveGlass.grouped(
                       quality: widget.quality,
+                      platformViewBackdrop: widget.platformViewBackdrop,
                       shape: _barShape,
                       child: const SizedBox.expand(),
                     ),
@@ -526,6 +539,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                 // 2. Icon Content Layer (Unselected + Selected combined for refraction)
                 Positioned.fill(
                   child: RepaintBoundary(
+                    // Keyed so the premium indicator can refract this icon layer
+                    // (capturable) over a PlatformView.
+                    key: _iconLayerKey,
                     child: Stack(
                       children: [
                         ClipPath(
@@ -581,7 +597,13 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                   padding: const EdgeInsets.all(4),
                   expansion: widget.indicatorExpansion,
                   settings: widget.indicatorSettings,
-                  backgroundKey: widget.backgroundKey,
+                  // Over a PlatformView the normal backdrop (map region) can't be
+                  // captured by toImageSync, so the premium indicator refracts the
+                  // bar's own icon layer instead (capturable) — keeping the
+                  // premium magic-lens over the PlatformView.
+                  backgroundKey: widget.platformViewBackdrop
+                      ? _iconLayerKey
+                      : widget.backgroundKey,
                 ),
               ],
             ),
@@ -611,6 +633,7 @@ class SearchPill extends StatefulWidget {
     this.interactionGlowBlurRadius = 0,
     this.interactionGlowSpreadRadius = 0,
     this.interactionGlowOpacity = 1,
+    this.platformViewBackdrop = false,
     super.key,
   });
 
@@ -620,6 +643,10 @@ class SearchPill extends StatefulWidget {
   final GlassQuality quality;
   final bool enableBackgroundAnimation;
   final double backgroundPressScale;
+
+  /// Render the pill's glass via the live BackdropFilter path so it composites
+  /// over a PlatformView.
+  final bool platformViewBackdrop;
 
   /// Called when the search field gains or loses focus.
   /// Used by the parent bar to drive the dismiss pill visibility.
@@ -784,7 +811,12 @@ class SearchPillState extends State<SearchPill> {
                     : () => widget.config.onSearchToggle(true),
                 width: double.infinity,
                 height: double.infinity,
-                quality: widget.quality,
+                // Over a PlatformView the collapsed button uses the lightweight
+                // veil so it matches the rest of the bar (premium can't sample
+                // the PlatformView).
+                quality: widget.platformViewBackdrop
+                    ? GlassQuality.standard
+                    : widget.quality,
                 iconColor: iconColor,
                 // When fully collapsed (square), LiquidOval gives a perfect
                 // circle that stretches uniformly. During the collapse
@@ -832,6 +864,7 @@ class SearchPillState extends State<SearchPill> {
             child: AdaptiveGlass.grouped(
               shape: shape,
               quality: widget.quality,
+              platformViewBackdrop: widget.platformViewBackdrop,
               child: _wrapWithGlow(
                 child: _buildExpanded(iconColor, micColor),
               ),
