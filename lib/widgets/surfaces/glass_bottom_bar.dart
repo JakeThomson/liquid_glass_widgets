@@ -608,174 +608,112 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
               height: widget.barHeight,
               child: Builder(
                 builder: (context) {
-                  // Resolve shadows for sibling shadow layers painted
-                  // BELOW the glass pills.
-                  final isDark = CupertinoTheme.of(context).brightness ==
-                      Brightness.dark;
-                  final shadows = isDark
-                      ? const <BoxShadow>[]
-                      : InheritedLiquidGlass.ofOrDefault(context)
-                          .effectiveShadow;
-                  final barShape = LiquidRoundedSuperellipse(
-                      borderRadius: widget.barBorderRadius);
-
                   return Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // ── 0. Shadow layers ───────────────────────────
-                      if (shadows.isNotEmpty) ...[
-                        // Tab pill shadow
+                      // 1. Optional extra button — painted first (bottom of z-order).
+                      // Pinned to the trailing edge. Painted before the tab pill
+                      // so the jelly indicator's glass effect correctly overlaps and
+                      // refracts the extra button during horizontal stretch physics.
+                      // This matches the z-order pattern in GlassSearchableBottomBar.
+                      if (widget.extraButton != null)
                         Positioned(
-                          left: 0,
+                          right: 0,
                           top: 0,
-                          width: tabPillW,
-                          height: widget.barHeight,
-                          child: IgnorePointer(
-                            child: ClipPath(
-                              clipBehavior: Clip.antiAlias,
-                              clipper: _InversePillClipper(barShape),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(
-                                      widget.barBorderRadius),
-                                  boxShadow: shadows,
-                                ),
-                              ),
+                          bottom: 0,
+                          child: SizedBox(
+                            width: widget.extraButton!.size,
+                            height: widget.barHeight,
+                            child: BottomBarExtraBtn(
+                              config: widget.extraButton!,
+                              quality: effectiveQuality,
+                              iconColor: widget.extraButton!.iconColor ??
+                                  resolvedUnselectedIconColor,
+                              enableBlend: widget.enableBlend,
+                              borderRadius: widget.barBorderRadius ==
+                                      GlassBottomBar._defaultBarBorderRadius
+                                  ? null
+                                  : widget.barBorderRadius,
                             ),
                           ),
                         ),
-                        // Extra button shadow (if present)
-                        if (widget.extraButton != null)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            bottom: 0,
-                            child: SizedBox(
-                              width: widget.extraButton!.size,
-                              height: widget.barHeight,
-                              child: IgnorePointer(
-                                child: ClipPath(
-                                  clipBehavior: Clip.antiAlias,
-                                  clipper: _InverseOvalClipper(),
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      shape: widget.barBorderRadius ==
-                                              GlassBottomBar._defaultBarBorderRadius
-                                          ? BoxShape.circle
-                                          : BoxShape.rectangle,
-                                      borderRadius: widget.barBorderRadius !=
-                                              GlassBottomBar._defaultBarBorderRadius
-                                          ? BorderRadius.circular(
-                                              widget.barBorderRadius)
-                                          : null,
-                                      boxShadow: shadows,
-                                    ),
+
+                      // 2. Tab pill — painted last (top of z-order).
+                      // The jelly indicator uses Stack(clipBehavior: Clip.none)
+                      // internally, so it can overflow past the pill bounds.
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        width: tabPillW,
+                        height: widget.barHeight,
+                        child: TabIndicator(
+                          quality: effectiveQuality,
+                          visible: widget.showIndicator,
+                          tabIndex: widget.selectedIndex,
+                          tabCount: widget.tabs.length,
+                          indicatorColor: widget.indicatorColor,
+                          indicatorSettings: widget.indicatorSettings,
+                          onTabChanged: widget.onTabSelected,
+                          barHeight: widget.barHeight,
+                          barBorderRadius: widget.barBorderRadius,
+                          tabPadding: widget.tabPadding,
+                          backgroundKey: widget.backgroundKey,
+                          maskingQuality: widget.maskingQuality,
+                          indicatorExpansion: widget.indicatorExpansion,
+                          interactionGlowColor:
+                              widget.interactionBehavior.hasGlow
+                                  ? effectiveInteractionGlowColor
+                                  : const Color(0x00000000),
+                          interactionGlowRadius: widget.interactionGlowRadius,
+                          interactionGlowBlurRadius: effectiveGlowBlurRadius,
+                          interactionGlowSpreadRadius:
+                              effectiveGlowSpreadRadius,
+                          interactionGlowOpacity: effectiveGlowOpacity,
+                          interactionScale: widget.interactionBehavior.hasScale
+                              ? widget.pressScale
+                              : 1.0,
+                          childUnselected: Row(
+                            children: [
+                              for (var i = 0; i < widget.tabs.length; i++)
+                                Expanded(
+                                  child: BottomBarTabItem(
+                                    tab: widget.tabs[i],
+                                    selected: false,
+                                    selectedIconColor:
+                                        resolvedSelectedIconColor,
+                                    unselectedIconColor:
+                                        resolvedUnselectedIconColor,
+                                    iconSize: widget.iconSize,
+                                    labelFontSize: widget.labelFontSize,
+                                    textStyle: widget.textStyle,
+                                    iconLabelSpacing: widget.iconLabelSpacing,
+                                    glowDuration: widget.glowDuration,
+                                    glowBlurRadius: widget.glowBlurRadius,
+                                    glowSpreadRadius: widget.glowSpreadRadius,
+                                    glowOpacity: widget.glowOpacity,
+                                    // onTap is null: all tap selection goes through
+                                    // TabIndicator.onBarTapDown (prevents double-fire).
+                                    onTap: null,
                                   ),
                                 ),
-                              ),
-                            ),
+                            ],
                           ),
-                      ],
-                  // 1. Optional extra button — painted first (bottom of z-order).
-                  // Pinned to the trailing edge. Painted before the tab pill
-                  // so the jelly indicator's glass effect correctly overlaps and
-                  // refracts the extra button during horizontal stretch physics.
-                  // This matches the z-order pattern in GlassSearchableBottomBar.
-                  if (widget.extraButton != null)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      child: SizedBox(
-                        width: widget.extraButton!.size,
-                        height: widget.barHeight,
-                        child: BottomBarExtraBtn(
-                          config: widget.extraButton!,
-                          quality: effectiveQuality,
-                          iconColor: widget.extraButton!.iconColor ??
-                              resolvedUnselectedIconColor,
-                          enableBlend: widget.enableBlend,
-                          borderRadius: widget.barBorderRadius ==
-                                  GlassBottomBar._defaultBarBorderRadius
-                              ? null
-                              : widget.barBorderRadius,
+                          // Pass selected tabs (foreground/masked layer)
+                          selectedTabBuilder: (context, intensity, alignment) =>
+                              _buildSelectedTabs(
+                                  intensity,
+                                  alignment,
+                                  resolvedSelectedIconColor,
+                                  resolvedUnselectedIconColor),
+                          magnification: widget.magnification,
+                          innerBlur: widget.innerBlur,
                         ),
                       ),
-                    ),
-
-                  // 2. Tab pill — painted last (top of z-order).
-                  // The jelly indicator uses Stack(clipBehavior: Clip.none)
-                  // internally, so it can overflow past the pill bounds.
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    width: tabPillW,
-                    height: widget.barHeight,
-                    child: TabIndicator(
-                      quality: effectiveQuality,
-                      visible: widget.showIndicator,
-                      tabIndex: widget.selectedIndex,
-                      tabCount: widget.tabs.length,
-                      indicatorColor: widget.indicatorColor,
-                      indicatorSettings: widget.indicatorSettings,
-                      onTabChanged: widget.onTabSelected,
-                      barHeight: widget.barHeight,
-                      barBorderRadius: widget.barBorderRadius,
-                      tabPadding: widget.tabPadding,
-                      backgroundKey: widget.backgroundKey,
-                      maskingQuality: widget.maskingQuality,
-                      indicatorExpansion: widget.indicatorExpansion,
-                      interactionGlowColor: widget.interactionBehavior.hasGlow
-                          ? effectiveInteractionGlowColor
-                          : const Color(0x00000000),
-                      interactionGlowRadius: widget.interactionGlowRadius,
-                      interactionGlowBlurRadius: effectiveGlowBlurRadius,
-                      interactionGlowSpreadRadius: effectiveGlowSpreadRadius,
-                      interactionGlowOpacity: effectiveGlowOpacity,
-                      interactionScale: widget.interactionBehavior.hasScale
-                          ? widget.pressScale
-                          : 1.0,
-                      childUnselected: Row(
-                        children: [
-                          for (var i = 0; i < widget.tabs.length; i++)
-                            Expanded(
-                              child: BottomBarTabItem(
-                                tab: widget.tabs[i],
-                                selected: false,
-                                selectedIconColor: resolvedSelectedIconColor,
-                                unselectedIconColor:
-                                    resolvedUnselectedIconColor,
-                                iconSize: widget.iconSize,
-                                labelFontSize: widget.labelFontSize,
-                                textStyle: widget.textStyle,
-                                iconLabelSpacing: widget.iconLabelSpacing,
-                                glowDuration: widget.glowDuration,
-                                glowBlurRadius: widget.glowBlurRadius,
-                                glowSpreadRadius: widget.glowSpreadRadius,
-                                glowOpacity: widget.glowOpacity,
-                                // onTap is null: all tap selection goes through
-                                // TabIndicator.onBarTapDown (prevents double-fire).
-                                onTap: null,
-                              ),
-                            ),
-                        ],
-                      ),
-                      // Pass selected tabs (foreground/masked layer)
-                      selectedTabBuilder: (context, intensity, alignment) =>
-                          _buildSelectedTabs(
-                              intensity,
-                              alignment,
-                              resolvedSelectedIconColor,
-                              resolvedUnselectedIconColor),
-                      magnification: widget.magnification,
-                      innerBlur: widget.innerBlur,
-                    ),
-                  ),
                     ],
-                  );  // Stack
-                },  // Builder.builder
-              ),  // Builder
-            );  // SizedBox
+                  ); // Stack
+                }, // Builder.builder
+              ), // Builder
+            ); // SizedBox
           },
         ),
       ),
@@ -1118,43 +1056,3 @@ class JellyClipper extends CustomClipper<Path> {
 /// - Objects stretch perpendicular to movement
 ///
 /// Used by [_TabIndicator] to animate the draggable indicator.
-
-/// Clips out the interior of a pill shape, leaving only the exterior.
-///
-/// Used by the bar-level shadow layers to paint drop-shadows outside the
-/// pill boundary without the glass shader sampling its own shadow.
-class _InversePillClipper extends CustomClipper<Path> {
-  const _InversePillClipper(this.shape);
-
-  final LiquidRoundedSuperellipse shape;
-
-  @override
-  Path getClip(Size size) {
-    final rect = Offset.zero & size;
-    final shapePath = shape.getOuterPath(rect);
-    final outerRect = rect.inflate(50.0);
-    final outerPath = Path()..addRect(outerRect);
-    return Path.combine(PathOperation.difference, outerPath, shapePath);
-  }
-
-  @override
-  bool shouldReclip(_InversePillClipper oldClipper) =>
-      oldClipper.shape != shape;
-}
-
-/// Clips out the interior of an oval, leaving only the exterior.
-///
-/// Used by the bar-level shadow layer for the extra button (which is circular).
-class _InverseOvalClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final rect = Offset.zero & size;
-    final ovalPath = Path()..addOval(rect);
-    final outerRect = rect.inflate(50.0);
-    final outerPath = Path()..addRect(outerRect);
-    return Path.combine(PathOperation.difference, outerPath, ovalPath);
-  }
-
-  @override
-  bool shouldReclip(_InverseOvalClipper oldClipper) => false;
-}

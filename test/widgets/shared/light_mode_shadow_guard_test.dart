@@ -137,7 +137,8 @@ void main() {
       await tester.pump();
 
       // No shadow DecoratedBox in dark mode.
-      debugDumpApp(); expect(findShadowDecoratedBox(), findsNothing);
+      debugDumpApp();
+      expect(findShadowDecoratedBox(), findsNothing);
     });
 
     testWidgets('collapsed pill skips shadow when shadowElevation is 0',
@@ -167,7 +168,8 @@ void main() {
       await tester.pump();
 
       // No shadow when elevation is 0.
-      debugDumpApp(); expect(findShadowDecoratedBox(), findsNothing);
+      debugDumpApp();
+      expect(findShadowDecoratedBox(), findsNothing);
     });
 
     testWidgets('expanded pill renders shadow in light mode with elevation',
@@ -225,7 +227,8 @@ void main() {
       );
       await tester.pump();
 
-      debugDumpApp(); expect(findShadowDecoratedBox(), findsNothing);
+      debugDumpApp();
+      expect(findShadowDecoratedBox(), findsNothing);
     });
 
     testWidgets('shadow layer is wrapped with IgnorePointer', (tester) async {
@@ -460,7 +463,8 @@ void main() {
       );
       await tester.pump();
 
-      debugDumpApp(); expect(findShadowDecoratedBox(), findsNothing);
+      debugDumpApp();
+      expect(findShadowDecoratedBox(), findsNothing);
     });
 
     testWidgets('own-layer skips shadow when shadowElevation=0',
@@ -484,7 +488,8 @@ void main() {
       );
       await tester.pump();
 
-      debugDumpApp(); expect(findShadowDecoratedBox(), findsNothing);
+      debugDumpApp();
+      expect(findShadowDecoratedBox(), findsNothing);
     });
 
     testWidgets(

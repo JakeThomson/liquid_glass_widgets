@@ -675,8 +675,7 @@ void main() {
       // At least one GlassGlow must carry the theme color.
       final match = glows.any((g) => g.glowColor == expectedColor);
       expect(match, isTrue,
-          reason:
-              'No GlassGlow received the theme glow color $expectedColor. '
+          reason: 'No GlassGlow received the theme glow color $expectedColor. '
               'Found: ${glows.map((g) => g.glowColor).toList()}');
     });
 

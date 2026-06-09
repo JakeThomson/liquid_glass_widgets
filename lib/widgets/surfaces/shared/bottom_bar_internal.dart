@@ -801,5 +801,3 @@ class _InverseBarClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(_InverseBarClipper oldClipper) => oldClipper.shape != shape;
 }
-
-

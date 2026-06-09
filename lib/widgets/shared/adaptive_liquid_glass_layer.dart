@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme_data.dart';
@@ -128,6 +128,12 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
     final bool useFullRenderer =
         _canUseImpeller && effectiveQuality == GlassQuality.premium;
 
+    // Resolve shadow for SDF rendering. Shadows only apply in light mode.
+    final bool isDark =
+        CupertinoTheme.of(context).brightness == Brightness.dark;
+    final List<BoxShadow> resolvedShadows =
+        isDark ? const <BoxShadow>[] : effectiveSettings.effectiveShadow;
+
     // On Skia/Web, we want to provide a single BackdropFilter for the whole layer
     // to avoid each child doing its own expensive blur.
     Widget content = child;
@@ -135,6 +141,7 @@ class AdaptiveLiquidGlassLayer extends StatelessWidget {
     return PremiumGlassTracker(
       child: LiquidGlassLayer(
         settings: effectiveSettings,
+        shadows: resolvedShadows,
         child: GlassIsolationScope(
           isolated: false,
           child: InheritedLiquidGlass(

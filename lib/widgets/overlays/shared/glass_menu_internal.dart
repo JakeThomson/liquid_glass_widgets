@@ -420,13 +420,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         currentHeight / 2.0 +
         (_verticalOffset * clampedValue);
 
-    // Fade the shadow in aggressively at the end of the morph.
-    // clampedValue goes from 0.0 to 1.0. We want the shadow to appear
-    // during the last 20% of the expansion.
-    final shadowOpacity = ((clampedValue - 0.8) / 0.2).clamp(0.0, 1.0);
-
-    final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
-
     return Stack(
       children: [
         // Invisible full-screen tap-to-close barrier
@@ -436,31 +429,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               behavior: HitTestBehavior.translucent,
               onTap: _closeMenu,
               child: Container(color: Colors.black.withValues(alpha: 0.0)),
-            ),
-          ),
-
-        // ── Post-Morph Fading Drop Shadow ────────────────────────────────────
-        // Because the SDF metaball shader cannot draw shadows for morphed geometry,
-        // we fade in a standard drop shadow beneath the final menu body shape
-        // as the morph completes.
-        if (!isDark &&
-            shadowOpacity > 0.0 &&
-            effectiveSettings.shadowElevation > 0)
-          Positioned(
-            left: blobBLeft,
-            top: blobBTop,
-            child: Opacity(
-              opacity: shadowOpacity,
-              child: IgnorePointer(
-                child: Container(
-                  width: currentWidth,
-                  height: currentHeight,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(currentRadius),
-                    boxShadow: effectiveSettings.effectiveShadow,
-                  ),
-                ),
-              ),
             ),
           ),
 
@@ -475,67 +443,64 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                 (_morphController.isClosing && _morphController.hasHandedOff)
                     ? 0.0
                     : 1.0,
-            child: LiquidGlassLayer(
+            child: AdaptiveLiquidGlassLayer(
               settings: effectiveSettings,
-              child: InheritedLiquidGlass(
-                settings: effectiveSettings,
-                quality: effectiveQuality,
-                isBlurProvidedByAncestor: false,
-                child: LiquidGlassBlendGroup(
-                  blend: state.blend,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      // ─── Blob A: Trigger Ghost ───────────────────────────────
-                      // Stays perfectly centered on the trigger, BUT absorbs the
-                      // closing momentum (pushDx/pushDy) to bounce when slammed.
-                      // Shrinks to 0 scale over the first 40% of the animation to
-                      // smoothly break the liquid bridge.
-                      // Blob A is the spawn blob; under morphFromZero there is no trigger to ghost.
-                      if (!widget.morphFromZero)
-                        Positioned(
-                          left: _triggerGlobalPosition.dx +
-                              _followOffset.dx +
-                              state.pushDx,
-                          top: _triggerGlobalPosition.dy +
-                              _followOffset.dy +
-                              state.pushDy,
-                          child: Transform.scale(
-                            scale: state.anchorScale,
-                            child: GlassContainer(
-                              useOwnLayer: false,
-                              settings: effectiveSettings,
-                              quality: effectiveQuality,
-                              width: tw,
-                              height: th,
-                              shape: LiquidRoundedSuperellipse(
-                                borderRadius: _triggerBorderRadius ??
-                                    _triggerSize!.shortestSide / 2.0,
-                              ),
+              quality: effectiveQuality,
+              blendAmount: state.blend,
+              child: LiquidGlassBlendGroup(
+                blend: state.blend,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // ─── Blob A: Trigger Ghost ───────────────────────────────
+                    // Stays perfectly centered on the trigger, BUT absorbs the
+                    // closing momentum (pushDx/pushDy) to bounce when slammed.
+                    // Shrinks to 0 scale over the first 40% of the animation to
+                    // smoothly break the liquid bridge.
+                    // Blob A is the spawn blob; under morphFromZero there is no trigger to ghost.
+                    if (!widget.morphFromZero)
+                      Positioned(
+                        left: _triggerGlobalPosition.dx +
+                            _followOffset.dx +
+                            state.pushDx,
+                        top: _triggerGlobalPosition.dy +
+                            _followOffset.dy +
+                            state.pushDy,
+                        child: Transform.scale(
+                          scale: state.anchorScale,
+                          child: GlassContainer(
+                            useOwnLayer: false,
+                            settings: effectiveSettings,
+                            quality: effectiveQuality,
+                            width: tw,
+                            height: th,
+                            shape: LiquidRoundedSuperellipse(
+                              borderRadius: _triggerBorderRadius ??
+                                  _triggerSize!.shortestSide / 2.0,
                             ),
                           ),
                         ),
+                      ),
 
-                      // ── Blob B: Menu Body ───────────────────────────────────
-                      // Its center travels diagonally relative to the trigger.
-                      // By scaling the x/y offsets with the width/height curves,
-                      // its edges stay perfectly pinned while it grows!
-                      Positioned(
-                        left: blobBLeft,
-                        top: blobBTop,
-                        child: IgnorePointer(
-                          ignoring: clampedValue < 0.8,
-                          child: _buildMorphingContainer(
-                            state,
-                            clampedValue,
-                            currentWidth,
-                            currentHeight,
-                            currentRadius,
-                          ),
+                    // ── Blob B: Menu Body ───────────────────────────────────
+                    // Its center travels diagonally relative to the trigger.
+                    // By scaling the x/y offsets with the width/height curves,
+                    // its edges stay perfectly pinned while it grows!
+                    Positioned(
+                      left: blobBLeft,
+                      top: blobBTop,
+                      child: IgnorePointer(
+                        ignoring: clampedValue < 0.8,
+                        child: _buildMorphingContainer(
+                          state,
+                          clampedValue,
+                          currentWidth,
+                          currentHeight,
+                          currentRadius,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

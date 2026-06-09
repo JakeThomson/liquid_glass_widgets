@@ -208,27 +208,27 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
           final isSquare =
               (constraints.maxWidth - constraints.maxHeight).abs() < 2;
           final currentShape = isSquare ? const LiquidOval() : _barShape;
-          
+
           return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: widget.onDismissSearch,
-              child: AdaptiveGlass.grouped(
-                quality: widget.quality,
-                shape: currentShape,
-                child: _wrapWithGlow(
-                  child: widget.collapsedLogoBuilder != null
-                      ? AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          transitionBuilder: (c, a) =>
-                              FadeTransition(opacity: a, child: c),
-                          child: SizedBox.expand(
-                            key: const ValueKey('logo'),
-                            child: widget.collapsedLogoBuilder!(context),
-                          ),
-                        )
-                      : const SizedBox.shrink(key: ValueKey('empty')),
-                ),
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onDismissSearch,
+            child: AdaptiveGlass.grouped(
+              quality: widget.quality,
+              shape: currentShape,
+              child: _wrapWithGlow(
+                child: widget.collapsedLogoBuilder != null
+                    ? AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        transitionBuilder: (c, a) =>
+                            FadeTransition(opacity: a, child: c),
+                        child: SizedBox.expand(
+                          key: const ValueKey('logo'),
+                          child: widget.collapsedLogoBuilder!(context),
+                        ),
+                      )
+                    : const SizedBox.shrink(key: ValueKey('empty')),
               ),
+            ),
           );
         },
       );
@@ -433,8 +433,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                   quality: widget.quality,
                   indicatorColor: indicatorColor,
                   isBackgroundIndicator: false,
-                  borderRadius:
-                      thickness < 1 ? backgroundRadius : glassRadius,
+                  borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
                   padding: const EdgeInsets.all(4),
                   expansion: widget.indicatorExpansion,
                   settings: widget.indicatorSettings,
@@ -785,23 +784,24 @@ class SearchPillState extends State<SearchPill> {
                     : 1.0,
                 stretch: 0.5, // Matches GlassButton default stretch
                 resistance: 0.01,
-                anchorStretch: true, // Matches GlassButton default (keeps it attached so it morphs)
+                anchorStretch:
+                    true, // Matches GlassButton default (keeps it attached so it morphs)
                 child: GestureDetector(
-                    key: const ValueKey('pill-collapsed'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: (widget.isActive && widget.config.expandWhenActive)
-                        ? () {}
-                        : () => widget.config.onSearchToggle(true),
-                    child: AdaptiveGlass.grouped(
-                      shape: currentShape,
-                      quality: widget.quality,
-                      child: _wrapWithGlow(
-                        child: Center(
-                          child: widget.config.searchIcon ??
-                              Icon(CupertinoIcons.search, color: iconColor),
-                        ),
+                  key: const ValueKey('pill-collapsed'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: (widget.isActive && widget.config.expandWhenActive)
+                      ? () {}
+                      : () => widget.config.onSearchToggle(true),
+                  child: AdaptiveGlass.grouped(
+                    shape: currentShape,
+                    quality: widget.quality,
+                    child: _wrapWithGlow(
+                      child: Center(
+                        child: widget.config.searchIcon ??
+                            Icon(CupertinoIcons.search, color: iconColor),
                       ),
                     ),
+                  ),
                 ),
               ),
               IgnorePointer(
@@ -836,12 +836,12 @@ class SearchPillState extends State<SearchPill> {
             behavior: HitTestBehavior.opaque,
             onTap: _focusNode.requestFocus,
             child: AdaptiveGlass.grouped(
-                shape: shape,
-                quality: widget.quality,
-                child: _wrapWithGlow(
-                  child: _buildExpanded(iconColor, micColor),
-                ),
+              shape: shape,
+              quality: widget.quality,
+              child: _wrapWithGlow(
+                child: _buildExpanded(iconColor, micColor),
               ),
+            ),
           ), // GestureDetector
         ); // LiquidStretch
       },

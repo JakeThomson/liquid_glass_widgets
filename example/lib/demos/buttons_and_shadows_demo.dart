@@ -47,198 +47,208 @@ class _ShadowClippingDemoPageState extends State<ShadowClippingDemoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return GlassScaffold(
-      background: Container(
-        color: const Color(0xFFF0F0F5), // Light background to see shadows
+    // ── GPU Shadows Demo ─────────────────────────────────────────────────────
+    // Drop shadows on glass surfaces are only visible in Light Mode, since
+    // dark mode backgrounds are naturally too dark for a black shadow to cast.
+    //
+    // We force this demo into Light Mode so the GPU SDF shadows are always visible.
+    return CupertinoTheme(
+      data: CupertinoTheme.of(context).copyWith(
+        brightness: Brightness.light,
       ),
-      appBar: const GlassAppBar(
-        title: Text('Buttons & Shadows Demo'),
-      ),
-      bottomBar: GlassSearchableBottomBar(
-        selectedIndex: _tabIndex,
-        onTabSelected: (idx) => setState(() {
-          _tabIndex = idx;
-          _searchActive = false;
-        }),
-        isSearchActive: _searchActive,
-        searchConfig: GlassSearchBarConfig(
-          onSearchToggle: (active) => setState(() => _searchActive = active),
+      child: GlassScaffold(
+        background: Container(
+          color: const Color(0xFFF0F0F5), // Light background to see shadows
         ),
-        settings: const LiquidGlassSettings(
-          shadowElevation: 2.0,
-          blur: 15,
-          thickness: 20,
+        appBar: const GlassAppBar(
+          title: Text('Buttons & Shadows Demo'),
         ),
-        tabs: [
-          GlassBottomBarTab(
-            icon: const Icon(CupertinoIcons.house),
-            label: 'Home',
+        bottomBar: GlassSearchableBottomBar(
+          selectedIndex: _tabIndex,
+          onTabSelected: (idx) => setState(() {
+            _tabIndex = idx;
+            _searchActive = false;
+          }),
+          isSearchActive: _searchActive,
+          searchConfig: GlassSearchBarConfig(
+            onSearchToggle: (active) => setState(() => _searchActive = active),
           ),
-          GlassBottomBarTab(
-            icon: const Icon(CupertinoIcons.compass),
-            label: 'Discover',
+          settings: const LiquidGlassSettings(
+            shadowElevation: 2.0,
+            blur: 15,
+            thickness: 20,
           ),
-        ],
-      ),
-      body: AdaptiveLiquidGlassLayer(
-        settings: const LiquidGlassSettings(
-          thickness: 20,
-          blur: 8,
+          tabs: [
+            GlassBottomBarTab(
+              icon: const Icon(CupertinoIcons.house),
+              label: 'Home',
+            ),
+            GlassBottomBarTab(
+              icon: const Icon(CupertinoIcons.compass),
+              label: 'Discover',
+            ),
+          ],
         ),
-        quality: GlassQuality.premium,
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text(
-                  'Premium Buttons with Elevations',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Shadows should visibly expand around the buttons and not be cut off at the edge.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                  ),
-                ),
-                const SizedBox(height: 48),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _ElevatedButton(elevation: 1.0),
-                    _ElevatedButton(elevation: 2.0),
-                    _ElevatedButton(elevation: 4.0),
-                  ],
-                ),
-                const SizedBox(height: 64),
-                const Text(
-                  'Glass Menu',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Center(
-                  child: GlassMenu(
-                    settings: const LiquidGlassSettings(
-                      thickness: 20,
-                      blur: 12,
-                      shadowElevation: 1.0,
+        body: AdaptiveLiquidGlassLayer(
+          settings: const LiquidGlassSettings(
+            thickness: 20,
+            blur: 8,
+          ),
+          quality: GlassQuality.premium,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Premium Buttons with Elevations',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Shadows should visibly expand around the buttons and not be cut off at the edge.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _ElevatedButton(elevation: 1.0),
+                      _ElevatedButton(elevation: 2.0),
+                      _ElevatedButton(elevation: 4.0),
+                    ],
+                  ),
+                  const SizedBox(height: 64),
+                  const Text(
+                    'Glass Menu',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: GlassMenu(
+                      settings: const LiquidGlassSettings(
+                        thickness: 20,
+                        blur: 12,
+                        shadowElevation: 1.0,
+                      ),
+                      quality: GlassQuality.premium,
+                      items: [
+                        GlassMenuItem(
+                          title: 'Option 1',
+                          icon: const Icon(CupertinoIcons.star),
+                          onTap: () {},
+                        ),
+                        GlassMenuItem(
+                          title: 'Option 2',
+                          icon: const Icon(CupertinoIcons.heart),
+                          onTap: () {},
+                        ),
+                        GlassMenuItem(
+                          title: 'Option 3',
+                          titleStyle: const TextStyle(
+                              color: CupertinoColors.destructiveRed),
+                          icon: const Icon(CupertinoIcons.delete,
+                              color: CupertinoColors.destructiveRed),
+                          onTap: () {},
+                        ),
+                      ],
+                      triggerBuilder: (context, toggle) => GlassButton(
+                        icon: const Icon(CupertinoIcons.ellipsis),
+                        width: 56,
+                        height: 56,
+                        iconSize: 24,
+                        iconColor: Colors.black87,
+                        onTap: toggle, // Correctly wire up the toggle function
+                        useOwnLayer: true, // Required for standalone shadows
+                        settings: const LiquidGlassSettings(
+                          shadowElevation: 1.0,
+                          glassColor: Color(0x99FFFFFF), // Make glass visible
+                        ),
+                        quality: GlassQuality.premium,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 64),
+                  const Text(
+                    'Button Groups',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  GlassButtonGroup.icons(
+                    direction: Axis.horizontal,
                     quality: GlassQuality.premium,
+                    useOwnLayer: true,
+                    settings: const LiquidGlassSettings(
+                      shadowElevation: 2.0,
+                    ),
                     items: [
-                      GlassMenuItem(
-                        title: 'Option 1',
-                        icon: const Icon(CupertinoIcons.star),
+                      GlassGroupItem(
+                        icon: const Icon(CupertinoIcons.reply),
                         onTap: () {},
                       ),
-                      GlassMenuItem(
-                        title: 'Option 2',
+                      GlassGroupItem(
                         icon: const Icon(CupertinoIcons.heart),
                         onTap: () {},
                       ),
-                      GlassMenuItem(
-                        title: 'Option 3',
-                        titleStyle: const TextStyle(
-                            color: CupertinoColors.destructiveRed),
-                        icon: const Icon(CupertinoIcons.delete,
-                            color: CupertinoColors.destructiveRed),
+                      GlassGroupItem(
+                        icon: const Icon(CupertinoIcons.share),
                         onTap: () {},
                       ),
                     ],
-                    triggerBuilder: (context, toggle) => GlassButton(
-                      icon: const Icon(CupertinoIcons.ellipsis),
-                      width: 56,
-                      height: 56,
-                      iconSize: 24,
-                      iconColor: Colors.black87,
-                      onTap: toggle, // Correctly wire up the toggle function
-                      useOwnLayer: true, // Required for standalone shadows
-                      settings: const LiquidGlassSettings(
-                        shadowElevation: 1.0,
-                        glassColor: Color(0x99FFFFFF), // Make glass visible
-                      ),
-                      quality: GlassQuality.premium,
-                    ),
                   ),
-                ),
-                const SizedBox(height: 64),
-                const Text(
-                  'Button Groups',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                GlassButtonGroup.icons(
-                  direction: Axis.horizontal,
-                  quality: GlassQuality.premium,
-                  useOwnLayer: true,
-                  settings: const LiquidGlassSettings(
-                    shadowElevation: 2.0,
-                  ),
-                  items: [
-                    GlassGroupItem(
-                      icon: const Icon(CupertinoIcons.reply),
-                      onTap: () {},
-                    ),
-                    GlassGroupItem(
-                      icon: const Icon(CupertinoIcons.heart),
-                      onTap: () {},
-                    ),
-                    GlassGroupItem(
-                      icon: const Icon(CupertinoIcons.share),
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 64),
-                const Text(
-                  'Wide Button',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                GlassButton.custom(
-                  width: 300,
-                  height: 64,
-                  shape: const LiquidRoundedRectangle(
-                      borderRadius: 12), // Gentle corner radius
-                  onTap: () {},
-                  useOwnLayer: true,
-                  settings: const LiquidGlassSettings(
-                    shadowElevation: 1.0,
-                    thickness: 20,
-                    blur: 10,
-                    glassColor: Color(0x99FFFFFF),
-                  ),
-                  quality: GlassQuality.premium,
-                  child: const Text(
-                    'Wide Button with Shadow',
+                  const SizedBox(height: 64),
+                  const Text(
+                    'Wide Button',
                     style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                       color: Colors.black87,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
                     ),
                   ),
-                ),
-                const SizedBox(height: 64),
-              ],
+                  const SizedBox(height: 24),
+                  GlassButton.custom(
+                    width: 300,
+                    height: 64,
+                    shape: const LiquidRoundedRectangle(
+                        borderRadius: 12), // Gentle corner radius
+                    onTap: () {},
+                    useOwnLayer: true,
+                    settings: const LiquidGlassSettings(
+                      shadowElevation: 1.0,
+                      thickness: 20,
+                      blur: 10,
+                      glassColor: Color(0x99FFFFFF),
+                    ),
+                    quality: GlassQuality.premium,
+                    child: const Text(
+                      'Wide Button with Shadow',
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 64),
+                ],
+              ),
             ),
           ),
         ),

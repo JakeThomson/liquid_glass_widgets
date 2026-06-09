@@ -645,18 +645,6 @@ class _DemosTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-
-                  _LargeDemoCard(
-                    title: 'Buttons & Shadows',
-                    subtitle: 'Glass elevations and dynamic shadow clipping\n(Best viewed in Light Mode)',
-                    icon: CupertinoIcons.layers_fill,
-                    gradient: const [
-                      Color(0xFFE5B2CA),
-                      Color(0xFFCD82A0),
-                    ],
-                    destination: const ShadowClippingDemoPage(),
-                  ),
 
                   const SizedBox(height: 120),
                 ],
@@ -791,6 +779,18 @@ class _ExamplesTab extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  _LargeDemoCard(
+                    title: 'Buttons & Shadows',
+                    subtitle: 'Glass elevations and GPU SDF shadows',
+                    icon: CupertinoIcons.layers_fill,
+                    gradient: const [
+                      Color(0xFFFFB340), // Vibrant Amber
+                      Color(0xFFE58600), // Deep Orange
+                    ],
+                    destination: const ShadowClippingDemoPage(),
                   ),
                   const SizedBox(height: 14),
 

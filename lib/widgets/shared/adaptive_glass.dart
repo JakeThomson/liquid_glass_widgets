@@ -317,9 +317,16 @@ class AdaptiveGlass extends StatelessWidget {
         useOwnLayer || GlassIsolationScope.isIsolated(context);
 
     if (effectiveUseOwnLayer) {
+      // Resolve shadows for the GPU cutout method
+      final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+      final shadows = (isDark || _FrostedFallback._isFlatEdge(shape))
+          ? const <BoxShadow>[]
+          : baseSettings.effectiveShadow;
+
       Widget premium = LiquidGlass.withOwnLayer(
         shape: shape,
         settings: settings,
+        shadows: shadows,
         clipBehavior: clipBehavior,
         // De-isolate children so nested glass groups with this own-layer
         // rather than creating its own (which causes double-glass).
@@ -332,12 +339,8 @@ class AdaptiveGlass extends StatelessWidget {
         ),
       );
 
-      return _wrapWithLightModeShadow(
-        context,
-        baseSettings,
-        PremiumGlassTracker(
-          child: premium,
-        ),
+      return PremiumGlassTracker(
+        child: premium,
       );
     } else {
       // Grouped elements (e.g. inside GlassBottomBar) rely on the ancestor's
