@@ -1,3 +1,49 @@
+# 0.15.3
+
+## `platformViewBackdrop` — Premium Glass Over iOS PlatformViews
+
+New opt-in flag that lets glass bars render correctly over native iOS views
+(Google Maps, Apple Maps, WebView, MapLibre, video players) while keeping the
+premium indicator animations alive. Previously, developers had to downgrade to
+`GlassQuality.standard` on iOS — now they can stay on `premium`.
+
+*Contributed by [@jfhair](https://github.com/jfhair) in [PR #94](https://github.com/sdegenaar/liquid_glass_widgets/pull/94).*
+
+### New parameter: `platformViewBackdrop`
+
+- **`GlassBottomBar`** — new `platformViewBackdrop` parameter. When `true`,
+  the bar background renders via live `BackdropFilter` (the premium shader's
+  `toImageSync` cannot capture a `UIKitView`), while the premium indicator
+  refracts the bar's own icon layer instead of the un-capturable backdrop.
+- **`GlassSearchableBottomBar`** — same parameter, applied to both the tab
+  indicator and the search pill. The collapsed search button automatically
+  falls back to `GlassQuality.standard` over a PlatformView.
+- **`AdaptiveGlass` / `AdaptiveGlass.grouped()`** — new `platformViewBackdrop`
+  parameter that forces the `BackdropFilter` rendering path even at
+  `GlassQuality.premium`.
+- **`AdaptiveLiquidGlassLayer`** — new `platformViewBackdrop` parameter that
+  skips the `LiquidGlassBlendGroup` wrapper when rendering over a PlatformView.
+
+### Usage
+
+```dart
+GlassBottomBar(
+  quality: GlassQuality.premium,
+  platformViewBackdrop: Platform.isIOS, // ← one line fix
+  tabs: myTabs,
+  selectedIndex: _index,
+  onTabSelected: (i) => setState(() => _index = i),
+)
+```
+
+### Example app
+
+- **Google Maps demo** — updated to use `platformViewBackdrop: Platform.isIOS`
+  instead of the old `Platform.isIOS ? GlassQuality.standard : GlassQuality.premium`
+  workaround. The bar now stays at `GlassQuality.premium` on all platforms.
+
+---
+
 # 0.15.2
 
 ## GPU SDF Shadows — Light Mode Performance & Metaball Support
