@@ -14,13 +14,13 @@ import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
 import '../../../utils/glass_spring.dart';
-import 'tab_drag_gesture_mixin.dart';
 import '../../interactive/glass_button.dart';
 import '../../shared/adaptive_glass.dart';
 import '../../shared/animated_glass_indicator.dart';
 import '../../shared/inherited_liquid_glass.dart';
 import '../glass_bottom_bar.dart' show MaskingQuality, JellyClipper;
 import 'glass_search_bar_config.dart';
+import 'tab_drag_gesture_mixin.dart';
 
 // =============================================================================
 // _DismissPill
@@ -219,24 +219,32 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
               (constraints.maxWidth - constraints.maxHeight).abs() < 2;
           final currentShape = isSquare ? const LiquidOval() : _barShape;
 
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onDismissSearch,
-            child: AdaptiveGlass.grouped(
-              quality: widget.quality,
-              shape: currentShape,
-              child: _wrapWithGlow(
-                child: widget.collapsedLogoBuilder != null
-                    ? AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 220),
-                        transitionBuilder: (c, a) =>
-                            FadeTransition(opacity: a, child: c),
-                        child: SizedBox.expand(
-                          key: const ValueKey('logo'),
-                          child: widget.collapsedLogoBuilder!(context),
-                        ),
-                      )
-                    : const SizedBox.shrink(key: ValueKey('empty')),
+          return LiquidStretch(
+            interactionScale: widget.enableBackgroundAnimation
+                ? widget.backgroundPressScale
+                : 1.0,
+            stretch: 0.5,
+            resistance: 0.01,
+            anchorStretch: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onDismissSearch,
+              child: AdaptiveGlass.grouped(
+                quality: widget.quality,
+                shape: currentShape,
+                child: _wrapWithGlow(
+                  child: widget.collapsedLogoBuilder != null
+                      ? AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          transitionBuilder: (c, a) =>
+                              FadeTransition(opacity: a, child: c),
+                          child: SizedBox.expand(
+                            key: const ValueKey('logo'),
+                            child: widget.collapsedLogoBuilder!(context),
+                          ),
+                        )
+                      : const SizedBox.shrink(key: ValueKey('empty')),
+                ),
               ),
             ),
           );
