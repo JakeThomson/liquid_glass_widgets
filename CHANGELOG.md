@@ -1,3 +1,21 @@
+# 0.15.6
+
+## 🌫️ Scroll Edge Fade — Perceptual Gradient Curve
+
+Replaced the 2-stop linear alpha gradient in `GlassScrollEdgeEffect` with a
+multi-stop eased curve that matches the perceptual dissolve of iOS 26.
+
+- **5-stop gradient profiles** for both `soft` and `hard` styles — eliminates
+  the "denser in the centre" banding and the visible seam at the fade boundary.
+- **`hard` style reworked**: steeper hold → sharper drop curve instead of just
+  compressing the soft profile. Height multiplier relaxed from 0.33× to 0.5×.
+- **Example app**: Nav Patterns demo now fully brightness-aware (adaptive text
+  colours, `GlassStatusBarStyle.auto`, adaptive solid-bar colour).
+
+No API changes. No breaking changes.
+
+---
+
 # 0.15.5
 
 ## ✨ Whiten Strength — Light-Mode Legibility Veil
