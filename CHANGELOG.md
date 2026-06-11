@@ -20,6 +20,9 @@ busy light backgrounds — modelling iOS 26's light-mode glass.
   nears the scroll bottom — the iOS light-mode behaviour where content crowding
   under a bar gets the strongest legibility lift.
 
+- **Example app**: Buttons & Shadows demo now includes a real-time whiten
+  slider with side-by-side comparison cards and scroll-to-bottom boost preview.
+
 *Contributed by [@jfhair](https://github.com/jfhair) in [PR #100](https://github.com/sdegenaar/liquid_glass_widgets/pull/100).*
 
 ## 🎬 Scale-with-Morph — Cohesive Overlay Content Reveal
