@@ -1,5 +1,27 @@
 # 0.15.5
 
+## ✨ Whiten Strength — Light-Mode Legibility Veil
+
+Opt-in whitening ("legibility veil") lifts glass toward white for legibility over
+busy light backgrounds — modelling iOS 26's light-mode glass.
+
+- **`LiquidGlassSettings.whitenStrength`** (0.0–1.0, default 0.0): lifts the
+  finished glass toward white as the last step of the render. A single
+  control-wide value with no spatial seams or halo artifacts.
+- **`LiquidGlassSettings.whitenGated`** (default `true`): when gated, the lift
+  scales by per-pixel luminance so bright content lifts to white while dark
+  content (text, icons) stays crisp. Ungated applies the lift uniformly — useful
+  for dark-mode frost effects.
+- **Consistent across all three quality tiers** from one knob: Premium
+  (fragment shader), Standard (tint lerp), and Minimal (frosted fallback) all
+  render the same whitenStrength value consistently.
+- **`GlassSearchableBottomBar` whiten-at-bottom**: when a `scrollController`
+  is provided, the bar animates its whitening toward full white as the page
+  nears the scroll bottom — the iOS light-mode behaviour where content crowding
+  under a bar gets the strongest legibility lift.
+
+*Contributed by [@jfhair](https://github.com/jfhair) in [PR #100](https://github.com/sdegenaar/liquid_glass_widgets/pull/100).*
+
 ## 🎬 Scale-with-Morph — Cohesive Overlay Content Reveal
 
 Menu items and popover content now scale in alongside the liquid morph animation

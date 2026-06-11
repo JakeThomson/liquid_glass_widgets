@@ -109,8 +109,7 @@ void main() {
       expect(find.byType(GlassSearchableBottomBar), findsOneWidget);
     });
 
-    testWidgets('whitenAtBottom: false builds and stays inert',
-        (tester) async {
+    testWidgets('whitenAtBottom: false builds and stays inert', (tester) async {
       final controller = ScrollController();
       addTearDown(controller.dispose);
 

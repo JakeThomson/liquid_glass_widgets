@@ -690,8 +690,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   // ── Scale-with-morph animation (PR #97) ────────────────────────────────────
-  testWidgets(
-      'GlassMenu items are wrapped in Transform.scale when fully open',
+  testWidgets('GlassMenu items are wrapped in Transform.scale when fully open',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -727,8 +726,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-      'GlassMenu items are wrapped in Opacity when fully open',
+  testWidgets('GlassMenu items are wrapped in Opacity when fully open',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(

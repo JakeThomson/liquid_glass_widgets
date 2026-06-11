@@ -541,8 +541,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-      'GlassPopover content is wrapped in Opacity when fully open',
+  testWidgets('GlassPopover content is wrapped in Opacity when fully open',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
