@@ -447,9 +447,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               settings: effectiveSettings,
               quality: effectiveQuality,
               blendAmount: state.blend,
-              child: LiquidGlassBlendGroup(
-                blend: state.blend,
-                child: Stack(
+              child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     // ─── Blob A: Trigger Ghost ───────────────────────────────
@@ -505,7 +503,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               ),
             ),
           ),
-        ),
       ],
     );
   }
