@@ -411,7 +411,6 @@ class _GlassPopoverState extends State<GlassPopover>
     );
   }
 
-
   Widget _buildPopoverContainer(
     LiquidMorphState state,
     double clampedValue,

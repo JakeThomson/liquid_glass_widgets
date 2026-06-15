@@ -306,7 +306,8 @@ class _InteractivePageState extends State<InteractivePage> {
                         segments: ['Daily', 'Weekly', 'Monthly'],
                         selectedIndex: _segment1,
                         onSegmentSelected: (i) => setState(() => _segment1 = i),
-                        quality: GlassQuality.premium, // intentional — theme bypass for showcase
+                        quality: GlassQuality
+                            .premium, // intentional — theme bypass for showcase
                       ),
                       SizedBox(height: 12),
                       GlassSegmentedControl(
@@ -365,7 +366,8 @@ class _InteractivePageState extends State<InteractivePage> {
                       GlassSlider(
                         value: _slider1,
                         onChanged: (v) => setState(() => _slider1 = v),
-                        quality: GlassQuality.premium, // intentional — theme bypass for showcase
+                        quality: GlassQuality
+                            .premium, // intentional — theme bypass for showcase
                       ),
                       SizedBox(height: 8),
                       Text(
