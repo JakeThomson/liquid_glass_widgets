@@ -29,6 +29,7 @@ class LiquidGlassSettings with EquatableMixin {
     this.shadow,
     this.whitenStrength = 0.0,
     this.whitenGated = true,
+    this.pinchStrength = 0.0,
   });
 
   /// Creates [LiquidGlassSettings] using Figma-inspired parameter names.
@@ -251,6 +252,19 @@ class LiquidGlassSettings with EquatableMixin {
   /// approximations are always uniform.
   final bool whitenGated;
 
+  /// Concave horizontal-pinch strength for the interactive pill indicator.
+  ///
+  /// When > 0, the premium render shader applies a concave inward displacement
+  /// at the left and right edges of the glass surface, creating the iOS 26
+  /// "pinched through a lens" look. The centre of the surface (over the icon
+  /// and label) is left flat and undistorted.
+  ///
+  /// Only affects the Premium (Impeller) path via
+  /// [liquid_glass_final_render.frag].
+  ///
+  /// Range: 0.0 (no pinch, the default) to 1.0 (full concave waist).
+  final double pinchStrength;
+
   /// The effective saturation taking visibility into account.
   double get effectiveSaturation => 1 + (saturation - 1) * visibility;
 
@@ -293,6 +307,7 @@ class LiquidGlassSettings with EquatableMixin {
       shadow: t < 0.5 ? a.shadow : b.shadow,
       whitenStrength: lerpDouble(a.whitenStrength, b.whitenStrength, t)!,
       whitenGated: t < 0.5 ? a.whitenGated : b.whitenGated,
+      pinchStrength: lerpDouble(a.pinchStrength, b.pinchStrength, t)!,
     );
   }
 
@@ -324,6 +339,7 @@ class LiquidGlassSettings with EquatableMixin {
     List<BoxShadow>? shadow,
     double? whitenStrength,
     bool? whitenGated,
+    double? pinchStrength,
   }) =>
       LiquidGlassSettings(
         visibility: visibility ?? this.visibility,
@@ -344,6 +360,7 @@ class LiquidGlassSettings with EquatableMixin {
         shadow: shadow ?? this.shadow,
         whitenStrength: whitenStrength ?? this.whitenStrength,
         whitenGated: whitenGated ?? this.whitenGated,
+        pinchStrength: pinchStrength ?? this.pinchStrength,
       );
 
   @override
@@ -365,5 +382,6 @@ class LiquidGlassSettings with EquatableMixin {
         shadow,
         whitenStrength,
         whitenGated,
+        pinchStrength,
       ];
 }

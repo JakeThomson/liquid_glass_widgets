@@ -51,6 +51,11 @@ uniform float uWhiten;
 // behaviour, gives dark glass a small even lift toward white).
 uniform float uWhitenGated;
 
+// Slot 20: uPinchStrength. Concave horizontal-pinch strength [0..1].
+// When > 0, the pill's refraction is squeezed inward at the left/right edges,
+// creating the iOS 26 "pinched through a lens" look. The centre is left flat.
+uniform float uPinchStrength;
+
 uniform sampler2D uBackgroundTexture;
 uniform sampler2D uGeometryTexture;
 
@@ -131,7 +136,6 @@ void main() {
     vec3  baseRefract = refract(incident, normal, invN);
     float refractLen  = (height + baseHeight) / max(0.001, abs(baseRefract.z));
     vec2  displacement = baseRefract.xy * refractLen;
-
     // On OpenGL ES, screenUV.y is already flipped to (1.0 - y) to compensate
     // for the bottom-left texture-origin convention.  The displacement is
     // computed in Flutter's native Y-down space (outward normal at the bottom
@@ -142,7 +146,50 @@ void main() {
         displacement.y = -displacement.y;
     #endif
 
-    // Apply refraction — with optional chromatic aberration.
+    // ── Concave horizontal pinch ──────────────────────────────────────────────
+    // iOS 26 indicator pills make the bar content behind the left/right edges
+    // appear slightly compressed inward — as if the pill is a convex lens
+    // squeezing the bar through its edges. The effect is HORIZONTAL ONLY:
+    // the bar content at the pill edges is sampled from a position slightly
+    // closer to the pill centre, making those edge regions appear to pinch in.
+    //
+    // The centre of the pill (over the icon/label) is left completely flat.
+    //
+    // Scale: shifts are in UV space relative to the FULL backdrop (uSize).
+    // 0.015 UV on a 390pt screen ≈ 6pt logical pixels — subtle but visible.
+    //
+    // ── iOS 26 Concave Lens Pinch ─────────────────────────────────────────────
+    if (uPinchStrength > 0.001) {
+        // We cannot use normalXY because it is 0.0 in the flat interior of the pill,
+        // which prevents the background from being pinched at all.
+        // We also cannot use a circular distance field, because a circle mapped to a 
+        // wide pill creates an elliptical lens that curves the flat top/bottom edges.
+        //
+        // Solution: Use an L6 norm (superellipse/squircle) distance field.
+        // This mathematically mimics the physical shape of a rounded rectangle:
+        // perfectly flat on the top/bottom/sides, and perfectly rounded in the corners.
+        
+        vec2 centered = geometryUV - vec2(0.5);
+        vec2 absCentered = abs(centered) * 2.0; // 0.0 to 1.0
+        
+        // L6 norm: (x^6 + y^6)^(1/6). Flatter than a circle, rounder than a square.
+        float squircleDist = pow(pow(absCentered.x, 6.0) + pow(absCentered.y, 6.0), 1.0 / 6.0);
+        
+        // Smooth ramp starting from the center outwards
+        float pinchRamp = smoothstep(0.0, 1.0, squircleDist);
+        
+        // Shift using the radial vector, scaled by the squircle distance ramp.
+        // 0.025 UV max shift gives the perfect Apple-like pinch strength.
+        vec2 pinchShift = centered * pinchRamp * uPinchStrength * 0.025;
+        
+        // Correct Y-axis for OpenGL ES
+        #ifdef IMPELLER_TARGET_OPENGLES
+            pinchShift.y = -pinchShift.y;
+        #endif
+        
+        screenUV += pinchShift;
+    }
+
     // PP1 optimisation: when the surface normal is flat (pointing straight up,
     // i.e. normalXY ≈ 0), refract() always produces displacement = vec2(0) and
     // the refracted UV is identical to screenUV.  Skip refract() entirely and

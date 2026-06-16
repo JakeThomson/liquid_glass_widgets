@@ -105,7 +105,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
     ),
     refractiveIndex: GlassDefaults.refractiveIndex,
     lightIntensity: GlassDefaults.lightIntensity,
-    chromaticAberration: GlassDefaults.chromaticAberration,
+    chromaticAberration: 0.0, // iOS 26 pill does not have chromatic aberration
     lightAngle: GlassDefaults.lightAngle,
     blur: 0,
   );
@@ -120,10 +120,11 @@ class AnimatedGlassIndicator extends StatelessWidget {
   /// with no repaint.
   ///
   ///  - Horizontal 20 px: covers glass shader antialiased edge rendering.
-  ///  - Vertical 12 px: covers max jelly scaleY (≈1.24 × 48 px ≈ 5.8 px)
-  ///    plus a generous margin for Impeller subpixel rounding.
+  ///  - Vertical 15 px: covers max jelly scaleY plus headroom for the concave 
+  ///    vertical pinch shader to sample the bar behind it without hitting the clamp edge.
   static const _jellyClipExpansion = EdgeInsets.symmetric(
     horizontal: 20.0,
+    vertical: 15.0,
   );
 
   @override
@@ -162,7 +163,14 @@ class AnimatedGlassIndicator extends StatelessWidget {
     // than wrapping the widget in `Opacity`.
     final fade = thickness.clamp(0.0, 1.0);
     final base = settings ?? _baseGlassSettings;
-    final effectiveSettings = base.copyWith(visibility: fade);
+    final effectiveSettings = base.copyWith(
+      visibility: fade,
+      // Concave pinch driven by interaction intensity — the pill appears
+      // "squeezed through a lens" at the left/right edges during drag,
+      // matching iOS 26's indicator look. Full 0→1 range; fine-tuning
+      // happens in the shader multipliers.
+      pinchStrength: fade,
+    );
 
     final shape = useSuperellipse
         ? LiquidRoundedSuperellipse(borderRadius: borderRadius * 2)
