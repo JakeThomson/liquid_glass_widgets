@@ -168,7 +168,6 @@ void main() {
         // Solution: Use an L6 norm (superellipse/squircle) distance field.
         // This mathematically mimics the physical shape of a rounded rectangle:
         // perfectly flat on the top/bottom/sides, and perfectly rounded in the corners.
-
         vec2 centered = geometryUV - vec2(0.5);
 
         // Calculate physical distance from the pill's center
@@ -184,18 +183,18 @@ void main() {
         // edgeDist is 0.0 in the flat center, and 1.0 at the absolute curved edge
         float edgeDist = distFromInner / max(radius, 0.001);
 
-        // Taper from 0.0 at center, to 1.0 midway, and back to 0.0 at the edge.
-        // This ensures the background perfectly anchors to the unpinched background
-        // at the boundary of the pill, completely eliminating the hard edge pixelation.
-        float centeredDist = (edgeDist - 0.5) * 2.0;
-        float pinchRamp = smoothstep(1.0, 0.0, abs(centeredDist));
+        // Ramp from 0.0 at the inner skeleton to 1.0 at the edge.
+        // This keeps the flat middle of the pill perfectly sharp (0 shift),
+        // preventing distortion of icons, while applying maximum shift at the edge
+        // to create the thick, physical glass lens discontinuity.
+        float pinchRamp = smoothstep(0.0, 1.0, edgeDist);
 
         // Normalize d_signed safely to get the physical radial direction
         vec2 shiftDir = d_signed / max(distFromInner, 0.001);
 
-        // Max shift in physical pixels (e.g., 8.0 pixels maximum pinch depth).
-        // Converts the physical shift into normalized screen UV space.
-        vec2 pinchShift = (shiftDir * pinchRamp * uPinchStrength * 8.0) / uSize;
+        // Max shift in physical pixels (e.g., 12.0 pixels max shift)
+        // 12.0 physical pixels creates a pronounced Apple-style refractive edge.
+        vec2 pinchShift = (shiftDir * pinchRamp * uPinchStrength * 12.0) / uSize;
 
         // Correct Y-axis for OpenGL ES.
         #ifdef IMPELLER_TARGET_OPENGLES
@@ -203,6 +202,10 @@ void main() {
         #endif
 
         screenUV += pinchShift;
+        
+        // Guarantee we never sample outside the valid backdrop capture bounds,
+        // preventing black/void artifacts if the pill is pressed tightly against the edge.
+        screenUV = clamp(screenUV, vec2(0.001), vec2(0.999));
     }
 
     // PP1 optimisation: when the surface normal is flat (pointing straight up,
