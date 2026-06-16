@@ -170,29 +170,32 @@ void main() {
         // perfectly flat on the top/bottom/sides, and perfectly rounded in the corners.
 
         vec2 centered = geometryUV - vec2(0.5);
-        vec2 absCentered = abs(centered) * 2.0; // 0.0 to 1.0
 
-        // Compute x^6 and y^6 using multiply chains instead of pow().
-        // pow(x, 6.0) compiles to exp(6*log(x)) — a pair of transcendental ops.
-        // x^6 via squaring and multiplying is 3 scalar multiplies with no
-        // transcendentals: faster on every GPU backend (Metal, Vulkan, OpenGL ES).
-        // Mathematically identical result.
-        float ax2 = absCentered.x * absCentered.x;
-        float ay2 = absCentered.y * absCentered.y;
-        float ax6 = ax2 * ax2 * ax2;
-        float ay6 = ay2 * ay2 * ay2;
+        // Calculate physical distance from the pill's center
+        vec2 p_signed = centered * uGeometrySize;
+        vec2 p_abs = abs(p_signed);
+        float radius = min(uGeometrySize.x, uGeometrySize.y) * 0.5;
+        vec2 flatSize = max(uGeometrySize * 0.5 - vec2(radius), 0.0);
 
-        // L6 norm: (x^6 + y^6)^(1/6).
-        // The outer pow() cannot be replaced without changing the distance metric,
-        // so it is retained. The dominant cost (the two inner pow() calls) is gone.
-        float squircleDist = pow(ax6 + ay6, 1.0 / 6.0);
+        // Distance vector from the flat inner skeleton
+        vec2 d_signed = sign(p_signed) * max(p_abs - flatSize, 0.0);
+        float distFromInner = length(d_signed);
 
-        // Smooth ramp from centre outward.
-        float pinchRamp = smoothstep(0.0, 1.0, squircleDist);
+        // edgeDist is 0.0 in the flat center, and 1.0 at the absolute curved edge
+        float edgeDist = distFromInner / max(radius, 0.001);
 
-        // Shift using the radial vector, scaled by the squircle distance ramp.
-        // 0.025 UV max shift gives the perfect Apple-like pinch strength.
-        vec2 pinchShift = centered * pinchRamp * uPinchStrength * 0.025;
+        // Taper from 0.0 at center, to 1.0 midway, and back to 0.0 at the edge.
+        // This ensures the background perfectly anchors to the unpinched background
+        // at the boundary of the pill, completely eliminating the hard edge pixelation.
+        float centeredDist = (edgeDist - 0.5) * 2.0;
+        float pinchRamp = smoothstep(1.0, 0.0, abs(centeredDist));
+
+        // Normalize d_signed safely to get the physical radial direction
+        vec2 shiftDir = d_signed / max(distFromInner, 0.001);
+
+        // Max shift in physical pixels (e.g., 8.0 pixels maximum pinch depth).
+        // Converts the physical shift into normalized screen UV space.
+        vec2 pinchShift = (shiftDir * pinchRamp * uPinchStrength * 8.0) / uSize;
 
         // Correct Y-axis for OpenGL ES.
         #ifdef IMPELLER_TARGET_OPENGLES
