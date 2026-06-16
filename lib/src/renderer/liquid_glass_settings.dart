@@ -11,6 +11,12 @@ import 'liquid_glass_render_scope.dart';
 /// Represents the settings for a liquid glass effect.
 class LiquidGlassSettings with EquatableMixin {
   /// Creates a new [LiquidGlassSettings] with the given settings.
+  /// Public constructor — all material glass properties.
+  ///
+  /// [pinchStrength] is intentionally absent here. It is an internal
+  /// shader-transport value set only by [AnimatedGlassIndicator] via
+  /// [copyWithPinch]. Users configure the effect through the hosting
+  /// widget's `indicatorPinchStrength` parameter instead.
   const LiquidGlassSettings({
     this.visibility = 1.0,
     this.glassColor = const Color.fromARGB(0, 255, 255, 255),
@@ -29,9 +35,32 @@ class LiquidGlassSettings with EquatableMixin {
     this.shadow,
     this.whitenStrength = 0.0,
     this.whitenGated = true,
-    // Internal transport for the render shader — not a public material property.
-    // Set via AnimatedGlassIndicator.pinchStrength / indicatorPinchStrength.
-    this.pinchStrength = 0.0,
+  }) : pinchStrength = 0.0;
+
+  /// Private constructor used exclusively by [copyWithPinch].
+  ///
+  /// Carries the full field set including [pinchStrength] so that
+  /// [AnimatedGlassIndicator] can thread the animated pinch value to
+  /// the render shader without exposing [pinchStrength] in the public API.
+  const LiquidGlassSettings._withPinch({
+    required this.visibility,
+    required this.glassColor,
+    required this.thickness,
+    required this.blur,
+    required this.chromaticAberration,
+    required this.lightAngle,
+    required this.lightIntensity,
+    required this.ambientStrength,
+    required this.refractiveIndex,
+    required this.saturation,
+    required this.glowIntensity,
+    required this.specularSharpness,
+    required this.standardOpacityMultiplier,
+    required this.shadowElevation,
+    required this.shadow,
+    required this.whitenStrength,
+    required this.whitenGated,
+    required this.pinchStrength,
   });
 
   /// Creates [LiquidGlassSettings] using Figma-inspired parameter names.
@@ -254,19 +283,22 @@ class LiquidGlassSettings with EquatableMixin {
   /// approximations are always uniform.
   final bool whitenGated;
 
-  /// Internal shader transport value for the concave lens pinch effect.
+  /// Internal shader transport — the animated pinch strength for the concave
+  /// lens effect on indicator pills.
   ///
-  /// Set exclusively by [AnimatedGlassIndicator] via [copyWithPinch].
-  /// Do not set this directly — use [AnimatedGlassIndicator.pinchStrength]
-  /// or the hosting widget's `indicatorPinchStrength` parameter instead.
+  /// Always `0.0` on instances created via the public constructor.
+  /// Only non-zero when set by [AnimatedGlassIndicator] via [copyWithPinch].
+  /// Configure from outside via the hosting widget's `indicatorPinchStrength`.
   final double pinchStrength;
 
-  /// Returns a copy of these settings with the given [pinchStrength] applied.
+  /// Returns a copy of these settings with [pinchStrength] set to [value].
   ///
-  /// Internal use only — called by [AnimatedGlassIndicator] to thread the
-  /// animated pinch value to the render shader without exposing [pinchStrength]
-  /// in the public [copyWith] API.
-  LiquidGlassSettings copyWithPinch(double pinchStrength) => LiquidGlassSettings(
+  /// **Internal use only** — called exclusively by [AnimatedGlassIndicator]
+  /// to thread the animated pinch value into the render shader.
+  /// Users should configure this via `indicatorPinchStrength` on
+  /// [GlassBottomBar], [GlassTabBar], [GlassSegmentedControl], or
+  /// [GlassSearchableBottomBar].
+  LiquidGlassSettings copyWithPinch(double value) => LiquidGlassSettings._withPinch(
         visibility: visibility,
         glassColor: glassColor,
         thickness: thickness,
@@ -284,7 +316,7 @@ class LiquidGlassSettings with EquatableMixin {
         shadow: shadow,
         whitenStrength: whitenStrength,
         whitenGated: whitenGated,
-        pinchStrength: pinchStrength,
+        pinchStrength: value,
       );
 
   /// The effective saturation taking visibility into account.
@@ -309,7 +341,7 @@ class LiquidGlassSettings with EquatableMixin {
     if (a == null) return b!;
     if (b == null) return a;
 
-    return LiquidGlassSettings(
+    return LiquidGlassSettings._withPinch(
       visibility: lerpDouble(a.visibility, b.visibility, t)!,
       glassColor: Color.lerp(a.glassColor, b.glassColor, t)!,
       thickness: lerpDouble(a.thickness, b.thickness, t)!,
@@ -329,6 +361,8 @@ class LiquidGlassSettings with EquatableMixin {
       shadow: t < 0.5 ? a.shadow : b.shadow,
       whitenStrength: lerpDouble(a.whitenStrength, b.whitenStrength, t)!,
       whitenGated: t < 0.5 ? a.whitenGated : b.whitenGated,
+      // pinchStrength is interaction state — lerp it so transitions are smooth
+      // when the indicator fades between active/resting states.
       pinchStrength: lerpDouble(a.pinchStrength, b.pinchStrength, t)!,
     );
   }
@@ -362,7 +396,7 @@ class LiquidGlassSettings with EquatableMixin {
     double? whitenStrength,
     bool? whitenGated,
   }) =>
-      LiquidGlassSettings(
+      LiquidGlassSettings._withPinch(
         visibility: visibility ?? this.visibility,
         glassColor: glassColor ?? this.glassColor,
         thickness: thickness ?? this.thickness,
@@ -381,10 +415,9 @@ class LiquidGlassSettings with EquatableMixin {
         shadow: shadow ?? this.shadow,
         whitenStrength: whitenStrength ?? this.whitenStrength,
         whitenGated: whitenGated ?? this.whitenGated,
-        // pinchStrength is intentionally preserved here — copyWith is used
-        // internally by AnimatedGlassIndicator to change visibility while
-        // keeping the current pinch value alive. To set a NEW pinch value,
-        // call copyWithPinch() instead.
+        // Preserve current pinchStrength — copyWith is called by AnimatedGlassIndicator
+        // to change visibility while keeping the live pinch value alive.
+        // To set a new pinch value, call copyWithPinch() instead.
         pinchStrength: pinchStrength,
       );
 
