@@ -183,18 +183,21 @@ void main() {
         // edgeDist is 0.0 in the flat center, and 1.0 at the absolute curved edge
         float edgeDist = distFromInner / max(radius, 0.001);
 
-        // Ramp from 0.0 at the inner skeleton to 1.0 at the edge.
-        // This keeps the flat middle of the pill perfectly sharp (0 shift),
-        // preventing distortion of icons, while applying maximum shift at the edge
-        // to create the thick, physical glass lens discontinuity.
-        float pinchRamp = smoothstep(0.0, 1.0, edgeDist);
+        // Apple's iOS 26 pill is a smooth, continuous "blister" (like a water drop).
+        // It does NOT have a harsh, cut-glass edge. The background warps smoothly.
+        // To achieve this, the displacement must return to 0.0 at the boundary.
+        // We use a sine wave so the shift smoothly curves up to maximum at the
+        // middle of the radius, and back to 0.0 at the absolute edge.
+        float pinchRamp = sin(edgeDist * 3.14159265);
 
         // Normalize d_signed safely to get the physical radial direction
         vec2 shiftDir = d_signed / max(distFromInner, 0.001);
 
-        // Max shift in physical pixels (e.g., 12.0 pixels max shift)
-        // 12.0 physical pixels creates a pronounced Apple-style refractive edge.
-        vec2 pinchShift = (shiftDir * pinchRamp * uPinchStrength * 12.0) / uSize;
+        // Because we taper back to 0 at the edge, the visual "strength" of the
+        // pinch is distributed over a smooth curve. We need a larger max physical
+        // shift (e.g., 24.0 pixels) in the middle of the curve so the pinch is
+        // clearly visible, while remaining perfectly mathematically continuous.
+        vec2 pinchShift = (shiftDir * pinchRamp * uPinchStrength * 24.0) / uSize;
 
         // Correct Y-axis for OpenGL ES.
         #ifdef IMPELLER_TARGET_OPENGLES
