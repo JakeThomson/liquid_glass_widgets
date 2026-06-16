@@ -345,7 +345,7 @@ class TabIndicator extends StatefulWidget {
     required this.maskingQuality,
     this.indicatorSettings,
     this.backgroundKey,
-    this.indicatorExpansion = 8,
+    this.indicatorExpansion = const EdgeInsets.all(8.0),
     this.indicatorPinchStrength = 1.0,
     this.interactionGlowColor,
     this.interactionGlowRadius = 1.5,
@@ -379,7 +379,7 @@ class TabIndicator extends StatefulWidget {
   /// give a more dramatic "puff" stretch; lower values produce a
   /// tighter, more iOS-native feel. Defaults to `14` to match the
   /// pre-existing visual.
-  final double indicatorExpansion;
+  final EdgeInsetsGeometry indicatorExpansion;
 
   /// Maximum concave lens pinch strength for the animated pill.
   /// Forwarded directly to [AnimatedGlassIndicator.pinchStrength].
@@ -793,7 +793,7 @@ class TabIndicatorState extends State<TabIndicator>
                               itemCount: widget.tabCount,
                               alignment: alignment,
                               thickness: thickness,
-                              expansion: widget.indicatorExpansion,
+                              expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
                               transform: jellyTransform,
                               borderRadius:
                                   thickness < 1 ? backgroundRadius : glassRadius,
@@ -811,7 +811,7 @@ class TabIndicatorState extends State<TabIndicator>
                               itemCount: widget.tabCount,
                               alignment: alignment,
                               thickness: thickness,
-                              expansion: widget.indicatorExpansion,
+                              expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
                               transform: jellyTransform,
                               borderRadius:
                                   thickness < 1 ? backgroundRadius : glassRadius,
@@ -846,7 +846,7 @@ class TabIndicatorState extends State<TabIndicator>
             paintGlass: true,
             borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
             padding: const EdgeInsets.all(4),
-            expansion: widget.indicatorExpansion,
+            expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
             settings: widget.indicatorSettings,
             pinchStrength: widget.indicatorPinchStrength,
             backgroundKey: widget.platformViewBackdrop

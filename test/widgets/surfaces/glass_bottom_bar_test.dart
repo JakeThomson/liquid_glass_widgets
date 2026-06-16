@@ -801,13 +801,13 @@ void main() {
       const GlassBottomBarTab(label: 'C', icon: Icon(CupertinoIcons.person)),
     ];
 
-    test('default indicatorExpansion is 14', () {
+    test('default indicatorExpansion is EdgeInsets.all(8.0)', () {
       final bar = GlassBottomBar(
         tabs: tabs,
         selectedIndex: 0,
         onTabSelected: (_) {},
       );
-      expect(bar.indicatorExpansion, 14);
+      expect(bar.indicatorExpansion, const EdgeInsets.all(8.0));
     });
 
     testWidgets('accepts custom indicatorExpansion', (tester) async {
@@ -817,14 +817,14 @@ void main() {
             tabs: tabs,
             selectedIndex: 0,
             onTabSelected: (_) {},
-            indicatorExpansion: 5,
+            indicatorExpansion: const EdgeInsets.all(5.0),
             maskingQuality: MaskingQuality.off,
           ),
         ),
       );
       final bar =
           tester.widget<GlassBottomBar>(find.byType(GlassBottomBar).first);
-      expect(bar.indicatorExpansion, 5);
+      expect(bar.indicatorExpansion, const EdgeInsets.all(5.0));
     });
 
     testWidgets('accepts zero indicatorExpansion', (tester) async {
@@ -834,7 +834,7 @@ void main() {
             tabs: tabs,
             selectedIndex: 0,
             onTabSelected: (_) {},
-            indicatorExpansion: 0,
+            indicatorExpansion: EdgeInsets.zero,
             maskingQuality: MaskingQuality.off,
           ),
         ),
@@ -849,7 +849,7 @@ void main() {
             tabs: tabs,
             selectedIndex: 0,
             onTabSelected: (_) {},
-            indicatorExpansion: 40,
+            indicatorExpansion: const EdgeInsets.all(40.0),
             maskingQuality: MaskingQuality.off,
           ),
         ),

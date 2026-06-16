@@ -222,7 +222,7 @@ class GlassBottomBar extends StatefulWidget {
     this.maskingQuality = MaskingQuality.high,
     this.backgroundKey,
     this.tabWidth,
-    this.indicatorExpansion = 8,
+    this.indicatorExpansion = const EdgeInsets.all(8.0),
     this.interactionGlowColor,
     this.interactionGlowRadius = 1.5,
     this.interactionBehavior = GlassInteractionBehavior.full,
@@ -376,9 +376,8 @@ class GlassBottomBar extends StatefulWidget {
   /// How far the jelly indicator's leading and trailing edges expand
   /// past the tab boundary as the indicator translates between tabs.
   /// Higher values give a more dramatic "puff" stretch; lower values
-  /// produce a tighter, more iOS-native feel. Defaults to `14` —
-  /// matches the pre-existing visual.
-  final double indicatorExpansion;
+  /// tighter, more iOS-native feel. Defaults to `EdgeInsets.all(8.0)`.
+  final EdgeInsetsGeometry indicatorExpansion;
 
   /// List of tabs to display in the bottom bar.
   ///
@@ -1028,7 +1027,7 @@ class JellyClipper extends CustomClipper<Path> {
   final int itemCount;
   final Alignment alignment;
   final double thickness;
-  final double expansion;
+  final EdgeInsets expansion;
   final Matrix4 transform;
   final double borderRadius;
   final bool inverse;
@@ -1063,7 +1062,12 @@ class JellyClipper extends CustomClipper<Path> {
     );
 
     // Apply expansion based on thickness (drag state)
-    final inflatedRect = paddedRect.inflate(expansion * thickness);
+    final inflatedRect = Rect.fromLTRB(
+      paddedRect.left - (expansion.left * thickness),
+      paddedRect.top - (expansion.top * thickness),
+      paddedRect.right + (expansion.right * thickness),
+      paddedRect.bottom + (expansion.bottom * thickness),
+    );
 
     // Create rounded rect path
     final path = Path()

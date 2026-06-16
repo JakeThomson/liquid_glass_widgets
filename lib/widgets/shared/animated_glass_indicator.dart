@@ -54,8 +54,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
   /// Padding to apply around the indicator (e.g., for GlassBottomBar).
   final EdgeInsetsGeometry padding;
 
-  /// How much to expand the indicator during drag (default 8.0).
-  final double expansion;
+  /// How much to expand the indicator during drag.
+  final EdgeInsetsGeometry expansion;
 
   /// Whether to use LiquidRoundedSuperellipse (Apple style) or standard RoundedRectangle.
   final bool useSuperellipse;
@@ -100,7 +100,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
     required this.borderRadius,
     this.settings,
     this.padding = EdgeInsets.zero,
-    this.expansion = 8.0,
+    this.expansion = const EdgeInsets.all(8.0),
     this.useSuperellipse = true,
     this.backgroundKey,
     this.paintBackground = true,
@@ -145,13 +145,14 @@ class AnimatedGlassIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Calculate expansion rectangle based on thickness
+    final resolvedExpansion = expansion.resolve(Directionality.of(context));
     final rect = RelativeRect.lerp(
       RelativeRect.fill,
       RelativeRect.fromLTRB(
-        -expansion,
-        -expansion,
-        -expansion,
-        -expansion,
+        -resolvedExpansion.left,
+        -resolvedExpansion.top,
+        -resolvedExpansion.right,
+        -resolvedExpansion.bottom,
       ),
       thickness,
     );

@@ -667,7 +667,7 @@ class TabBarContentState extends State<TabBarContent>
                   pinchStrength: widget.indicatorPinchStrength,
                   backgroundKey: widget.backgroundKey,
                   expansion:
-                      widget.maskingQuality == MaskingQuality.off ? 0.0 : 8.0,
+                      widget.maskingQuality == MaskingQuality.off ? EdgeInsets.zero : const EdgeInsets.all(8.0),
                   paintBackground: paintBackground,
                   paintGlass: paintGlass,
                   shadows: paintBackground ? _effectiveShadow : null,

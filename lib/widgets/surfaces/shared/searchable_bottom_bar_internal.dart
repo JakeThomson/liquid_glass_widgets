@@ -120,7 +120,7 @@ class SearchableTabIndicator extends StatefulWidget {
     this.indicatorPinchStrength = 1.0,
     this.backgroundKey,
     this.collapsedLogoBuilder,
-    this.indicatorExpansion = 8,
+    this.indicatorExpansion = const EdgeInsets.all(8.0),
     this.interactionGlowColor,
     this.interactionGlowRadius = 1.5,
     this.interactionGlowBlurRadius = 0,
@@ -159,7 +159,7 @@ class SearchableTabIndicator extends StatefulWidget {
   /// give a more dramatic "puff" stretch; lower values produce a
   /// tighter, more iOS-native feel. Defaults to `14` to match the
   /// pre-existing visual.
-  final double indicatorExpansion;
+  final EdgeInsetsGeometry indicatorExpansion;
 
   final Color? interactionGlowColor;
   final double interactionGlowRadius;
@@ -574,7 +574,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                               itemCount: widget.tabCount,
                               alignment: alignment,
                               thickness: thickness,
-                              expansion: widget.indicatorExpansion,
+                              expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
                               transform: jellyTransform,
                               borderRadius: effRadius,
                               inverse: true,
@@ -590,7 +590,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                               itemCount: widget.tabCount,
                               alignment: alignment,
                               thickness: thickness,
-                              expansion: widget.indicatorExpansion,
+                              expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
                               transform: jellyTransform,
                               borderRadius: effRadius,
                             ),
@@ -624,7 +624,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
             paintGlass: true,
             borderRadius: effRadius,
             padding: const EdgeInsets.all(4),
-            expansion: widget.indicatorExpansion,
+            expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
             settings: widget.indicatorSettings,
             pinchStrength: widget.indicatorPinchStrength,
             // Over a PlatformView the normal backdrop (map region) can't be

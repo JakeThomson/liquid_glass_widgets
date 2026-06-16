@@ -99,7 +99,7 @@ class GlassSearchableBottomBar extends StatefulWidget {
     this.interactionBehavior = GlassInteractionBehavior.full,
     this.pressScale = 1.04,
     this.tabWidth,
-    this.indicatorExpansion = 8,
+    this.indicatorExpansion = const EdgeInsets.all(8.0),
     this.onBarTap,
     // ── Whiten-at-bottom (light-mode legibility) ─────────────────────────────
     this.whitenAtBottom = true,
@@ -439,7 +439,7 @@ class GlassSearchableBottomBar extends StatefulWidget {
   /// Higher values give a more dramatic "puff" stretch; lower values
   /// produce a tighter, more iOS-native feel. Defaults to `14` —
   /// matches the pre-existing visual.
-  final double indicatorExpansion;
+  final EdgeInsetsGeometry indicatorExpansion;
 
   /// Called when the user taps anywhere on the bar.
   ///

@@ -305,6 +305,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           iconSize: 28,
           iconLabelSpacing: 0,
           indicatorColor: CupertinoColors.tertiaryLabel.resolveFrom(context),
+          indicatorExpansion: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
           quality: GlassQuality.premium,
           interactionBehavior: GlassInteractionBehavior.full,
           settings: LiquidGlassSettings(
@@ -413,13 +414,13 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                 children: [
                   Icon(Icons.apple,
                       color: CupertinoColors.label.resolveFrom(context),
-                      size: 28),
+                      size: 32),
                   SizedBox(width: 4),
                   Text(
                     'News',
                     style: TextStyle(
                       color: CupertinoColors.label.resolveFrom(context),
-                      fontSize: 28,
+                      fontSize: 32,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                     ),
@@ -430,7 +431,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                 '6 April',
                 style: TextStyle(
                   color: CupertinoColors.secondaryLabel.resolveFrom(context),
-                  fontSize: 28,
+                  fontSize: 32,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.5,
                 ),
