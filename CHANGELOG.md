@@ -27,7 +27,7 @@ scrolls under the bars — matching the native App Store early-darkening behavio
 
 `toImageSync` called during a dirty repaint boundary spammed `[GlassEffect] toImageSync failed` in debug and dropped the frame's capture. Guarded with `debugNeedsPaint` check (release-safe, same pattern as `GlassScrollEdgeEffect`).
 
-**No API changes. No breaking changes.**
+**No breaking changes.** New parameters are all optional with safe defaults — existing code compiles and behaves identically without changes.
 
 
 ---
