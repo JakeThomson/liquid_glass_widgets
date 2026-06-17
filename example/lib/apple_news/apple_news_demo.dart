@@ -354,8 +354,8 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             GlassBottomBarTab(
               label: 'Today',
               icon: SizedBox(
-                width: 26,
-                height: 26,
+                width: 24,
+                height: 24,
                 child: SvgPicture.asset(
                   'assets/news_logo.svg',
                   fit: BoxFit.contain,
@@ -366,8 +366,8 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                 ),
               ),
               activeIcon: SizedBox(
-                width: 26,
-                height: 26,
+                width: 24,
+                height: 24,
                 child: SvgPicture.asset(
                   'assets/news_logo.svg',
                   fit: BoxFit.contain,
@@ -381,14 +381,14 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             GlassBottomBarTab(
               label: 'News+',
               icon: SizedBox(
-                width: 26,
-                height: 26,
-                child: Icon(SFSymbols.newspaper_fill, size: 26),
+                width: 28,
+                height: 28,
+                child: Icon(SFSymbols.newspaper_fill, size: 28),
               ),
               activeIcon: SizedBox(
-                width: 26,
-                height: 26,
-                child: Icon(SFSymbols.newspaper_fill, size: 26),
+                width: 28,
+                height: 28,
+                child: Icon(SFSymbols.newspaper_fill, size: 28),
               ),
             ),
             GlassBottomBarTab(
