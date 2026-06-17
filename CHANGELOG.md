@@ -1,3 +1,71 @@
+# 0.16.1
+
+## 🍎 iOS 26 Indicator Defaults — Parity Calibration
+
+Three indicator defaults have been updated across `GlassBottomBar` and
+`GlassSearchableBottomBar` to better match the iOS 26 bottom-bar pill
+out of the box. No API changes — all parameters remain fully configurable.
+
+### Changed defaults
+
+#### `indicatorPinchStrength` — `1.0` → `0.4`
+
+The previous default of `1.0` applied the maximum concave lens / pinch effect
+during drag. iOS 26's actual pinch is more restrained — `0.4` produces the
+characteristic "through a lens" look without over-distorting the edges.
+
+**To restore the previous behaviour:**
+```dart
+GlassBottomBar(
+  indicatorPinchStrength: 1.0,
+  ...
+)
+```
+
+#### `indicatorExpansion` — `EdgeInsets.all(8)` → `EdgeInsets.symmetric(horizontal: 12, vertical: 8)`
+
+The indicator pill in iOS 26 bottom bars is slightly wider than it is tall —
+a subtle "landing pad" shape that reads as a rounded rectangle rather than a
+near-circle. The new default matches this proportion.
+
+**To restore the previous behaviour:**
+```dart
+GlassBottomBar(
+  indicatorExpansion: const EdgeInsets.all(8.0),
+  ...
+)
+```
+
+#### `AnimatedGlassIndicator` chromatic aberration — `0.0` → `0.15`
+
+The indicator's internal `_baseGlassSettings` now sets
+`chromaticAberration: 0.15`. Real iOS 26 glass has a faint iridescent
+rainbow fringe at the rim. At `0.15` the effect is a whisper — visible
+up close, subliminal during normal use.
+
+**To disable the aberration** pass a full `indicatorSettings` override:
+```dart
+GlassBottomBar(
+  indicatorSettings: LiquidGlassSettings(
+    chromaticAberration: 0.0,
+    // include other fields you need
+  ),
+  ...
+)
+```
+
+### Affected widgets
+
+- `GlassBottomBar` — `indicatorPinchStrength` and `indicatorExpansion`
+- `GlassSearchableBottomBar` — `indicatorPinchStrength` and `indicatorExpansion`
+- All widgets using `AnimatedGlassIndicator` — `chromaticAberration` baseline
+
+`GlassTabBar` and `GlassSegmentedControl` retain their existing expansion
+defaults (`EdgeInsets.all(8.0)`) as their geometry is different from a
+bottom navigation bar.
+
+---
+
 # 0.16.0
 
 ## 🎨 Content-Aware Light/Dark Adaptation

@@ -1044,14 +1044,27 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
 
   group('GlassSearchableBottomBar.indicatorExpansion', () {
-    test('default indicatorExpansion is EdgeInsets.all(8.0)', () {
+    test('default indicatorExpansion matches iOS 26 calibration', () {
       final bar = GlassSearchableBottomBar(
         tabs: _testTabs,
         selectedIndex: 0,
         onTabSelected: (_) {},
         searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
       );
-      expect(bar.indicatorExpansion, const EdgeInsets.all(8.0));
+      expect(
+        bar.indicatorExpansion,
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      );
+    });
+
+    test('default indicatorPinchStrength is 0.4 (iOS 26 calibration)', () {
+      final bar = GlassSearchableBottomBar(
+        tabs: _testTabs,
+        selectedIndex: 0,
+        onTabSelected: (_) {},
+        searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+      );
+      expect(bar.indicatorPinchStrength, 0.4);
     });
 
     testWidgets('accepts custom indicatorExpansion', (tester) async {

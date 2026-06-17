@@ -801,13 +801,25 @@ void main() {
       const GlassBottomBarTab(label: 'C', icon: Icon(CupertinoIcons.person)),
     ];
 
-    test('default indicatorExpansion is EdgeInsets.all(8.0)', () {
+    test('default indicatorExpansion matches iOS 26 calibration', () {
       final bar = GlassBottomBar(
         tabs: tabs,
         selectedIndex: 0,
         onTabSelected: (_) {},
       );
-      expect(bar.indicatorExpansion, const EdgeInsets.all(8.0));
+      expect(
+        bar.indicatorExpansion,
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      );
+    });
+
+    test('default indicatorPinchStrength is 0.4 (iOS 26 calibration)', () {
+      final bar = GlassBottomBar(
+        tabs: tabs,
+        selectedIndex: 0,
+        onTabSelected: (_) {},
+      );
+      expect(bar.indicatorPinchStrength, 0.4);
     });
 
     testWidgets('accepts custom indicatorExpansion', (tester) async {

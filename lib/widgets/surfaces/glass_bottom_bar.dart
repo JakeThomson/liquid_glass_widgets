@@ -206,7 +206,7 @@ class GlassBottomBar extends StatefulWidget {
     this.showIndicator = true,
     this.indicatorColor,
     this.indicatorSettings,
-    this.indicatorPinchStrength = 1.0,
+    this.indicatorPinchStrength = 0.4,
     this.selectedIconColor,
     this.unselectedIconColor,
     this.iconSize = 24,
@@ -222,7 +222,7 @@ class GlassBottomBar extends StatefulWidget {
     this.maskingQuality = MaskingQuality.high,
     this.backgroundKey,
     this.tabWidth,
-    this.indicatorExpansion = const EdgeInsets.all(8.0),
+    this.indicatorExpansion = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     this.interactionGlowColor,
     this.interactionGlowRadius = 1.5,
     this.interactionBehavior = GlassInteractionBehavior.full,
@@ -378,7 +378,12 @@ class GlassBottomBar extends StatefulWidget {
   /// How far the jelly indicator's leading and trailing edges expand
   /// past the tab boundary as the indicator translates between tabs.
   /// Higher values give a more dramatic "puff" stretch; lower values
-  /// tighter, more iOS-native feel. Defaults to `EdgeInsets.all(8.0)`.
+  /// a tighter, more iOS-native feel.
+  ///
+  /// Defaults to `EdgeInsets.symmetric(horizontal: 12, vertical: 8)` which
+  /// matches the iOS 26 bottom-bar pill proportions (slightly wider than tall).
+  /// To restore the previous symmetric behaviour pass
+  /// `indicatorExpansion: const EdgeInsets.all(8.0)`.
   final EdgeInsetsGeometry indicatorExpansion;
 
   /// List of tabs to display in the bottom bar.

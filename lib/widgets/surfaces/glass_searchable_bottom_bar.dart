@@ -75,7 +75,7 @@ class GlassSearchableBottomBar extends StatefulWidget {
     this.showIndicator = true,
     this.indicatorColor,
     this.indicatorSettings,
-    this.indicatorPinchStrength = 1.0,
+    this.indicatorPinchStrength = 0.4,
     this.selectedIconColor,
     this.unselectedIconColor,
     this.iconSize = 24,
@@ -99,7 +99,7 @@ class GlassSearchableBottomBar extends StatefulWidget {
     this.interactionBehavior = GlassInteractionBehavior.full,
     this.pressScale = 1.04,
     this.tabWidth,
-    this.indicatorExpansion = const EdgeInsets.all(8.0),
+    this.indicatorExpansion = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     this.onBarTap,
     // ── Whiten-at-bottom (light-mode legibility) ─────────────────────────────
     this.whitenAtBottom = true,

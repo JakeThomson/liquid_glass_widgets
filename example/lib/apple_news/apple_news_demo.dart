@@ -295,7 +295,6 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
       bottomBar: Padding(
         padding: EdgeInsets.only(bottom: sysBottom),
         child: GlassSearchableBottomBar(
-          indicatorPinchStrength: 0.4,
           selectedIndex: _selectedTab,
           isSearchActive: _isSearching,
           onTabSelected: (index) => setState(() {
@@ -310,8 +309,6 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           iconLabelSpacing: 0,
           spacing: 8,
           indicatorColor: CupertinoColors.tertiaryLabel.resolveFrom(context),
-          indicatorExpansion:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           quality: GlassQuality.premium,
           interactionBehavior: GlassInteractionBehavior.full,
           settings: LiquidGlassSettings(
