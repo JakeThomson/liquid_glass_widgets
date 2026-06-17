@@ -113,7 +113,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
 
   static const _baseGlassSettings = LiquidGlassSettings(
     glassColor: Color.from(
-      alpha: 0.15,
+      alpha: 0.0,
       red: 1,
       green: 1,
       blue: 1,

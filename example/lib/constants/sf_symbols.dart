@@ -27,6 +27,19 @@ class SFSymbols {
       IconData(63844, fontFamily: 'SFSymbols', fontPackage: null);
   static const IconData square_and_pencil =
       IconData(62794, fontFamily: 'SFSymbols', fontPackage: null);
+  static const IconData house =
+      IconData(65473, fontFamily: 'SFSymbols', fontPackage: null);
+  static const IconData house_fill =
+      IconData(65462, fontFamily: 'SFSymbols', fontPackage: null);
+  static const IconData newspaper =
+      IconData(64303, fontFamily: 'SFSymbols', fontPackage: null);
+  static const IconData newspaper_fill =
+      IconData(64300, fontFamily: 'SFSymbols', fontPackage: null);
+  static const IconData headphones =
+      IconData(108, fontFamily: 'SFSymbols', fontPackage: null);
+  static const IconData rectangle_fill_on_rectangle_angled_fill =
+      IconData(63425, fontFamily: 'SFSymbols', fontPackage: null);
+  
   static const IconData trash =
       IconData(62185, fontFamily: 'SFSymbols', fontPackage: null);
   static const IconData xmark_bin =

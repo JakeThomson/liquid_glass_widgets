@@ -8,7 +8,9 @@ library;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import '../constants/sf_symbols.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME CONSTANTS
@@ -293,6 +295,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
       bottomBar: Padding(
         padding: EdgeInsets.only(bottom: sysBottom),
         child: GlassSearchableBottomBar(
+          indicatorPinchStrength: 0.4,
           selectedIndex: _selectedTab,
           isSearchActive: _isSearching,
           onTabSelected: (index) => setState(() {
@@ -304,8 +307,10 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           labelFontSize: 10,
           iconSize: 28,
           iconLabelSpacing: 0,
+          spacing: 8,
           indicatorColor: CupertinoColors.tertiaryLabel.resolveFrom(context),
-          indicatorExpansion: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+          indicatorExpansion:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           quality: GlassQuality.premium,
           interactionBehavior: GlassInteractionBehavior.full,
           settings: LiquidGlassSettings(
@@ -314,9 +319,9 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                 : const Color(0xCCFFFFFF),
             thickness: 30,
             blur: 2,
-            chromaticAberration: .01,
+            chromaticAberration: 0,
             lightAngle: GlassDefaults.lightAngle,
-            lightIntensity: .5,
+            lightIntensity: .3,
             ambientStrength: 0,
             refractiveIndex: 1.2,
             saturation: 1.2,
@@ -339,22 +344,35 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           tabs: [
             GlassBottomBarTab(
               label: 'Today',
-              icon: Icon(CupertinoIcons.house),
-              activeIcon: Icon(CupertinoIcons.house_fill),
+              icon: SvgPicture.asset(
+                'assets/news_logo.svg',
+                width: 20,
+                colorFilter: ColorFilter.mode(
+                  CupertinoColors.label.resolveFrom(context),
+                  BlendMode.srcIn,
+                ),
+              ),
+              activeIcon: SvgPicture.asset(
+                'assets/news_logo.svg',
+                width: 20,
+                colorFilter: const ColorFilter.mode(
+                  Color.fromRGBO(255, 90, 130, 1),
+                  BlendMode.srcIn,
+                ),
+              ),
             ),
             GlassBottomBarTab(
               label: 'News+',
-              icon: Icon(CupertinoIcons.news_solid),
-              activeIcon: Icon(CupertinoIcons.news_solid),
+              icon: Icon(SFSymbols.newspaper),
+              activeIcon: Icon(SFSymbols.newspaper_fill),
             ),
             GlassBottomBarTab(
               label: 'Audio',
-              icon: Icon(CupertinoIcons.headphones),
+              icon: Icon(SFSymbols.headphones),
             ),
             GlassBottomBarTab(
               label: 'Following',
-              icon:
-                  Icon(CupertinoIcons.rectangle_fill_on_rectangle_angled_fill),
+              icon: Icon(SFSymbols.rectangle_fill_on_rectangle_angled_fill),
             ),
           ],
         ),
@@ -403,36 +421,37 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
 
   Widget _buildNewsHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(10, 8, 16, 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Icon(Icons.apple,
                       color: CupertinoColors.label.resolveFrom(context),
-                      size: 32),
-                  SizedBox(width: 4),
+                      size: 38),
+                  //  SizedBox(width: 4),
                   Text(
                     'News',
                     style: TextStyle(
                       color: CupertinoColors.label.resolveFrom(context),
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
                     ),
                   ),
                 ],
               ),
               Text(
-                '6 April',
+                '16 April',
                 style: TextStyle(
                   color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   fontSize: 32,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                 ),
               ),
