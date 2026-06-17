@@ -200,8 +200,13 @@ class AnimatedGlassIndicator extends StatelessWidget {
       // Map settings.thickness → rimThickness (logical px rim width).
       // uThickness is declared but unused in interactive_indicator.frag;
       // uRimThickness is what actually controls the visible hairline rim width.
-      // Clamp to 0–8 px: beyond 8 the rim bleeds into the pill body.
-      rimThickness: (settings?.effectiveThickness ?? 0.5).clamp(0.0, 8.0),
+      // Minimum 0.5 guarantees the SDF has a defined anti-aliased edge even
+      // when effectiveThickness is 0 (the base indicator settings omit thickness).
+      // Without the minimum, rimThickness = 0 forces the edge to rely solely on
+      // the coarser Dart-side ClipPath AA, which produces visible pixelation at
+      // the pinch curves where the jelly transform distorts the pre-computed AA.
+      // Clamp ceiling 8 px: beyond 8 the rim bleeds into the pill body.
+      rimThickness: (settings?.effectiveThickness ?? 0.5).clamp(0.5, 8.0),
       // Calibrate standard-tier indicator styling in Dart space instead of the shader:
       // Soften the forced rim outline to match premium's elegance and keep the body translucent.
       ambientRim: isStdPath ? 0.08 : 0.1,

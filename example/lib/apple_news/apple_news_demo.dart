@@ -295,7 +295,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
       bottomBar: Padding(
         padding: EdgeInsets.only(bottom: sysBottom),
         child: GlassSearchableBottomBar(
-          indicatorPinchStrength: 0.4,
+          indicatorPinchStrength: 0.35,
           selectedIndex: _selectedTab,
           isSearchActive: _isSearching,
           onTabSelected: (index) => setState(() {
@@ -305,7 +305,8 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           selectedIconColor: Color.fromRGBO(255, 90, 130, 1),
           unselectedIconColor: CupertinoColors.label.resolveFrom(context),
           labelFontSize: 10,
-          iconSize: 28,
+          iconSize: 26,
+          magnification: 1.15,
           iconLabelSpacing: 0,
           spacing: 8,
           indicatorColor: CupertinoColors.tertiaryLabel.resolveFrom(context),
@@ -346,7 +347,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
               label: 'Today',
               icon: SvgPicture.asset(
                 'assets/news_logo.svg',
-                width: 20,
+                width: 18,
                 colorFilter: ColorFilter.mode(
                   CupertinoColors.label.resolveFrom(context),
                   BlendMode.srcIn,
@@ -354,7 +355,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
               ),
               activeIcon: SvgPicture.asset(
                 'assets/news_logo.svg',
-                width: 20,
+                width: 18,
                 colorFilter: const ColorFilter.mode(
                   Color.fromRGBO(255, 90, 130, 1),
                   BlendMode.srcIn,

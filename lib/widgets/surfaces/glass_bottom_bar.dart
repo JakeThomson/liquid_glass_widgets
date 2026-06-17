@@ -217,7 +217,7 @@ class GlassBottomBar extends StatefulWidget {
     this.glowSpreadRadius = 8,
     this.glowOpacity = 0.6,
     this.quality,
-    this.magnification = 1.0,
+    this.magnification = 1.15,
     this.innerBlur = 0.0,
     this.maskingQuality = MaskingQuality.high,
     this.backgroundKey,
@@ -243,12 +243,14 @@ class GlassBottomBar extends StatefulWidget {
 
   /// Magnification factor for the content inside the selected indicator.
   ///
-  /// Values > 1.0 will zoom in the content, creating a lens effect.
+  /// Values > 1.0 zoom in the selected tab's icon and label, creating the
+  /// iOS 26 "lens" effect where the active tab appears slightly larger than
+  /// its neighbours.
   ///
-  /// **Recommended range:** 1.0-1.3
-  /// - 1.0: No magnification (default)
-  /// - 1.1-1.2: Subtle emphasis
-  /// - 1.3+: Dramatic effect (may look aggressive)
+  /// **Recommended range:** 1.0–1.3
+  /// - `1.15` (default) — matches Apple News / Safari selected-tab scale.
+  /// - `1.0` — no magnification; all tabs render at the same size.
+  /// - `1.2–1.3` — more dramatic; may feel large with dense labels.
   ///
   /// Only applies when [maskingQuality] is [MaskingQuality.high].
   final double magnification;
