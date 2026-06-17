@@ -123,10 +123,17 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Sync the reduced-motion accessibility flag to the morph controller.
-    // This fires on first build and again whenever MediaQuery changes
-    // (e.g. user toggles Reduce Motion in Settings while the app is running).
+    // This fires on first build and again whenever the disableAnimations flag
+    // changes (e.g. user toggles Reduce Motion in Settings while the app is
+    // running).
+    //
+    // IMPORTANT: use the scoped accessor, NOT MediaQuery.of(context).
+    // MediaQuery.of() subscribes to the entire MediaQueryData, which includes
+    // viewInsets (keyboard height). That would cause _GlassMenuState to rebuild
+    // on every keyboard open / close — even when the menu is closed.
+    // MediaQuery.disableAnimationsOf() subscribes only to that one field.
     _morphController.setDisableAnimations(
-      MediaQuery.of(context).disableAnimations,
+      MediaQuery.disableAnimationsOf(context),
     );
   }
 
@@ -232,9 +239,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // A fresh open must never inherit a previous open's live anchor nudge.
     _followOffset = Offset.zero;
     final position = _triggerGlobalPosition;
-    final mediaQuery = MediaQuery.maybeOf(context);
-    final screenWidth = mediaQuery?.size.width ?? double.infinity;
-    final screenHeight = mediaQuery?.size.height ?? double.infinity;
+    // Use the scoped sizeOf accessor to avoid subscribing to viewInsets.
+    final screenSize = MediaQuery.maybeSizeOf(context);
+    final screenWidth = screenSize?.width ?? double.infinity;
+    final screenHeight = screenSize?.height ?? double.infinity;
 
     // Calculate menu height for vertical boundary check
     final menuHeight = _calculateMenuHeight();
@@ -515,7 +523,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // Account for system text scaling when calculating natural height.
     // Without this, increased text size causes items to render taller than
     // the height budget, triggering unwanted scrolling (GitHub issue).
-    final mediaQuery = MediaQuery.maybeOf(context);
+    //
+    // Use scoped MediaQuery accessors (sizeOf / textScalerOf) so this method
+    // does NOT subscribe to viewInsets (keyboard height). Full MediaQuery.of()
+    // would cause the menu to rebuild on every keyboard open / close.
 
     // Sum all menu item heights, scaled by text scaler
     final itemHeights = widget.items.fold<double>(
@@ -529,13 +540,15 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final naturalHeight = itemHeights + 24.0 + gaps;
 
     if (widget.autoAdjustToScreen) {
-      if (mediaQuery != null) {
+      // sizeOf subscribes only to size changes, not viewInsets.
+      final screenHeight = MediaQuery.maybeSizeOf(context)?.height;
+      if (screenHeight != null) {
         final flutterView = View.of(context);
         final mqPadding = EdgeInsets.fromViewPadding(
             flutterView.padding, flutterView.devicePixelRatio);
 
         // Clamp to screen height minus safe areas and a 20px safety buffer
-        final maxHeight = mediaQuery.size.height -
+        final maxHeight = screenHeight -
             mqPadding.vertical -
             widget.menuPadding.vertical -
             20.0;
@@ -877,8 +890,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   /// This method estimates the rendered height to prevent the menu from
   /// becoming scrollable when it shouldn't be.
   double _getScaledItemHeight(Widget item, BuildContext context) {
-    final mediaQuery = MediaQuery.maybeOf(context);
-    final textScaler = mediaQuery?.textScaler ?? TextScaler.noScaling;
+    // textScalerOf subscribes only to text scale changes, not to viewInsets.
+    final textScaler = MediaQuery.textScalerOf(context);
 
     if (item is GlassMenuItem) {
       // The item has 8px vertical padding top + bottom = 16px fixed chrome.

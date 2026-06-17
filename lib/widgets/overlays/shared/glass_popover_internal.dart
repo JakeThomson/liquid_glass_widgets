@@ -80,8 +80,14 @@ class _GlassPopoverState extends State<GlassPopover>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Sync the reduced-motion accessibility flag to the morph controller.
+    //
+    // IMPORTANT: use the scoped accessor, NOT MediaQuery.of(context).
+    // MediaQuery.of() subscribes to the entire MediaQueryData, which includes
+    // viewInsets (keyboard height). That would cause _GlassPopoverState to
+    // rebuild on every keyboard open / close — even when the popover is closed.
+    // MediaQuery.disableAnimationsOf() subscribes only to that one field.
     _morphController.setDisableAnimations(
-      MediaQuery.of(context).disableAnimations,
+      MediaQuery.disableAnimationsOf(context),
     );
   }
 
@@ -182,9 +188,10 @@ class _GlassPopoverState extends State<GlassPopover>
     _triggerBorderRadius = _triggerSize!.height / 2;
     _triggerGlobalPosition = renderBox.localToGlobal(Offset.zero);
     final position = _triggerGlobalPosition;
-    final mediaQuery = MediaQuery.maybeOf(context);
-    final screenWidth = mediaQuery?.size.width ?? double.infinity;
-    final screenHeight = mediaQuery?.size.height ?? double.infinity;
+    // Use the scoped sizeOf accessor to avoid subscribing to viewInsets.
+    final screenSize = MediaQuery.maybeSizeOf(context);
+    final screenWidth = screenSize?.width ?? double.infinity;
+    final screenHeight = screenSize?.height ?? double.infinity;
 
     final popoverHeight = _effectivePopoverHeight();
 

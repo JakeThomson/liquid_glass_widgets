@@ -1,3 +1,37 @@
+# 0.16.2
+
+## 🐛 Bug Fix — `GlassMenu` / `GlassPopover` rebuild on keyboard open/close
+
+`GlassMenu` and `GlassPopover` were rebuilding on every keyboard open/close event,
+even when closed. Caused by `MediaQuery.of(context)` in `didChangeDependencies`
+subscribing to `viewInsets`. Fixed by switching to scoped accessors
+(`disableAnimationsOf`, `maybeSizeOf`, `textScalerOf`). Regression tests added.
+
+## ✨ Content-luminance scroll-edge scrim ([#106](https://github.com/sdegenaar/liquid_glass_widgets/pull/106) by [@jfhair](https://github.com/jfhair))
+
+The continuous companion to the `contentAwareBrightness` discrete lever. Scroll-edge
+fades now track content luminance and dissolve toward a dark color as dark content
+scrolls under the bars — matching the native App Store early-darkening behaviour.
+
+- `GlassContentAwareScope.register()` gains `onLuminanceChanged` (brightness callback is now optional). Per-rect mean luminance is delivered from the existing single capture; deliveries are gated on >0.005 movement.
+- `GlassScrollEdgeEffect.contentAwareFade` — each edge band registers with the scope and lerps toward `darkFadeColor` as content darkens (`luminanceDarkBelow` / `luminanceLightAbove` thresholds, 280 ms ease-out). Inert without a scope.
+- `GlassScaffold.contentAwareEdgeFade` — one flag to enable both bars, composing with `contentAwareBrightness`.
+- **Latent wrap-order fix (0.16.0):** `GlassScaffold` was wrapping the body in `GlassContentAwareContent` *after* the edge fade, so the fade overlays were inside the sampled region. With the adaptive scrim this is a feedback loop. Wrap order corrected + regression test added.
+
+## 🐛 `GlassModalSheet` handle-drag fixes ([#106](https://github.com/sdegenaar/liquid_glass_widgets/pull/106))
+
+- Handle drag no longer fights the inner scroll. `_handleDragActive` notifier is set on pointer-down (before the inner `Scrollable` can claim slop), disabling inner scroll for the gesture lifetime. Fixes a freeze when dragging the handle over a `PlatformView`.
+- `dragIndicatorColor` now actually reaches the drag indicator — it was silently wired into `_SheetLayout` but never forwarded to `_GlassDragIndicator`.
+
+## 🐛 `GlassEffect` — defer capture when boundary is mid-paint ([#106](https://github.com/sdegenaar/liquid_glass_widgets/pull/106))
+
+`toImageSync` called during a dirty repaint boundary spammed `[GlassEffect] toImageSync failed` in debug and dropped the frame's capture. Guarded with `debugNeedsPaint` check (release-safe, same pattern as `GlassScrollEdgeEffect`).
+
+**No API changes. No breaking changes.**
+
+
+---
+
 # 0.16.1
 
 ## 🐛 Bug Fix — `GlassQuality.minimal` crash in `GlassMenu` / `GlassPullDownButton` / `GlassPopover`

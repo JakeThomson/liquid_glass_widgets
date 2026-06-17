@@ -607,4 +607,64 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('EarlyContent'), findsOneWidget);
   });
+
+  // ── Keyboard-open regression (MediaQuery.viewInsets) ─────────────────────────
+  //
+  // Regression: GlassPopover shared the same bug as GlassMenu — subscribing
+  // to the full MediaQueryData via MediaQuery.of(context) in
+  // didChangeDependencies, causing a rebuild on every keyboard open/close.
+  // Fix: MediaQuery.disableAnimationsOf(context) scoped accessor.
+  testWidgets(
+      'GlassPopover does NOT rebuild when viewInsets changes (keyboard open/close)',
+      (tester) async {
+    int buildCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassPopover(
+              trigger: Builder(builder: (context) {
+                buildCount++;
+                return const SizedBox(
+                    width: 60, height: 40, child: Text('CountTrigger'));
+              }),
+              contentBuilder: (context, close) => const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('CountContent'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    final int buildCountAfterInit = buildCount;
+
+    // Simulate keyboard open.
+    tester.view.viewInsets = FakeViewPadding(bottom: 300);
+    await tester.pump();
+
+    expect(
+      buildCount,
+      buildCountAfterInit,
+      reason: 'GlassPopover rebuilt when viewInsets changed (keyboard opened). '
+          'didChangeDependencies is subscribing to the full MediaQueryData '
+          'instead of MediaQuery.disableAnimationsOf().',
+    );
+
+    // Simulate keyboard close.
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pump();
+
+    expect(
+      buildCount,
+      buildCountAfterInit,
+      reason: 'GlassPopover rebuilt when viewInsets changed (keyboard closed). '
+          'Same root cause as above.',
+    );
+
+    addTearDown(tester.view.reset);
+  });
 }
