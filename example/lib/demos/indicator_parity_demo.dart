@@ -214,17 +214,20 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                 _WidgetSection(
                   label: 'GlassTabBar',
                   color: const Color(0xFF0A84FF),
-                  child: GlassTabBar(
-                    tabs: _tabs,
-                    selectedIndex: _tabSelected,
-                    onTabSelected: (i) => setState(() => _tabSelected = i),
-                    quality: GlassQuality.premium,
-                    // height: 56 required for icon + label tabs.
-                    // Default 44 is for icon-only or text-only.
-                    height: 56,
-                    indicatorPinchStrength: _pinchStrength,
-                    indicatorExpansion: _expansion,
-                    indicatorSettings: _indicatorSettings,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: GlassTabBar(
+                      tabs: _tabs,
+                      selectedIndex: _tabSelected,
+                      onTabSelected: (i) => setState(() => _tabSelected = i),
+                      quality: GlassQuality.premium,
+                      // height: 56 required for icon + label tabs.
+                      // Default 44 is for icon-only or text-only.
+                      height: 56,
+                      indicatorPinchStrength: _pinchStrength,
+                      indicatorExpansion: _expansion,
+                      indicatorSettings: _indicatorSettings,
+                    ),
                   ),
                 ),
 
