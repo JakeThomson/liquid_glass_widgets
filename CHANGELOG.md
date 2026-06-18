@@ -22,6 +22,7 @@ The `indicatorPinchStrength` concave lens warp is now unified across all four in
 - **`GlassSegmentedControl` refraction** — labels are now refracted through the glass pill at `GlassQuality.premium` (was rendered in wrong z-order).
 - **`GlassTabBar` indicator radius** — resting pill now inherits the tab bar's `borderRadius` (was hardcoded `16 px`).
 - **`AnimatedGlassIndicator` settings merge** — partial `indicatorSettings` overrides no longer silently reset `chromaticAberration`.
+- **Pinch lens jitter at rest** — icon and label content no longer shimmers through the lens when the pill settles. Root cause: the jelly spring's micro-oscillations (±10 % of `thickness`) were directly amplified into the UV warp. Fixed by applying a quadratic ease-out to the pinch multiplier (`1 − (1 − fade)²`), compressing the near-settled oscillation range ≈10×.
 
 ### Migration
 
