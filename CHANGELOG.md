@@ -24,6 +24,10 @@ The `indicatorPinchStrength` concave lens warp is now unified across all four in
 - **`AnimatedGlassIndicator` settings merge** — partial `indicatorSettings` overrides no longer silently reset `chromaticAberration`.
 - **Pinch lens jitter at rest** — icon and label content no longer shimmers through the lens when the pill settles. Root cause: the jelly spring's micro-oscillations (±10 % of `thickness`) were directly amplified into the UV warp. Fixed by applying a quadratic ease-out to the pinch multiplier (`1 − (1 − fade)²`), compressing the near-settled oscillation range ≈10×.
 
+### Try it — Indicator Parity demo
+
+The example app includes a live **Indicator Parity** demo (`Demos → Indicator Parity`) with all four pill widgets side-by-side and real-time sliders for `pinchStrength`, `indicatorExpansion`, and `chromaticAberration`. Use it to tune parameters before writing any code.
+
 ### Migration
 
 All four widgets share the same tuning API:
