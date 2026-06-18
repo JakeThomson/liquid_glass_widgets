@@ -882,14 +882,16 @@ void main() {
   group('GlassBottomBar 5-tab expansion stress', () {
     final fiveTabs = [
       const GlassBottomBarTab(label: 'Home', icon: Icon(CupertinoIcons.home)),
-      const GlassBottomBarTab(label: 'Search', icon: Icon(CupertinoIcons.search)),
+      const GlassBottomBarTab(
+          label: 'Search', icon: Icon(CupertinoIcons.search)),
       const GlassBottomBarTab(label: 'Inbox', icon: Icon(CupertinoIcons.tray)),
-      const GlassBottomBarTab(label: 'Profile', icon: Icon(CupertinoIcons.person)),
-      const GlassBottomBarTab(label: 'Settings', icon: Icon(CupertinoIcons.settings)),
+      const GlassBottomBarTab(
+          label: 'Profile', icon: Icon(CupertinoIcons.person)),
+      const GlassBottomBarTab(
+          label: 'Settings', icon: Icon(CupertinoIcons.settings)),
     ];
 
-    testWidgets(
-        'fast full-width drag on 5-tab bar does not crash or overflow',
+    testWidgets('fast full-width drag on 5-tab bar does not crash or overflow',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -917,7 +919,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('all 5 labels remain findable after drag with default expansion',
+    testWidgets(
+        'all 5 labels remain findable after drag with default expansion',
         (tester) async {
       int selected = 0;
       await tester.pumpWidget(

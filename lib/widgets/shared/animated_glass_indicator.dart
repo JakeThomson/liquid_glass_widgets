@@ -186,9 +186,10 @@ class AnimatedGlassIndicator extends StatelessWidget {
       lightAngle: override.lightAngle != _settingsDefaults.lightAngle
           ? override.lightAngle
           : null,
-      lightIntensity: override.lightIntensity != _settingsDefaults.lightIntensity
-          ? override.lightIntensity
-          : null,
+      lightIntensity:
+          override.lightIntensity != _settingsDefaults.lightIntensity
+              ? override.lightIntensity
+              : null,
       ambientStrength:
           override.ambientStrength != _settingsDefaults.ambientStrength
               ? override.ambientStrength
@@ -197,10 +198,9 @@ class AnimatedGlassIndicator extends StatelessWidget {
           override.refractiveIndex != _settingsDefaults.refractiveIndex
               ? override.refractiveIndex
               : null,
-      saturation:
-          override.saturation != _settingsDefaults.saturation
-              ? override.saturation
-              : null,
+      saturation: override.saturation != _settingsDefaults.saturation
+          ? override.saturation
+          : null,
       glowIntensity: override.glowIntensity != _settingsDefaults.glowIntensity
           ? override.glowIntensity
           : null,
@@ -217,9 +217,10 @@ class AnimatedGlassIndicator extends StatelessWidget {
               ? override.shadowElevation
               : null,
       shadow: override.shadow,
-      whitenStrength: override.whitenStrength != _settingsDefaults.whitenStrength
-          ? override.whitenStrength
-          : null,
+      whitenStrength:
+          override.whitenStrength != _settingsDefaults.whitenStrength
+              ? override.whitenStrength
+              : null,
       whitenGated: override.whitenGated != _settingsDefaults.whitenGated
           ? override.whitenGated
           : null,
@@ -236,7 +237,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
   /// with no repaint.
   ///
   ///  - Horizontal 20 px: covers glass shader antialiased edge rendering.
-  ///  - Vertical 15 px: covers max jelly scaleY plus headroom for the concave 
+  ///  - Vertical 15 px: covers max jelly scaleY plus headroom for the concave
   ///    vertical pinch shader to sample the bar behind it without hitting the clamp edge.
   static const _jellyClipExpansion = EdgeInsets.symmetric(
     horizontal: 20.0,
@@ -279,9 +280,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
     // We fade the glass in/out by setting `visibility` on the settings rather
     // than wrapping the widget in `Opacity`.
     final fade = thickness.clamp(0.0, 1.0);
-    final base = settings != null
-        ? _mergeWithBase(settings!)
-        : baseIndicatorSettings;
+    final base =
+        settings != null ? _mergeWithBase(settings!) : baseIndicatorSettings;
 
     // Stabilise the pinch UV shift against jelly spring micro-oscillation.
     //
@@ -341,9 +341,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
     // below will apply a sub-pixel shift/scale. If we pre-rasterise the glass
     // with a RepaintBoundary, the pre-computed AA will misalign with the pixel
     // grid during the transform, causing stair-stepping on the edges.
-    final interactiveIndicator = thickness > 0.01
-        ? glassWidget
-        : const SizedBox.expand();
+    final interactiveIndicator =
+        thickness > 0.01 ? glassWidget : const SizedBox.expand();
 
     // Only the active glass effect needs jelly physics — the solid
     // background pill is always at rest and must NOT go through the

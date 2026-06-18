@@ -703,27 +703,27 @@ class TabIndicatorState extends State<TabIndicator>
                   : widget.backgroundKey,
             ),
 
-            // Persistent selected-icon overlay — always rendered at the TARGET
-            // (settled) tab position regardless of spring thickness. This ensures
-            // the selected icon stays vibrant (selected style) at rest, not washed
-            // out by the unselected-style icons in the layer below.
-            if (widget.visible)
-              Positioned.fill(
-                child: Align(
-                  alignment: targetAlignment,
-                  child: FractionallySizedBox(
-                    widthFactor: 1 / widget.tabCount,
-                    child: Container(
-                      padding: widget.tabPadding,
-                      height: widget.barHeight,
-                      child: widget.selectedTabBuilder(
-                          context, 1.0, targetAlignment),
-                    ),
+          // Persistent selected-icon overlay — always rendered at the TARGET
+          // (settled) tab position regardless of spring thickness. This ensures
+          // the selected icon stays vibrant (selected style) at rest, not washed
+          // out by the unselected-style icons in the layer below.
+          if (widget.visible)
+            Positioned.fill(
+              child: Align(
+                alignment: targetAlignment,
+                child: FractionallySizedBox(
+                  widthFactor: 1 / widget.tabCount,
+                  child: Container(
+                    padding: widget.tabPadding,
+                    height: widget.barHeight,
+                    child: widget.selectedTabBuilder(
+                        context, 1.0, targetAlignment),
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -772,7 +772,8 @@ class TabIndicatorState extends State<TabIndicator>
                     isBackgroundIndicator: false,
                     paintBackground: true,
                     paintGlass: false,
-                    borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
+                    borderRadius:
+                        thickness < 1 ? backgroundRadius : glassRadius,
                     padding: const EdgeInsets.all(4),
                     expansion: widget.indicatorExpansion,
                     settings: widget.indicatorSettings,
@@ -794,10 +795,12 @@ class TabIndicatorState extends State<TabIndicator>
                               itemCount: widget.tabCount,
                               alignment: alignment,
                               thickness: thickness,
-                              expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
+                              expansion: widget.indicatorExpansion
+                                  .resolve(Directionality.of(context)),
                               transform: jellyTransform,
-                              borderRadius:
-                                  thickness < 1 ? backgroundRadius : glassRadius,
+                              borderRadius: thickness < 1
+                                  ? backgroundRadius
+                                  : glassRadius,
                               inverse: true,
                             ),
                             child: Container(
@@ -813,10 +816,12 @@ class TabIndicatorState extends State<TabIndicator>
                               itemCount: widget.tabCount,
                               alignment: alignment,
                               thickness: thickness,
-                              expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
+                              expansion: widget.indicatorExpansion
+                                  .resolve(Directionality.of(context)),
                               transform: jellyTransform,
-                              borderRadius:
-                                  thickness < 1 ? backgroundRadius : glassRadius,
+                              borderRadius: thickness < 1
+                                  ? backgroundRadius
+                                  : glassRadius,
                             ),
                             child: Container(
                               padding: widget.tabPadding,
@@ -848,7 +853,8 @@ class TabIndicatorState extends State<TabIndicator>
             paintGlass: true,
             borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
             padding: const EdgeInsets.all(4),
-            expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
+            expansion:
+                widget.indicatorExpansion.resolve(Directionality.of(context)),
             settings: widget.indicatorSettings,
             pinchStrength: widget.indicatorPinchStrength,
             backgroundKey: widget.platformViewBackdrop

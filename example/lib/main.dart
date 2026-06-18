@@ -17,7 +17,6 @@ import 'package:liquid_glass_widgets_example/demos/buttons_and_shadows_demo.dart
 import 'package:liquid_glass_widgets_example/demos/content_aware_brightness_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/indicator_parity_demo.dart';
 
-
 import 'package:liquid_glass_widgets_example/demos/google_maps_demo.dart'
     show PlatformViewDemo;
 import 'package:liquid_glass_widgets_example/pages/containers_page.dart';

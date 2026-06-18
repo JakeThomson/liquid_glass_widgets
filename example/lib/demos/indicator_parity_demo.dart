@@ -394,18 +394,18 @@ class _TunerPanelState extends State<_TunerPanel> {
                         ),
                       ),
                       // Current values summary (visible when closed)
-                      if (!_isOpen) ...
-                        [
-                          _MiniValuePill(
-                              label: 'P',
-                              value: widget.pinchStrength.toStringAsFixed(1),
-                              color: const Color(0xFF5E3AFF)),
-                          const SizedBox(width: 4),
-                          _MiniValuePill(
-                              label: 'E',
-                              value: '${widget.expansionH.round()}×${widget.expansionV.round()}',
-                              color: const Color(0xFF0A84FF)),
-                        ],
+                      if (!_isOpen) ...[
+                        _MiniValuePill(
+                            label: 'P',
+                            value: widget.pinchStrength.toStringAsFixed(1),
+                            color: const Color(0xFF5E3AFF)),
+                        const SizedBox(width: 4),
+                        _MiniValuePill(
+                            label: 'E',
+                            value:
+                                '${widget.expansionH.round()}×${widget.expansionV.round()}',
+                            color: const Color(0xFF0A84FF)),
+                      ],
                       const SizedBox(width: 4),
                       AnimatedRotation(
                         turns: _isOpen ? 0.5 : 0.0,
@@ -485,8 +485,7 @@ class _TunerPanelState extends State<_TunerPanel> {
                               min: 0,
                               max: 0.5,
                               divisions: 50,
-                              displayValue:
-                                  widget.glassTint.toStringAsFixed(2),
+                              displayValue: widget.glassTint.toStringAsFixed(2),
                               accentColor: const Color(0xFFBF5AF2),
                               onChanged: widget.onGlassTintChanged,
                             ),
@@ -572,8 +571,7 @@ class _SliderRow extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
@@ -597,8 +595,7 @@ class _SliderRow extends StatelessWidget {
                 activeTrackColor: accentColor,
                 inactiveTrackColor: Colors.white.withValues(alpha: 0.12),
                 thumbColor: Colors.white,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 7),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
                 trackHeight: 3,
                 overlayShape: SliderComponentShape.noOverlay,
               ),

@@ -120,7 +120,8 @@ class SearchableTabIndicator extends StatefulWidget {
     this.indicatorPinchStrength = 0.4,
     this.backgroundKey,
     this.collapsedLogoBuilder,
-    this.indicatorExpansion = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    this.indicatorExpansion =
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     this.interactionGlowColor,
     this.interactionGlowRadius = 1.5,
     this.interactionGlowBlurRadius = 0,
@@ -139,6 +140,7 @@ class SearchableTabIndicator extends StatefulWidget {
   final Widget Function(BuildContext, double, Alignment) selectedTabBuilder;
   final Color? indicatorColor;
   final LiquidGlassSettings? indicatorSettings;
+
   /// Maximum concave lens pinch strength. Forwarded to [AnimatedGlassIndicator].
   final double indicatorPinchStrength;
   final ValueChanged<int> onTabChanged;
@@ -575,7 +577,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                               itemCount: widget.tabCount,
                               alignment: alignment,
                               thickness: thickness,
-                              expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
+                              expansion: widget.indicatorExpansion
+                                  .resolve(Directionality.of(context)),
                               transform: jellyTransform,
                               borderRadius: effRadius,
                               inverse: true,
@@ -592,7 +595,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                               itemCount: widget.tabCount,
                               alignment: alignment,
                               thickness: thickness,
-                              expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
+                              expansion: widget.indicatorExpansion
+                                  .resolve(Directionality.of(context)),
                               transform: jellyTransform,
                               borderRadius: effRadius,
                             ),
@@ -626,7 +630,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
             paintGlass: true,
             borderRadius: effRadius,
             padding: const EdgeInsets.all(4),
-            expansion: widget.indicatorExpansion.resolve(Directionality.of(context)),
+            expansion:
+                widget.indicatorExpansion.resolve(Directionality.of(context)),
             settings: widget.indicatorSettings,
             pinchStrength: widget.indicatorPinchStrength,
             // Over a PlatformView the normal backdrop (map region) can't be

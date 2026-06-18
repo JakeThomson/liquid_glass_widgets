@@ -119,7 +119,8 @@ class GlassTabBar extends StatefulWidget {
     this.indicatorBorderRadius,
     this.indicatorSettings,
     this.indicatorPinchStrength = 0.4,
-    this.indicatorExpansion = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    this.indicatorExpansion =
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     this.backgroundKey,
     this.maskingQuality = MaskingQuality.high,
     this.dividerSettings,
@@ -225,7 +226,6 @@ class GlassTabBar extends StatefulWidget {
   /// `EdgeInsets.symmetric(horizontal: 12, vertical: 8)` which matches
   /// [GlassBottomBar] for a consistent look across all indicator widgets.
   final EdgeInsetsGeometry indicatorExpansion;
-
 
   /// Optional background key for Skia/Web refraction.
   final GlobalKey? backgroundKey;

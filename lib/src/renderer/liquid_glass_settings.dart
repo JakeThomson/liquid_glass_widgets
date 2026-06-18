@@ -298,7 +298,8 @@ class LiquidGlassSettings with EquatableMixin {
   /// Users should configure this via `indicatorPinchStrength` on
   /// [GlassBottomBar], [GlassTabBar], [GlassSegmentedControl], or
   /// [GlassSearchableBottomBar].
-  LiquidGlassSettings copyWithPinch(double value) => LiquidGlassSettings._withPinch(
+  LiquidGlassSettings copyWithPinch(double value) =>
+      LiquidGlassSettings._withPinch(
         visibility: visibility,
         glassColor: glassColor,
         thickness: thickness,

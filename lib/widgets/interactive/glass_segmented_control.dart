@@ -125,7 +125,8 @@ class GlassSegmentedControl extends StatefulWidget {
     this.indicatorColor,
     this.indicatorSettings,
     this.indicatorPinchStrength = 0.4,
-    this.indicatorExpansion = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    this.indicatorExpansion =
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     this.settings,
     this.useOwnLayer = false,
     this.quality,
@@ -244,7 +245,6 @@ class GlassSegmentedControl extends StatefulWidget {
   /// `EdgeInsets.symmetric(horizontal: 12, vertical: 8)` matching [GlassBottomBar]
   /// and [GlassTabBar].
   final EdgeInsetsGeometry indicatorExpansion;
-
 
   // ===========================================================================
   // Glass Effect Properties

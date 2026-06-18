@@ -58,7 +58,6 @@ class SFSymbols {
   static const IconData rectangle_stack_fill =
       IconData(63269, fontFamily: 'SFSymbols', fontPackage: null);
 
-
   static const IconData trash =
       IconData(62185, fontFamily: 'SFSymbols', fontPackage: null);
   static const IconData xmark_bin =
