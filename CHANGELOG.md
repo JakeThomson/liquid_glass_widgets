@@ -15,7 +15,6 @@ The `indicatorPinchStrength` concave lens warp is now unified across all four in
 ### Changed defaults
 
 - `GlassTabBar.indicatorPinchStrength`: `1.0` → `0.4`
-- `GlassSegmentedControl.indicatorPinchStrength`: `1.0` → `0.4`
 
 ### Bug fixes
 
