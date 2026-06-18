@@ -219,6 +219,9 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                     selectedIndex: _tabSelected,
                     onTabSelected: (i) => setState(() => _tabSelected = i),
                     quality: GlassQuality.premium,
+                    // height: 56 required for icon + label tabs.
+                    // Default 44 is for icon-only or text-only.
+                    height: 56,
                     indicatorPinchStrength: _pinchStrength,
                     indicatorExpansion: _expansion,
                     indicatorSettings: _indicatorSettings,
@@ -285,10 +288,10 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
 }
 
 // =============================================================================
-// Tuner panel — all sliders
+// Tuner panel — collapsible, default closed
 // =============================================================================
 
-class _TunerPanel extends StatelessWidget {
+class _TunerPanel extends StatefulWidget {
   const _TunerPanel({
     required this.pinchStrength,
     required this.expansionH,
@@ -310,75 +313,181 @@ class _TunerPanel extends StatelessWidget {
   final ValueChanged<double> onAberrationChanged;
 
   @override
+  State<_TunerPanel> createState() => _TunerPanelState();
+}
+
+class _TunerPanelState extends State<_TunerPanel> {
+  bool _isOpen = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return GestureDetector(
+      onTap: !_isOpen ? () => setState(() => _isOpen = true) : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: _isOpen
+              ? Colors.white.withValues(alpha: 0.09)
+              : Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _isOpen
+                ? Colors.white.withValues(alpha: 0.18)
+                : Colors.white.withValues(alpha: 0.10),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(19),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(CupertinoIcons.tuningfork,
-                  color: Colors.white70, size: 14),
-              const SizedBox(width: 6),
-              Text(
-                'LIVE TUNER — applies to all four widgets',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.55),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.6,
+              // ── Header row — always visible, tappable ─────────────────────
+              GestureDetector(
+                onTap: () => setState(() => _isOpen = !_isOpen),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                  child: Row(
+                    children: [
+                      const Icon(CupertinoIcons.tuningfork,
+                          color: Colors.white70, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'LIVE TUNER — applies to all four widgets',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.55),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ),
+                      // Current values summary (visible when closed)
+                      if (!_isOpen) ...
+                        [
+                          _MiniValuePill(
+                              label: 'P',
+                              value: widget.pinchStrength.toStringAsFixed(1),
+                              color: const Color(0xFF5E3AFF)),
+                          const SizedBox(width: 4),
+                          _MiniValuePill(
+                              label: 'E',
+                              value: '${widget.expansionH.round()}×${widget.expansionV.round()}',
+                              color: const Color(0xFF0A84FF)),
+                        ],
+                      const SizedBox(width: 4),
+                      AnimatedRotation(
+                        turns: _isOpen ? 0.5 : 0.0,
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeInOut,
+                        child: Icon(
+                          CupertinoIcons.chevron_down,
+                          color: Colors.white.withValues(alpha: 0.4),
+                          size: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
+
+              // ── Sliders — only when open ──────────────────────────────────
+              AnimatedSize(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeInOut,
+                child: _isOpen
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Divider(
+                                height: 1,
+                                thickness: 0.5,
+                                color: Color(0x22FFFFFF)),
+                            const SizedBox(height: 10),
+                            _SliderRow(
+                              label: 'Pinch Strength',
+                              value: widget.pinchStrength,
+                              min: 0,
+                              max: 1,
+                              divisions: 20,
+                              displayValue:
+                                  widget.pinchStrength.toStringAsFixed(2),
+                              accentColor: const Color(0xFF5E3AFF),
+                              onChanged: widget.onPinchChanged,
+                            ),
+                            _SliderRow(
+                              label: 'Expansion H',
+                              value: widget.expansionH,
+                              min: 0,
+                              max: 28,
+                              divisions: 28,
+                              displayValue: '${widget.expansionH.round()} px',
+                              accentColor: const Color(0xFF0A84FF),
+                              onChanged: widget.onExpansionHChanged,
+                            ),
+                            _SliderRow(
+                              label: 'Expansion V',
+                              value: widget.expansionV,
+                              min: 0,
+                              max: 20,
+                              divisions: 20,
+                              displayValue: '${widget.expansionV.round()} px',
+                              accentColor: const Color(0xFF0A84FF),
+                              onChanged: widget.onExpansionVChanged,
+                            ),
+                            _SliderRow(
+                              label: 'Chromatic Aberration',
+                              value: widget.aberration,
+                              min: 0,
+                              max: 0.5,
+                              divisions: 50,
+                              displayValue:
+                                  widget.aberration.toStringAsFixed(2),
+                              accentColor: const Color(0xFFFF9F0A),
+                              onChanged: widget.onAberrationChanged,
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _SliderRow(
-            label: 'Pinch Strength',
-            value: pinchStrength,
-            min: 0,
-            max: 1,
-            divisions: 20,
-            displayValue: pinchStrength.toStringAsFixed(2),
-            accentColor: const Color(0xFF5E3AFF),
-            onChanged: onPinchChanged,
-          ),
-          _SliderRow(
-            label: 'Expansion H',
-            value: expansionH,
-            min: 0,
-            max: 28,
-            divisions: 28,
-            displayValue: '${expansionH.round()} px',
-            accentColor: const Color(0xFF0A84FF),
-            onChanged: onExpansionHChanged,
-          ),
-          _SliderRow(
-            label: 'Expansion V',
-            value: expansionV,
-            min: 0,
-            max: 20,
-            divisions: 20,
-            displayValue: '${expansionV.round()} px',
-            accentColor: const Color(0xFF0A84FF),
-            onChanged: onExpansionVChanged,
-          ),
-          _SliderRow(
-            label: 'Chromatic Aberration',
-            value: aberration,
-            min: 0,
-            max: 0.5,
-            divisions: 50,
-            displayValue: aberration.toStringAsFixed(2),
-            accentColor: const Color(0xFFFF9F0A),
-            onChanged: onAberrationChanged,
-          ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact pill showing a single tuning value in the collapsed tuner header.
+class _MiniValuePill extends StatelessWidget {
+  const _MiniValuePill(
+      {required this.label, required this.value, required this.color});
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '$label:$value',
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
       ),
     );
   }
