@@ -72,6 +72,7 @@ void main() {
       expect(widget.fadeTop, isTrue);
       expect(widget.fadeBottom, isTrue);
       expect(widget.style, equals(GlassScrollEdgeStyle.soft));
+      expect(widget.bottomFadeInset, equals(0.0));
     });
 
     test('GlassScrollEdgeStyle has soft and hard values', () {
@@ -154,6 +155,32 @@ void main() {
       );
 
       expect(find.text('Custom heights'), findsOneWidget);
+    });
+
+    testWidgets('bottomFadeInset lifts the bottom fade off the bottom edge',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GlassScrollEdgeEffect(
+            fadeTop: false,
+            fadeBottom: true,
+            bottomFadeInset: 24,
+            child: ListView(
+              children: const [Text('Inset bottom')],
+            ),
+          ),
+        ),
+      );
+
+      // Bottom-only fade => a single Positioned overlay; its `bottom` is
+      // lifted off the box edge by bottomFadeInset (default would be 0).
+      final positioned = tester.widget<Positioned>(
+        find.descendant(
+          of: find.byType(GlassScrollEdgeEffect),
+          matching: find.byType(Positioned),
+        ),
+      );
+      expect(positioned.bottom, equals(24));
     });
   });
 }

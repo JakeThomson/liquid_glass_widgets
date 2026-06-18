@@ -101,6 +101,7 @@ class GlassScrollEdgeEffect extends StatefulWidget {
     this.luminanceDarkBelow = 0.45,
     this.luminanceLightAbove = 0.72,
     this.fadeDuration = const Duration(milliseconds: 280),
+    this.bottomFadeInset = 0.0,
   }) : assert(
           luminanceDarkBelow < luminanceLightAbove,
           'luminanceDarkBelow must be below luminanceLightAbove',
@@ -125,6 +126,18 @@ class GlassScrollEdgeEffect extends StatefulWidget {
   ///
   /// Defaults to 60.0.
   final double bottomFadeHeight;
+
+  /// Distance (logical px) to lift the BOTTOM fade up from this widget's
+  /// bottom edge. `0` (the default) anchors it to the bottom edge as usual.
+  ///
+  /// Use this when the scroll viewport extends below the visible area — e.g. a
+  /// bottom sheet whose content box "sinks" past the screen bottom at full
+  /// expansion. Without it the bottom fade rides the box's true (off-screen)
+  /// bottom and never appears; setting this to the overflow amount re-anchors
+  /// the fade to the visible bottom. Has no effect on the top fade.
+  ///
+  /// Defaults to 0.0.
+  final double bottomFadeInset;
 
   /// Whether to fade content at the top edge.
   ///
@@ -438,7 +451,7 @@ class _GlassScrollEdgeEffectState extends State<GlassScrollEdgeEffect>
       final darkness = isTop ? _topDarkness : _bottomDarkness;
       return Positioned(
         top: isTop ? 0 : null,
-        bottom: isTop ? null : 0,
+        bottom: isTop ? null : widget.bottomFadeInset,
         left: 0,
         right: 0,
         height: height,
@@ -461,7 +474,7 @@ class _GlassScrollEdgeEffectState extends State<GlassScrollEdgeEffect>
     // Non-adaptive path — unchanged behaviour (darkness fixed at 0).
     return Positioned(
       top: isTop ? 0 : null,
-      bottom: isTop ? null : 0,
+      bottom: isTop ? null : widget.bottomFadeInset,
       left: 0,
       right: 0,
       height: height,
