@@ -282,9 +282,23 @@ class AnimatedGlassIndicator extends StatelessWidget {
     final base = settings != null
         ? _mergeWithBase(settings!)
         : baseIndicatorSettings;
+
+    // Stabilise the pinch UV shift against jelly spring micro-oscillation.
+    //
+    // The spring targets thickness=1.0 when active and overshoots, leaving
+    // `fade` oscillating in the 0.9–1.0 range while the pill settles.
+    // Using `fade` directly as the pinch multiplier amplifies this oscillation
+    // into the UV warp, making icons/labels jitter visibly through the lens.
+    //
+    // The quadratic ease-out formula 1−(1−f)² compresses the near-1.0
+    // oscillation range from ±0.10 → ±0.01 (≈10× reduction) while still
+    // mapping 0→0 and 1→1 cleanly. `visibility` is left on the raw `fade`
+    // so glass opacity still tracks the spring naturally — only the UV
+    // distortion is stabilised.
+    final stablePinchFade = 1.0 - (1.0 - fade) * (1.0 - fade);
     final effectiveSettings = base
         .copyWith(visibility: fade)
-        .copyWithPinch(fade * pinchStrength);
+        .copyWithPinch(stablePinchFade * pinchStrength);
 
     final shape = useSuperellipse
         ? LiquidRoundedSuperellipse(borderRadius: borderRadius * 2)
