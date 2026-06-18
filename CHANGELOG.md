@@ -1,44 +1,38 @@
 # 0.17.0
 
-## 🍎 iOS 26 Indicator Parity — All Four Pill Widgets
+## 🔬 iOS 26 Concave Lens Pinch — All Four Pill Widgets
 
-### New features
+The `indicatorPinchStrength` concave lens warp is now unified across all four interactive pill widgets. During a drag the pill edges curve inward (iOS 26 "through a lens" effect). Fully tunable — `0.0` disables it, `1.0` is maximum distortion.
 
-- **`indicatorExpansion` on `GlassTabBar` and `GlassSegmentedControl`** — new parameter (default `EdgeInsets.symmetric(horizontal: 12, vertical: 8)`) matching `GlassBottomBar`. Controls how far the pill grows beyond its cell during drag.
-- **`AnimatedGlassIndicator` exported** from the public API — allows `baseIndicatorSettings.copyWith(...)` patterns from application code.
+### New parameters
+
+- **`GlassTabBar.indicatorPinchStrength`** (default `0.4`)
+- **`GlassTabBar.indicatorExpansion`** (default `EdgeInsets.symmetric(horizontal: 12, vertical: 8)`)
+- **`GlassSegmentedControl.indicatorPinchStrength`** (default `0.4`)
+- **`GlassSegmentedControl.indicatorExpansion`** (default `EdgeInsets.symmetric(horizontal: 12, vertical: 8)`)
+- **`AnimatedGlassIndicator`** exported from the public API — enables `baseIndicatorSettings.copyWith(...)` from app code.
 
 ### Changed defaults
 
-- **`indicatorPinchStrength`** on `GlassTabBar` and `GlassSegmentedControl`: `1.0` → `0.4` (matches the iOS 26-calibrated value already on `GlassBottomBar`).
-
-**To restore previous behaviour on any widget:**
-```dart
-GlassTabBar(indicatorPinchStrength: 1.0, ...)
-GlassSegmentedControl(indicatorPinchStrength: 0.0, ...) // 0.0 = no pinch
-```
+- `GlassTabBar.indicatorPinchStrength`: `1.0` → `0.4`
+- `GlassSegmentedControl.indicatorPinchStrength`: `1.0` → `0.4`
 
 ### Bug fixes
 
-- **`GlassTabBar` indicator pill shape** — resting pill now inherits the tab bar's `borderRadius` instead of falling back to a hardcoded `16 px`. Pill is correctly rounded at all heights including `height: 56` (icon + label tabs).
-- **`GlassSegmentedControl` refraction** — segment labels are now refracted through the glass pill on `GlassQuality.premium`. Previously the glass rendered below the labels (single-pass), so the shader had nothing to sample. Now uses the same dual-layer approach as `GlassTabBar` and `GlassBottomBar`.
-- **`AnimatedGlassIndicator` settings merge** — partial `indicatorSettings` overrides (e.g. `LiquidGlassSettings(blur: 2)`) now correctly preserve `chromaticAberration: 0.15` from `baseIndicatorSettings`. Previously the merge could silently reset aberration to the constructor default.
+- **`GlassSegmentedControl` refraction** — labels are now refracted through the glass pill at `GlassQuality.premium` (was rendered in wrong z-order).
+- **`GlassTabBar` indicator radius** — resting pill now inherits the tab bar's `borderRadius` (was hardcoded `16 px`).
+- **`AnimatedGlassIndicator` settings merge** — partial `indicatorSettings` overrides no longer silently reset `chromaticAberration`.
 
 ### Migration
 
-All four indicator widgets now share identical defaults and the same tuning API:
+All four widgets share the same tuning API:
 
 ```dart
-// Same parameters work on GlassBottomBar, GlassSearchableBottomBar,
-// GlassTabBar, and GlassSegmentedControl:
 indicatorPinchStrength: 0.4,
 indicatorExpansion: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
 indicatorSettings: AnimatedGlassIndicator.baseIndicatorSettings
     .copyWith(chromaticAberration: 0.15),
 ```
-
-### Demo
-
-Added **Indicator Parity** demo page — shows all four widgets simultaneously with live sliders for pinch strength, expansion, and chromatic aberration.
 
 ---
 
