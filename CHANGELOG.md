@@ -12,9 +12,6 @@ The `indicatorPinchStrength` concave lens warp is now unified across all four in
 - **`GlassSegmentedControl.indicatorExpansion`** (default `EdgeInsets.symmetric(horizontal: 12, vertical: 8)`)
 - **`AnimatedGlassIndicator`** exported from the public API — enables `baseIndicatorSettings.copyWith(...)` from app code.
 
-### Changed defaults
-
-- `GlassTabBar.indicatorPinchStrength`: `1.0` → `0.4`
 
 ### Bug fixes
 
