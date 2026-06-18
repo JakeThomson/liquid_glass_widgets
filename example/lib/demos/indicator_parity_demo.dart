@@ -224,6 +224,17 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                       // height: 56 required for icon + label tabs.
                       // Default 44 is for icon-only or text-only.
                       height: 56,
+                      // Full-pill radius — matches the bottom bars' rounded look.
+                      borderRadius: BorderRadius.circular(28),
+                      iconSize: 20,
+                      selectedLabelStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                      ),
                       indicatorPinchStrength: _pinchStrength,
                       indicatorExpansion: _expansion,
                       indicatorSettings: _indicatorSettings,
