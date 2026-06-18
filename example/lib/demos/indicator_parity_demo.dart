@@ -215,7 +215,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                   label: 'GlassTabBar',
                   color: const Color(0xFF0A84FF),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.all(16),
                     child: GlassTabBar(
                       tabs: _tabs,
                       selectedIndex: _tabSelected,
