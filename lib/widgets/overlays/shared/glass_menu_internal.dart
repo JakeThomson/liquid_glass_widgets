@@ -123,17 +123,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Sync the reduced-motion accessibility flag to the morph controller.
-    // This fires on first build and again whenever the disableAnimations flag
-    // changes (e.g. user toggles Reduce Motion in Settings while the app is
-    // running).
-    //
-    // IMPORTANT: use the scoped accessor, NOT MediaQuery.of(context).
-    // MediaQuery.of() subscribes to the entire MediaQueryData, which includes
-    // viewInsets (keyboard height). That would cause _GlassMenuState to rebuild
-    // on every keyboard open / close — even when the menu is closed.
-    // MediaQuery.disableAnimationsOf() subscribes only to that one field.
+    // This fires on first build and again whenever MediaQuery changes
+    // (e.g. user toggles Reduce Motion in Settings while the app is running).
     _morphController.setDisableAnimations(
-      MediaQuery.disableAnimationsOf(context),
+      MediaQuery.of(context).disableAnimations,
     );
   }
 
@@ -239,10 +232,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // A fresh open must never inherit a previous open's live anchor nudge.
     _followOffset = Offset.zero;
     final position = _triggerGlobalPosition;
-    // Use the scoped sizeOf accessor to avoid subscribing to viewInsets.
-    final screenSize = MediaQuery.maybeSizeOf(context);
-    final screenWidth = screenSize?.width ?? double.infinity;
-    final screenHeight = screenSize?.height ?? double.infinity;
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final screenWidth = mediaQuery?.size.width ?? double.infinity;
+    final screenHeight = mediaQuery?.size.height ?? double.infinity;
 
     // Calculate menu height for vertical boundary check
     final menuHeight = _calculateMenuHeight();
@@ -455,58 +447,61 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               settings: effectiveSettings,
               quality: effectiveQuality,
               blendAmount: state.blend,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // ─── Blob A: Trigger Ghost ───────────────────────────────
-                  // Stays perfectly centered on the trigger, BUT absorbs the
-                  // closing momentum (pushDx/pushDy) to bounce when slammed.
-                  // Shrinks to 0 scale over the first 40% of the animation to
-                  // smoothly break the liquid bridge.
-                  // Blob A is the spawn blob; under morphFromZero there is no trigger to ghost.
-                  if (!widget.morphFromZero)
-                    Positioned(
-                      left: _triggerGlobalPosition.dx +
-                          _followOffset.dx +
-                          state.pushDx,
-                      top: _triggerGlobalPosition.dy +
-                          _followOffset.dy +
-                          state.pushDy,
-                      child: Transform.scale(
-                        scale: state.anchorScale,
-                        child: GlassContainer(
-                          useOwnLayer: false,
-                          settings: effectiveSettings,
-                          quality: effectiveQuality,
-                          width: tw,
-                          height: th,
-                          shape: LiquidRoundedSuperellipse(
-                            borderRadius: _triggerBorderRadius ??
-                                _triggerSize!.shortestSide / 2.0,
+              child: LiquidGlassBlendGroup(
+                blend: state.blend,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // ─── Blob A: Trigger Ghost ───────────────────────────────
+                    // Stays perfectly centered on the trigger, BUT absorbs the
+                    // closing momentum (pushDx/pushDy) to bounce when slammed.
+                    // Shrinks to 0 scale over the first 40% of the animation to
+                    // smoothly break the liquid bridge.
+                    // Blob A is the spawn blob; under morphFromZero there is no trigger to ghost.
+                    if (!widget.morphFromZero)
+                      Positioned(
+                        left: _triggerGlobalPosition.dx +
+                            _followOffset.dx +
+                            state.pushDx,
+                        top: _triggerGlobalPosition.dy +
+                            _followOffset.dy +
+                            state.pushDy,
+                        child: Transform.scale(
+                          scale: state.anchorScale,
+                          child: GlassContainer(
+                            useOwnLayer: false,
+                            settings: effectiveSettings,
+                            quality: effectiveQuality,
+                            width: tw,
+                            height: th,
+                            shape: LiquidRoundedSuperellipse(
+                              borderRadius: _triggerBorderRadius ??
+                                  _triggerSize!.shortestSide / 2.0,
+                            ),
                           ),
                         ),
                       ),
-                    ),
 
-                  // ── Blob B: Menu Body ───────────────────────────────────
-                  // Its center travels diagonally relative to the trigger.
-                  // By scaling the x/y offsets with the width/height curves,
-                  // its edges stay perfectly pinned while it grows!
-                  Positioned(
-                    left: blobBLeft,
-                    top: blobBTop,
-                    child: IgnorePointer(
-                      ignoring: clampedValue < 0.8,
-                      child: _buildMorphingContainer(
-                        state,
-                        clampedValue,
-                        currentWidth,
-                        currentHeight,
-                        currentRadius,
+                    // ── Blob B: Menu Body ───────────────────────────────────
+                    // Its center travels diagonally relative to the trigger.
+                    // By scaling the x/y offsets with the width/height curves,
+                    // its edges stay perfectly pinned while it grows!
+                    Positioned(
+                      left: blobBLeft,
+                      top: blobBTop,
+                      child: IgnorePointer(
+                        ignoring: clampedValue < 0.8,
+                        child: _buildMorphingContainer(
+                          state,
+                          clampedValue,
+                          currentWidth,
+                          currentHeight,
+                          currentRadius,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -523,10 +518,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // Account for system text scaling when calculating natural height.
     // Without this, increased text size causes items to render taller than
     // the height budget, triggering unwanted scrolling (GitHub issue).
-    //
-    // Use scoped MediaQuery accessors (sizeOf / textScalerOf) so this method
-    // does NOT subscribe to viewInsets (keyboard height). Full MediaQuery.of()
-    // would cause the menu to rebuild on every keyboard open / close.
+    final mediaQuery = MediaQuery.maybeOf(context);
 
     // Sum all menu item heights, scaled by text scaler
     final itemHeights = widget.items.fold<double>(
@@ -540,15 +532,13 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final naturalHeight = itemHeights + 24.0 + gaps;
 
     if (widget.autoAdjustToScreen) {
-      // sizeOf subscribes only to size changes, not viewInsets.
-      final screenHeight = MediaQuery.maybeSizeOf(context)?.height;
-      if (screenHeight != null) {
+      if (mediaQuery != null) {
         final flutterView = View.of(context);
         final mqPadding = EdgeInsets.fromViewPadding(
             flutterView.padding, flutterView.devicePixelRatio);
 
         // Clamp to screen height minus safe areas and a 20px safety buffer
-        final maxHeight = screenHeight -
+        final maxHeight = mediaQuery.size.height -
             mqPadding.vertical -
             widget.menuPadding.vertical -
             20.0;
@@ -890,8 +880,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   /// This method estimates the rendered height to prevent the menu from
   /// becoming scrollable when it shouldn't be.
   double _getScaledItemHeight(Widget item, BuildContext context) {
-    // textScalerOf subscribes only to text scale changes, not to viewInsets.
-    final textScaler = MediaQuery.textScalerOf(context);
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final textScaler = mediaQuery?.textScaler ?? TextScaler.noScaling;
 
     if (item is GlassMenuItem) {
       // The item has 8px vertical padding top + bottom = 16px fixed chrome.

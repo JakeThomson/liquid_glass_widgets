@@ -116,9 +116,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install glslang
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --fix-missing glslang-tools
+        run: sudo apt-get install -y glslang-tools
 
       - name: Verify glslangValidator
         run: glslangValidator --version

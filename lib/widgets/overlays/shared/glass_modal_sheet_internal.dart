@@ -27,11 +27,6 @@ class _SheetLayout extends StatelessWidget {
   final ScrollController scrollController;
   final ValueNotifier<SheetState> currentStateNotifier;
   final double expandProgressValue;
-
-  /// When true, the inner content scroll is force-disabled regardless
-  /// of expand state. Set during a handle drag so the scrollable can't
-  /// claim the vertical-drag gesture and fight the sheet drag.
-  final bool disableInnerScroll;
   final Widget child;
   final bool showDragIndicator;
   final Color? dragIndicatorColor;
@@ -72,7 +67,6 @@ class _SheetLayout extends StatelessWidget {
     required this.scrollController,
     required this.currentStateNotifier,
     required this.expandProgressValue,
-    this.disableInnerScroll = false,
     required this.child,
     required this.showDragIndicator,
     this.dragIndicatorColor,
@@ -89,14 +83,11 @@ class _SheetLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final handleZone = _SheetHandleZone(
-      indicatorWidth: dragIndicatorWidth,
-      indicatorColor: dragIndicatorColor,
-    );
+    final handleZone = _SheetHandleZone(indicatorWidth: dragIndicatorWidth);
 
     final contentZone = _SheetContent(
       scrollController: scrollController,
-      isFullScreen: expandProgressValue > 0.95 && !disableInnerScroll,
+      isFullScreen: expandProgressValue > 0.95,
       padding: padding,
       child: child,
     );
@@ -341,10 +332,9 @@ class _SheetLayout extends StatelessWidget {
 // ===========================================================================
 
 class _SheetHandleZone extends StatelessWidget {
-  const _SheetHandleZone({required this.indicatorWidth, this.indicatorColor});
+  const _SheetHandleZone({required this.indicatorWidth});
 
   final double indicatorWidth;
-  final Color? indicatorColor;
 
   @override
   Widget build(BuildContext context) {
@@ -356,11 +346,7 @@ class _SheetHandleZone extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
-          _GlassDragIndicator(
-            isGlass: isGlass,
-            width: indicatorWidth,
-            color: indicatorColor,
-          ),
+          _GlassDragIndicator(isGlass: isGlass, width: indicatorWidth),
           const SizedBox(height: 8),
         ],
       ),
@@ -369,21 +355,10 @@ class _SheetHandleZone extends StatelessWidget {
 }
 
 class _GlassDragIndicator extends StatelessWidget {
-  const _GlassDragIndicator({
-    required this.isGlass,
-    required this.width,
-    this.color,
-  });
+  const _GlassDragIndicator({required this.isGlass, required this.width});
 
   final bool isGlass;
   final double width;
-
-  /// Explicit handle color. When null, falls back to the iOS-26
-  /// default themed against the ambient [CupertinoTheme] brightness.
-  /// Callers that float the sheet over content with its own brightness
-  /// (e.g. a map mode that differs from the app theme) should pass an
-  /// explicit color so the handle matches that surface.
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -399,7 +374,7 @@ class _GlassDragIndicator extends StatelessWidget {
         width: width,
         height: 4,
         decoration: BoxDecoration(
-          color: color ?? defaultColor,
+          color: defaultColor,
           borderRadius: BorderRadius.circular(2),
         ),
       ),

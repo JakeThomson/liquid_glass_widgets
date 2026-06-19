@@ -275,26 +275,6 @@ class _GlassEffectState extends State<GlassEffect>
   /// Synchronous capture path for native (non-web) platforms.
   void _captureBackgroundSync(
       RenderRepaintBoundary boundary, Size size, Offset? pos) {
-    // In debug, toImageSync ASSERTS when the boundary is marked needing paint
-    // (no valid layer yet). `_handleTick` captures in the transient phase —
-    // BEFORE this frame paints — and during interaction it captures every
-    // frame, so while the backdrop repaints the boundary is dirty and the
-    // assert throws on (almost) every frame, spamming the console with
-    // "[GlassEffect] toImageSync failed". Defer to the post-frame callback in
-    // that case: capture the freshly-painted frame once it's clean. (Asserts
-    // are stripped in release, so `debugNeedsPaint` must be read inside an
-    // assert closure — reading it in a release build throws.)
-    bool needsPaint = false;
-    assert(() {
-      needsPaint = boundary.debugNeedsPaint;
-      return true;
-    }());
-    if (needsPaint) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _captureBackgroundSync(boundary, size, pos);
-      });
-      return;
-    }
     try {
       // pixelRatio: 1.0 — logical resolution is sufficient for refraction.
       // Stays in GPU-accessible memory; handed directly to setImageSampler.
@@ -440,12 +420,29 @@ class _GlassEffectState extends State<GlassEffect>
 
     // Path B: Native Impeller (Premium only)
     if (isImpeller && widget.quality == GlassQuality.premium) {
-      return LiquidGlass.withOwnLayer(
-        shape: widget.shape,
-        settings: widget.settings,
-        clipExpansion: widget.clipExpansion,
-        child: widget.child,
+      // ClipPath(Clip.antiAlias) adds a GPU-accelerated compositor clip that
+      // provides hardware sub-pixel AA on the indicator boundary.  We cannot
+      // use Clip.antiAliasWithSaveLayer here because LiquidGlass.withOwnLayer
+      // contains a BackdropFilterLayer — a saveLayer would isolate it from the
+      // real compositor backdrop and destroy the glass refraction effect.
+      // Clip.antiAlias creates a ClipPathLayer (no saveLayer isolation) which
+      // gives smooth GPU-native path AA applied AFTER the glass renders,
+      // overriding any pre-baked edge from the RepaintBoundary + Transform chain.
+      //
+      // coverage:ignore-start
+      // Unreachable in unit tests: isImpeller=false (no real GPU renderer).
+      // Tested on physical device / Impeller integration tests only.
+      return ClipPath(
+        clipper: ShapeBorderClipper(shape: widget.shape),
+        clipBehavior: Clip.antiAlias,
+        child: LiquidGlass.withOwnLayer(
+          shape: widget.shape,
+          settings: widget.settings,
+          clipExpansion: widget.clipExpansion,
+          child: widget.child,
+        ),
       );
+      // coverage:ignore-end
     }
 
     // 4. Resolve if we can use the high-fidelity refraction shader

@@ -80,14 +80,8 @@ class _GlassPopoverState extends State<GlassPopover>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Sync the reduced-motion accessibility flag to the morph controller.
-    //
-    // IMPORTANT: use the scoped accessor, NOT MediaQuery.of(context).
-    // MediaQuery.of() subscribes to the entire MediaQueryData, which includes
-    // viewInsets (keyboard height). That would cause _GlassPopoverState to
-    // rebuild on every keyboard open / close — even when the popover is closed.
-    // MediaQuery.disableAnimationsOf() subscribes only to that one field.
     _morphController.setDisableAnimations(
-      MediaQuery.disableAnimationsOf(context),
+      MediaQuery.of(context).disableAnimations,
     );
   }
 
@@ -188,10 +182,9 @@ class _GlassPopoverState extends State<GlassPopover>
     _triggerBorderRadius = _triggerSize!.height / 2;
     _triggerGlobalPosition = renderBox.localToGlobal(Offset.zero);
     final position = _triggerGlobalPosition;
-    // Use the scoped sizeOf accessor to avoid subscribing to viewInsets.
-    final screenSize = MediaQuery.maybeSizeOf(context);
-    final screenWidth = screenSize?.width ?? double.infinity;
-    final screenHeight = screenSize?.height ?? double.infinity;
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final screenWidth = mediaQuery?.size.width ?? double.infinity;
+    final screenHeight = mediaQuery?.size.height ?? double.infinity;
 
     final popoverHeight = _effectivePopoverHeight();
 
@@ -357,59 +350,65 @@ class _GlassPopoverState extends State<GlassPopover>
                 (_morphController.isClosing && _morphController.hasHandedOff)
                     ? 0.0
                     : 1.0,
-            child: AdaptiveLiquidGlassLayer(
+            child: LiquidGlassLayer(
               settings: effectiveSettings,
-              quality: effectiveQuality,
-              blendAmount: state.blend,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // ── Blob A: Trigger Ghost ─────────────────────────
-                  // Stays perfectly centered on the trigger, shrinks to
-                  // 0 scale over the first 40% of the animation to
-                  // smoothly break the liquid bridge.
-                  Positioned(
-                    left: _triggerGlobalPosition.dx + state.pushDx,
-                    top: _triggerGlobalPosition.dy + state.pushDy,
-                    child: Transform.scale(
-                      scale: state.anchorScale,
-                      child: GlassContainer(
-                        useOwnLayer: false,
-                        settings: effectiveSettings,
-                        quality: effectiveQuality,
-                        width: tw,
-                        height: th,
-                        shape: LiquidRoundedSuperellipse(
-                          borderRadius: _triggerBorderRadius ??
-                              _triggerSize!.shortestSide / 2.0,
+              child: InheritedLiquidGlass(
+                settings: effectiveSettings,
+                quality: effectiveQuality,
+                isBlurProvidedByAncestor: false,
+                child: LiquidGlassBlendGroup(
+                  blend: state.blend,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // ── Blob A: Trigger Ghost ─────────────────────────
+                      // Stays perfectly centered on the trigger, shrinks to
+                      // 0 scale over the first 40% of the animation to
+                      // smoothly break the liquid bridge.
+                      Positioned(
+                        left: _triggerGlobalPosition.dx + state.pushDx,
+                        top: _triggerGlobalPosition.dy + state.pushDy,
+                        child: Transform.scale(
+                          scale: state.anchorScale,
+                          child: GlassContainer(
+                            useOwnLayer: false,
+                            settings: effectiveSettings,
+                            quality: effectiveQuality,
+                            width: tw,
+                            height: th,
+                            shape: LiquidRoundedSuperellipse(
+                              borderRadius: _triggerBorderRadius ??
+                                  _triggerSize!.shortestSide / 2.0,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
 
-                  // ── Blob B: Popover Body ─────────────────────────
-                  Positioned(
-                    left: _triggerGlobalPosition.dx +
-                        tw / 2.0 +
-                        state.currentDx -
-                        currentWidth / 2.0 +
-                        (_horizontalOffset * clampedValue),
-                    top: _triggerGlobalPosition.dy +
-                        th / 2.0 +
-                        state.currentDy -
-                        currentHeight / 2.0 +
-                        (_verticalOffset * clampedValue),
-                    child: IgnorePointer(
-                      ignoring: clampedValue < 0.8,
-                      child: _buildPopoverContainer(
-                        state,
-                        clampedValue,
-                        currentWidth,
-                        currentHeight,
+                      // ── Blob B: Popover Body ─────────────────────────
+                      Positioned(
+                        left: _triggerGlobalPosition.dx +
+                            tw / 2.0 +
+                            state.currentDx -
+                            currentWidth / 2.0 +
+                            (_horizontalOffset * clampedValue),
+                        top: _triggerGlobalPosition.dy +
+                            th / 2.0 +
+                            state.currentDy -
+                            currentHeight / 2.0 +
+                            (_verticalOffset * clampedValue),
+                        child: IgnorePointer(
+                          ignoring: clampedValue < 0.8,
+                          child: _buildPopoverContainer(
+                            state,
+                            clampedValue,
+                            currentWidth,
+                            currentHeight,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

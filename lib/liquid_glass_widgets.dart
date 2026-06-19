@@ -16,7 +16,6 @@ export 'src/renderer/liquid_glass_renderer.dart'
 export 'src/renderer/liquid_shape.dart'; // all shapes are public
 export 'src/renderer/internal/interaction_notification.dart'; // public for Smart Silence support
 export 'types/glass_specular_sharpness.dart'; // GlassSpecularSharpness enum
-export 'types/glass_tint_blend.dart'; // GlassTintBlend enum
 
 // Setup and Configuration
 export 'liquid_glass_setup.dart';
@@ -39,6 +38,8 @@ export 'src/types/glass_interaction_behavior.dart'; // GlassInteractionBehavior 
 // Shared widgets
 export 'widgets/shared/adaptive_glass.dart';
 export 'widgets/shared/adaptive_liquid_glass_layer.dart';
+export 'widgets/shared/animated_glass_indicator.dart'
+    show AnimatedGlassIndicator; // baseIndicatorSettings for partial overrides
 export 'widgets/shared/glass_accessibility_scope.dart'; // GlassAccessibilityScope + GlassAccessibilityData
 export 'widgets/shared/glass_adaptive_scope.dart'; // GlassAdaptiveScope + GlassAdaptiveScopeData + GlassAdaptiveDiagnostic
 export 'widgets/shared/glass_backdrop_scope.dart'; // GlassBackdropScope — per-screen backdrop isolation
