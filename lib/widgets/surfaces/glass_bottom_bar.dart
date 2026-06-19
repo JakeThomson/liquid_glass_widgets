@@ -167,7 +167,7 @@ enum MaskingQuality {
 
 /// **Deprecated:** Use [GlassTabBar.bottom] instead.
 ///
-/// [GlassBottomBar] is a zero-logic shim that will be removed in v2.0.
+/// [GlassBottomBar] is a zero-logic shim that will be removed in v1.0.
 /// Migrate by replacing `GlassBottomBar(` with `GlassTabBar.bottom(` and
 /// `GlassBottomBarTab(` with `GlassTab(`. All parameters are identical.
 ///
@@ -178,7 +178,7 @@ enum MaskingQuality {
 /// GlassTabBar.bottom(tabs: [GlassTab(icon: Icon(Icons.home), label: 'Home')], ...)
 /// ```
 @Deprecated('Use GlassTabBar.bottom() instead. '
-    'GlassBottomBar will be removed in v2.0. '
+    'GlassBottomBar will be removed in v1.0. '
     'Migration: replace GlassBottomBar( with GlassTabBar.bottom( '
     'and GlassBottomBarTab( with GlassTab(.')
 class GlassBottomBar extends StatelessWidget {
@@ -674,7 +674,7 @@ class GlassBottomBar extends StatelessWidget {
 /// Replace `GlassBottomBarTab(icon: ..., label: ..., glowColor: ...)` with
 /// `GlassTab(icon: ..., label: ..., glowColor: ...)`.
 @Deprecated('Use GlassTab instead. '
-    'GlassBottomBarTab will be removed in v2.0. '
+    'GlassBottomBarTab will be removed in v1.0. '
     'Migration: replace GlassBottomBarTab( with GlassTab(.')
 class GlassBottomBarTab {
   /// Creates a bottom bar tab configuration.

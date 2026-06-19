@@ -41,7 +41,7 @@ export 'shared/glass_search_bar_config.dart';
 /// [isSearchActive] and [searchConfig].
 /// **Deprecated:** Use [GlassTabBar.searchable] instead.
 ///
-/// [GlassSearchableBottomBar] is a zero-logic shim that will be removed in v2.0.
+/// [GlassSearchableBottomBar] is a zero-logic shim that will be removed in v1.0.
 /// Migrate by replacing `GlassSearchableBottomBar(` with `GlassTabBar.searchable(`.
 /// All parameters are identical. Replace any `GlassBottomBarTab(` with `GlassTab(`.
 ///
@@ -52,7 +52,7 @@ export 'shared/glass_search_bar_config.dart';
 /// GlassTabBar.searchable(tabs: [...], searchConfig: ..., ...)
 /// ```
 @Deprecated('Use GlassTabBar.searchable() instead. '
-    'GlassSearchableBottomBar will be removed in v2.0. '
+    'GlassSearchableBottomBar will be removed in v1.0. '
     'Migration: replace GlassSearchableBottomBar( with GlassTabBar.searchable(.')
 class GlassSearchableBottomBar extends StatelessWidget {
   /// Creates a glass bottom bar with a morphing search pill.

@@ -146,21 +146,31 @@ enum _GlassTabBarPlacement { inline, bottom, searchable }
 class GlassTabBar extends StatefulWidget {
   // ─── Default (inline) constructor ─────────────────────────────────────────
 
-  /// Creates an inline glass tab bar embedded in page content.
+  /// **Deprecated:** Use [GlassSegmentedControl] for inline segment controls.
   ///
-  /// Use this for in-page sub-navigation (e.g. tabs inside a page body).
-  /// For bottom navigation use [GlassTabBar.bottom]. For a searchable bottom
-  /// bar use [GlassTabBar.searchable].
+  /// [GlassSegmentedControl] is the iOS 26 UISegmentedControl equivalent and
+  /// the correct replacement for this constructor. It provides the same
+  /// light-tinted container + glass pill behaviour with first-class
+  /// [GlassSegmentedControl.isScrollable] support.
+  ///
+  /// ```dart
+  /// // BEFORE
+  /// GlassTabBar(tabs: [GlassTab(label: 'A'), GlassTab(label: 'B')], ...)
+  /// // AFTER
+  /// GlassSegmentedControl(segments: [GlassTab(label: 'A'), GlassTab(label: 'B')], ...)
+  /// ```
+  @Deprecated(
+    'Use GlassSegmentedControl instead. '
+    'GlassTabBar() (default constructor) will be removed in v1.0. '
+    'Migration: replace GlassTabBar( with GlassSegmentedControl( '
+    'and rename tabs: to segments:, onTabSelected: to onSegmentSelected:.'
+  )
   const GlassTabBar({
     required this.tabs,
     required this.selectedIndex,
     required this.onTabSelected,
     super.key,
     this.height = 44.0,
-    @Deprecated(
-      'Use GlassFilterBar for scrollable chip rows. '
-      'GlassTabBar.isScrollable will be removed in v2.0.',
-    )
     this.isScrollable = false,
     this.indicatorPadding = const EdgeInsets.all(2),
     this.indicatorColor,
