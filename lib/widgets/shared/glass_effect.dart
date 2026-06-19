@@ -428,6 +428,10 @@ class _GlassEffectState extends State<GlassEffect>
       // Clip.antiAlias creates a ClipPathLayer (no saveLayer isolation) which
       // gives smooth GPU-native path AA applied AFTER the glass renders,
       // overriding any pre-baked edge from the RepaintBoundary + Transform chain.
+      //
+      // coverage:ignore-start
+      // Unreachable in unit tests: isImpeller=false (no real GPU renderer).
+      // Tested on physical device / Impeller integration tests only.
       return ClipPath(
         clipper: ShapeBorderClipper(shape: widget.shape),
         clipBehavior: Clip.antiAlias,
@@ -438,6 +442,7 @@ class _GlassEffectState extends State<GlassEffect>
           child: widget.child,
         ),
       );
+      // coverage:ignore-end
     }
 
     // 4. Resolve if we can use the high-fidelity refraction shader
