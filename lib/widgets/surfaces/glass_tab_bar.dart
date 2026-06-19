@@ -1,7 +1,8 @@
 // ignore_for_file: deprecated_member_use_from_same_package
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
-import 'package:flutter/physics.dart' show SpringDescription;
+
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../src/types/glass_interaction_behavior.dart';

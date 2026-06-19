@@ -1,4 +1,176 @@
+# 0.18.0
+
+## 🏗️ Unified Navigation API — iOS 26 Alignment
+
+This release consolidates the widget API to map 1:1 with Apple's iOS 26 control vocabulary. Two v1-era widgets are deprecated (see Migration below), and `GlassTabBar` becomes the single source of truth for all tab-navigation work.
+
+---
+
+### New: `GlassTabBar.bottom()` — iOS 26 UITabBar equivalent
+
+Named constructor for bottom navigation bars. Full liquid glass layer, jelly physics pill indicator, `MaskingQuality` dual-layer icon rendering, and optional `dividerSettings`.
+
+```dart
+GlassTabBar.bottom(
+  tabs: [
+    GlassTab(icon: Icon(Icons.home), label: 'Home'),
+    GlassTab(icon: Icon(Icons.search), label: 'Search'),
+    GlassTab(icon: Icon(Icons.person), label: 'Profile'),
+  ],
+  selectedIndex: _selectedIndex,
+  onTabSelected: (i) => setState(() => _selectedIndex = i),
+)
+```
+
+---
+
+### New: `GlassTabBar.searchable()` — UITabBar + morphing search
+
+Named constructor combining bottom navigation with a morphing glass search pill. Identical API to `GlassTabBar.bottom()` with additional `searchBarConfig` and `controller` parameters.
+
+```dart
+GlassTabBar.searchable(
+  tabs: [...],
+  selectedIndex: _selectedIndex,
+  onTabSelected: (i) => setState(() => _selectedIndex = i),
+  searchBarConfig: GlassSearchBarConfig(hintText: 'Search...'),
+  controller: _tabBarController,
+)
+```
+
+---
+
+### New: `GlassSegmentedControl` — icon support + scrollable mode
+
+#### Icon + label support (fixed mode)
+
+`segments` now accepts `List<GlassTab>` instead of `List<String>`. Each segment can render:
+- **Label only** — `GlassTab(label: 'Weekly')`
+- **Icon only** — `GlassTab(icon: Icon(Icons.photo))`
+- **Icon + label** — `GlassTab(icon: Icon(Icons.photo), label: 'Photos')` (icon above label)
+
+This matches iOS 26 UISegmentedControl which has supported `UIImage` segments since early iOS.
+
+#### Scrollable mode — 100% parity with original `GlassTabBar(isScrollable: true)`
+
+New `GlassSegmentedControl.scrollable()` named constructor for category filter tabs (6+ items). Internally uses the same `TabBarContent` backend as `GlassTabBar`, delivering identical spring physics, gesture handling, and 3-layer rendering.
+
+```dart
+// Fixed (UISegmentedControl — equal width, 2–6 items)
+GlassSegmentedControl(
+  segments: [
+    GlassTab(label: 'All'),
+    GlassTab(icon: Icon(Icons.photo), label: 'Photos'),
+    GlassTab(label: 'Videos'),
+  ],
+  selectedIndex: _selectedIndex,
+  onSegmentSelected: (i) => setState(() => _selectedIndex = i),
+)
+
+// Scrollable (category filter tabs — natural width, 7+ items)
+GlassSegmentedControl.scrollable(
+  segments: List.generate(12, (i) => GlassTab(label: 'Category ${i + 1}')),
+  selectedIndex: _selectedIndex,
+  onSegmentSelected: (i) => setState(() => _selectedIndex = i),
+)
+```
+
+---
+
+### Architecture: Dependency inversion
+
+All tab-bar layout logic now lives in dedicated layout files:
+
+| File | Owns |
+|---|---|
+| `shared/tab_bar_inline_internal.dart` | `TabBarContent` — shared pill + gesture engine |
+| `shared/tab_bar_bottom_layout.dart` | `TabBarBottomLayout` — full glass bottom shell |
+| `shared/tab_bar_searchable_layout.dart` | `TabBarSearchableLayout` — search morph shell |
+
+`GlassTabBar` dispatches to these shells. `GlassBottomBar` and `GlassSearchableBottomBar` are now zero-logic shims that delegate to the same shells.
+
+---
+
+### Deprecated — removal in v1.0
+
+#### `GlassBottomBar` → `GlassTabBar.bottom()`
+
+```dart
+// BEFORE
+GlassBottomBar(
+  tabs: [GlassBottomBarTab(icon: Icon(Icons.home), label: 'Home')],
+  selectedIndex: _selectedIndex,
+  onTabSelected: (i) => setState(() => _selectedIndex = i),
+)
+
+// AFTER
+GlassTabBar.bottom(
+  tabs: [GlassTab(icon: Icon(Icons.home), label: 'Home')],
+  selectedIndex: _selectedIndex,
+  onTabSelected: (i) => setState(() => _selectedIndex = i),
+)
+```
+
+#### `GlassSearchableBottomBar` → `GlassTabBar.searchable()`
+
+```dart
+// BEFORE
+GlassSearchableBottomBar(tabs: [...], ...)
+
+// AFTER
+GlassTabBar.searchable(tabs: [...], ...)
+```
+
+#### `GlassTabBar()` default constructor → `GlassSegmentedControl`
+
+```dart
+// BEFORE
+GlassTabBar(
+  tabs: [GlassTab(label: 'A'), GlassTab(label: 'B')],
+  selectedIndex: _selectedIndex,
+  onTabSelected: (i) => setState(() => _selectedIndex = i),
+)
+
+// AFTER
+GlassSegmentedControl(
+  segments: [GlassTab(label: 'A'), GlassTab(label: 'B')],
+  selectedIndex: _selectedIndex,
+  onSegmentSelected: (i) => setState(() => _selectedIndex = i),
+)
+```
+
+#### `GlassSegmentedControl.segments: List<String>` → `List<GlassTab>`
+
+```dart
+// BEFORE
+GlassSegmentedControl(segments: ['Daily', 'Weekly', 'Monthly'], ...)
+
+// AFTER
+GlassSegmentedControl(
+  segments: [
+    GlassTab(label: 'Daily'),
+    GlassTab(label: 'Weekly'),
+    GlassTab(label: 'Monthly'),
+  ],
+  ...
+)
+```
+
+---
+
+### iOS 26 control vocabulary — full mapping
+
+| Widget | iOS 26 equivalent | Glass tier |
+|---|---|---|
+| `GlassSegmentedControl(...)` | `UISegmentedControl` | Light tint + glass pill |
+| `GlassSegmentedControl.scrollable(...)` | Scrollable filter tabs | Light tint + glass pill |
+| `GlassTabBar.bottom(...)` | `UITabBar` | Full liquid glass |
+| `GlassTabBar.searchable(...)` | `UITabBar` + search | Full liquid glass |
+
+---
+
 # 0.17.0
+
 
 ## 🔬 iOS 26 Concave Lens Pinch — All Four Pill Widgets
 
