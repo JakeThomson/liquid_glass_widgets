@@ -239,22 +239,22 @@ class _BottomBarDemoPageState extends State<_BottomBarDemoPage> {
   int _selectedIndex = 0;
 
   static const _tabs = [
-    GlassBottomBarTab(
+    GlassTab(
       label: 'Home',
       icon: Icon(CupertinoIcons.house),
       activeIcon: Icon(CupertinoIcons.house_fill),
     ),
-    GlassBottomBarTab(
+    GlassTab(
       label: 'Browse',
       icon: Icon(CupertinoIcons.compass),
       activeIcon: Icon(CupertinoIcons.compass_fill),
     ),
-    GlassBottomBarTab(
+    GlassTab(
       label: 'Favorites',
       icon: Icon(CupertinoIcons.heart),
       activeIcon: Icon(CupertinoIcons.heart_fill),
     ),
-    GlassBottomBarTab(
+    GlassTab(
       label: 'Profile',
       icon: Icon(CupertinoIcons.person),
       activeIcon: Icon(CupertinoIcons.person_fill),
@@ -331,7 +331,7 @@ class _BottomBarDemoPageState extends State<_BottomBarDemoPage> {
             ],
           ),
         ),
-        bottomNavigationBar: GlassBottomBar(
+        bottomNavigationBar: GlassTabBar.bottom(
           selectedIndex: _selectedIndex,
           onTabSelected: (i) => setState(() => _selectedIndex = i),
           quality: GlassQuality.premium,
@@ -358,17 +358,17 @@ class _SearchableBarDemoPageState extends State<_SearchableBarDemoPage> {
   bool _isMiniMode = false;
 
   static const _tabs = [
-    GlassBottomBarTab(
+    GlassTab(
       label: 'Home',
       icon: Icon(CupertinoIcons.house),
       activeIcon: Icon(CupertinoIcons.house_fill),
     ),
-    GlassBottomBarTab(
+    GlassTab(
       label: 'Browse',
       icon: Icon(CupertinoIcons.compass),
       activeIcon: Icon(CupertinoIcons.compass_fill),
     ),
-    GlassBottomBarTab(
+    GlassTab(
       label: 'Profile',
       icon: Icon(CupertinoIcons.person),
       activeIcon: Icon(CupertinoIcons.person_fill),
@@ -493,7 +493,7 @@ class _SearchableBarDemoPageState extends State<_SearchableBarDemoPage> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: GlassSearchableBottomBar(
+              child: GlassTabBar.searchable(
                 selectedIndex: _selectedIndex,
                 isSearchActive: _isMiniMode || _isSearching,
                 onTabSelected: (i) {

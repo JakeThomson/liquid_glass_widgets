@@ -77,11 +77,11 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
   ];
 
   static const _barTabs = [
-    GlassBottomBarTab(label: 'Home', icon: Icon(CupertinoIcons.home)),
-    GlassBottomBarTab(
+    GlassTab(label: 'Home', icon: Icon(CupertinoIcons.home)),
+    GlassTab(
         label: 'Discover', icon: Icon(CupertinoIcons.compass_fill)),
-    GlassBottomBarTab(label: 'Library', icon: Icon(CupertinoIcons.book_fill)),
-    GlassBottomBarTab(label: 'Profile', icon: Icon(CupertinoIcons.person_fill)),
+    GlassTab(label: 'Library', icon: Icon(CupertinoIcons.book_fill)),
+    GlassTab(label: 'Profile', icon: Icon(CupertinoIcons.person_fill)),
   ];
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                 _WidgetSection(
                   label: 'GlassBottomBar',
                   color: const Color(0xFFFF375F),
-                  child: GlassBottomBar(
+                  child: GlassTabBar.bottom(
                     tabs: _barTabs,
                     selectedIndex: _barSelected,
                     onTabSelected: (i) => setState(() => _barSelected = i),
@@ -275,7 +275,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                 _WidgetSection(
                   label: 'GlassSearchableBottomBar',
                   color: const Color(0xFF30D158),
-                  child: GlassSearchableBottomBar(
+                  child: GlassTabBar.searchable(
                     tabs: _barTabs,
                     selectedIndex: _searchBarSelected,
                     isSearchActive: _isSearching,
@@ -740,7 +740,7 @@ class _LiveValuesBadge extends StatelessWidget {
     final v = expansionV.round();
     final pinch = pinchStrength.toStringAsFixed(2);
     final aber = aberration.toStringAsFixed(2);
-    return 'GlassBottomBar(\n'
+    return 'GlassTabBar.bottom(\n'
         '  indicatorPinchStrength: $pinch,\n'
         '  indicatorExpansion: EdgeInsets.symmetric(\n'
         '    horizontal: $h, vertical: $v,\n'

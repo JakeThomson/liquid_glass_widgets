@@ -112,7 +112,7 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
       ),
       bottomNavigationBar: Padding(
         padding: EdgeInsets.only(bottom: sysBottom > 25 ? sysBottom - 25 : 0),
-        child: GlassSearchableBottomBar(
+        child: GlassTabBar.searchable(
           selectedIndex: _selectedTab,
           interactionBehavior: GlassInteractionBehavior.scaleOnly,
           isSearchActive: _isSearching,
@@ -137,16 +137,16 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
                 setState(() => _searchFieldFocused = focused),
           ),
           tabs: [
-            GlassBottomBarTab(
+            GlassTab(
               label: 'Standard',
               icon: const Icon(CupertinoIcons.layers_alt),
               activeIcon: const Icon(CupertinoIcons.layers_alt_fill),
             ),
-            GlassBottomBarTab(
+            GlassTab(
               label: 'Peek',
               icon: const Icon(Icons.unfold_more_rounded),
             ),
-            GlassBottomBarTab(
+            GlassTab(
               label: 'Apple Maps',
               icon: const Icon(CupertinoIcons.map),
               activeIcon: const Icon(CupertinoIcons.map_fill),
