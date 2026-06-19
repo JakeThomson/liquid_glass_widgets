@@ -78,8 +78,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
 
   static const _barTabs = [
     GlassTab(label: 'Home', icon: Icon(CupertinoIcons.home)),
-    GlassTab(
-        label: 'Discover', icon: Icon(CupertinoIcons.compass_fill)),
+    GlassTab(label: 'Discover', icon: Icon(CupertinoIcons.compass_fill)),
     GlassTab(label: 'Library', icon: Icon(CupertinoIcons.book_fill)),
     GlassTab(label: 'Profile', icon: Icon(CupertinoIcons.person_fill)),
   ];

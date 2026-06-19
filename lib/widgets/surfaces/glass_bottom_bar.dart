@@ -197,12 +197,10 @@ enum MaskingQuality {
 /// // AFTER
 /// GlassTabBar.bottom(tabs: [GlassTab(icon: Icon(Icons.home), label: 'Home')], ...)
 /// ```
-@Deprecated(
-  'Use GlassTabBar.bottom() instead. '
-  'GlassBottomBar will be removed in v2.0. '
-  'Migration: replace GlassBottomBar( with GlassTabBar.bottom( '
-  'and GlassBottomBarTab( with GlassTab(.'
-)
+@Deprecated('Use GlassTabBar.bottom() instead. '
+    'GlassBottomBar will be removed in v2.0. '
+    'Migration: replace GlassBottomBar( with GlassTabBar.bottom( '
+    'and GlassBottomBarTab( with GlassTab(.')
 class GlassBottomBar extends StatefulWidget {
   /// Creates a glass bottom navigation bar.
   const GlassBottomBar({
@@ -891,11 +889,9 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
 /// [GlassBottomBarTab] is a zero-logic typedef shim.
 /// Replace `GlassBottomBarTab(icon: ..., label: ..., glowColor: ...)` with
 /// `GlassTab(icon: ..., label: ..., glowColor: ...)`.
-@Deprecated(
-  'Use GlassTab instead. '
-  'GlassBottomBarTab will be removed in v2.0. '
-  'Migration: replace GlassBottomBarTab( with GlassTab(.'
-)
+@Deprecated('Use GlassTab instead. '
+    'GlassBottomBarTab will be removed in v2.0. '
+    'Migration: replace GlassBottomBarTab( with GlassTab(.')
 class GlassBottomBarTab {
   /// Creates a bottom bar tab configuration.
   const GlassBottomBarTab({
