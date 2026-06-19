@@ -185,6 +185,24 @@ enum MaskingQuality {
   high,
 }
 
+/// **Deprecated:** Use [GlassTabBar.bottom] instead.
+///
+/// [GlassBottomBar] is a zero-logic shim that will be removed in v2.0.
+/// Migrate by replacing `GlassBottomBar(` with `GlassTabBar.bottom(` and
+/// `GlassBottomBarTab(` with `GlassTab(`. All parameters are identical.
+///
+/// ```dart
+/// // BEFORE
+/// GlassBottomBar(tabs: [GlassBottomBarTab(icon: Icon(Icons.home), label: 'Home')], ...)
+/// // AFTER
+/// GlassTabBar.bottom(tabs: [GlassTab(icon: Icon(Icons.home), label: 'Home')], ...)
+/// ```
+@Deprecated(
+  'Use GlassTabBar.bottom() instead. '
+  'GlassBottomBar will be removed in v2.0. '
+  'Migration: replace GlassBottomBar( with GlassTabBar.bottom( '
+  'and GlassBottomBarTab( with GlassTab(.'
+)
 class GlassBottomBar extends StatefulWidget {
   /// Creates a glass bottom navigation bar.
   const GlassBottomBar({
@@ -868,6 +886,16 @@ class _GlassBottomBarState extends State<GlassBottomBar> {
 ///   icon: SvgPicture.asset('assets/settings.svg', colorFilter: ...),
 /// )
 /// ```
+/// **Deprecated:** Use [GlassTab] instead.
+///
+/// [GlassBottomBarTab] is a zero-logic typedef shim.
+/// Replace `GlassBottomBarTab(icon: ..., label: ..., glowColor: ...)` with
+/// `GlassTab(icon: ..., label: ..., glowColor: ...)`.
+@Deprecated(
+  'Use GlassTab instead. '
+  'GlassBottomBarTab will be removed in v2.0. '
+  'Migration: replace GlassBottomBarTab( with GlassTab(.'
+)
 class GlassBottomBarTab {
   /// Creates a bottom bar tab configuration.
   const GlassBottomBarTab({
