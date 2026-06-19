@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../../constants/glass_defaults.dart';
 import '../../constants/glass_shadow.dart';
 import '../../types/glass_specular_sharpness.dart';
+import '../../types/glass_tint_blend.dart';
 import 'liquid_glass_renderer.dart';
 import 'liquid_glass_render_scope.dart';
 
@@ -35,6 +36,8 @@ class LiquidGlassSettings with EquatableMixin {
     this.shadow,
     this.whitenStrength = 0.0,
     this.whitenGated = true,
+    this.tintBlend = GlassTintBlend.auto,
+    this.backerColor,
   }) : pinchStrength = 0.0;
 
   /// Private constructor used exclusively by [copyWithPinch].
@@ -60,6 +63,8 @@ class LiquidGlassSettings with EquatableMixin {
     required this.shadow,
     required this.whitenStrength,
     required this.whitenGated,
+    required this.tintBlend,
+    this.backerColor,
     required this.pinchStrength,
   });
 
@@ -317,8 +322,35 @@ class LiquidGlassSettings with EquatableMixin {
         shadow: shadow,
         whitenStrength: whitenStrength,
         whitenGated: whitenGated,
+        tintBlend: tintBlend,
+        backerColor: backerColor,
         pinchStrength: value,
       );
+
+  /// Controls how [glassColor] blends with the refracted backdrop.
+  ///
+  /// See [GlassTintBlend] for the available modes.
+  final GlassTintBlend tintBlend;
+
+  /// Optional dimming "backer" painted directly behind the glass.
+  ///
+  /// A shape-matched, color-filled pad composited *behind* the glass surface —
+  /// the inverse of [shadow], which sits outside the boundary. It provides
+  /// contrast for a control's content over rich or colorful backdrops where the
+  /// glass tint alone can't: video, maps, photography, or any control floating
+  /// over busy content. This is Apple's "dimming layer" guidance for keeping
+  /// glass controls legible (see the Materials section of the Human Interface
+  /// Guidelines, and SwiftUI's clear `Glass` variant).
+  ///
+  /// The color's alpha *is* the dimming opacity. Apple suggests roughly 35% as
+  /// a starting point — e.g. `Color(0x59000000)` for a neutral dark dim.
+  ///
+  /// Rendered at the widget level (like [shadow]), clipped to the glass shape,
+  /// so it composites correctly even over a PlatformView — where a shader-side
+  /// tint cannot reach.
+  ///
+  /// Defaults to null: no backer, and no change to existing rendering.
+  final Color? backerColor;
 
   /// The effective saturation taking visibility into account.
   double get effectiveSaturation => 1 + (saturation - 1) * visibility;
@@ -362,9 +394,13 @@ class LiquidGlassSettings with EquatableMixin {
       shadow: t < 0.5 ? a.shadow : b.shadow,
       whitenStrength: lerpDouble(a.whitenStrength, b.whitenStrength, t)!,
       whitenGated: t < 0.5 ? a.whitenGated : b.whitenGated,
+      tintBlend: t < 0.5 ? a.tintBlend : b.tintBlend,
+      // Lerp the color so the backer fades smoothly (from/to transparent when
+      // one side is null), rather than popping at the midpoint.
+      backerColor: Color.lerp(a.backerColor, b.backerColor, t),
       // pinchStrength is interaction state — lerp it so transitions are smooth
       // when the indicator fades between active/resting states.
-      pinchStrength: lerpDouble(a.pinchStrength, b.pinchStrength, t)!,
+      pinchStrength: lerpDouble(a.pinchStrength, b.pinchStrength, t)!
     );
   }
 
@@ -396,6 +432,8 @@ class LiquidGlassSettings with EquatableMixin {
     List<BoxShadow>? shadow,
     double? whitenStrength,
     bool? whitenGated,
+    GlassTintBlend? tintBlend,
+    Color? backerColor,
   }) =>
       LiquidGlassSettings._withPinch(
         visibility: visibility ?? this.visibility,
@@ -416,6 +454,8 @@ class LiquidGlassSettings with EquatableMixin {
         shadow: shadow ?? this.shadow,
         whitenStrength: whitenStrength ?? this.whitenStrength,
         whitenGated: whitenGated ?? this.whitenGated,
+        tintBlend: tintBlend ?? this.tintBlend,
+        backerColor: backerColor ?? this.backerColor,
         // Preserve current pinchStrength — copyWith is called by AnimatedGlassIndicator
         // to change visibility while keeping the live pinch value alive.
         // To set a new pinch value, call copyWithPinch() instead.
@@ -441,6 +481,8 @@ class LiquidGlassSettings with EquatableMixin {
         shadow,
         whitenStrength,
         whitenGated,
+        tintBlend,
+        backerColor,
         pinchStrength,
       ];
 }
