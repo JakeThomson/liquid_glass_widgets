@@ -50,12 +50,15 @@ Future<void> _pumpBar(
         builder: (ctx, idx, _) => SizedBox(
           width: width,
           height: 56,
-          child: GlassTabBar(
-            tabs: tabs,
-            selectedIndex: idx,
-            onTabSelected: (i) => selectedIndex.value = i,
-            isScrollable: isScrollable,
-          ),
+          child: isScrollable
+              ? GlassSegmentedControl.scrollable(
+                  segments: tabs,
+                  selectedIndex: idx,
+                  onSegmentSelected: (i) => selectedIndex.value = i)
+              : GlassSegmentedControl(
+                  segments: tabs,
+                  selectedIndex: idx,
+                  onSegmentSelected: (i) => selectedIndex.value = i),
         ),
       ),
     ),
@@ -82,12 +85,11 @@ void main() {
             return SizedBox(
               width: 400,
               height: 56,
-              child: GlassTabBar(
-                tabs: _tabs,
-                selectedIndex: selectedIndex,
-                onTabSelected: (i) => outerSetState(() => selectedIndex = i),
-                isScrollable: true,
-              ),
+              child: GlassSegmentedControl.scrollable(
+                  segments: _tabs,
+                  selectedIndex: selectedIndex,
+                  onSegmentSelected: (i) =>
+                      outerSetState(() => selectedIndex = i)),
             );
           }),
         ),
@@ -123,12 +125,11 @@ void main() {
             return SizedBox(
               width: 400,
               height: 56,
-              child: GlassTabBar(
-                tabs: _tabs,
-                selectedIndex: selectedIndex,
-                onTabSelected: (i) => outerSetState(() => selectedIndex = i),
-                isScrollable: true,
-              ),
+              child: GlassSegmentedControl.scrollable(
+                  segments: _tabs,
+                  selectedIndex: selectedIndex,
+                  onSegmentSelected: (i) =>
+                      outerSetState(() => selectedIndex = i)),
             );
           }),
         ),
@@ -139,7 +140,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Drag → DraggableIndicatorPhysics drives fractional index path.
-      final finder = find.byType(GlassTabBar);
+      final finder = find.byType(GlassSegmentedControl);
       final center = tester.getCenter(finder);
       final gesture = await tester.startGesture(center);
       await gesture.moveBy(const Offset(60, 0));
@@ -166,12 +167,17 @@ void main() {
             return SizedBox(
               width: 400,
               height: 56,
-              child: GlassTabBar(
-                tabs: _tabs,
-                selectedIndex: selectedIndex,
-                onTabSelected: (i) => outerSetState(() => selectedIndex = i),
-                isScrollable: scrollable,
-              ),
+              child: scrollable
+                  ? GlassSegmentedControl.scrollable(
+                      segments: _tabs,
+                      selectedIndex: selectedIndex,
+                      onSegmentSelected: (i) =>
+                          outerSetState(() => selectedIndex = i))
+                  : GlassSegmentedControl(
+                      segments: _tabs,
+                      selectedIndex: selectedIndex,
+                      onSegmentSelected: (i) =>
+                          outerSetState(() => selectedIndex = i)),
             );
           }),
         ),
@@ -239,7 +245,6 @@ void main() {
         (tester) async {
       // Lines 472-482: the full-check path evaluates borderRadius field.
       // GlassTabBar with indicatorBorderRadius change exercises this.
-      BorderRadius radius = BorderRadius.circular(16);
       int selectedIndex = 0;
       late StateSetter outerSetState;
 
@@ -250,13 +255,11 @@ void main() {
             return SizedBox(
               width: 400,
               height: 56,
-              child: GlassTabBar(
-                tabs: _tabs.sublist(0, 3),
-                selectedIndex: selectedIndex,
-                onTabSelected: (i) => outerSetState(() => selectedIndex = i),
-                isScrollable: false,
-                indicatorBorderRadius: radius,
-              ),
+              child: GlassSegmentedControl(
+                  segments: _tabs.sublist(0, 3),
+                  selectedIndex: selectedIndex,
+                  onSegmentSelected: (i) =>
+                      outerSetState(() => selectedIndex = i)),
             );
           }),
         ),
@@ -266,7 +269,6 @@ void main() {
       // Change both radius and selected tab — causes shouldReclip to evaluate
       // the full property set (including borderRadius != oldClipper.borderRadius).
       outerSetState(() {
-        radius = BorderRadius.circular(24);
         selectedIndex = 1;
       });
       await tester.pump(const Duration(milliseconds: 16));
@@ -293,7 +295,7 @@ void main() {
       final sel = ValueNotifier<int>(2);
       await _pumpBar(tester, tabs: _tabs, selectedIndex: sel);
 
-      await tester.drag(find.byType(GlassTabBar), const Offset(8, 0));
+      await tester.drag(find.byType(GlassSegmentedControl), const Offset(8, 0));
       await tester.pumpAndSettle();
 
       expect(sel.value, 2);
@@ -306,7 +308,7 @@ void main() {
       final sel = ValueNotifier<int>(0);
       await _pumpBar(tester, tabs: _tabs, selectedIndex: sel);
 
-      await tester.drag(find.byType(GlassTabBar), const Offset(45, 0));
+      await tester.drag(find.byType(GlassSegmentedControl), const Offset(45, 0));
       await tester.pumpAndSettle();
 
       expect(sel.value, greaterThan(0));
@@ -317,7 +319,7 @@ void main() {
       final sel = ValueNotifier<int>(0);
       await _pumpBar(tester, tabs: _tabs3, selectedIndex: sel, width: 300);
 
-      await tester.fling(find.byType(GlassTabBar), const Offset(10, 0), 600);
+      await tester.fling(find.byType(GlassSegmentedControl), const Offset(10, 0), 600);
       await tester.pumpAndSettle();
 
       expect(sel.value, 1);
@@ -328,7 +330,7 @@ void main() {
       final sel = ValueNotifier<int>(2);
       await _pumpBar(tester, tabs: _tabs3, selectedIndex: sel, width: 300);
 
-      await tester.fling(find.byType(GlassTabBar), const Offset(-10, 0), 600);
+      await tester.fling(find.byType(GlassSegmentedControl), const Offset(-10, 0), 600);
       await tester.pumpAndSettle();
 
       expect(sel.value, 1);
@@ -339,7 +341,7 @@ void main() {
       final sel = ValueNotifier<int>(0);
       await _pumpBar(tester, tabs: _tabs3, selectedIndex: sel, width: 300);
 
-      await tester.fling(find.byType(GlassTabBar), const Offset(-200, 0), 800);
+      await tester.fling(find.byType(GlassSegmentedControl), const Offset(-200, 0), 800);
       await tester.pumpAndSettle();
 
       expect(sel.value, 0);
@@ -350,7 +352,7 @@ void main() {
       final sel = ValueNotifier<int>(2);
       await _pumpBar(tester, tabs: _tabs3, selectedIndex: sel, width: 300);
 
-      await tester.fling(find.byType(GlassTabBar), const Offset(200, 0), 800);
+      await tester.fling(find.byType(GlassSegmentedControl), const Offset(200, 0), 800);
       await tester.pumpAndSettle();
 
       expect(sel.value, 2);
@@ -362,7 +364,7 @@ void main() {
       await _pumpBar(tester, tabs: _tabs3, selectedIndex: sel);
 
       final gesture =
-          await tester.startGesture(tester.getCenter(find.byType(GlassTabBar)));
+          await tester.startGesture(tester.getCenter(find.byType(GlassSegmentedControl)));
       await gesture.moveBy(const Offset(-500, 0));
       await tester.pump(const Duration(milliseconds: 16));
       await gesture.up();
@@ -377,7 +379,7 @@ void main() {
       await _pumpBar(tester, tabs: _tabs3, selectedIndex: sel);
 
       final gesture =
-          await tester.startGesture(tester.getCenter(find.byType(GlassTabBar)));
+          await tester.startGesture(tester.getCenter(find.byType(GlassSegmentedControl)));
       await gesture.moveBy(const Offset(500, 0));
       await tester.pump(const Duration(milliseconds: 16));
       await gesture.up();
@@ -393,7 +395,7 @@ void main() {
       await _pumpBar(tester,
           tabs: _tabs, selectedIndex: sel, isScrollable: true);
 
-      final barRect = tester.getRect(find.byType(GlassTabBar));
+      final barRect = tester.getRect(find.byType(GlassSegmentedControl));
       final gesture = await tester.startGesture(
         Offset(barRect.left + 40, barRect.center.dy),
       );
@@ -411,7 +413,7 @@ void main() {
       await _pumpBar(tester,
           tabs: _tabs, selectedIndex: sel, isScrollable: true);
 
-      await tester.fling(find.byType(GlassTabBar), const Offset(5, 0), 600);
+      await tester.fling(find.byType(GlassSegmentedControl), const Offset(5, 0), 600);
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
@@ -441,7 +443,7 @@ void main() {
       await _pumpBar(tester,
           tabs: _tabs, selectedIndex: sel, isScrollable: true);
 
-      final barRect = tester.getRect(find.byType(GlassTabBar));
+      final barRect = tester.getRect(find.byType(GlassSegmentedControl));
       final gesture = await tester.startGesture(
         Offset(barRect.left + 50, barRect.center.dy),
       );
@@ -464,12 +466,10 @@ void main() {
             builder: (ctx, idx, _) => SizedBox(
               width: 300,
               height: 56,
-              child: GlassTabBar(
-                tabs: const [GlassTab(label: 'A'), GlassTab(label: 'B')],
-                selectedIndex: idx,
-                onTabSelected: (i) => sel.value = i,
-                isScrollable: true,
-              ),
+              child: GlassSegmentedControl.scrollable(
+                  segments: const [GlassTab(label: 'A'), GlassTab(label: 'B')],
+                  selectedIndex: idx,
+                  onSegmentSelected: (i) => sel.value = i),
             ),
           ),
         ),
@@ -478,7 +478,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
       await tester.pumpAndSettle();
 
-      await tester.fling(find.byType(GlassTabBar), const Offset(200, 0), 200);
+      await tester.fling(find.byType(GlassSegmentedControl), const Offset(200, 0), 200);
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
@@ -517,12 +517,10 @@ void main() {
             builder: (ctx, idx, _) => SizedBox(
               width: 200,
               height: 56,
-              child: GlassTabBar(
-                tabs: narrowTabs,
-                selectedIndex: idx,
-                onTabSelected: (i) => sel.value = i,
-                isScrollable: true,
-              ),
+              child: GlassSegmentedControl.scrollable(
+                  segments: narrowTabs,
+                  selectedIndex: idx,
+                  onSegmentSelected: (i) => sel.value = i),
             ),
           ),
         ),
@@ -579,7 +577,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap the first tab (leftmost, may be partially scrolled off).
-      final barRect = tester.getRect(find.byType(GlassTabBar));
+      final barRect = tester.getRect(find.byType(GlassSegmentedControl));
       await tester.tapAt(Offset(barRect.left + 10, barRect.center.dy));
       await tester.pumpAndSettle();
 
@@ -602,7 +600,7 @@ void main() {
       await _pumpBar(tester,
           tabs: _tabs, selectedIndex: sel, isScrollable: true);
 
-      final barRect = tester.getRect(find.byType(GlassTabBar));
+      final barRect = tester.getRect(find.byType(GlassSegmentedControl));
       final gesture = await tester.startGesture(
         Offset(barRect.left + 50, barRect.center.dy),
       );
@@ -626,14 +624,13 @@ void main() {
             builder: (ctx, idx, _) => SizedBox(
               width: 300,
               height: 56,
-              child: GlassTabBar(
-                tabs: const [
+              child: GlassSegmentedControl.scrollable(
+                segments: const [
                   GlassTab(label: 'Left'),
                   GlassTab(label: 'Right'),
                 ],
                 selectedIndex: idx,
-                onTabSelected: (i) => sel.value = i,
-                isScrollable: true,
+                onSegmentSelected: (i) => sel.value = i,
               ),
             ),
           ),
@@ -645,7 +642,7 @@ void main() {
 
       // Drag from the rightmost tab area — indicator is at index 1, nextIndex
       // clamps to 1, making diff == 0 in the interpolation.
-      final barRect = tester.getRect(find.byType(GlassTabBar));
+      final barRect = tester.getRect(find.byType(GlassSegmentedControl));
       final gesture = await tester.startGesture(
         Offset(barRect.right - 30, barRect.center.dy),
       );

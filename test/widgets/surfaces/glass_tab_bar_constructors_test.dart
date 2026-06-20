@@ -437,23 +437,22 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: settingsWithoutLighting,
-            child: GlassTabBar(
-              tabs: const [GlassTab(label: 'X'), GlassTab(label: 'Y')],
+            child: GlassSegmentedControl(
+              segments: const [GlassTab(label: 'X'), GlassTab(label: 'Y')],
               selectedIndex: 0,
-              onTabSelected: (_) {},
+              onSegmentSelected: (_) {},
             ),
           ),
         ),
       );
       await tester.pump();
 
-      expect(find.byType(GlassTabBar), findsOneWidget);
+      expect(find.byType(GlassSegmentedControl), findsOneWidget);
       // Inline mode must NOT produce a GlassBottomBar
       expect(find.byType(GlassBottomBar), findsNothing);
     });
 
-    testWidgets('.bottom() dispatches to TabBarBottomLayout',
-        (tester) async {
+    testWidgets('.bottom() dispatches to TabBarBottomLayout', (tester) async {
       await tester.pumpWidget(_wrap(_box(
         GlassTabBar.bottom(
           tabs: [_tab('Home'), _tab('Me')],
@@ -478,8 +477,8 @@ void main() {
             tabs: [_tab('Home'), _tab('Me')],
             selectedIndex: 0,
             onTabSelected: (_) {},
-            searchConfig:
-                GlassSearchBarConfig(hintText: 'Search', onSearchToggle: (_) {}),
+            searchConfig: GlassSearchBarConfig(
+                hintText: 'Search', onSearchToggle: (_) {}),
           ),
         ),
       ));
@@ -556,12 +555,13 @@ void main() {
           child: GlassSearchableBottomBar(
             tabs: [
               GlassBottomBarTab(label: 'Home', icon: const Icon(Icons.home)),
-              GlassBottomBarTab(label: 'Browse', icon: const Icon(Icons.explore)),
+              GlassBottomBarTab(
+                  label: 'Browse', icon: const Icon(Icons.explore)),
             ],
             selectedIndex: 0,
             onTabSelected: (_) {},
-            searchConfig:
-                GlassSearchBarConfig(hintText: 'Search...', onSearchToggle: (_) {}),
+            searchConfig: GlassSearchBarConfig(
+                hintText: 'Search...', onSearchToggle: (_) {}),
           ),
         ),
       ));

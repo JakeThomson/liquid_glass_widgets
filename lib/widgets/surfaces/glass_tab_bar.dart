@@ -2,14 +2,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 
-
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../src/types/glass_interaction_behavior.dart';
 import '../../types/glass_quality.dart';
-import '../shared/adaptive_liquid_glass_layer.dart';
 import '../shared/inherited_liquid_glass.dart';
-import '../../theme/glass_theme_helpers.dart';
 import 'glass_bottom_bar.dart'
     show
         GlassBottomBar,
@@ -20,116 +17,95 @@ import 'glass_bottom_bar.dart'
 import 'glass_searchable_bottom_bar.dart' show GlassSearchableBottomBar;
 import 'shared/glass_search_bar_config.dart';
 import 'shared/tab_bar_searchable_controller.dart';
-import 'shared/tab_bar_inline_internal.dart';
 import 'shared/tab_bar_bottom_layout.dart';
 import 'shared/tab_bar_searchable_layout.dart';
 
 export 'shared/glass_search_bar_config.dart';
 
-/// A glass morphism tab bar following Apple's iOS design patterns.
+/// The iOS 26 structural navigation bar widget.
 ///
-/// [GlassTabBar] provides a horizontal tab navigation bar with glass effect,
-/// smooth animations, draggable indicator, and jelly physics. It matches iOS's
-/// modern tab bar designs with liquid glass aesthetics.
+/// [GlassTabBar] is the **bottom navigation** control. It mirrors Apple's
+/// `UITabBarController` and renders a floating glass pill at the bottom of the
+/// screen with jelly-physics indicator, `MaskingQuality` icon rendering, and
+/// optional search morphing.
 ///
-/// ## Key Features
+/// > **Inline / in-page tab bars** (e.g. "Timeline | Mentions") should use
+/// > [GlassSegmentedControl] or [GlassSegmentedControl.scrollable] instead.
+/// > Those map to `UISegmentedControl` and are not the responsibility of this
+/// > widget.
 ///
-/// - **Draggable Indicator**: Swipe between tabs with jelly physics
-/// - **Smooth Animations**: Velocity-based snapping with organic motion
-/// - **Icons + Labels**: Support for icons, labels, or both
-/// - **Sharp Text**: Text renders clearly above glass effect
-/// - **Scrollable Support**: Handles 2-20+ tabs with smooth scrolling
-/// - **iOS Style**: Faithful to Apple's iOS 26 design guidelines
+/// ## Constructors
+///
+/// | Constructor | iOS equivalent | Use-case |
+/// |---|---|---|
+/// | [GlassTabBar.bottom] | `UITabBar` | App-level bottom navigation |
+/// | [GlassTabBar.searchable] | `UITabBar` + search | Bottom nav + morphing search bar |
 ///
 /// ## Usage
 ///
-/// ### Basic Usage
+/// ### Bottom navigation bar
 /// ```dart
-/// int selectedIndex = 0;
-///
-/// GlassTabBar(
+/// GlassTabBar.bottom(
 ///   tabs: [
-///     GlassTab(label: 'Timeline'),
-///     GlassTab(label: 'Mentions'),
-///     GlassTab(label: 'Messages'),
-///   ],
-///   selectedIndex: selectedIndex,
-///   onTabSelected: (index) {
-///     setState(() => selectedIndex = index);
-///   },
-/// )
-/// ```
-///
-/// ### With Icons and Labels
-/// ```dart
-/// GlassTabBar(
-///   height: 56, // Taller for icon + label
-///   tabs: [
-///     GlassTab(icon: Icon(Icons.home), label: 'Home'),
+///     GlassTab(icon: Icon(Icons.home),   label: 'Home'),
 ///     GlassTab(icon: Icon(Icons.search), label: 'Search'),
 ///     GlassTab(icon: Icon(Icons.person), label: 'Profile'),
 ///   ],
 ///   selectedIndex: _selectedIndex,
-///   onTabSelected: (index) => setState(() => _selectedIndex = index),
+///   onTabSelected: (i) => setState(() => _selectedIndex = i),
 /// )
 /// ```
 ///
-/// ### Within LiquidGlassLayer (Grouped Mode)
+/// ### With morphing search bar
 /// ```dart
-/// AdaptiveLiquidGlassLayer(
-///   settings: LiquidGlassSettings(
-///     thickness: 0.8,
-///     blur: 12.0,
-///   ),
-///   child: Column(
-///     children: [
-///       GlassTabBar(
-///         tabs: [
-///           GlassTab(label: 'Photos'),
-///           GlassTab(label: 'Albums'),
-///           GlassTab(label: 'Search'),
-///         ],
-///         selectedIndex: _selectedIndex,
-///         onTabSelected: (index) => setState(() => _selectedIndex = index),
-///       ),
-///       Expanded(
-///         child: TabContent(index: _selectedIndex),
-///       ),
-///     ],
-///   ),
-/// )
-/// ```
-///
-/// ### Scrollable with Many Tabs
-/// ```dart
-/// GlassTabBar(
-///   isScrollable: true,
-///   tabs: List.generate(
-///     10,
-///     (i) => GlassTab(label: 'Category ${i + 1}'),
-///   ),
+/// GlassTabBar.searchable(
+///   tabs: [
+///     GlassTab(icon: Icon(Icons.home),   label: 'Home'),
+///     GlassTab(icon: Icon(Icons.search), label: 'Search'),
+///   ],
 ///   selectedIndex: _selectedIndex,
-///   onTabSelected: (index) => setState(() => _selectedIndex = index),
+///   onTabSelected: (i) => setState(() => _selectedIndex = i),
+///   searchBarConfig: GlassSearchBarConfig(hintText: 'Search...'),
+///   controller: _controller,
+/// )
+/// ```
+///
+/// ### Inline / in-page tab switching (use GlassSegmentedControl)
+/// ```dart
+/// // ✅ Correct widget for inline content switching
+/// GlassSegmentedControl(
+///   segments: const [
+///     GlassTab(label: 'Timeline'),
+///     GlassTab(label: 'Mentions'),
+///   ],
+///   selectedIndex: _selectedIndex,
+///   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
+/// )
+///
+/// // ✅ Scrollable variant for many categories
+/// GlassSegmentedControl.scrollable(
+///   segments: List.generate(10, (i) => GlassTab(label: 'Category ${i+1}')),
+///   selectedIndex: _selectedIndex,
+///   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
 /// )
 /// ```
 // ---------------------------------------------------------------------------
 // Placement discriminant — private, drives constructor dispatch
 // ---------------------------------------------------------------------------
-enum _GlassTabBarPlacement { inline, bottom, searchable }
+enum _GlassTabBarPlacement { bottom, searchable }
 
-/// The unified iOS 26 tab bar widget.
+/// The iOS 26 structural bottom navigation bar.
 ///
-/// Three named constructors mirror the three `UITabBarController` use-cases:
-///
-/// - **[GlassTabBar]** (default) — inline pill embedded in page content.
-///   Maps to Apple's in-page sub-navigation (e.g. Twitter timeline vs mentions).
+/// Two named constructors cover the two `UITabBarController` use-cases:
 ///
 /// - **[GlassTabBar.bottom]** — floating pill at the screen bottom with safe
 ///   area handling, jelly physics, and optional extra action button.
-///   Replaces [GlassBottomBar] (deprecated in v0.18.0).
+///   Replaces the deprecated [GlassBottomBar].
 ///
 /// - **[GlassTabBar.searchable]** — bottom pill that morphs into a search bar.
-///   Replaces [GlassSearchableBottomBar] (deprecated in v0.18.0).
+///   Replaces the deprecated [GlassSearchableBottomBar].
+///
+/// For in-page / inline tab switching, use [GlassSegmentedControl] instead.
 ///
 /// ## Migration from v0.17.x
 ///
@@ -145,104 +121,6 @@ enum _GlassTabBarPlacement { inline, bottom, searchable }
 ///
 /// The old widgets still work — they are zero-logic deprecation shims.
 class GlassTabBar extends StatefulWidget {
-  // ─── Default (inline) constructor ─────────────────────────────────────────
-
-  /// **Deprecated:** Use [GlassSegmentedControl] for inline segment controls.
-  ///
-  /// [GlassSegmentedControl] is the iOS 26 UISegmentedControl equivalent and
-  /// the correct replacement for this constructor. It provides the same
-  /// light-tinted container + glass pill behaviour with first-class
-  /// [GlassSegmentedControl.isScrollable] support.
-  ///
-  /// ```dart
-  /// // BEFORE
-  /// GlassTabBar(tabs: [GlassTab(label: 'A'), GlassTab(label: 'B')], ...)
-  /// // AFTER
-  /// GlassSegmentedControl(segments: [GlassTab(label: 'A'), GlassTab(label: 'B')], ...)
-  /// ```
-  @Deprecated(
-    'Use GlassSegmentedControl instead. '
-    'GlassTabBar() (default constructor) will be removed in v1.0. '
-    'Migration: replace GlassTabBar( with GlassSegmentedControl( '
-    'and rename tabs: to segments:, onTabSelected: to onSegmentSelected:.'
-  )
-  const GlassTabBar({
-    required this.tabs,
-    required this.selectedIndex,
-    required this.onTabSelected,
-    super.key,
-    this.height = 44.0,
-    this.isScrollable = false,
-    this.indicatorPadding = const EdgeInsets.all(2),
-    this.indicatorColor,
-    this.selectedLabelStyle,
-    this.unselectedLabelStyle,
-    this.selectedIconColor,
-    this.unselectedIconColor,
-    this.iconSize = 24.0,
-    this.labelPadding = const EdgeInsets.symmetric(horizontal: 16),
-    this.backgroundColor = const Color(0x00000000),
-    this.settings,
-    this.useOwnLayer = false,
-    this.quality,
-    this.borderRadius,
-    this.indicatorBorderRadius,
-    this.indicatorSettings,
-    this.indicatorPinchStrength = 0.4,
-    this.indicatorExpansion =
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    this.backgroundKey,
-    this.maskingQuality = MaskingQuality.high,
-    this.dividerSettings,
-    this.indicatorShadow,
-  })  : _placement = _GlassTabBarPlacement.inline,
-        // Bottom-only fields
-        spacing = 8,
-        horizontalPadding = 20,
-        verticalPadding = 20,
-        barHeight = 64,
-        barBorderRadius = _kDefaultBottomBorderRadius,
-        tabPadding = const EdgeInsets.symmetric(horizontal: 4),
-        iconLabelSpacing = 4,
-        enableBlend = true,
-        blendAmount = 10,
-        showIndicator = true,
-        magnification = 1.15,
-        innerBlur = 0.0,
-        glowDuration = const Duration(milliseconds: 300),
-        glowBlurRadius = 32,
-        glowSpreadRadius = 8,
-        glowOpacity = 0.6,
-        labelFontSize = 11,
-        textStyle = null,
-        tabWidth = null,
-        extraButton = null,
-        interactionBehavior = GlassInteractionBehavior.full,
-        pressScale = 1.04,
-        interactionGlowColor = null,
-        interactionGlowRadius = 1.5,
-        platformViewBackdrop = false,
-        adaptiveBrightness = false,
-        onBrightnessChanged = null,
-        brightnessOverride = null,
-        // Searchable-only fields
-        searchConfig = null,
-        controller = null,
-        isSearchActive = false,
-        searchBarHeight = 50,
-        springDescription = null,
-        tabPillAnchor = GlassTabPillAnchor.start,
-        onBarTap = null,
-        whitenAtBottom = true,
-        whitenBottomThreshold = 45.0,
-        whitenAtBottomTarget = 1.0,
-        scrollController = null,
-        assert(tabs.length >= 2, 'GlassTabBar requires at least 2 tabs'),
-        assert(
-          selectedIndex >= 0 && selectedIndex < tabs.length,
-          'selectedIndex must be within bounds of tabs list',
-        );
-
   // ─── Bottom constructor ────────────────────────────────────────────────────
 
   /// Creates a floating bottom tab bar — the iOS 26 `UITabBarController` equivalent.
@@ -480,24 +358,11 @@ class GlassTabBar extends StatefulWidget {
       required this.onTabSelected,
       required _GlassTabBarPlacement placement,
       super.key,
-      // Inline-specific
-      this.height = 44.0,
-      this.isScrollable = false,
-      this.indicatorPadding = const EdgeInsets.all(2),
-      this.backgroundColor = const Color(0x00000000),
-      this.useOwnLayer = false,
-      this.borderRadius,
-      this.indicatorBorderRadius,
-      this.dividerSettings,
-      this.indicatorShadow,
       // Shared styling
       this.indicatorColor,
-      this.selectedLabelStyle,
-      this.unselectedLabelStyle,
       this.selectedIconColor,
       this.unselectedIconColor,
       this.iconSize = 24.0,
-      this.labelPadding = const EdgeInsets.symmetric(horizontal: 16),
       this.settings,
       this.quality,
       this.indicatorSettings,
@@ -548,9 +413,7 @@ class GlassTabBar extends StatefulWidget {
       this.whitenAtBottomTarget = 1.0,
       this.scrollController})
       : _placement = placement,
-        assert(
-            tabs.length >= (placement == _GlassTabBarPlacement.inline ? 2 : 1),
-            'GlassTabBar requires at least 1 tab'),
+        assert(tabs.length >= 1, 'GlassTabBar requires at least 1 tab'),
         assert(
           selectedIndex >= 0 && selectedIndex < tabs.length,
           'selectedIndex must be within bounds of tabs list',
@@ -565,26 +428,8 @@ class GlassTabBar extends StatefulWidget {
   /// Called when a tab is selected.
   final ValueChanged<int> onTabSelected;
 
-  /// Height of the tab bar.
-  ///
-  /// Defaults to 44.0 (iOS standard).
-  /// Use 56.0 or higher when using icons + labels.
-  final double height;
-
-  /// Whether the tabs should be scrollable.
-  final bool isScrollable;
-
-  /// Padding around the indicator.
-  final EdgeInsetsGeometry indicatorPadding;
-
   /// Color of the pill indicator.
   final Color? indicatorColor;
-
-  /// Text style for selected tab label.
-  final TextStyle? selectedLabelStyle;
-
-  /// Text style for unselected tab labels.
-  final TextStyle? unselectedLabelStyle;
 
   /// Icon color for selected tab.
   final Color? selectedIconColor;
@@ -595,17 +440,8 @@ class GlassTabBar extends StatefulWidget {
   /// Size of the icons.
   final double iconSize;
 
-  /// Padding around each tab label.
-  final EdgeInsetsGeometry labelPadding;
-
-  /// Background color of the tab bar.
-  final Color backgroundColor;
-
-  /// Glass effect settings (only used when [useOwnLayer] is true).
+  /// Glass effect settings.
   final LiquidGlassSettings? settings;
-
-  /// Whether to create its own layer or use grouped glass.
-  final bool useOwnLayer;
 
   /// Rendering quality for the glass effect.
   ///
@@ -623,12 +459,6 @@ class GlassTabBar extends StatefulWidget {
   ///
   /// Mirrors the same parameter on [GlassBottomBar] for a consistent API.
   final MaskingQuality maskingQuality;
-
-  /// BorderRadius of the tab bar.
-  final BorderRadius? borderRadius;
-
-  /// BorderRadius of the sliding indicator.
-  final BorderRadius? indicatorBorderRadius;
 
   /// Glass settings for the sliding indicator.
   final LiquidGlassSettings? indicatorSettings;
@@ -654,28 +484,6 @@ class GlassTabBar extends StatefulWidget {
 
   /// Optional background key for Skia/Web refraction.
   final GlobalKey? backgroundKey;
-
-  /// Settings for the vertical dividers between segments.
-  final DividerSettings? dividerSettings;
-
-  /// Optional shadows for the active indicator pill.
-  ///
-  /// Applied only when the pill is idle (solid color) — automatically
-  /// suppressed during the liquid glass drag animation so it does not
-  /// interact with the BackdropFilter blur. Useful for improving contrast
-  /// in light-mode themes where the pill and track share similar colours.
-  ///
-  /// Example:
-  /// ```dart
-  /// indicatorShadow: [
-  ///   BoxShadow(
-  ///     color: Colors.black.withOpacity(0.12),
-  ///     blurRadius: 4,
-  ///     offset: Offset(0, 1),
-  ///   ),
-  /// ]
-  /// ```
-  final List<BoxShadow>? indicatorShadow;
 
   // ---------------------------------------------------------------------------
   // Internal placement discriminant
@@ -817,31 +625,10 @@ class GlassTabBar extends StatefulWidget {
 }
 
 class _GlassTabBarState extends State<GlassTabBar> {
-  // Cache default background color to avoid allocations
-  static const _defaultDarkBackgroundColor = Color(0x1FFFFFFF); // white12
-  static const _defaultLightBackgroundColor = Color(0x1F000000); // black12
-
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   @override
   void didUpdateWidget(GlassTabBar oldWidget) {
     super.didUpdateWidget(oldWidget);
   }
-
-  // Cache default glass settings to avoid allocations on every build
-  static const _defaultGlassSettings = LiquidGlassSettings(
-    thickness: 30,
-    blur: 3,
-    chromaticAberration: 0.5,
-    lightIntensity: 2,
-    refractiveIndex: 1.15,
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -851,8 +638,6 @@ class _GlassTabBarState extends State<GlassTabBar> {
         return _buildBottom(context);
       case _GlassTabBarPlacement.searchable:
         return _buildSearchable(context);
-      case _GlassTabBarPlacement.inline:
-        return _buildInline(context);
     }
   }
 
@@ -980,72 +765,6 @@ class _GlassTabBarState extends State<GlassTabBar> {
       brightnessOverride: widget.brightnessOverride,
     );
   }
-
-  /// Builds the original inline tab bar (default constructor).
-  Widget _buildInline(BuildContext context) {
-    // Inherit quality from parent layer if not explicitly set
-    final effectiveQuality = GlassThemeHelpers.resolveQuality(
-      context,
-      widgetQuality: widget.quality,
-    );
-
-    final effectiveSettings = widget.settings ?? _defaultGlassSettings;
-
-    final backgroundColor = widget.backgroundColor == const Color(0x00000000)
-        ? (CupertinoTheme.brightnessOf(context) == Brightness.light
-            ? _defaultLightBackgroundColor
-            : _defaultDarkBackgroundColor)
-        : widget.backgroundColor;
-
-    final borderRadius =
-        widget.borderRadius ?? BorderRadius.circular(widget.height / 2.2);
-
-    final content = Container(
-      height: widget.height,
-      // No clipBehavior: the glass indicator's 8px expansion must not be
-      // clipped. Scroll content is already clipped by SingleChildScrollView's
-      // own Clip.hardEdge viewport — the Container clip is not needed for that.
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: borderRadius,
-      ),
-      padding: widget.indicatorPadding,
-      child: TabBarContent(
-        tabs: widget.tabs,
-        selectedIndex: widget.selectedIndex,
-        onTabSelected: widget.onTabSelected,
-        isScrollable: widget.isScrollable,
-        scrollController: _scrollController,
-        indicatorColor: widget.indicatorColor,
-        selectedLabelStyle: widget.selectedLabelStyle,
-        unselectedLabelStyle: widget.unselectedLabelStyle,
-        selectedIconColor: widget.selectedIconColor,
-        unselectedIconColor: widget.unselectedIconColor,
-        iconSize: widget.iconSize,
-        labelPadding: widget.labelPadding,
-        quality: effectiveQuality,
-        indicatorBorderRadius: widget.indicatorBorderRadius,
-        indicatorSettings: widget.indicatorSettings,
-        indicatorPinchStrength: widget.indicatorPinchStrength,
-        indicatorExpansion: widget.indicatorExpansion,
-        backgroundKey: widget.backgroundKey,
-        maskingQuality: widget.maskingQuality,
-        dividerSettings: widget.dividerSettings,
-        indicatorShadow: widget.indicatorShadow,
-        tabBarBorderRadius: borderRadius,
-      ),
-    );
-
-    if (widget.useOwnLayer) {
-      return AdaptiveLiquidGlassLayer(
-        settings: effectiveSettings,
-        quality: effectiveQuality,
-        child: content,
-      );
-    }
-
-    return content;
-  }
 }
 
 // =============================================================================
@@ -1060,7 +779,6 @@ typedef GlassSegment = GlassTab;
 /// [GlassTab] (and its alias [GlassSegment]) is the single tab type across
 /// the unified API:
 /// - [GlassSegmentedControl] — use [label] and/or [icon]
-/// - [GlassTabBar] (inline) — use [icon] and/or [label]
 /// - [GlassTabBar.bottom] — use [icon], [activeIcon], [label], [glowColor]
 /// - [GlassTabBar.searchable] — same as `.bottom()`
 ///
@@ -1208,5 +926,3 @@ class DividerSettings {
     );
   }
 }
-
-

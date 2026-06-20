@@ -59,6 +59,35 @@ This matches iOS 26 UISegmentedControl which has supported `UIImage` segments si
 
 #### Scrollable mode — 100% parity with original `GlassTabBar(isScrollable: true)`
 
+---
+
+### 🚨 Removed: `GlassTabBar()` inline constructor
+
+The default `GlassTabBar()` constructor has been **removed**. `GlassTabBar` is now exclusively used for structural bottom navigation (`GlassTabBar.bottom()` and `GlassTabBar.searchable()`). 
+
+**Migration:**
+For all inline tab bars, pill menus, or scrollable tag lists, use `GlassSegmentedControl()` or `GlassSegmentedControl.scrollable()`. They provide 100% feature parity with the old inline `GlassTabBar`.
+
+```diff
+- GlassTabBar(
+-   tabs: const [
+-     GlassTab(label: 'A'),
+-     GlassTab(label: 'B'),
+-   ],
+-   selectedIndex: _selectedIndex,
+-   onTabSelected: (i) => setState(() => _selectedIndex = i),
+- )
++ GlassSegmentedControl(
++   segments: const [
++     GlassTab(label: 'A'),
++     GlassTab(label: 'B'),
++   ],
++   selectedIndex: _selectedIndex,
++   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
++ )
+```
+
+
 New `GlassSegmentedControl.scrollable()` named constructor for category filter tabs (6+ items). Internally uses the same `TabBarContent` backend as `GlassTabBar`, delivering identical spring physics, gesture handling, and 3-layer rendering.
 
 ```dart
