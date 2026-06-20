@@ -114,8 +114,9 @@ class _AdaptiveLiquidGlassLayerState extends State<AdaptiveLiquidGlassLayer> {
     final themeOverride = themeData.settingsFor(context);
     final withTheme = themeOverride?.applyTo(baseSettings) ?? baseSettings;
     final effectiveSettings = widget.settings ?? withTheme;
-    final effectiveQuality =
-        widget.quality ?? themeData.qualityFor(context) ?? GlassQuality.standard;
+    final effectiveQuality = widget.quality ??
+        themeData.qualityFor(context) ??
+        GlassQuality.standard;
 
     // ---- MINIMAL FAST-PATH --------------------------------------------------
     // GlassQuality.minimal skips LiquidGlassLayer entirely.
