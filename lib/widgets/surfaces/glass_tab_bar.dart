@@ -1052,9 +1052,14 @@ class _GlassTabBarState extends State<GlassTabBar> {
 // GlassTab — unified tab configuration type for ALL GlassTabBar constructors
 // =============================================================================
 
+/// A semantic alias for [GlassTab] when used within a [GlassSegmentedControl].
+typedef GlassSegment = GlassTab;
+
 /// Configuration for a tab in [GlassTabBar] (all constructors).
 ///
-/// [GlassTab] is the single tab type across the unified API:
+/// [GlassTab] (and its alias [GlassSegment]) is the single tab type across
+/// the unified API:
+/// - [GlassSegmentedControl] — use [label] and/or [icon]
 /// - [GlassTabBar] (inline) — use [icon] and/or [label]
 /// - [GlassTabBar.bottom] — use [icon], [activeIcon], [label], [glowColor]
 /// - [GlassTabBar.searchable] — same as `.bottom()`

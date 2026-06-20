@@ -155,6 +155,11 @@ class GlassSegmentedControl extends StatefulWidget {
           'GlassSegmentedControl requires at least 2 segments',
         ),
         assert(
+          segments.length <= 6,
+          'GlassSegmentedControl works best with 2–5 segments. '
+          'For 6+ items use GlassSegmentedControl.scrollable().',
+        ),
+        assert(
           selectedIndex >= 0 && selectedIndex < segments.length,
           'selectedIndex must be within bounds of segments list',
         );
