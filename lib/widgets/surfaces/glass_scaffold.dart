@@ -482,16 +482,23 @@ class GlassScaffold extends StatelessWidget {
         ),
 
       // 3. Bottom bar (above body — painted after body in Stack).
+      // SafeArea ensures the bar is never obscured by the Android system
+      // navigation bar or the iOS home indicator on any device.
       if (bottomBar != null)
         Positioned(
           key: const ValueKey('glass_scaffold_bottom_bar'),
           left: 0,
           right: 0,
           bottom: 0,
-          child: GlassIsolationScope(
-            isolated: true,
-            defaultQuality: GlassQuality.premium,
-            child: bottomBar!,
+          child: SafeArea(
+            top: false,
+            left: false,
+            right: false,
+            child: GlassIsolationScope(
+              isolated: true,
+              defaultQuality: GlassQuality.premium,
+              child: bottomBar!,
+            ),
           ),
         ),
     ];
