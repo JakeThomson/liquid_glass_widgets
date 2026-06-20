@@ -75,8 +75,8 @@ export 'shared/glass_search_bar_config.dart';
 /// // ✅ Correct widget for inline content switching
 /// GlassSegmentedControl(
 ///   segments: const [
-///     GlassTab(label: 'Timeline'),
-///     GlassTab(label: 'Mentions'),
+///     GlassSegment(label: 'Timeline'),
+///     GlassSegment(label: 'Mentions'),
 ///   ],
 ///   selectedIndex: _selectedIndex,
 ///   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
@@ -84,7 +84,7 @@ export 'shared/glass_search_bar_config.dart';
 ///
 /// // ✅ Scrollable variant for many categories
 /// GlassSegmentedControl.scrollable(
-///   segments: List.generate(10, (i) => GlassTab(label: 'Category ${i+1}')),
+///   segments: List.generate(10, (i) => GlassSegment(label: 'Category ${i+1}')),
 ///   selectedIndex: _selectedIndex,
 ///   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
 /// )

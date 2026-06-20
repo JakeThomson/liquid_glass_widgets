@@ -79,8 +79,8 @@ For all inline tab bars, pill menus, or scrollable tag lists, use `GlassSegmente
 - )
 + GlassSegmentedControl(
 +   segments: const [
-+     GlassTab(label: 'A'),
-+     GlassTab(label: 'B'),
++     GlassSegment(label: 'A'),
++     GlassSegment(label: 'B'),
 +   ],
 +   selectedIndex: _selectedIndex,
 +   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
@@ -93,10 +93,10 @@ New `GlassSegmentedControl.scrollable()` named constructor for category filter t
 ```dart
 // Fixed (UISegmentedControl — equal width, 2–6 items)
 GlassSegmentedControl(
-  segments: [
-    GlassTab(label: 'All'),
-    GlassTab(icon: Icon(Icons.photo), label: 'Photos'),
-    GlassTab(label: 'Videos'),
+  segments: const [
+    GlassSegment(label: 'All'),
+    GlassSegment(icon: Icon(Icons.photo), label: 'Photos'),
+    GlassSegment(label: 'Videos'),
   ],
   selectedIndex: _selectedIndex,
   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
@@ -104,7 +104,7 @@ GlassSegmentedControl(
 
 // Scrollable (category filter tabs — natural width, 7+ items)
 GlassSegmentedControl.scrollable(
-  segments: List.generate(12, (i) => GlassTab(label: 'Category ${i + 1}')),
+  segments: List.generate(12, (i) => GlassSegment(label: 'Category ${i + 1}')),
   selectedIndex: _selectedIndex,
   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
 )

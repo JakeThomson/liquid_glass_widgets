@@ -44,7 +44,11 @@ import 'shared/segmented_control_internal.dart';
 /// int selectedIndex = 0;
 ///
 /// GlassSegmentedControl(
-///   segments: ['Daily', 'Weekly', 'Monthly'],
+///   segments: const [
+///     GlassSegment(label: 'Daily'),
+///     GlassSegment(label: 'Weekly'),
+///     GlassSegment(label: 'Monthly'),
+///   ],
 ///   selectedIndex: selectedIndex,
 ///   onSegmentSelected: (index) {
 ///     setState(() => selectedIndex = index);
@@ -63,7 +67,11 @@ import 'shared/segmented_control_internal.dart';
 ///   child: Column(
 ///     children: [
 ///       GlassSegmentedControl(
-///         segments: ['One', 'Two', 'Three'],
+///         segments: const [
+///           GlassSegment(label: 'One'),
+///           GlassSegment(label: 'Two'),
+///           GlassSegment(label: 'Three'),
+///         ],
 ///         selectedIndex: _selectedIndex,
 ///         onSegmentSelected: (index) {
 ///           setState(() => _selectedIndex = index);
@@ -77,7 +85,10 @@ import 'shared/segmented_control_internal.dart';
 /// ### Standalone Mode
 /// ```dart
 /// GlassSegmentedControl(
-///   segments: ['Option A', 'Option B'],
+///   segments: const [
+///     GlassSegment(label: 'Option A'),
+///     GlassSegment(label: 'Option B'),
+///   ],
 ///   selectedIndex: _selectedIndex,
 ///   onSegmentSelected: (index) {
 ///     setState(() => _selectedIndex = index);
@@ -90,14 +101,32 @@ import 'shared/segmented_control_internal.dart';
 /// )
 /// ```
 ///
+/// ### Icons and labels
+/// ```dart
+/// GlassSegmentedControl(
+///   segments: const [
+///     GlassSegment(icon: Icon(Icons.photo),     label: 'Photos'),
+///     GlassSegment(icon: Icon(Icons.videocam),  label: 'Videos'),
+///     GlassSegment(icon: Icon(Icons.music_note),label: 'Music'),
+///   ],
+///   selectedIndex: _selectedIndex,
+///   onSegmentSelected: (index) =>
+///       setState(() => _selectedIndex = index),
+///   height: 56,
+/// )
+/// ```
+///
 /// ### Custom Styling
 /// ```dart
 /// GlassSegmentedControl(
-///   segments: ['Small', 'Medium', 'Large'],
+///   segments: const [
+///     GlassSegment(label: 'Small'),
+///     GlassSegment(label: 'Medium'),
+///     GlassSegment(label: 'Large'),
+///   ],
 ///   selectedIndex: _selectedIndex,
-///   onSegmentSelected: (index) {
-///     setState(() => _selectedIndex = index);
-///   },
+///   onSegmentSelected: (index) =>
+///       setState(() => _selectedIndex = index),
 ///   height: 36,
 ///   borderRadius: 18,
 ///   selectedTextStyle: TextStyle(
@@ -173,11 +202,11 @@ class GlassSegmentedControl extends StatefulWidget {
   /// ```dart
   /// GlassSegmentedControl.scrollable(
   ///   segments: [
-  ///     GlassTab(label: 'All'),
-  ///     GlassTab(label: 'Photos', icon: Icon(Icons.photo)),
-  ///     GlassTab(label: 'Videos'),
-  ///     GlassTab(label: 'Music'),
-  ///     GlassTab(label: 'Files'),
+  ///     GlassSegment(label: 'All'),
+  ///     GlassSegment(label: 'Photos', icon: Icon(Icons.photo)),
+  ///     GlassSegment(label: 'Videos'),
+  ///     GlassSegment(label: 'Music'),
+  ///     GlassSegment(label: 'Files'),
   ///   ],
   ///   selectedIndex: _selectedIndex,
   ///   onSegmentSelected: (i) => setState(() => _selectedIndex = i),
