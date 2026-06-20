@@ -6,6 +6,12 @@ This release consolidates the widget API to map 1:1 with Apple's iOS 26 control 
 
 ---
 
+### ⚠️ Breaking Change: Android Bottom Bar Padding
+
+`GlassScaffold` now automatically manages the Android system navigation bar padding for `bottomBar`. If you previously added manual `Padding` or `SafeArea` around your bottom bar to prevent it from slipping behind the Android navigation buttons, please remove it to avoid double-padding.
+
+---
+
 ### New: `GlassTabBar.bottom()` — iOS 26 UITabBar equivalent
 
 Named constructor for bottom navigation bars. Full liquid glass layer, jelly physics pill indicator, `MaskingQuality` dual-layer icon rendering, and optional `dividerSettings`.

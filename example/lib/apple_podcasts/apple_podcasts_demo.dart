@@ -396,34 +396,32 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
       ],
 
       // ── Bottom navigation bar ──────────────────────────────────────────────
-      bottomBar: Padding(
-        padding: EdgeInsets.only(bottom: bottomOffset),
-        child: GlassTabBar.searchable(
-          isSearchActive: _isMiniMode || _isSearching,
-          selectedIndex: _selectedTab,
-          onTabSelected: (index) {
-            if (index == _selectedTab && _isMiniMode) {
-              _dismissMiniMode();
-            } else {
-              setState(() {
-                _selectedTab = index;
-                _isSearching = false;
-              });
-            }
-          },
-          barHeight: _kBarH,
-          searchBarHeight: 50.0,
-          horizontalPadding: _kPaddingH,
-          verticalPadding: _kPaddingV,
-          spacing: _kSpacing,
-          selectedIconColor: _kPodcastsPurple,
-          unselectedIconColor: CupertinoColors.label.resolveFrom(context),
-          indicatorColor: CupertinoColors.tertiaryLabel.resolveFrom(context),
-          labelFontSize: 10,
-          iconSize: 28,
-          iconLabelSpacing: 0,
-          quality: GlassQuality.premium,
-          interactionBehavior: GlassInteractionBehavior.full,
+      bottomBar: GlassTabBar.searchable(
+        isSearchActive: _isMiniMode || _isSearching,
+        selectedIndex: _selectedTab,
+        onTabSelected: (index) {
+          if (index == _selectedTab && _isMiniMode) {
+            _dismissMiniMode();
+          } else {
+            setState(() {
+              _selectedTab = index;
+              _isSearching = false;
+            });
+          }
+        },
+        barHeight: _kBarH,
+        searchBarHeight: 50.0,
+        horizontalPadding: _kPaddingH,
+        verticalPadding: _kPaddingV,
+        spacing: _kSpacing,
+        selectedIconColor: _kPodcastsPurple,
+        unselectedIconColor: CupertinoColors.label.resolveFrom(context),
+        indicatorColor: CupertinoColors.tertiaryLabel.resolveFrom(context),
+        labelFontSize: 10,
+        iconSize: 28,
+        iconLabelSpacing: 0,
+        quality: GlassQuality.premium,
+        interactionBehavior: GlassInteractionBehavior.full,
           settings: LiquidGlassSettings(
             glassColor: CupertinoTheme.brightnessOf(context) == Brightness.dark
                 ? const Color.fromRGBO(28, 28, 30, 0.8)
@@ -496,7 +494,6 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
                 activeIcon: Icon(CupertinoIcons.square_stack_3d_up_fill)),
           ],
         ),
-      ),
     );
   }
 

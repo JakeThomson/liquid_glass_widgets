@@ -333,44 +333,42 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
       ],
 
       // ── Bottom navigation bar ──────────────────────────────────────────────
-      bottomBar: Padding(
-        padding: EdgeInsets.only(bottom: bottomOffset),
-        child: GlassTabBar.searchable(
-          isSearchActive: _isMiniMode || _isSearching,
-          selectedIndex: _selectedTab,
-          onTabSelected: (index) {
-            if (index == _selectedTab && _isMiniMode) {
-              _dismissMiniMode();
-            } else {
-              final ctrl = switch (index) {
-                1 => _radioScrollController,
-                2 => _libraryScrollController,
-                _ => _scrollController,
-              };
-              final newMini = ctrl.hasClients && ctrl.offset > 50;
-              setState(() {
-                _selectedTab = index;
-                _isSearching = false;
-                _isMiniMode = newMini;
-              });
-            }
-          },
-          barHeight: _kBarH,
-          searchBarHeight: 50.0,
-          horizontalPadding: _kPaddingH,
-          verticalPadding: _kPaddingV,
-          spacing: _kSpacing,
-          selectedIconColor: _kMusicRed,
-          unselectedIconColor:
-              CupertinoColors.label.resolveFrom(context).withValues(alpha: 0.9),
-          indicatorColor: CupertinoColors.label
-              .resolveFrom(context)
-              .withValues(alpha: 0.20),
-          labelFontSize: 10,
-          iconSize: 28,
-          iconLabelSpacing: 0,
-          quality: GlassQuality.premium,
-          interactionBehavior: GlassInteractionBehavior.full,
+      bottomBar: GlassTabBar.searchable(
+        isSearchActive: _isMiniMode || _isSearching,
+        selectedIndex: _selectedTab,
+        onTabSelected: (index) {
+          if (index == _selectedTab && _isMiniMode) {
+            _dismissMiniMode();
+          } else {
+            final ctrl = switch (index) {
+              1 => _radioScrollController,
+              2 => _libraryScrollController,
+              _ => _scrollController,
+            };
+            final newMini = ctrl.hasClients && ctrl.offset > 50;
+            setState(() {
+              _selectedTab = index;
+              _isSearching = false;
+              _isMiniMode = newMini;
+            });
+          }
+        },
+        barHeight: _kBarH,
+        searchBarHeight: 50.0,
+        horizontalPadding: _kPaddingH,
+        verticalPadding: _kPaddingV,
+        spacing: _kSpacing,
+        selectedIconColor: _kMusicRed,
+        unselectedIconColor:
+            CupertinoColors.label.resolveFrom(context).withValues(alpha: 0.9),
+        indicatorColor: CupertinoColors.label
+            .resolveFrom(context)
+            .withValues(alpha: 0.20),
+        labelFontSize: 10,
+        iconSize: 28,
+        iconLabelSpacing: 0,
+        quality: GlassQuality.premium,
+        interactionBehavior: GlassInteractionBehavior.full,
           settings: _barGlassSettings,
           searchConfig: GlassSearchBarConfig(
             focusNode: _searchFocusNode,
@@ -412,7 +410,6 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
           ),
           tabs: _kTabs,
         ),
-      ),
     );
   }
 
