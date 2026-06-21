@@ -1,9 +1,9 @@
 // ignore_for_file: require_trailing_commas
-// Tests for tab_bar_internal.dart (TabBarContent) and
+// Tests for scrollable_segment_content.dart (ScrollableSegmentContent) and
 // bottom_bar_internal.dart (GlassBottomBarClipper.shouldReclip).
 //
 // Coverage targets:
-//   tab_bar_internal.dart:
+//   scrollable_segment_content.dart:
 //     - lines 337-348: selectedIndex change in scrollable mode (indicator update)
 //     - line 127:      _measureTabs postFrameCallback re-schedule
 //     - lines 534-546: scrollable mode indicator skip when not measured + exact-width path

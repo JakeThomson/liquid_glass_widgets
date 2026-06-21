@@ -8,7 +8,7 @@ import '../../types/glass_quality.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../surfaces/glass_bottom_bar.dart' show MaskingQuality;
 import '../surfaces/glass_tab_bar.dart' show DividerSettings, GlassTab;
-import '../surfaces/shared/tab_bar_inline_internal.dart';
+import 'shared/scrollable_segment_content.dart';
 import 'shared/segmented_control_internal.dart';
 
 /// A glass morphism segmented control following Apple's design patterns.
@@ -267,7 +267,7 @@ class GlassSegmentedControl extends StatefulWidget {
   /// Whether this control scrolls horizontally.
   ///
   /// When `false` (default), uses equal-width segments with [SegmentedControlContent].
-  /// When `true`, uses [TabBarContent] with natural widths — identical to
+  /// When `true`, uses [ScrollableSegmentContent] with natural widths — identical to
   /// [GlassTabBar]`(isScrollable: true)` from the original API.
   final bool isScrollable;
 
@@ -501,7 +501,7 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
         // SingleChildScrollView's own Clip.hardEdge clips scroll content.
         decoration: BoxDecoration(color: bg, borderRadius: borderRadius),
         padding: widget.padding,
-        child: TabBarContent(
+        child: ScrollableSegmentContent(
           tabs: widget.segments,
           selectedIndex: widget.selectedIndex,
           onTabSelected: widget.onSegmentSelected,

@@ -1,4 +1,4 @@
-// Shared internal widgets for GlassTabBar.
+// Shared internal widget for GlassSegmentedControl — scrollable mode.
 //
 // NOT part of the public API — do not export from liquid_glass_widgets.dart.
 library;
@@ -11,21 +11,21 @@ import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
 import '../../../utils/glass_spring.dart';
 import '../../shared/animated_glass_indicator.dart';
-import '../glass_bottom_bar.dart' show MaskingQuality;
-import '../glass_tab_bar.dart' show GlassTab, DividerSettings;
+import '../../surfaces/glass_bottom_bar.dart' show MaskingQuality;
+import '../../surfaces/glass_tab_bar.dart' show GlassTab, DividerSettings;
 
 // =============================================================================
-// TabBarContent — draggable indicator + tab layout
+// ScrollableSegmentContent — draggable indicator + segment layout
 // =============================================================================
 
-/// Internal stateful widget managing the draggable pill indicator and tab
-/// items for [GlassTabBar].
+/// Internal stateful widget managing the scrollable pill indicator and segment
+/// items for [GlassSegmentedControl.scrollable].
 ///
-/// Extracted from [GlassTabBar] to keep the public widget focused on
+/// Extracted from [GlassSegmentedControl] to keep the public widget focused on
 /// configuration and glass-layer wrapping, while this widget owns all gesture,
-/// spring, and rendering logic.
-class TabBarContent extends StatefulWidget {
-  const TabBarContent({
+/// spring, and rendering logic for the scrollable layout mode.
+class ScrollableSegmentContent extends StatefulWidget {
+  const ScrollableSegmentContent({
     required this.tabs,
     required this.selectedIndex,
     required this.onTabSelected,
@@ -87,12 +87,12 @@ class TabBarContent extends StatefulWidget {
   final BorderRadius? tabBarBorderRadius;
 
   @override
-  State<TabBarContent> createState() => TabBarContentState();
+  State<ScrollableSegmentContent> createState() => ScrollableSegmentContentState();
 }
 
-/// State for [TabBarContent]. Public for testing via `@visibleForTesting`.
+/// State for [ScrollableSegmentContent]. Public for testing via `@visibleForTesting`.
 @visibleForTesting
-class TabBarContentState extends State<TabBarContent>
+class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     with TickerProviderStateMixin {
   // Cache default indicator color to avoid allocations
   static const _defaultIndicatorColor =
@@ -216,7 +216,7 @@ class TabBarContentState extends State<TabBarContent>
   }
 
   @override
-  void didUpdateWidget(TabBarContent oldWidget) {
+  void didUpdateWidget(ScrollableSegmentContent oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     // Handle scrollController swap (e.g., parent provides a new controller).

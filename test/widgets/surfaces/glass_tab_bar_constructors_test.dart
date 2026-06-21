@@ -429,9 +429,9 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('GlassTabBar placement dispatch', () {
-    testWidgets('default constructor (_inline) dispatches to TabBarContent',
+    testWidgets('scrollable constructor dispatches to ScrollableSegmentContent',
         (tester) async {
-      // The inline build path uses TabBarContent internally (visible via
+      // The scrollable build path uses ScrollableSegmentContent internally (visible via
       // finding Container at the root of the bar).
       await tester.pumpWidget(
         createTestApp(

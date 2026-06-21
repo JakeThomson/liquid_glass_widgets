@@ -88,7 +88,7 @@ For all inline tab bars, pill menus, or scrollable tag lists, use `GlassSegmente
 ```
 
 
-New `GlassSegmentedControl.scrollable()` named constructor for category filter tabs (6+ items). Internally uses the same `TabBarContent` backend as `GlassTabBar`, delivering identical spring physics, gesture handling, and 3-layer rendering.
+New `GlassSegmentedControl.scrollable()` named constructor for category filter tabs (6+ items). Internally uses `ScrollableSegmentContent` — a dedicated widget that owns scrollable pill physics, gesture handling, and 3-layer rendering. Structurally identical to the old inline `GlassTabBar(isScrollable: true)`, now correctly located in the interactive widget family.
 
 ```dart
 // Fixed (UISegmentedControl — equal width, 2–6 items)
@@ -118,9 +118,10 @@ All tab-bar layout logic now lives in dedicated layout files:
 
 | File | Owns |
 |---|---|
-| `shared/tab_bar_inline_internal.dart` | `TabBarContent` — shared pill + gesture engine |
-| `shared/tab_bar_bottom_layout.dart` | `TabBarBottomLayout` — full glass bottom shell |
-| `shared/tab_bar_searchable_layout.dart` | `TabBarSearchableLayout` — search morph shell |
+| `interactive/shared/scrollable_segment_content.dart` | `ScrollableSegmentContent` — scrollable pill + gesture engine (used by `GlassSegmentedControl.scrollable`) |
+| `interactive/shared/segmented_control_internal.dart` | `SegmentedControlContent` — fixed-width pill + gesture engine (used by `GlassSegmentedControl`) |
+| `surfaces/shared/tab_bar_bottom_layout.dart` | `TabBarBottomLayout` — full glass bottom shell |
+| `surfaces/shared/tab_bar_searchable_layout.dart` | `TabBarSearchableLayout` — search morph shell |
 
 `GlassTabBar` dispatches to these shells. `GlassBottomBar` and `GlassSearchableBottomBar` are now zero-logic shims that delegate to the same shells.
 
