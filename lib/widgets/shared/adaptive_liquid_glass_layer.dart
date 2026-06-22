@@ -171,7 +171,7 @@ class _AdaptiveLiquidGlassLayerState extends State<AdaptiveLiquidGlassLayer> {
       child: LiquidGlassLayer(
         settings: effectiveSettings,
         shadows: resolvedShadows,
-        clipExpansion: clipExpansion,
+        clipExpansion: widget.clipExpansion,
         child: GlassIsolationScope(
           isolated: false,
           child: InheritedLiquidGlass(
