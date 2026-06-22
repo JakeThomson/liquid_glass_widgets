@@ -97,7 +97,6 @@ vec4 textureBilinear(sampler2D tex, vec2 uv, vec2 size, vec2 invSize) {
     return mix(cTop, cBot, f.y);
 }
 
-
 void main() {
     // Unpacked here rather than at global scope: global non-constant initialisers
     // (e.g. float x = uniform.y) are valid in desktop GLSL 4.6 but rejected by

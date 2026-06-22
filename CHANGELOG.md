@@ -1,3 +1,10 @@
+# 0.18.2
+
+- **Fix:** Eliminated jagged/pixelated stair-step artifacts on `AnimatedGlassIndicator` pill edges when `indicatorPinchStrength > 0`.
+  The root cause was a known Flutter/Impeller engine limitation: `BackdropFilterLayer` implicit samplers are bound to `FragmentShader` as Nearest-Neighbor with no Dart API to override it (Flutter Issue #139887). The continuous sub-pixel UV shifts from the lens pinch and chromatic aberration were snapping to integer texels, producing blocky rainbow fringes on high-contrast backgrounds.
+  **Resolution:** Added a `textureBilinear` helper to `liquid_glass_final_render.frag` that performs a standard 4-texel bilinear interpolation in GLSL, restoring perfectly smooth sub-pixel background sampling. The geometry texture (`uGeometryTexture`) is intentionally excluded as its pixel-aligned SDF data must not be softened.
+- **Chore:** Removed dead code from `render.glsl` (`computeY`, `getHeight`, `calculateLighting`, `calculateRefraction`, `renderLiquidGlass`, `debugNormals`) — functions superseded by the inline logic in `liquid_glass_final_render.frag`. Reduces compiled shader binary size.
+
 # 0.18.1
 
 - **Hotfix:** Resolved missing coverage in layout engines and segmented controls.
