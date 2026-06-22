@@ -61,6 +61,43 @@ uniform sampler2D uGeometryTexture;
 
 layout(location = 0) out vec4 fragColor;
 
+// ── Manual Bilinear Filtering ─────────────────────────────────────────────
+// Impeller's implicit BackdropFilterLayer sampler is bound to the
+// FragmentShader as Nearest-Neighbor (no Dart API exists to change it —
+// tracked as Flutter Issue #139887). On-screen bilinear is lost, which means
+// continuous sub-pixel UV shifts (pinch lens, refraction) snap to integer
+// texels and produce stair-step aliasing on high-contrast background edges.
+//
+// This function replaces all uBackgroundTexture lookups with 4 Nearest-Neighbor
+// fetches and a standard bilinear mix, restoring perfectly smooth sub-pixel
+// sampling at the cost of 3 additional cache-hot reads per invocation.
+//
+// NOTE: uGeometryTexture is intentionally excluded — it is a pre-rasterized
+// SDF picture whose texels are pixel-aligned by construction. Bilinear
+// filtering it would soften the SDF alpha channel and degrade anti-aliasing.
+//
+// Windows/SkSL: texture() with literal-computed UVs is legal in glslang
+// SPIR-V path; floor(), fract(), and vec2 arithmetic are all universally
+// supported. This function introduces no new platform compatibility issues.
+vec4 textureBilinear(sampler2D tex, vec2 uv, vec2 size, vec2 invSize) {
+    vec2 px = uv * size - 0.5;
+    vec2 f = fract(px);
+    vec2 p0 = floor(px);
+    vec2 p1 = p0 + vec2(1.0, 0.0);
+    vec2 p2 = p0 + vec2(0.0, 1.0);
+    vec2 p3 = p0 + vec2(1.0, 1.0);
+
+    vec4 c0 = texture(tex, (p0 + 0.5) * invSize);
+    vec4 c1 = texture(tex, (p1 + 0.5) * invSize);
+    vec4 c2 = texture(tex, (p2 + 0.5) * invSize);
+    vec4 c3 = texture(tex, (p3 + 0.5) * invSize);
+
+    vec4 cTop = mix(c0, c1, f.x);
+    vec4 cBot = mix(c2, c3, f.x);
+    return mix(cTop, cBot, f.y);
+}
+
+
 void main() {
     // Unpacked here rather than at global scope: global non-constant initialisers
     // (e.g. float x = uniform.y) are valid in desktop GLSL 4.6 but rejected by
@@ -230,10 +267,10 @@ void main() {
     if (dot(normalXY, normalXY) < 1e-4) {
         // Flat interior — surface is pointing straight at the camera.
         // Displacement is mathematically zero; sample the background directly.
-        refractColor = texture(uBackgroundTexture, screenUV);
+        refractColor = textureBilinear(uBackgroundTexture, screenUV, uSize, invTexSize);
     } else if (uChromaticAberration < 0.01) {
         vec2 refractedUV = screenUV + displacement * invTexSize;
-        refractColor = texture(uBackgroundTexture, refractedUV);
+        refractColor = textureBilinear(uBackgroundTexture, refractedUV, uSize, invTexSize);
     } else {
         float dispersionStrength = uChromaticAberration * 0.5;
         vec2 redOffset  = displacement * (1.0 + dispersionStrength);
@@ -243,9 +280,9 @@ void main() {
         vec2 greenUV = screenUV + displacement * invTexSize;
         vec2 blueUV  = screenUV + blueOffset  * invTexSize;
 
-        float red         = texture(uBackgroundTexture, redUV).r;
-        vec4  greenSample = texture(uBackgroundTexture, greenUV);
-        float blue        = texture(uBackgroundTexture, blueUV).b;
+        float red         = textureBilinear(uBackgroundTexture, redUV, uSize, invTexSize).r;
+        vec4  greenSample = textureBilinear(uBackgroundTexture, greenUV, uSize, invTexSize);
+        float blue        = textureBilinear(uBackgroundTexture, blueUV, uSize, invTexSize).b;
 
         refractColor = vec4(red, greenSample.g, blue, greenSample.a);
     }
