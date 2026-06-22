@@ -1,3 +1,15 @@
+# Unreleased
+
+## ✨ Per-state label text style on bottom bars — `selectedLabelStyle` / `unselectedLabelStyle`
+
+Adds `selectedLabelStyle` / `unselectedLabelStyle` (`TextStyle?`) to `GlassTabBar.bottom`, `GlassTabBar.searchable`, and the deprecated `GlassBottomBar` / `GlassSearchableBottomBar`.
+
+This complements the `selectedLabelColor` / `unselectedLabelColor` parameters by letting callers set the selected/unselected label's **font family, weight, and letter-spacing per state** — needed to match Apple's tab bar, where the selected label is heavier than a single shared `textStyle` can express.
+
+The per-state style is **merged over** the base label style, so it overrides only the fields it sets and keeps the resolved per-state label color unless the style provides its own. Both default to `null` → existing behavior unchanged.
+
+---
+
 # 0.18.1
 
 - **Hotfix:** Resolved missing coverage in layout engines and segmented controls.

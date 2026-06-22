@@ -123,6 +123,8 @@ class BottomBarTabItem extends StatelessWidget {
     required this.unselectedIconColor,
     this.selectedLabelColor,
     this.unselectedLabelColor,
+    this.selectedLabelStyle,
+    this.unselectedLabelStyle,
     required this.iconSize,
     required this.textStyle,
     required this.labelFontSize,
@@ -141,6 +143,14 @@ class BottomBarTabItem extends StatelessWidget {
   final Color unselectedIconColor;
   final Color? selectedLabelColor;
   final Color? unselectedLabelColor;
+
+  /// Per-state label text style. Merged over the base label style, so it can
+  /// override font family / weight / letter-spacing while keeping the resolved
+  /// [selectedLabelColor] / [unselectedLabelColor] (unless the style sets its
+  /// own color). Null leaves the existing behavior unchanged.
+  final TextStyle? selectedLabelStyle;
+  final TextStyle? unselectedLabelStyle;
+
   final double iconSize;
   final TextStyle? textStyle;
 
@@ -166,6 +176,22 @@ class BottomBarTabItem extends StatelessWidget {
         ? (selectedLabelColor ?? selectedIconColor)
         : (unselectedLabelColor ?? unselectedIconColor);
     final iconWidget = selected ? (tab.activeIcon ?? tab.icon) : tab.icon;
+
+    // Base label style (custom [textStyle] or the built-in default), then merge
+    // the per-state [selectedLabelStyle]/[unselectedLabelStyle] over it — so a
+    // caller can set a heavier/different selected font without losing the
+    // resolved per-state label color.
+    final baseLabelStyle = textStyle ??
+        TextStyle(
+          color: labelColor,
+          fontSize: labelFontSize,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+        );
+    final stateLabelStyle =
+        selected ? selectedLabelStyle : unselectedLabelStyle;
+    final resolvedLabelStyle = stateLabelStyle != null
+        ? baseLabelStyle.merge(stateLabelStyle)
+        : baseLabelStyle;
 
     return GestureDetector(
       // onTap may be null when selection is owned by the outer TabIndicator
@@ -255,13 +281,7 @@ class BottomBarTabItem extends StatelessWidget {
                     maxLines: 1,
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
-                    style: textStyle ??
-                        TextStyle(
-                          color: labelColor,
-                          fontSize: labelFontSize,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                        ),
+                    style: resolvedLabelStyle,
                   ),
               ],
             ),
