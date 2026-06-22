@@ -103,6 +103,34 @@ void main() {
       expect(find.text('Profile'), findsWidgets);
     });
 
+    testWidgets('per-state selectedLabelStyle / unselectedLabelStyle merge over base',
+        (tester) async {
+      // Exercises BottomBarTabItem's per-state label-style merge: the selected
+      // tab merges selectedLabelStyle (and unselected tabs unselectedLabelStyle)
+      // over the base label style.
+      await tester.pumpWidget(_wrap(_box(
+        GlassTabBar.bottom(
+          tabs: [_tab('Home'), _tab('Profile')],
+          selectedIndex: 0,
+          onTabSelected: (_) {},
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.4,
+          ),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      )));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // The selected label resolves to the merged weight from selectedLabelStyle.
+      final homeLabels = tester.widgetList<Text>(find.text('Home'));
+      expect(
+        homeLabels.any((t) => t.style?.fontWeight == FontWeight.w900),
+        isTrue,
+      );
+    });
+
     testWidgets('renders with 3 tabs without crashing', (tester) async {
       await tester.pumpWidget(_wrap(_box(
         GlassTabBar.bottom(
