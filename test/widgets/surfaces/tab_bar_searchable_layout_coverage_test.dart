@@ -8,7 +8,6 @@ void main() {
         (tester) async {
       final searchCtrl = SearchableBottomBarController();
       int selectedIndex = 0;
-      bool focusChangedFired = false;
       bool cancelTapped = false;
 
       await tester.pumpWidget(
@@ -29,8 +28,7 @@ void main() {
                     searchConfig: GlassSearchBarConfig(
                       showsCancelButton: true,
                       onSearchToggle: (_) {},
-                      onSearchFocusChanged: (focused) =>
-                          focusChangedFired = focused,
+                      onSearchFocusChanged: (_) {},
                       onCancelTap: () => cancelTapped = true,
                       cancelIcon: const Icon(Icons.close),
                     ),

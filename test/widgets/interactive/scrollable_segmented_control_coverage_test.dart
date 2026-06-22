@@ -50,7 +50,7 @@ void main() {
       expect(selectedIndex, 0);
 
       // Test programmatic scroll to right edge
-      final state = tester.state(find.byType(GlassSegmentedControl));
+      expect(tester.state(find.byType(GlassSegmentedControl)), isNotNull);
       // Try to exercise any hidden state properties if we needed
     });
   });
