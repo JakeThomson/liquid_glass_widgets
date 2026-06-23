@@ -103,7 +103,8 @@ void main() {
       expect(find.byType(GlassBottomBar), findsOneWidget);
     });
 
-    testWidgets('GlassContainer(platformViewBackdrop) forwards to AdaptiveGlass',
+    testWidgets(
+        'GlassContainer(platformViewBackdrop) forwards to AdaptiveGlass',
         (tester) async {
       // The flag threads GlassContainer → AdaptiveGlass, forcing the
       // BackdropFilter fallback path even at premium quality.

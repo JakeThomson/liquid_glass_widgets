@@ -37,6 +37,12 @@ The automatic behavior is unchanged. `applyGlassColor` still picks luminosity-pr
 
 **Breaking, but inert:** code that passed `LiquidGlassSettings(tintBlend: …)` must drop the argument. No rendered output changes.
 
+## 🔧 Raised minimum SDK constraints — Flutter ≥ 3.24.0, Dart ≥ 3.5.0
+
+The `filterQuality` parameter on `FragmentShader.setImageSampler()` (used for the 0.18.2 anti-aliasing fixes) was introduced in Flutter 3.24.0. The previous lower bound (`flutter: ">=3.10.0"`) allowed older toolchains to resolve the package but fail to compile it.
+
+**Flutter 3.32+ recommended** for best Impeller rendering quality — shader APIs improve significantly across releases.
+
 ---
 
 # 0.18.2
