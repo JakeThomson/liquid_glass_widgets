@@ -28,6 +28,7 @@ precision highp float; // mediump causes colour banding (10-bit mantissa on mobi
 // Slots 16-17: uLightDirection
 // Slot 18: uWhiten
 // Slot 19: uWhitenGated
+// Slot 20: uPinchStrength
 uniform vec2 uSize;          // physical-pixel size of the backdrop capture
 uniform vec2 uGeometryOffset;
 uniform vec2 uGeometrySize;

@@ -30,6 +30,9 @@
   Two compounding causes: (1) the background texture was previously captured at `pixelRatio: 1.0`, so each texel covered a 3×3 block of physical pixels on a 3× Retina display; (2) Impeller's `setImageSampler()` binding defaults to Nearest-Neighbor, snapping continuous UV offsets from edge refraction to these large texels.
   **Resolution:** Background capture now uses the device's full DPR. A `textureBilinear` GLSL helper replaces all raw `texture()` calls in `interactive_indicator.frag`. ~250 KB additional GPU texture memory; sub-0.1 ms additional GPU time per frame — negligible on any modern device.
 
+- **Fix:** Resolved intermittent Metal API Validation abort on iOS (`GlassQuality.premium`) — missing buffer bindings for `uWhiten`, `uWhitenGated`, and `uPinchStrength` ([#121](https://github.com/sdegenaar/liquid_glass_widgets/issues/121)).
+  All shader uniforms (slots 0–20) are now written atomically on every paint frame, preventing a stale or zero-initialised `FragmentShader` snapshot from reaching the Metal draw call. Affected: `GlassTabBar.bottom(quality: GlassQuality.premium)` with an animating indicator. No API changes.
+
 ### Notes
 
 - **Note (Flutter engine limitation):** The `textureBilinear` workaround in `liquid_glass_final_render.frag` (4-tap bilinear in GLSL) remains necessary for backdrop sampling because Impeller binds the implicit `BackdropFilterLayer` sampler as Nearest-Neighbor with no Dart API to override `FilterQuality`. A Flutter engine feature request to expose sampler filter quality for backdrop layers has been filed at [Flutter Issue #188365](https://github.com/flutter/flutter/issues/188365). Once resolved, the GLSL workaround can be replaced with a single `texture()` call.
