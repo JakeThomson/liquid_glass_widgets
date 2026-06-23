@@ -8,6 +8,8 @@ This complements the `selectedLabelColor` / `unselectedLabelColor` parameters by
 
 The per-state style is **merged over** the base label style, so it overrides only the fields it sets and keeps the resolved per-state label color unless the style provides its own. Both default to `null` → existing behavior unchanged.
 
+Also fixes a related precedence bug: an explicit `selectedLabelColor` / `unselectedLabelColor` was silently dropped whenever a `textStyle` was also supplied (the per-state color only fed the fallback style). It now overrides the base color — including a color baked into `textStyle` — while `textStyle`-only callers are unaffected.
+
 ---
 
 # 0.18.1

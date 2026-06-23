@@ -172,21 +172,29 @@ class BottomBarTabItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconColor = selected ? selectedIconColor : unselectedIconColor;
-    final labelColor = selected
-        ? (selectedLabelColor ?? selectedIconColor)
-        : (unselectedLabelColor ?? unselectedIconColor);
     final iconWidget = selected ? (tab.activeIcon ?? tab.icon) : tab.icon;
 
-    // Base label style (custom [textStyle] or the built-in default), then merge
-    // the per-state [selectedLabelStyle]/[unselectedLabelStyle] over it — so a
-    // caller can set a heavier/different selected font without losing the
-    // resolved per-state label color.
-    final baseLabelStyle = textStyle ??
+    // Label style resolution — most-specific-wins:
+    //   1. Base typography: caller [textStyle], else the built-in default keyed
+    //      to the per-state icon color.
+    //   2. An explicit per-state label color
+    //      ([selectedLabelColor]/[unselectedLabelColor]) overrides the base
+    //      color — including a color baked into [textStyle] — since it's the more
+    //      specific intent. When null, textStyle's own color (or the icon-color
+    //      default) stands.
+    //   3. The per-state [selectedLabelStyle]/[unselectedLabelStyle] merges last,
+    //      so a caller can set a heavier/different selected font on top.
+    var baseLabelStyle = textStyle ??
         TextStyle(
-          color: labelColor,
+          color: iconColor,
           fontSize: labelFontSize,
           fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
         );
+    final perStateLabelColor =
+        selected ? selectedLabelColor : unselectedLabelColor;
+    if (perStateLabelColor != null) {
+      baseLabelStyle = baseLabelStyle.copyWith(color: perStateLabelColor);
+    }
     final stateLabelStyle =
         selected ? selectedLabelStyle : unselectedLabelStyle;
     final resolvedLabelStyle = stateLabelStyle != null

@@ -131,6 +131,32 @@ void main() {
       );
     });
 
+    testWidgets('explicit selectedLabelColor wins over textStyle color',
+        (tester) async {
+      // Regression for the textStyle / selectedLabelColor precedence: an explicit
+      // per-state color must apply even when a textStyle (with its own color) is
+      // also supplied.
+      await tester.pumpWidget(_wrap(_box(
+        GlassTabBar.bottom(
+          tabs: [_tab('Home'), _tab('Profile')],
+          selectedIndex: 0,
+          onTabSelected: (_) {},
+          textStyle: const TextStyle(color: Colors.green, fontSize: 12),
+          selectedLabelColor: Colors.red,
+          unselectedLabelColor: Colors.orange,
+        ),
+      )));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // Selected label resolves to selectedLabelColor (red), not textStyle's green.
+      final homeLabels = tester.widgetList<Text>(find.text('Home'));
+      expect(homeLabels.any((t) => t.style?.color == Colors.red), isTrue);
+      // Unselected label resolves to unselectedLabelColor (orange).
+      final profileLabels = tester.widgetList<Text>(find.text('Profile'));
+      expect(profileLabels.any((t) => t.style?.color == Colors.orange), isTrue);
+    });
+
     testWidgets('renders with 3 tabs without crashing', (tester) async {
       await tester.pumpWidget(_wrap(_box(
         GlassTabBar.bottom(
