@@ -321,7 +321,8 @@ class _GlassEffectState extends State<GlassEffect>
     try {
       // Web: async at full DPR. Still a 1-frame lag during drag but now
       // provides full-resolution texels for the bilinear filter.
-      final image = await boundary.toImage(pixelRatio: _devicePixelRatio); // coverage:ignore-line
+      final image = await boundary.toImage(
+          pixelRatio: _devicePixelRatio); // coverage:ignore-line
       if (mounted) {
         setState(() {
           _backgroundImage?.dispose();
