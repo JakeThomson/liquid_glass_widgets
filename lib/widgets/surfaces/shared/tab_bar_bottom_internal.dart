@@ -732,6 +732,7 @@ class TabIndicatorState extends State<TabIndicator>
               quality: widget.quality,
               indicatorColor: indicatorColor,
               isBackgroundIndicator: false,
+              innerBlur: widget.innerBlur,
               borderRadius: thickness < 1 ? backgroundRadius : glassRadius,
               padding: const EdgeInsets.all(4),
               expansion: widget.indicatorExpansion,
@@ -811,6 +812,7 @@ class TabIndicatorState extends State<TabIndicator>
                     isBackgroundIndicator: false,
                     paintBackground: true,
                     paintGlass: false,
+                    innerBlur: widget.innerBlur,
                     borderRadius:
                         thickness < 1 ? backgroundRadius : glassRadius,
                     padding: const EdgeInsets.all(4),
