@@ -63,10 +63,17 @@ layout(location = 0) out vec4 fragColor;
 
 // ── Manual Bilinear Filtering ─────────────────────────────────────────────
 // Impeller's implicit BackdropFilterLayer sampler is bound to the
-// FragmentShader as Nearest-Neighbor (no Dart API exists to change it —
-// tracked as Flutter Issue #139887). On-screen bilinear is lost, which means
-// continuous sub-pixel UV shifts (pinch lens, refraction) snap to integer
-// texels and produce stair-step aliasing on high-contrast background edges.
+// FragmentShader as Nearest-Neighbor with no Dart API to override it.
+// Tracked as:
+//   Flutter Issue #139887 — original bug report (NN aliasing on backdrop)
+//   Flutter Issue #188365 — feature request to expose FilterQuality on
+//                           BackdropFilterLayer (filed during 0.18.2 work)
+// Once #188365 is resolved, this entire function can be replaced with a
+// single texture() call and the physTexSize/invTexSize derivation removed.
+//
+// On-screen bilinear is lost without this workaround, which means continuous
+// sub-pixel UV shifts (pinch lens, refraction) snap to integer texels and
+// produce stair-step aliasing on high-contrast background edges.
 //
 // This function replaces all uBackgroundTexture lookups with 4 Nearest-Neighbor
 // fetches and a standard bilinear mix, restoring perfectly smooth sub-pixel
@@ -110,12 +117,17 @@ void main() {
 
     vec2 fragCoord = FlutterFragCoord().xy;
 
-    // Use the explicit uSize uniform for UV derivation. textureSize() was tried
-    // but can return (0,0) on the first frame before GPU texture upload completes
+    // Retrieve the actual physical size of the background texture.
+    // In Impeller, BackdropFilterLayer can provide a texture the size of the full screen.
+    vec2 physTexSize = vec2(textureSize(uBackgroundTexture, 0));
+    
+    // textureSize() can return (0,0) on the first frame before GPU texture upload completes
     // in Impeller's BackdropFilterLayer context, causing 1/0 = Infinity UVs and
-    // an invisible first-frame render. uSize (physical pixels of the backdrop
-    // capture, equal to desiredMatteSize * devicePixelRatio) is always valid.
-    vec2 invTexSize = 1.0 / uSize;
+    // an invisible first-frame render. Fallback to uSize if invalid.
+    if (physTexSize.x < 1.0 || physTexSize.y < 1.0) {
+        physTexSize = uSize;
+    }
+    vec2 invTexSize = 1.0 / physTexSize;
     vec2 screenUV = fragCoord * invTexSize;
 
     #ifdef IMPELLER_TARGET_OPENGLES
@@ -127,16 +139,17 @@ void main() {
         geometryUV.y = 1.0 - geometryUV.y;
     #endif
 
-    // Any fragment whose geometryUV falls outside [0,1] is outside the glass
-    // pill boundary entirely.  Without this early-out the sampler clamps to the
-    // edge pixel (UV.x=0 → left boundary pixel, alpha ≈ 0.5 from SDF AA), which
-    // renders a faint glass stripe in the _clipExpansion zone (20 px on each
-    // side). That stripe is visible at the pill's vertical midpoint as a short
-    // line protruding left and right from the pill edges.
-    if (any(lessThan(geometryUV, vec2(0.0))) || any(greaterThan(geometryUV, vec2(1.0)))) {
-        fragColor = vec4(0.0);
-        return;
-    }
+    // Clamp geometryUV to [0, 1] for two reasons:
+    // 1. Impeller's texture samplers may default to Repeat mode. Without this
+    //    clamp, a fragment slightly outside uGeometrySize (e.g. during
+    //    LiquidStretch scaling overshoot) wraps around and samples the opposite
+    //    edge of the geometry SDF, producing inverted normals and extreme
+    //    chromatic aliasing (jagged rainbows).
+    // 2. Fragments genuinely outside the pill (the _clipExpansion zone) get
+    //    clamped to the SDF edge, which has near-zero alpha. The
+    //    `geometryData.a < 0.01` early-out below discards them efficiently
+    //    without needing a separate bounds check here.
+    geometryUV = clamp(geometryUV, 0.0, 1.0);
 
     vec4 geometryData = texture(uGeometryTexture, geometryUV);
 
@@ -266,10 +279,10 @@ void main() {
     if (dot(normalXY, normalXY) < 1e-4) {
         // Flat interior — surface is pointing straight at the camera.
         // Displacement is mathematically zero; sample the background directly.
-        refractColor = textureBilinear(uBackgroundTexture, screenUV, uSize, invTexSize);
+        refractColor = textureBilinear(uBackgroundTexture, screenUV, physTexSize, invTexSize);
     } else if (uChromaticAberration < 0.01) {
         vec2 refractedUV = screenUV + displacement * invTexSize;
-        refractColor = textureBilinear(uBackgroundTexture, refractedUV, uSize, invTexSize);
+        refractColor = textureBilinear(uBackgroundTexture, refractedUV, physTexSize, invTexSize);
     } else {
         float dispersionStrength = uChromaticAberration * 0.5;
         vec2 redOffset  = displacement * (1.0 + dispersionStrength);
@@ -279,9 +292,9 @@ void main() {
         vec2 greenUV = screenUV + displacement * invTexSize;
         vec2 blueUV  = screenUV + blueOffset  * invTexSize;
 
-        float red         = textureBilinear(uBackgroundTexture, redUV, uSize, invTexSize).r;
-        vec4  greenSample = textureBilinear(uBackgroundTexture, greenUV, uSize, invTexSize);
-        float blue        = textureBilinear(uBackgroundTexture, blueUV, uSize, invTexSize).b;
+        float red         = textureBilinear(uBackgroundTexture, redUV, physTexSize, invTexSize).r;
+        vec4  greenSample = textureBilinear(uBackgroundTexture, greenUV, physTexSize, invTexSize);
+        float blue        = textureBilinear(uBackgroundTexture, blueUV, physTexSize, invTexSize).b;
 
         refractColor = vec4(red, greenSample.g, blue, greenSample.a);
     }

@@ -195,7 +195,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       final geoBounds = MatrixUtils.transformRect(
         transform,
         geometry.bounds,
-      );
+      ).inflate(2.0); // Inflate by 2 logical pixels to fit the SDF AA skirt
       boundingBox = boundingBox == null
           ? geoBounds
           : boundingBox.expandToInclude(geoBounds);
@@ -295,7 +295,11 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               ..setOffset(activeBounds.topLeft * devicePixelRatio)
               ..setSize(activeBounds.size * devicePixelRatio);
           })
-          ..setImageSampler(1, geometryImage);
+          ..setImageSampler(
+            1,
+            geometryImage,
+            filterQuality: FilterQuality.medium,
+          );
         paintLiquidGlass(
           context,
           offset,

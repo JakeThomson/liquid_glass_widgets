@@ -72,6 +72,17 @@ vec4 textureBilinear(sampler2D tex, vec2 uv, vec2 physSize, vec2 invPhys) {
     vec2 p2 = p0 + vec2(0.0, 1.0);
     vec2 p3 = p0 + vec2(1.0, 1.0);
 
+    // Explicitly clamp to texture bounds. In Impeller, custom FragmentShader 
+    // samplers may not use ClampToEdge by default. When the indicator pill 
+    // expands outside the RepaintBoundary bounds (e.g. via jelly overshoot 
+    // or LiquidStretch scaling), out-of-bounds UVs cause extreme wrap-around 
+    // chromatic aliasing (jagged rainbows) on the pill's top/left edges.
+    vec2 maxPx = max(vec2(0.0), physSize - 1.0);
+    p0 = clamp(p0, vec2(0.0), maxPx);
+    p1 = clamp(p1, vec2(0.0), maxPx);
+    p2 = clamp(p2, vec2(0.0), maxPx);
+    p3 = clamp(p3, vec2(0.0), maxPx);
+
     vec4 c0 = texture(tex, (p0 + 0.5) * invPhys);
     vec4 c1 = texture(tex, (p1 + 0.5) * invPhys);
     vec4 c2 = texture(tex, (p2 + 0.5) * invPhys);
