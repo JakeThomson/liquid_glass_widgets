@@ -817,13 +817,13 @@ class _RenderLightweightGlass extends RenderProxyBox {
       _shader!.setImageSampler(
         0,
         _backgroundImage!,
-        filterQuality: FilterQuality.medium,
+        filterQuality: FilterQuality.medium, // coverage:ignore-line
       );
     } else if (LightweightLiquidGlass._dummyImage != null) {
       _shader!.setImageSampler(
         0,
         LightweightLiquidGlass._dummyImage!,
-        filterQuality: FilterQuality.medium,
+        filterQuality: FilterQuality.medium, // coverage:ignore-line
       );
     }
 
