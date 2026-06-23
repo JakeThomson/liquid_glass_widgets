@@ -87,7 +87,7 @@ layout(location = 0) out vec4 fragColor;
 // Windows/SkSL: texture() with literal-computed UVs is legal in glslang
 // SPIR-V path; floor(), fract(), and vec2 arithmetic are all universally
 // supported. This function introduces no new platform compatibility issues.
-vec4 textureBilinear(sampler2D tex, vec2 uv, vec2 size, vec2 invSize) {
+vec4 textureBilinear(vec2 uv, vec2 size, vec2 invSize) {
     vec2 px = uv * size - 0.5;
     vec2 f = fract(px);
     vec2 p0 = floor(px);
@@ -95,10 +95,10 @@ vec4 textureBilinear(sampler2D tex, vec2 uv, vec2 size, vec2 invSize) {
     vec2 p2 = p0 + vec2(0.0, 1.0);
     vec2 p3 = p0 + vec2(1.0, 1.0);
 
-    vec4 c0 = texture(tex, (p0 + 0.5) * invSize);
-    vec4 c1 = texture(tex, (p1 + 0.5) * invSize);
-    vec4 c2 = texture(tex, (p2 + 0.5) * invSize);
-    vec4 c3 = texture(tex, (p3 + 0.5) * invSize);
+    vec4 c0 = texture(uBackgroundTexture, (p0 + 0.5) * invSize);
+    vec4 c1 = texture(uBackgroundTexture, (p1 + 0.5) * invSize);
+    vec4 c2 = texture(uBackgroundTexture, (p2 + 0.5) * invSize);
+    vec4 c3 = texture(uBackgroundTexture, (p3 + 0.5) * invSize);
 
     vec4 cTop = mix(c0, c1, f.x);
     vec4 cBot = mix(c2, c3, f.x);
@@ -118,16 +118,7 @@ void main() {
 
     vec2 fragCoord = FlutterFragCoord().xy;
 
-    // Retrieve the actual physical size of the background texture.
-    // In Impeller, BackdropFilterLayer can provide a texture the size of the full screen.
-    vec2 physTexSize = vec2(textureSize(uBackgroundTexture, 0));
-    
-    // textureSize() can return (0,0) on the first frame before GPU texture upload completes
-    // in Impeller's BackdropFilterLayer context, causing 1/0 = Infinity UVs and
-    // an invisible first-frame render. Fallback to uSize if invalid.
-    if (physTexSize.x < 1.0 || physTexSize.y < 1.0) {
-        physTexSize = uSize;
-    }
+    vec2 physTexSize = uSize;
     vec2 invTexSize = 1.0 / physTexSize;
     vec2 screenUV = fragCoord * invTexSize;
 
@@ -280,10 +271,10 @@ void main() {
     if (dot(normalXY, normalXY) < 1e-4) {
         // Flat interior — surface is pointing straight at the camera.
         // Displacement is mathematically zero; sample the background directly.
-        refractColor = textureBilinear(uBackgroundTexture, screenUV, physTexSize, invTexSize);
+        refractColor = textureBilinear(screenUV, physTexSize, invTexSize);
     } else if (uChromaticAberration < 0.01) {
         vec2 refractedUV = screenUV + displacement * invTexSize;
-        refractColor = textureBilinear(uBackgroundTexture, refractedUV, physTexSize, invTexSize);
+        refractColor = textureBilinear(refractedUV, physTexSize, invTexSize);
     } else {
         float dispersionStrength = uChromaticAberration * 0.5;
         vec2 redOffset  = displacement * (1.0 + dispersionStrength);
@@ -293,9 +284,9 @@ void main() {
         vec2 greenUV = screenUV + displacement * invTexSize;
         vec2 blueUV  = screenUV + blueOffset  * invTexSize;
 
-        float red         = textureBilinear(uBackgroundTexture, redUV, physTexSize, invTexSize).r;
-        vec4  greenSample = textureBilinear(uBackgroundTexture, greenUV, physTexSize, invTexSize);
-        float blue        = textureBilinear(uBackgroundTexture, blueUV, physTexSize, invTexSize).b;
+        float red         = textureBilinear(redUV, physTexSize, invTexSize).r;
+        vec4  greenSample = textureBilinear(greenUV, physTexSize, invTexSize);
+        float blue        = textureBilinear(blueUV, physTexSize, invTexSize).b;
 
         refractColor = vec4(red, greenSample.g, blue, greenSample.a);
     }

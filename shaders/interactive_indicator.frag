@@ -63,7 +63,7 @@ out vec4 fragColor;
 // logSize  — uBackgroundSize in logical pixels
 // physSize — uBackgroundSize * uDpr = actual pixel dimensions of the texture
 // invPhys  — 1.0 / physSize (precomputed for efficiency)
-vec4 textureBilinear(sampler2D tex, vec2 uv, vec2 physSize, vec2 invPhys) {
+vec4 textureBilinear(vec2 uv, vec2 physSize, vec2 invPhys) {
     // Convert UV to physical texel coordinate, centre on the texel grid.
     vec2 px = uv * physSize - 0.5;
     vec2 f  = fract(px);
@@ -83,10 +83,10 @@ vec4 textureBilinear(sampler2D tex, vec2 uv, vec2 physSize, vec2 invPhys) {
     p2 = clamp(p2, vec2(0.0), maxPx);
     p3 = clamp(p3, vec2(0.0), maxPx);
 
-    vec4 c0 = texture(tex, (p0 + 0.5) * invPhys);
-    vec4 c1 = texture(tex, (p1 + 0.5) * invPhys);
-    vec4 c2 = texture(tex, (p2 + 0.5) * invPhys);
-    vec4 c3 = texture(tex, (p3 + 0.5) * invPhys);
+    vec4 c0 = texture(uTexture, (p0 + 0.5) * invPhys);
+    vec4 c1 = texture(uTexture, (p1 + 0.5) * invPhys);
+    vec4 c2 = texture(uTexture, (p2 + 0.5) * invPhys);
+    vec4 c3 = texture(uTexture, (p3 + 0.5) * invPhys);
 
     vec4 cTop = mix(c0, c1, f.x);
     vec4 cBot = mix(c2, c3, f.x);
@@ -236,12 +236,12 @@ void main() {
 
     if (uChromaticAberration < 0.001) {
       // No chromatic aberration — single bilinear fetch.
-      bg = textureBilinear(uTexture, localRefracted / uBackgroundSize, physBgSize, invPhysBgSize).rgb;
+      bg = textureBilinear(localRefracted / uBackgroundSize, physBgSize, invPhysBgSize).rgb;
     } else {
       // Chromatic aberration: separate RGB channels with bilinear filtering.
-      vec3 colR = textureBilinear(uTexture, (localRefracted + chromaticShift) / uBackgroundSize, physBgSize, invPhysBgSize).rgb;
-      vec3 colG = textureBilinear(uTexture, localRefracted / uBackgroundSize, physBgSize, invPhysBgSize).rgb;
-      vec3 colB = textureBilinear(uTexture, (localRefracted - chromaticShift) / uBackgroundSize, physBgSize, invPhysBgSize).rgb;
+      vec3 colR = textureBilinear((localRefracted + chromaticShift) / uBackgroundSize, physBgSize, invPhysBgSize).rgb;
+      vec3 colG = textureBilinear(localRefracted / uBackgroundSize, physBgSize, invPhysBgSize).rgb;
+      vec3 colB = textureBilinear((localRefracted - chromaticShift) / uBackgroundSize, physBgSize, invPhysBgSize).rgb;
       bg = vec3(colR.r, colG.g, colB.b);
     }
   } else {
