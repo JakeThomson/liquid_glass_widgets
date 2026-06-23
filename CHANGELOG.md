@@ -1,5 +1,12 @@
 
-# Unreleased
+# 0.18.3
+
+## ✨ `platformViewBackdrop` on the public glass widgets
+
+Follows up [#94](https://github.com/sdegenaar/liquid_glass_widgets/pull/94) by exposing the premium-over-PlatformView flag on the remaining public widgets — `GlassContainer`, `GlassButton`, `GlassIconButton`, `GlassButtonGroup`, `GlassMenu`, and `GlassModalSheet` — so apps can render premium glass cleanly over an iOS PlatformView (e.g. a Mapbox `MapWidget`) for any control, not just the bottom bar.
+
+Each gets an explicit `platformViewBackdrop` parameter defaulting to `false` (zero overhead / no behavior change for callers that don't need it), forwarded to the underlying `AdaptiveGlass`. For `GlassModalSheet` the flag threads through `GlassModalSheetScaffold` and the sheet state down to the `_SheetLayout`'s glass. Adds widget tests covering the simple-widget forwards.
+
 
 ## 🧹 Removed — `GlassTintBlend` (a no-op since 0.17.0)
 
