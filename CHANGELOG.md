@@ -1,3 +1,9 @@
+# 0.18.4
+
+- **Fix:** Loosened the `meta` dependency constraint to `^1.12.0` (instead of `^1.18.0`) to avoid pub resolution conflicts for users on older Flutter SDKs where `flutter_test` is bound to `meta 1.17.0`.
+
+---
+
 # 0.18.3
 
 ## ✨ Per-state label text style on bottom bars — `selectedLabelStyle` / `unselectedLabelStyle`

@@ -103,7 +103,8 @@ void main() {
       expect(find.text('Profile'), findsWidgets);
     });
 
-    testWidgets('per-state selectedLabelStyle / unselectedLabelStyle merge over base',
+    testWidgets(
+        'per-state selectedLabelStyle / unselectedLabelStyle merge over base',
         (tester) async {
       // Exercises BottomBarTabItem's per-state label-style merge: the selected
       // tab merges selectedLabelStyle (and unselected tabs unselectedLabelStyle)
