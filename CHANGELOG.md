@@ -1,3 +1,12 @@
+# 0.18.5
+
+## 🔧 Corrected minimum SDK constraint — Flutter ≥ 3.41.0
+
+- **Fix:** Raised the minimum Flutter constraint to `3.41.0`. The `filterQuality` parameter on `FragmentShader.setImageSampler()` was actually introduced in Flutter 3.41.0 (commit `add442b29c`), not 3.24.0 as previously stated. This prevents users on 3.38.x from failing at compile time.
+- **Reverted:** Raised the internal `meta` constraint back to `^1.18.0` since Flutter 3.41.0 guarantees this version is available.
+
+---
+
 # 0.18.4
 
 - **Fix:** Loosened the `meta` dependency constraint to `^1.12.0` (instead of `^1.18.0`) to avoid pub resolution conflicts for users on older Flutter SDKs where `flutter_test` is bound to `meta 1.17.0`.
@@ -43,11 +52,9 @@ The automatic behavior is unchanged. `applyGlassColor` still picks luminosity-pr
 
 **Breaking, but inert:** code that passed `LiquidGlassSettings(tintBlend: …)` must drop the argument. No rendered output changes.
 
-## 🔧 Raised minimum SDK constraints — Flutter ≥ 3.24.0, Dart ≥ 3.5.0
+## 🔧 SDK constraints bump *(corrected in 0.18.5)*
 
-The `filterQuality` parameter on `FragmentShader.setImageSampler()` (used for the 0.18.2 anti-aliasing fixes) was introduced in Flutter 3.24.0. The previous lower bound (`flutter: ">=3.10.0"`) allowed older toolchains to resolve the package but fail to compile it.
-
-**Flutter 3.32+ recommended** for best Impeller rendering quality — shader APIs improve significantly across releases.
+Raised minimum Flutter to `>=3.24.0` — this was incorrect. The actual minimum is `3.41.0`, corrected in `0.18.5`.
 
 ---
 
