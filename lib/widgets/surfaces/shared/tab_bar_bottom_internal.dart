@@ -19,7 +19,7 @@ import '../../shared/animated_glass_indicator.dart';
 import '../../shared/inherited_liquid_glass.dart';
 import '../glass_bottom_bar.dart'
     show
-        GlassBottomBarExtraButton,
+        GlassTabBarExtraButton,
         GlassBottomBarTab,
         MaskingQuality,
         JellyClipper;
@@ -318,7 +318,7 @@ class BottomBarExtraBtn extends StatelessWidget {
     super.key,
   });
 
-  final GlassBottomBarExtraButton config;
+  final GlassTabBarExtraButton config;
   final GlassQuality quality;
   final Color iconColor;
   final bool enableBlend;

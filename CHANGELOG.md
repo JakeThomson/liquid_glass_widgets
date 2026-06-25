@@ -1,3 +1,55 @@
+# 0.19.0
+
+## 💥 Breaking: Pre-v1.0 Public API Cleanup
+
+A pre-release naming audit to establish consistent, idiomatic conventions before v1.0 locks the API.
+
+### Renames
+
+| Old | New | Reason |
+|---|---|---|
+| `GlassBottomBarExtraButton` | `GlassTabBarExtraButton` | Tracks parent rename `GlassBottomBar` → `GlassTabBar` |
+| `GlassGroupItem` | `GlassButtonGroupItem` | Mirrors Flutter's `DropdownMenuItem` pattern |
+| `SheetState` | `GlassSheetState` | Prevents collision with Material 3 sheet infrastructure |
+| `SheetMode` | `GlassSheetMode` | Same — too generic as a bare name |
+| `FillTransition` | `GlassFillTransition` | Too generic as a bare name |
+| `ExtraButtonPosition` | `GlassExtraButtonPosition` | Ambiguous without prefix |
+
+> **Migration:** A `@Deprecated` typedef for `GlassBottomBarExtraButton` is provided. All other old names will produce compile errors — migration is mechanical find-and-replace.
+
+### GlassSegment — new concrete class
+
+`GlassSegment` was previously a `typedef` alias for `GlassTab`. It is now a proper class with a focused API for `GlassSegmentedControl`:
+
+```dart
+// GlassSegment — for GlassSegmentedControl only
+GlassSegment({ Widget? icon, String? label, String? tooltip, String? semanticLabel, bool enabled = true })
+
+// GlassTab — for GlassTabBar.bottom() and GlassTabBar.searchable()
+GlassTab({ Widget? icon, Widget? activeIcon, String? label, Color? glowColor, double? thickness })
+```
+
+Fields like `activeIcon`, `glowColor`, and `thickness` are navigation-specific and only exist on `GlassTab`. `GlassSegment` adds `tooltip` and `enabled` (with built-in disabled rendering at 38% opacity).
+
+### Barrel hygiene
+
+Internal types (`SheetSnapshot`, `SheetGeometry`, `GesturePhase`, `GestureArena`, `FrozenState`) are no longer accessible from the package barrel. These were implementation details that leaked through `part` file exports.
+
+## ⚡ Performance
+
+- **Shader:** `interactive_indicator.frag` — replaced `pow()` calls with multiply chains; collapsed duplicate rim pass; zero transcendental functions in highlight path.
+- **Shader:** `liquid_glass_final_render.frag` — `⁶√x` computed via sqrt cascade (3 SFU vs 2 transcendentals); `sceneSDF` samples reduced from 5 → 4.
+- **Dart:** `resolveAdaptiveRadius` scoped to `MediaQuery.viewPaddingOf` + `MediaQuery.sizeOf` — glass widgets no longer rebuild on keyboard or unrelated `MediaQueryData` changes.
+- **Dart:** Searchable tab bar and `GlassSegmentedControl` spring animations now use `ListenableBuilder` scoped to the indicator subtree. Verified on-device: zero `State.build()` calls during 120Hz spring animation.
+
+## 🐛 Fix
+
+- **`LiquidGlassWidgets.initialize()`** now pre-warms all four shaders — `liquid_glass_geometry_blended.frag` and `liquid_glass_final_render.frag` were previously lazy-loaded, causing first-frame jank.
+- **`GlassSegment.enabled = false` now blocks tap/tapDown** — disabled segments rendered at 38% opacity but still fired `onSegmentSelected` in both fixed-width and scrollable modes. Tap and `onTapDown` handlers now early-return when the target segment is disabled.
+
+
+---
+
 # 0.18.6
 
 ## 🐛 Fix: Glass widgets now honour app `ThemeMode`, not OS dark mode

@@ -8,7 +8,7 @@ import '../../theme/glass_theme_helpers.dart';
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../surfaces/glass_bottom_bar.dart' show MaskingQuality;
-import '../surfaces/glass_tab_bar.dart' show DividerSettings, GlassTab;
+import '../surfaces/glass_tab_bar.dart' show DividerSettings, GlassSegment;
 import 'shared/scrollable_segment_content.dart';
 import 'shared/segmented_control_internal.dart';
 
@@ -258,12 +258,12 @@ class GlassSegmentedControl extends StatefulWidget {
 
   /// List of segments to display.
   ///
-  /// Each [GlassTab] may have a [GlassTab.label], a [GlassTab.icon], or both.
+  /// Each [GlassSegment] may have a [GlassSegment.label], a [GlassSegment.icon], or both.
   /// In fixed mode (default), all segments are equal-width. In scrollable mode
   /// segments have natural widths and scroll horizontally.
   ///
   /// Minimum 2 segments required (fixed mode), 1 segment (scrollable mode).
-  final List<GlassTab> segments;
+  final List<GlassSegment> segments;
 
   /// Whether this control scrolls horizontally.
   ///
