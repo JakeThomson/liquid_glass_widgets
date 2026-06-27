@@ -291,6 +291,27 @@ void main() {
       expect(find.byType(DecoratedBox), findsWidgets);
     });
 
+    testWidgets('isInteractive=true keeps BackdropFilter over a PlatformView',
+        (tester) async {
+      // platformViewBackdrop overrides the interactive blur-omission above: over
+      // a PlatformView the live BackdropFilter is the only path that blurs the
+      // (hybrid-composed) map, so it must run even for interactive surfaces.
+      await tester.pumpWidget(_wrap(const SizedBox(
+        width: 200,
+        height: 100,
+        child: AdaptiveGlass(
+          shape: _shape,
+          settings: _settings,
+          quality: GlassQuality.minimal,
+          isInteractive: true,
+          platformViewBackdrop: true,
+          child: SizedBox.expand(),
+        ),
+      )));
+      await tester.pump();
+      expect(find.byType(BackdropFilter), findsWidgets);
+    });
+
     testWidgets('glowIntensity > 0 adds glow overlay', (tester) async {
       await tester.pumpWidget(_wrap(const SizedBox(
         width: 200,
