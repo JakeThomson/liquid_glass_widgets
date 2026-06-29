@@ -101,7 +101,8 @@ void main() {
     expect(
       withFrost,
       greaterThan(withoutFrost),
-      reason: 'the innerBlur frost BackdropFilter must remain mounted while the '
+      reason:
+          'the innerBlur frost BackdropFilter must remain mounted while the '
           'pill morphs; re-gating it on backgroundOpacity would drop the clip '
           'and re-introduce the PlatformView gesture-cancel freeze',
     );

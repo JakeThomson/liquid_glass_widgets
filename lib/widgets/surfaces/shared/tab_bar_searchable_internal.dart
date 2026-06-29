@@ -887,7 +887,8 @@ class SearchPillState extends State<SearchPill> {
         widget.iconColor ??
         CupertinoColors.label;
     final iconColor = resolveIconColor(rawIconColor);
-    final micColor = resolveIconColor(widget.config.micIconColor ?? rawIconColor);
+    final micColor =
+        resolveIconColor(widget.config.micIconColor ?? rawIconColor);
     final shape =
         LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
 

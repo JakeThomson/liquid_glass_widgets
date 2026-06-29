@@ -81,7 +81,9 @@ Color resolveBarLabelColor(BuildContext context, double? darkAmount) {
   // ensures dark glass always produces white glyphs regardless of system brightness.
   if (labelColor is CupertinoDynamicColor) {
     final brightness = GlassTheme.brightnessOf(context);
-    return brightness == Brightness.dark ? labelColor.darkColor : labelColor.color;
+    return brightness == Brightness.dark
+        ? labelColor.darkColor
+        : labelColor.color;
   }
   return labelColor;
 }
@@ -399,7 +401,6 @@ class BottomBarExtraBtn extends StatelessWidget {
     );
   }
 }
-
 
 // =============================================================================
 // TabIndicator — draggable pill indicator with spring physics
