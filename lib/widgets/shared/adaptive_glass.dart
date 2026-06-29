@@ -491,6 +491,7 @@ class AdaptiveGlass extends StatelessWidget {
           child: IgnorePointer(
             child: _ShapeClip(
               shape: shape,
+              platformViewBackdrop: platformViewBackdrop,
               child: ColoredBox(color: backerColor),
             ),
           ),
@@ -782,6 +783,7 @@ class _FrostedFallback extends StatelessWidget {
             child: IgnorePointer(
               child: _ShapeClip(
                 shape: shape,
+                platformViewBackdrop: platformViewBackdrop,
                 child: CustomPaint(
                   painter: _SpecularRimPainter(
                     shape: shape,
@@ -932,14 +934,11 @@ class _SpecularRimPainter extends CustomPainter {
 /// `_FrostedFallback` surfaces when stacked over a PlatformView (e.g.
 /// `mapbox_maps_flutter`'s `MapWidget`, `video_player` on iOS).
 ///
-/// **Caveat — [LiquidOval] is not handled.** Empirically the engine fix
-/// does not forward `ClipRRect` with `circular(double.infinity)`, nor
-/// does it forward a `LayoutBuilder`-computed finite radius on a
-/// `LiquidOval` shape. Callers that need a halo-free circular surface
-/// over a PlatformView should pass
-/// `LiquidRoundedSuperellipse(borderRadius: size / 2)` instead, which
-/// renders identically to a circle on a square widget and triggers the
-/// engine fix.
+/// When [platformViewBackdrop] is true, any shape that can be expressed
+/// as a [BorderRadius] (including [LiquidOval] → `circular(9999)` and
+/// [LiquidRoundedRectangle]) is also routed through [ClipRRect] so the
+/// clip is forwarded and the frost is bounded to the shape on PlatformViews.
+/// Off a PlatformView, [LiquidOval] retains an exact [ClipPath] ellipse.
 class _ShapeClip extends StatelessWidget {
   const _ShapeClip({
     required this.shape,
