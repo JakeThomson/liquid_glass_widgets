@@ -40,13 +40,27 @@ GlassLargeTitle(
 
 +10 tests. **2,291 total, all passing.**
 
+## ⚡ Performance — `GlassBottomBar` Indicator (Impeller)
 
-
-=======
 - **`GlassBottomBar` indicator** — eliminates the live `BackdropFilterLayer` on Impeller
   premium, replacing it with a deterministic `toImageSync` capture path. Fixes the
   opaque-white indicator rendering on physical iOS (#99) and improves drag performance
   by removing a redundant compositor pass.
+
+## 🔧 `GlassGroupedSection` — Header/Footer styling
+
+- Header and footer text is now styled automatically via `DefaultTextStyle`
+  (`CupertinoColors.secondaryLabel`, 13pt) — callers no longer need to style them manually.
+- Margin is now applied via `Padding` wrapping the full section rather than on the inner
+  `GlassCard`, fixing card-edge clipping when a header or footer is present.
+- Import changed to `cupertino.dart` for correct `CupertinoColors` resolution.
+
+## 📝 Dart doc improvements
+
+- `GlassContainer`, `GlassCard`, `GlassGroupedSection`, `GlassSegmentedControl` — added
+  **⚠️ Anti-Pattern** sections documenting the glass-in-glass restriction: placing interactive
+  glass controls inside a container degrades refraction and clips jelly animations.
+
 
 # 0.19.5
 

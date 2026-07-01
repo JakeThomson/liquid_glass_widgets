@@ -1,7 +1,6 @@
 import 'dart:collection';
 import 'dart:math';
 import 'dart:ui' as ui;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -263,10 +262,6 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       );
     } else {
       if (_geometryImage case final geometryImage?) {
-        // Map the texture to exactly the bounds it was originally built for
-        // (_geometryLocalBounds) rather than the newly expanding current frame
-        // bounds (_paintBounds).
-        //
         // Map the texture to exactly the bounds it was originally built for
         // (_geometryLocalBounds) rather than the newly expanding current frame
         // bounds (_paintBounds).
