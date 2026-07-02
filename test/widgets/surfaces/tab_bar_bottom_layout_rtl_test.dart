@@ -65,7 +65,8 @@ void main() {
       await tester.pumpWidget(rtlBar(onTabSelected: (_) {}));
 
       final screenWidth = tester.getSize(find.byType(GlassTabBar)).width;
-      final homeCenter = tester.getCenter(find.text('Home').hitTestable().first);
+      final homeCenter =
+          tester.getCenter(find.text('Home').hitTestable().first);
       final profileCenter =
           tester.getCenter(find.text('Profile').hitTestable().first);
 

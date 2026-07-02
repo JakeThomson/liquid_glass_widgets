@@ -390,8 +390,7 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout> {
     final currentTabFloat = ((alignment.x + 1) / 2) * tabs.length;
     final affectedStart =
         (currentTabFloat - 1).floor().clamp(0, tabs.length - 1);
-    final affectedEnd =
-        (currentTabFloat + 1).ceil().clamp(0, tabs.length - 1);
+    final affectedEnd = (currentTabFloat + 1).ceil().clamp(0, tabs.length - 1);
 
     return _ltrTabRow(
       children: [

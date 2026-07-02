@@ -1,15 +1,21 @@
-# Unreleased
+# 0.19.7
 
-- **`GlassTabBar.bottom` / `GlassBottomBar`** — fixes RTL support (#142, @naeemeltaief).
-  The indicator/gesture coordinate system operates in physical (left-anchored) alignment
-  space while the tab `Row`s honour the ambient `Directionality`, so under RTL the pill and
-  the tap/drag hit-testing landed on the mirror-image tab. The bottom layout now normalises
-  the tab order, selected index and tap callback for RTL and pins *only the tab rows* to LTR,
-  so the first tab sits on the trailing edge with the pill and hit-testing aligned to it.
-  `indicatorExpansion` / `tabPadding` continue to resolve against the ambient direction, so
-  `EdgeInsetsDirectional` values still work in RTL. Consumers no longer need to force
-  `Directionality.ltr` and reverse tabs by hand.
-=======
+## 🐛 Bug Fixes
+
+- **`GlassTabBar.bottom` / `GlassBottomBar`** — fixes RTL support (#143, @naeemeltaief).
+  The pill and tap/drag hit-testing now correctly align with the visually reversed tab order
+  under RTL. The bottom layout normalises the tab data, selected index and callback for RTL,
+  and pins only the two inner tab `Row`s to LTR — leaving `indicatorExpansion`, `tabPadding`
+  and all text to resolve against the ambient direction as expected. Consumers no longer
+  need to force `Directionality.ltr` and reverse tabs by hand. +2 tests.
+
+- **`AnimatedGlassIndicator`** — restores the resting selection pill inside a `GlassContainer`
+  (#144, @jfhair). The background pill was permanently hidden whenever an ancestor set
+  `avoidsRefraction`, which is a steady-state layout flag on `GlassContainer` — not a
+  transient capture signal. The guard was incorrect and is removed. The pill now renders
+  correctly in all contexts. No API change. +1 test.
+
+
 # 0.19.6
 
 ## ✨ New — `GlassLargeTitle` + `GlassLargeTitleController`
@@ -74,8 +80,6 @@ GlassLargeTitle(
   glass controls inside a container degrades refraction and clips jelly animations.
 
 # 0.19.5
-
-
 
 - **`LiquidGlassSettings`** — adds `platformViewFallbackColor` (#138, @jfhair). Splits
   `backerColor`'s dual role: `backerColor` remains the aesthetic backer pad; the new
