@@ -284,30 +284,17 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
         return Transform.translate(
           offset: Offset(swayValue, 0),
           child: LiquidStretch(
-            interactionScale: widget.enableBackgroundAnimation
+            interactionScale: (widget.enableBackgroundAnimation &&
+                    !widget.platformViewBackdrop)
                 ? widget.backgroundPressScale
                 : 1.0,
             stretch: 0.0,
             resistance: 0.08,
             anchorStretch: false, // Tab bars use jelly-follow, not anchored
             child: Listener(
-              onPointerDown: (_) {
-                if (mounted) setState(() => tabIsDown = true);
-              },
-              onPointerUp: (e) {
-                if (!mounted) return;
-                if (!tabIsDragging) setState(() => tabIsDown = false);
-                // If a gesture is still flagged active after the pointer lifts,
-                // its terminal callback was dropped (PlatformView arena race) —
-                // self-heal on the next frame, honoring the lift position so a
-                // recovering tap also navigates. No-ops on a clean gesture.
-                recoverIfGestureStuck(e.position);
-              },
-              onPointerCancel: (e) {
-                if (!mounted) return;
-                if (!tabIsDragging) setState(() => tabIsDown = false);
-                recoverIfGestureStuck(e.position);
-              },
+              onPointerDown: (_) => onBarPointerDown(),
+              onPointerUp: (e) => onBarPointerUp(e.position),
+              onPointerCancel: (e) => onBarPointerCancel(e.position),
               child: GestureDetector(
                 key: ValueKey(gestureEpoch),
                 behavior: HitTestBehavior.opaque,
@@ -317,6 +304,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                 onHorizontalDragEnd: onBarDragEnd,
                 onHorizontalDragCancel: onBarDragCancel,
                 onTapDown: onBarTapDown,
+                onTapUp: onBarTapUp,
+                onTapCancel: onBarTapCancel,
                 child: VelocitySpringBuilder(
                   value: tabXAlign,
                   springWhenActive: GlassSpring.interactive(),
@@ -914,10 +903,11 @@ class SearchPillState extends State<SearchPill> {
             fit: StackFit.expand,
             children: [
               LiquidStretch(
-                interactionScale: widget.enableBackgroundAnimation
+                interactionScale: (widget.enableBackgroundAnimation &&
+                        !widget.platformViewBackdrop)
                     ? widget.backgroundPressScale
                     : 1.0,
-                stretch: 0.5, // Matches GlassButton default stretch
+                stretch: widget.platformViewBackdrop ? 0.0 : 0.5,
                 resistance: 0.01,
                 anchorStretch:
                     true, // Matches GlassButton default (keeps it attached so it morphs)
@@ -971,9 +961,10 @@ class SearchPillState extends State<SearchPill> {
         // No scale animation here — the pill is spring-positioned alongside
         // the dismiss button so any visual overflow causes overlap.
         return LiquidStretch(
-          interactionScale: widget.enableBackgroundAnimation
-              ? widget.backgroundPressScale
-              : 1.0,
+          interactionScale:
+              (widget.enableBackgroundAnimation && !widget.platformViewBackdrop)
+                  ? widget.backgroundPressScale
+                  : 1.0,
           stretch: 0.0,
           resistance: 0.08,
           anchorStretch: false, // Search pill uses jelly-follow, not anchored

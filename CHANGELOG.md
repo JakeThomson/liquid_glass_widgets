@@ -1,3 +1,19 @@
+# 0.20.2
+
+## 🐛 Bug Fixes — PlatformView gesture stability
+
+- **Tab bar freeze fixed:** Intermittent freeze where the tab indicator stopped
+  responding after interacting over an iOS `PlatformView` (e.g. a map or WebView).
+  The iOS gesture arena can silently drop terminal callbacks, leaving the recognizer
+  wedged. Fixed with proactive cleanup on `PointerDown`, post-frame recovery, and
+  a gesture ID guard to prevent rapid-tap state corruption.
+- **Stretch & scale disabled on `platformViewBackdrop: true`:** Flutter's
+  `BackdropFilter` snaps to integer pixels over a native view, causing sub-pixel
+  spring animations to jitter. Stretch and interaction-scale are now skipped when
+  `platformViewBackdrop` is set. No impact on any other screen or platform.
+
+---
+
 # 0.20.1
 
 ## 🐛 Bug Fix — `GlassButton.custom` layout expansion
