@@ -66,9 +66,7 @@ void main() {
         _make(
           settings: const LiquidGlassSettings(shadow: [
             BoxShadow(
-                color: Colors.black26,
-                blurRadius: 6,
-                offset: Offset(0, 2)),
+                color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
           ]),
         ),
         brightness: Brightness.light,
@@ -87,8 +85,7 @@ void main() {
       expect(_outerShadowPaint(), findsNothing);
     });
 
-    testWidgets('null settings paint NO shadow (back-compat)',
-        (tester) async {
+    testWidgets('null settings paint NO shadow (back-compat)', (tester) async {
       await tester.pumpWidget(_wrap(
         _make(),
         brightness: Brightness.light,

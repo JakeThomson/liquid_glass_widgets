@@ -51,8 +51,7 @@ void main() {
       expect(controller.progress, 1.0);
     });
 
-    testWidgets('snap back to half → progress returns to 0.0',
-        (tester) async {
+    testWidgets('snap back to half → progress returns to 0.0', (tester) async {
       final controller = GlassModalSheetController();
       await tester.pumpWidget(_sheetApp(controller));
       await tester.pumpAndSettle();

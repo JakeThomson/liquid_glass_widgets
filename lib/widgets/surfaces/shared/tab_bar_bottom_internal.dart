@@ -429,6 +429,7 @@ class TabIndicator extends StatefulWidget {
     this.interactionGlowOpacity = 1,
     this.interactionScale = 1.0,
     this.platformViewBackdrop = false,
+    this.springDescription,
     super.key,
   });
 
@@ -448,6 +449,7 @@ class TabIndicator extends StatefulWidget {
   final double magnification;
   final double innerBlur;
   final MaskingQuality maskingQuality;
+  final SpringDescription? springDescription;
   final GlobalKey? backgroundKey;
 
   /// How far the jelly indicator's leading and trailing edges expand
@@ -571,9 +573,10 @@ class TabIndicatorState extends State<TabIndicator>
                 child: VelocitySpringBuilder(
                   value: tabXAlign,
                   springWhenActive: GlassSpring.interactive(),
-                  springWhenReleased: GlassSpring.snappy(
-                    duration: const Duration(milliseconds: 350),
-                  ),
+                  springWhenReleased: widget.springDescription ??
+                      GlassSpring.snappy(
+                        duration: const Duration(milliseconds: 350),
+                      ),
                   active: tabIsDragging,
                   builder: (context, value, velocity, child) {
                     final alignment = Alignment(value, 0);

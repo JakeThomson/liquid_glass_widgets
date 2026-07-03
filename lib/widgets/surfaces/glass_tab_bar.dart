@@ -884,6 +884,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
       adaptiveBrightness: widget.adaptiveBrightness,
       onBrightnessChanged: widget.onBrightnessChanged,
       brightnessOverride: widget.brightnessOverride,
+      springDescription: widget.springDescription,
     );
   }
 
@@ -949,6 +950,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
       adaptiveBrightness: widget.adaptiveBrightness,
       onBrightnessChanged: widget.onBrightnessChanged,
       brightnessOverride: widget.brightnessOverride,
+      springDescription: widget.springDescription,
       // No extra button in inline placement
     );
   }
