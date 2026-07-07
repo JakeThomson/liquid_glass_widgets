@@ -1,4 +1,19 @@
+# 0.21.3
+
+## 🐛 Bug Fixes
+
+- **SVG and custom icons restored** — `SizedBox`-wrapped icons (e.g. `SvgPicture`) were silently stripped from the render tree since `0.20.0`. The `SizedBox.shrink()` sentinel detection now checks `width`, `height`, and `child` fields so a caller-supplied `SizedBox` wrapping a real icon is always rendered correctly.
+- **Searchable bar pill stays active while dragging** — the glass indicator on `GlassTabBar.searchable` collapsed back to its resting state when the finger passed over the currently selected tab mid-drag. The thickness spring now includes the `tabIsDragging` guard, matching the behaviour already present in `GlassTabBar.bottom`.
+- **`JellyClipper` Impeller radius guard** — the clip radius is now clamped to strictly less than half the indicator's shortest side, preventing a malformed `RRect` path that caused content to vanish under Impeller's Metal renderer in certain animation frames.
+
+## 🧹 Example
+
+- **Indicator Parity demo calibrated** — default refraction set to `1.15` (`GlassDefaults.refractiveIndex`) to match all Apple demos; both `GlassTabBar.inline` variants now wire live tuner sliders for expansion and pinch strength.
+
+---
+
 # 0.21.2
+
 
 ## 🐛 Bug Fixes
 

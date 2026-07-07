@@ -188,10 +188,14 @@ class BottomBarTabItem extends StatelessWidget {
     final iconColor = selected ? selectedIconColor : unselectedIconColor;
     final iconWidget = selected ? (tab.activeIcon ?? tab.icon) : tab.icon;
 
-    // When no icon is provided the builder passes SizedBox.shrink() as a
-    // sentinel. Exclude it from the Column so the label is truly centred
-    // and the iconLabelSpacing gap doesn't push it below mid-point.
-    final bool hasIcon = iconWidget is! SizedBox;
+    // SizedBox.shrink() (width:0, height:0, no child) is the sentinel used
+    // by glass_tab_bar.dart when a GlassTab has no icon. Detect it by checking
+    // that all three fields match — a caller-supplied SizedBox wrapping a real
+    // icon will have a non-zero size OR a non-null child.
+    final bool hasIcon = !(iconWidget is SizedBox &&
+        (iconWidget.width ?? 0) == 0 &&
+        (iconWidget.height ?? 0) == 0 &&
+        iconWidget.child == null);
 
     // Label style resolution — most-specific-wins:
     //   1. Base typography: caller [textStyle], else the built-in default keyed
