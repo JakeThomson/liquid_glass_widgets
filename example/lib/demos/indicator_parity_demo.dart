@@ -59,6 +59,10 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
   double _aberration = 0.15;
   // glassColor alpha — 0.0 = no tint (new default), 0.15 = old default
   double _glassTint = 0.0;
+  // refractiveIndex — 1.59 matches GlassTabBar.bottom internal default.
+  // Only visually affects the Premium (Impeller) path; Standard indicators
+  // do not capture background, so UV-warp has no effect there.
+  double _refraction = 1.59;
 
   // ── Per-widget state ───────────────────────────────────────────────────────
   int _segSelected = 0;
@@ -105,6 +109,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
   LiquidGlassSettings get _indicatorSettings =>
       AnimatedGlassIndicator.baseIndicatorSettings.copyWith(
         chromaticAberration: _aberration,
+        refractiveIndex: _refraction,
         glassColor: Color.from(
           alpha: _glassTint,
           red: 1,
@@ -202,11 +207,13 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                   expansionV: _expansionV,
                   aberration: _aberration,
                   glassTint: _glassTint,
+                  refraction: _refraction,
                   onPinchChanged: (v) => setState(() => _pinchStrength = v),
                   onExpansionHChanged: (v) => setState(() => _expansionH = v),
                   onExpansionVChanged: (v) => setState(() => _expansionV = v),
                   onAberrationChanged: (v) => setState(() => _aberration = v),
                   onGlassTintChanged: (v) => setState(() => _glassTint = v),
+                  onRefractionChanged: (v) => setState(() => _refraction = v),
                 ),
 
                 const SizedBox(height: 28),
@@ -406,11 +413,13 @@ class _TunerPanel extends StatefulWidget {
     required this.expansionV,
     required this.aberration,
     required this.glassTint,
+    required this.refraction,
     required this.onPinchChanged,
     required this.onExpansionHChanged,
     required this.onExpansionVChanged,
     required this.onAberrationChanged,
     required this.onGlassTintChanged,
+    required this.onRefractionChanged,
   });
 
   final double pinchStrength;
@@ -418,11 +427,13 @@ class _TunerPanel extends StatefulWidget {
   final double expansionV;
   final double aberration;
   final double glassTint;
+  final double refraction;
   final ValueChanged<double> onPinchChanged;
   final ValueChanged<double> onExpansionHChanged;
   final ValueChanged<double> onExpansionVChanged;
   final ValueChanged<double> onAberrationChanged;
   final ValueChanged<double> onGlassTintChanged;
+  final ValueChanged<double> onRefractionChanged;
 
   @override
   State<_TunerPanel> createState() => _TunerPanelState();
@@ -572,6 +583,17 @@ class _TunerPanelState extends State<_TunerPanel> {
                               displayValue: widget.glassTint.toStringAsFixed(2),
                               accentColor: const Color(0xFFBF5AF2),
                               onChanged: widget.onGlassTintChanged,
+                            ),
+                            _SliderRow(
+                              label: 'Refraction (n)',
+                              value: widget.refraction,
+                              min: 1.0,
+                              max: 2.0,
+                              divisions: 100,
+                              displayValue:
+                                  widget.refraction.toStringAsFixed(2),
+                              accentColor: const Color(0xFF64D2FF),
+                              onChanged: widget.onRefractionChanged,
                             ),
                           ],
                         ),

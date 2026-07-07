@@ -1,3 +1,26 @@
+# 0.21.2
+
+## 🐛 Bug Fixes
+
+- **Extra button stretch disabled over platform views** — `GlassTabBarExtraButton` now correctly disables its stretch effect when `platformViewBackdrop: true`, matching the behavior of `GlassTabBar.bottom` and fixing the jittery spring animation.
+- **`GlassMenu` item scroll wiggle fixed** — menu items with wrapped text (e.g. `maxLines: 2`) could drift sub-pixel vertically during slide-to-select dragging because `ClampingScrollPhysics` allowed fractional scroll offsets even when no overflow was intended. Non-scrollable menus now use `NeverScrollableScrollPhysics`, locking the content completely in place during drag.
+- **`GlassPopover` first-frame height fixed** — the popover was briefly rendered at full-screen height before its content height was known, producing a visible flash and forcing users to wrap content in a `SingleChildScrollView` as a workaround. An invisible `Offstage` measurement pass now runs on Frame 1, letting Flutter's layout engine calculate the exact intrinsic content height before the morph animation starts. The animation launches on Frame 2 with perfect geometry — no mid-flight height correction, no flash, no heuristics.
+
+## ⚡ Performance
+
+- **Removed unnecessary compositing layer in `GlassBottomBar`** — the `RepaintBoundary` wrapping the icon layer in `_buildHighQualityMode` is now only mounted when `platformViewBackdrop: true`, where it is required for the Platform View capture path (bug #99). In the common case (`platformViewBackdrop: false`) the boundary was creating a GPU offscreen texture every frame with no caching benefit, since the `JellyClipper` changes on every animation frame.
+- **`GlassPopover` idle trigger optimised** — when the popover is fully closed, the trigger widget now skips unnecessary `Transform`, `Opacity`, and `IgnorePointer` compositing layers. This removes redundant GPU work in the common idle state.
+
+## 🧹 Code Quality
+
+- **Null-safe trigger child access** — replaced a `child!` force-unwrap in `GlassPopoverInternal` with a null-safe `child ?? const SizedBox.shrink()` fallback, preventing a hard crash if `child` is ever omitted in a future refactor.
+
+## 🧪 Example
+
+- **Refraction slider added to Indicator Parity demo tuner** — a "Refraction (n)" slider (range 1.0–2.0, default 1.59 matching `GlassTabBar.bottom`'s internal default) for tuning the `refractiveIndex` on the Premium (Impeller) glass indicator. Standard indicators do not perform background capture so the parameter has no visual effect there.
+
+---
+
 # 0.21.1
 
 ## 🐛 Bug Fixes — Standard indicator parity
