@@ -4,7 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../theme/glass_theme.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 import '../../types/glass_quality.dart';
 import '../../utils/glass_performance_monitor.dart';
@@ -352,13 +353,15 @@ class AdaptiveGlass extends StatelessWidget {
     if (effectiveUseOwnLayer) {
       // Resolve shadows for the GPU cutout method
       final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
-      
+
       // Fallback to the CSS-style shadow for platforms with known saveLayer Impeller bugs
-      final useFallbackShadow = kIsWeb || defaultTargetPlatform == TargetPlatform.windows;
-      
-      final shadows = (isDark || _FrostedFallback._isFlatEdge(shape) || useFallbackShadow)
-          ? const <BoxShadow>[]
-          : baseSettings.effectiveShadow;
+      final useFallbackShadow =
+          kIsWeb || defaultTargetPlatform == TargetPlatform.windows;
+
+      final shadows =
+          (isDark || _FrostedFallback._isFlatEdge(shape) || useFallbackShadow)
+              ? const <BoxShadow>[]
+              : baseSettings.effectiveShadow;
 
       Widget premium = LiquidGlass.withOwnLayer(
         shape: shape,
@@ -384,7 +387,10 @@ class AdaptiveGlass extends StatelessWidget {
       );
 
       // If we bypassed the GPU cutout shadow, apply the standard CSS-style shadow instead
-      if (useFallbackShadow && baseSettings.effectiveShadow.isNotEmpty && !isDark && !_FrostedFallback._isFlatEdge(shape)) {
+      if (useFallbackShadow &&
+          baseSettings.effectiveShadow.isNotEmpty &&
+          !isDark &&
+          !_FrostedFallback._isFlatEdge(shape)) {
         return _wrapWithLightModeShadow(context, baseSettings, premiumTracker);
       }
       return premiumTracker;
