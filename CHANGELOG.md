@@ -1,3 +1,34 @@
+# Unreleased
+
+## ✨ New Features
+
+- **Optional sheet detents** — `GlassModalSheet` (and `.show()`) gained a
+  `detents` set (`Set<GlassSheetDetent>`, mirroring UIKit's sheet detents) plus
+  a `dismissible` flag, to compose which stops a sheet offers:
+  - `{GlassSheetDetent.medium}` → a **half-only glass** sheet that never morphs
+    to the opaque full state (its content still scrolls at the half detent).
+  - `{GlassSheetDetent.large}` → a **full-only opaque** sheet that opens
+    straight to full.
+  - `{GlassSheetDetent.medium, GlassSheetDetent.large}` → the default two-stop
+    sheet.
+  - `dismissible: false` → the sheet rubber-bands at its lowest detent instead
+    of swiping away (the Apple Pay / Sign in with Apple pattern).
+
+  The set must be non-empty (asserted). The peek floor is separate — it stays
+  `enablePeek` (the persistent-mode resting floor, with its own styling).
+
+## 🐛 Bug Fixes
+
+- **`GlassModalSheetController` reattachment** — the controller no longer
+  detaches when its `GlassModalSheet` is swapped under a stable controller
+  (e.g. a `ValueKey` change): the replacement's `initState` runs before the
+  outgoing widget's `dispose`, so the detach is now guarded to only clear the
+  attachment it still owns. Previously this left the controller inert and the
+  sheet un-openable.
+- **Half-only content scrolling** — a sheet's inner scroll view now enables at
+  the sheet's *topmost* detent rather than hardcoding the `full` state, so a
+  half-only sheet scrolls its content correctly.
+
 # 0.24.4
 
 ## 🐛 Bug Fixes
