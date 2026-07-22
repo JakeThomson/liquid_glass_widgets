@@ -237,7 +237,7 @@ void main() {
     test('handleDrag phase → evaluateMove always true', () {
       arena.phase = GesturePhase.handleDrag;
       expect(
-          arena.evaluateMove(0, 0, GlassSheetState.half, 5,
+          arena.evaluateMove(0, 0, GlassSheetState.half, GlassSheetState.full, 5,
               canScrollListUp: false, hasScrollClients: false),
           isTrue);
     });
@@ -245,7 +245,7 @@ void main() {
     test('scrolling phase → evaluateMove always false', () {
       arena.phase = GesturePhase.scrolling;
       expect(
-          arena.evaluateMove(0, 0, GlassSheetState.half, 5,
+          arena.evaluateMove(0, 0, GlassSheetState.half, GlassSheetState.full, 5,
               canScrollListUp: false, hasScrollClients: false),
           isFalse);
     });
@@ -253,14 +253,14 @@ void main() {
     test('contentDrag phase → evaluateMove always true', () {
       arena.phase = GesturePhase.contentDrag;
       expect(
-          arena.evaluateMove(0, 0, GlassSheetState.half, 5,
+          arena.evaluateMove(0, 0, GlassSheetState.half, GlassSheetState.full, 5,
               canScrollListUp: false, hasScrollClients: false),
           isTrue);
     });
 
     test('upward full + hasScrollClients → scrolling', () {
       arena.beginPointer(100, 50, 0.9, PointerDeviceKind.touch);
-      final r = arena.evaluateMove(80, 50, GlassSheetState.full, 5,
+      final r = arena.evaluateMove(80, 50, GlassSheetState.full, GlassSheetState.full, 5,
           canScrollListUp: false, hasScrollClients: true);
       expect(r, isFalse);
       expect(arena.phase, GesturePhase.scrolling);
@@ -268,7 +268,7 @@ void main() {
 
     test('upward full + no clients → contentDrag', () {
       arena.beginPointer(100, 50, 0.9, PointerDeviceKind.touch);
-      final r = arena.evaluateMove(80, 50, GlassSheetState.full, 5,
+      final r = arena.evaluateMove(80, 50, GlassSheetState.full, GlassSheetState.full, 5,
           canScrollListUp: false, hasScrollClients: false);
       expect(r, isTrue);
       expect(arena.phase, GesturePhase.contentDrag);
@@ -276,7 +276,7 @@ void main() {
 
     test('downward full + canScrollListUp → scrolling', () {
       arena.beginPointer(100, 50, 0.9, PointerDeviceKind.touch);
-      final r = arena.evaluateMove(120, 50, GlassSheetState.full, 5,
+      final r = arena.evaluateMove(120, 50, GlassSheetState.full, GlassSheetState.full, 5,
           canScrollListUp: true, hasScrollClients: true);
       expect(r, isFalse);
       expect(arena.phase, GesturePhase.scrolling);
@@ -284,7 +284,7 @@ void main() {
 
     test('downward full + cannot scroll → contentDrag', () {
       arena.beginPointer(100, 50, 0.9, PointerDeviceKind.touch);
-      final r = arena.evaluateMove(120, 50, GlassSheetState.full, 5,
+      final r = arena.evaluateMove(120, 50, GlassSheetState.full, GlassSheetState.full, 5,
           canScrollListUp: false, hasScrollClients: false);
       expect(r, isTrue);
       expect(arena.phase, GesturePhase.contentDrag);
@@ -292,14 +292,14 @@ void main() {
 
     test('half state vertical drag → contentDrag', () {
       arena.beginPointer(100, 50, 0.5, PointerDeviceKind.touch);
-      final r = arena.evaluateMove(120, 50, GlassSheetState.half, 5,
+      final r = arena.evaluateMove(120, 50, GlassSheetState.half, GlassSheetState.full, 5,
           canScrollListUp: false, hasScrollClients: false);
       expect(r, isTrue);
     });
 
     test('horizontal drag → false', () {
       arena.beginPointer(100, 50, 0.5, PointerDeviceKind.touch);
-      final r = arena.evaluateMove(102, 80, GlassSheetState.half, 5,
+      final r = arena.evaluateMove(102, 80, GlassSheetState.half, GlassSheetState.full, 5,
           canScrollListUp: false, hasScrollClients: false);
       expect(r, isFalse);
     });

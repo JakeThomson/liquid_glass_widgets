@@ -6,6 +6,21 @@ part of '../glass_modal_sheet.dart';
 
 enum GlassSheetState { hidden, peek, half, full }
 
+/// The resting heights a sheet may stop at, chosen via
+/// [GlassModalSheet.detents]. Mirrors UIKit's sheet detents:
+///
+///   • [medium] — the content-height, translucent-glass stop (Apple Pay /
+///     Sign in with Apple). Maps to [GlassSheetState.half] internally.
+///   • [large]  — the screen-height, opaque stop (Maps / Music). Maps to
+///     [GlassSheetState.full].
+///
+/// A sheet declares any non-empty subset: `{medium}` is half-only glass,
+/// `{large}` is full-only opaque, `{medium, large}` is the default two-stop
+/// sheet. The peek floor is NOT a detent here — it stays [GlassModalSheet
+/// .enablePeek] (it's the persistent-mode resting floor with its own
+/// styling, and folding it in would break that released API).
+enum GlassSheetDetent { medium, large }
+
 enum GlassSheetMode {
   /// Scenario 1: hidden ↔ half ↔ full
   /// Can swipe down from half to hidden. From full → half → hidden.
@@ -77,6 +92,9 @@ class SheetGeometry {
   final double? fullSize;
   final double peekSize;
   final bool enablePeek;
+  final bool enableHalf;
+  final bool enableFull;
+  final bool dismissible;
 
   const SheetGeometry({
     required this.mode,
@@ -84,7 +102,36 @@ class SheetGeometry {
     this.fullSize,
     required this.peekSize,
     this.enablePeek = true,
+    this.enableHalf = true,
+    this.enableFull = true,
+    this.dismissible = true,
   });
+
+  /// The rest states this sheet can occupy, ordered low → high. This is the
+  /// single source of truth for the state machine — snapping, min/max bounds,
+  /// and resistance all derive from it, so a sheet can omit any of peek / half
+  /// / full and the machine simply routes around the missing detent.
+  List<GlassSheetState> get orderedStates {
+    final states = <GlassSheetState>[];
+    // Hidden is a drag target (swipe-to-dismiss) only when the sheet is
+    // dismissible, has no peek floor, and isn't a persistent sheet. A
+    // non-dismissible sheet rubber-bands at its lowest detent instead (the
+    // Apple Pay / Sign in with Apple pattern — no accidental swipe-away).
+    if (dismissible && !enablePeek && mode == GlassSheetMode.dismissible) {
+      states.add(GlassSheetState.hidden);
+    }
+    if (enablePeek) states.add(GlassSheetState.peek);
+    if (enableHalf && halfSize > 0) states.add(GlassSheetState.half);
+    if (enableFull) states.add(GlassSheetState.full);
+    // Guardrail for the invalid all-disabled config (asserted against in the
+    // widget in debug): a sheet must have at least one primary detent, so fall
+    // back to half in release rather than render an un-openable sheet.
+    if (!states.contains(GlassSheetState.half) &&
+        !states.contains(GlassSheetState.full)) {
+      states.add(GlassSheetState.half);
+    }
+    return states;
+  }
 
   static double positionFor(
     GlassSheetState state,
@@ -141,8 +188,8 @@ class SheetGeometry {
     }
   }
 
-  GlassSheetState get minState =>
-      enablePeek ? GlassSheetState.peek : GlassSheetState.hidden;
+  GlassSheetState get minState => orderedStates.first;
+  GlassSheetState get maxState => orderedStates.last;
 
   /// Computes target state based on current position and velocity.
   GlassSheetState resolveTarget(
@@ -150,19 +197,9 @@ class SheetGeometry {
     required double snapThreshold,
     required double velocityThreshold,
   }) {
-    // Build the ordered sequence of available states for the current mode
-    final List<GlassSheetState> states = [];
-    if (!enablePeek && mode == GlassSheetMode.dismissible) {
-      states.add(GlassSheetState.hidden);
-    }
-    if (enablePeek) {
-      states.add(GlassSheetState.peek);
-    }
-    // Skip half state when halfSize is 0 — allows direct full→hidden.
-    if (halfSize > 0) {
-      states.add(GlassSheetState.half);
-    }
-    states.add(GlassSheetState.full);
+    // The ordered rest states for this sheet's config (peek / half / full are
+    // each optional; hidden appears only for a dismissible, peek-less sheet).
+    final states = orderedStates;
 
     final positions = states
         .map((s) => positionForState(s, current.screenSize.height))
@@ -175,7 +212,7 @@ class SheetGeometry {
       for (int i = 0; i < states.length - 1; i++) {
         if (current.position < positions[i + 1] - 0.001) return states[i + 1];
       }
-      return GlassSheetState.full;
+      return states.last;
     }
     if (velocity < -velocityThreshold) {
       // Find the next state below current
@@ -236,15 +273,15 @@ class SheetGeometry {
     required double resistance,
   }) {
     final minPos = positionForState(minState, screenHeight);
-    final fullPos = positionForState(GlassSheetState.full, screenHeight);
+    final maxPos = positionForState(maxState, screenHeight);
 
     if (rawPosition < minPos) {
       final overflow = minPos - rawPosition;
       return minPos - overflow * resistance;
     }
-    if (rawPosition > fullPos) {
-      final overflow = rawPosition - fullPos;
-      return fullPos + overflow * resistance;
+    if (rawPosition > maxPos) {
+      final overflow = rawPosition - maxPos;
+      return maxPos + overflow * resistance;
     }
     return rawPosition;
   }
@@ -258,7 +295,16 @@ class GlassModalSheetController {
   _GlassModalSheetState? _state;
 
   void _attach(_GlassModalSheetState state) => _state = state;
-  void _detach() => _state = null;
+
+  // Guarded: only clear if [state] is still the attached one. During a
+  // widget swap under a shared controller (e.g. a key change), the new
+  // instance's initState → _attach runs BEFORE the old instance's
+  // dispose → _detach; an unguarded clear would then null out the live
+  // attachment and silently break the controller. Mirrors how Flutter's
+  // own ScrollController/RestorableProperty guard reattachment.
+  void _detach(_GlassModalSheetState state) {
+    if (_state == state) _state = null;
+  }
 
   void snapToState(GlassSheetState state,
       {bool animate = true, double velocity = 0}) {
@@ -325,6 +371,7 @@ class GestureArena {
     double y,
     double x,
     GlassSheetState currentState,
+    GlassSheetState maxState,
     double threshold, {
     required bool canScrollListUp,
     required bool hasScrollClients,
@@ -337,7 +384,12 @@ class GestureArena {
     final dx = (x - dragStartX).abs();
 
     if (dy > threshold && dy > dx) {
-      if (currentState == GlassSheetState.full) {
+      // At the topmost detent the sheet can't expand further, so an inner
+      // scroll view (if any) owns the gesture. maxState is `full` for a
+      // normal sheet but `half` for a half-only sheet (enableFull: false),
+      // which is why this compares against maxState rather than hardcoding
+      // full — otherwise a half-only sheet would never scroll its content.
+      if (currentState == maxState) {
         if ((y - dragStartY) < 0) {
           // Swiping UP
           if (hasScrollClients) {
