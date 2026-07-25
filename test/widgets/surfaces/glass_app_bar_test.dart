@@ -186,8 +186,136 @@ void main() {
 
       expect(appBar.centerTitle, isTrue);
       expect(appBar.backgroundColor, equals(Colors.transparent));
+      expect(appBar.toolbarHeight, equals(44.0));
       expect(appBar.preferredSize, equals(const Size.fromHeight(44.0)));
+      expect(appBar.bottom, isNull);
     });
+
+    group('bottom parameter', () {
+      testWidgets('preferredSize includes bottom widget height', (tester) async {
+        const bottomHeight = 48.0;
+        final appBar = GlassAppBar(
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(bottomHeight),
+            child: const SizedBox.shrink(),
+          ),
+        );
+        expect(
+          appBar.preferredSize,
+          equals(const Size.fromHeight(44.0 + bottomHeight)),
+        );
+      });
+
+      testWidgets('bottom widget is rendered in the tree', (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: Scaffold(
+              appBar: GlassAppBar(
+                title: const Text('Title'),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(48.0),
+                  child: Text('bottom-content'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('bottom-content'), findsOneWidget);
+      });
+
+      testWidgets('scaffold reserves correct height with bottom',
+          (tester) async {
+        const bottomHeight = 48.0;
+        await tester.pumpWidget(
+          createTestApp(
+            child: Scaffold(
+              appBar: GlassAppBar(
+                title: const Text('Title'),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(bottomHeight),
+                  child: SizedBox.shrink(),
+                ),
+              ),
+              body: const SizedBox.expand(),
+            ),
+          ),
+        );
+
+        final appBarWidget = tester.widget<GlassAppBar>(
+          find.byType(GlassAppBar),
+        );
+        expect(
+          appBarWidget.preferredSize.height,
+          equals(44.0 + bottomHeight),
+        );
+      });
+
+      testWidgets('no bottom renders single toolbar row (no Column)',
+          (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: const Scaffold(
+              appBar: GlassAppBar(title: Text('No Bottom')),
+            ),
+          ),
+        );
+
+        // Without bottom there should be no Column inside GlassAppBar
+        expect(
+          find.descendant(
+            of: find.byType(GlassAppBar),
+            matching: find.byType(Column),
+          ),
+          findsNothing,
+        );
+      });
+
+      testWidgets('with bottom renders a Column wrapping toolbar + bottom',
+          (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: Scaffold(
+              appBar: GlassAppBar(
+                title: const Text('Title'),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(40.0),
+                  child: Text('tab-bar-placeholder'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          find.descendant(
+            of: find.byType(GlassAppBar),
+            matching: find.byType(Column),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      test('custom toolbarHeight is reflected in preferredSize without bottom',
+          () {
+        const appBar = GlassAppBar(toolbarHeight: 56.0);
+        expect(appBar.preferredSize, equals(const Size.fromHeight(56.0)));
+      });
+
+      test(
+          'custom toolbarHeight + bottom height sum correctly in preferredSize',
+          () {
+        final appBar = GlassAppBar(
+          toolbarHeight: 56.0,
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(48.0),
+            child: SizedBox.shrink(),
+          ),
+        );
+        expect(appBar.preferredSize, equals(const Size.fromHeight(104.0)));
+      });
+    });
+
 
     testWidgets('renders as StatelessWidget (no glass rendering)',
         (tester) async {
