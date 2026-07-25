@@ -1,4 +1,37 @@
+# 0.24.0
+
+## ⚠️ Breaking Changes
+
+- **`GlassAppBar.preferredSize` constructor parameter removed.** Replace with `toolbarHeight: double` (default `44.0`).
+
+  ```dart
+  // Before
+  GlassAppBar(preferredSize: Size.fromHeight(52))
+
+  // After
+  GlassAppBar(toolbarHeight: 52)
+  ```
+
+## 🐛 Bug Fixes
+
+- **`GlassScaffold` dark-mode gradient flash fixed.** When `backgroundColor` is set and the device is in dark mode, the edge-fade gradient around `GlassTabBar` / `GlassBottomBar` could briefly flash dark. The scaffold now always renders with a transparent Material background (preventing theme bleed), and passes the explicit `backgroundColor` to the edge-effect fallback gradient.
+
+## ✨ New Features
+
+
+- **`GlassAppBar.bottom`** — Accepts any `PreferredSizeWidget` (typically a `TabBar`) rendered below the navigation bar title. The scaffold automatically reserves the combined height — no manual sizing needed.
+
+  ```dart
+  GlassAppBar(
+    title: const Text('Browse'),
+    bottom: TabBar(tabs: [...]),
+  )
+  ```
+
+---
+
 # 0.23.0
+
 
 ## ⚠️ Breaking Changes
 
