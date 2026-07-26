@@ -16,6 +16,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+// Capsule sentinel — delegates to GlassDefaults so the demo stays in sync
+// with the package constant. Both bar and indicator pass this through to the
+// shader so it clamps to a true capsule at any bar height.
+const _kCapsuleSentinel = GlassDefaults.capsuleRadius;
+// The slider UI travels 4..36; at the max position we remap to _kCapsuleSentinel.
+const _kSliderCapsuleThreshold = 36.0;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LiquidGlassWidgets.initialize();
@@ -62,6 +69,20 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
   // refractiveIndex — 1.15 matches GlassDefaults.refractiveIndex, the same
   // value used by all Apple demos and the main example app.
   double _refraction = 1.15;
+  // ── Shape — 3-tier radius hierarchy ─────────────────────────────────────
+  // Tier 1 (default): both bar and indicator are capsule (iOS 26 authentic).
+  //   9999 is the sentinel value — widgets pass it directly to the shader so
+  //   it clamps to a perfect capsule even during jelly-bloom expansion.
+  // Tier 2 (bar slider): user drags bar radius below 36 → indicator auto-tracks
+  //   at barBorderRadius − 4 (nested-arc formula, same as GlassSegmentedControl).
+  // Tier 3 (indicator slider): explicit override, shown with a Reset-to-Auto button.
+  //
+  // Slider mapping: the slider travels 4..36 in the UI. When the slider is at
+  // its maximum (36), we write 9999.0 to mean "true capsule sentinel". Values
+  // below 36 are written verbatim.
+  double _barBorderRadius = _kCapsuleSentinel; // default: true capsule (iOS 26)
+  double?
+      _indicatorBorderRadiusOverride; // null = auto (capsule or barRadius − 4)
 
   // ── Per-widget state ───────────────────────────────────────────────────────
   int _segSelected = 0;
@@ -207,12 +228,20 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                   aberration: _aberration,
                   glassTint: _glassTint,
                   refraction: _refraction,
+                  barBorderRadius: _barBorderRadius,
+                  indicatorBorderRadius: _indicatorBorderRadiusOverride,
                   onPinchChanged: (v) => setState(() => _pinchStrength = v),
                   onExpansionHChanged: (v) => setState(() => _expansionH = v),
                   onExpansionVChanged: (v) => setState(() => _expansionV = v),
                   onAberrationChanged: (v) => setState(() => _aberration = v),
                   onGlassTintChanged: (v) => setState(() => _glassTint = v),
                   onRefractionChanged: (v) => setState(() => _refraction = v),
+                  onBarBorderRadiusChanged: (v) =>
+                      setState(() => _barBorderRadius = v),
+                  onIndicatorBorderRadiusChanged: (v) =>
+                      setState(() => _indicatorBorderRadiusOverride = v),
+                  onResetIndicatorBorderRadius: () =>
+                      setState(() => _indicatorBorderRadiusOverride = null),
                 ),
 
                 const SizedBox(height: 28),
@@ -230,6 +259,8 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                       onSegmentSelected: (i) =>
                           setState(() => _segSelected = i),
                       quality: GlassQuality.premium,
+                      borderRadius: _barBorderRadius,
+                      indicatorBorderRadius: _indicatorBorderRadiusOverride,
                       indicatorPinchStrength: _pinchStrength,
                       indicatorExpansion: _expansion,
                       indicatorSettings: _indicatorSettings,
@@ -264,6 +295,8 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
                       ),
+                      borderRadius: _barBorderRadius,
+                      indicatorBorderRadius: _indicatorBorderRadiusOverride,
                       indicatorPinchStrength: _pinchStrength,
                       indicatorExpansion: _expansion,
                       indicatorSettings: _indicatorSettings,
@@ -290,6 +323,8 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                           onTabSelected: (i) =>
                               setState(() => _inlineSelected = i),
                           quality: GlassQuality.premium,
+                          barBorderRadius: _barBorderRadius,
+                          indicatorBorderRadius: _indicatorBorderRadiusOverride,
                           indicatorPinchStrength: _pinchStrength,
                           indicatorSettings: _indicatorSettings,
                         ),
@@ -314,6 +349,8 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                             setState(() => _inlineIconSelected = i),
                         quality: GlassQuality.premium,
                         barHeight: 52,
+                        barBorderRadius: _barBorderRadius,
+                        indicatorBorderRadius: _indicatorBorderRadiusOverride,
                         indicatorPinchStrength: _pinchStrength,
                         indicatorSettings: _indicatorSettings,
                       ),
@@ -336,6 +373,8 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                     indicatorPinchStrength: _pinchStrength,
                     indicatorExpansion: _expansion,
                     indicatorSettings: _indicatorSettings,
+                    barBorderRadius: _barBorderRadius,
+                    indicatorBorderRadius: _indicatorBorderRadiusOverride,
                   ),
                 ),
 
@@ -353,6 +392,8 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                     indicatorPinchStrength: _pinchStrength,
                     indicatorExpansion: _expansion,
                     indicatorSettings: _indicatorSettings,
+                    barBorderRadius: _barBorderRadius,
+                    indicatorBorderRadius: _indicatorBorderRadiusOverride,
                   ),
                 ),
 
@@ -372,6 +413,8 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                     indicatorPinchStrength: _pinchStrength,
                     indicatorExpansion: _expansion,
                     indicatorSettings: _indicatorSettings,
+                    barBorderRadius: _barBorderRadius,
+                    indicatorBorderRadius: _indicatorBorderRadiusOverride,
                     searchConfig: GlassSearchBarConfig(
                       hintText: 'Search…',
                       showsCancelButton: true,
@@ -410,12 +453,17 @@ class _TunerPanel extends StatefulWidget {
     required this.aberration,
     required this.glassTint,
     required this.refraction,
+    required this.barBorderRadius,
+    required this.indicatorBorderRadius,
     required this.onPinchChanged,
     required this.onExpansionHChanged,
     required this.onExpansionVChanged,
     required this.onAberrationChanged,
     required this.onGlassTintChanged,
     required this.onRefractionChanged,
+    required this.onBarBorderRadiusChanged,
+    required this.onIndicatorBorderRadiusChanged,
+    required this.onResetIndicatorBorderRadius,
   });
 
   final double pinchStrength;
@@ -424,12 +472,21 @@ class _TunerPanel extends StatefulWidget {
   final double aberration;
   final double glassTint;
   final double refraction;
+  final double barBorderRadius;
+
+  /// null = auto (barBorderRadius − 4). Non-null = explicit Tier-3 override.
+  final double? indicatorBorderRadius;
   final ValueChanged<double> onPinchChanged;
   final ValueChanged<double> onExpansionHChanged;
   final ValueChanged<double> onExpansionVChanged;
   final ValueChanged<double> onAberrationChanged;
   final ValueChanged<double> onGlassTintChanged;
   final ValueChanged<double> onRefractionChanged;
+  final ValueChanged<double> onBarBorderRadiusChanged;
+  final ValueChanged<double> onIndicatorBorderRadiusChanged;
+
+  /// Resets indicator radius back to auto (Tier 2 → Tier 1/2).
+  final VoidCallback onResetIndicatorBorderRadius;
 
   @override
   State<_TunerPanel> createState() => _TunerPanelState();
@@ -590,6 +647,162 @@ class _TunerPanelState extends State<_TunerPanel> {
                                   widget.refraction.toStringAsFixed(2),
                               accentColor: const Color(0xFF64D2FF),
                               onChanged: widget.onRefractionChanged,
+                            ),
+                            const SizedBox(height: 6),
+                            const Divider(
+                                height: 1,
+                                thickness: 0.5,
+                                color: Color(0x22FFFFFF)),
+                            const SizedBox(height: 6),
+                            // ── Shape — 3-tier radius ──────────────────────
+                            // Slider travels 4..36 in the UI; the max value (36)
+                            // is mapped to the 9999 capsule sentinel on write.
+                            _SliderRow(
+                              label: 'Bar Radius  (Tier 1→2)',
+                              value: widget.barBorderRadius >= _kCapsuleSentinel
+                                  ? _kSliderCapsuleThreshold
+                                  : widget.barBorderRadius,
+                              min: 4,
+                              max: 36,
+                              divisions: 32,
+                              displayValue:
+                                  widget.barBorderRadius >= _kCapsuleSentinel
+                                      ? 'capsule (default)'
+                                      : '${widget.barBorderRadius.round()} px',
+                              accentColor: const Color(0xFFFF9F0A),
+                              onChanged: (v) => widget.onBarBorderRadiusChanged(
+                                // Map slider max → true capsule sentinel
+                                v >= _kSliderCapsuleThreshold
+                                    ? _kCapsuleSentinel
+                                    : v,
+                              ),
+                            ),
+                            // Indicator radius — Tier 2 (auto) / Tier 3 (override)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Indicator Radius  (Tier 2→3)',
+                                        style: TextStyle(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.7),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (widget.indicatorBorderRadius !=
+                                              null)
+                                            GestureDetector(
+                                              onTap: widget
+                                                  .onResetIndicatorBorderRadius,
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(
+                                                    right: 6),
+                                                child: Icon(
+                                                  Icons.refresh_rounded,
+                                                  size: 14,
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.5),
+                                                ),
+                                              ),
+                                            ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFF375F)
+                                                  .withValues(
+                                                alpha:
+                                                    widget.indicatorBorderRadius ==
+                                                            null
+                                                        ? 0.1
+                                                        : 0.2,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              widget.indicatorBorderRadius ==
+                                                      null
+                                                  ? 'auto'
+                                                  : '${widget.indicatorBorderRadius!.round()} px',
+                                              style: TextStyle(
+                                                color: const Color(0xFFFF375F)
+                                                    .withValues(
+                                                  alpha:
+                                                      widget.indicatorBorderRadius ==
+                                                              null
+                                                          ? 0.55
+                                                          : 1.0,
+                                                ),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                fontFeatures: const [
+                                                  FontFeature.tabularFigures()
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(
+                                    height: 30,
+                                    child: SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        activeTrackColor:
+                                            const Color(0xFFFF375F),
+                                        inactiveTrackColor: Colors.white
+                                            .withValues(alpha: 0.12),
+                                        thumbColor: const Color(0xFFFF375F),
+                                        thumbShape: const RoundSliderThumbShape(
+                                            enabledThumbRadius: 7),
+                                        trackHeight: 3,
+                                        overlayShape:
+                                            SliderComponentShape.noOverlay,
+                                      ),
+                                      child: Slider(
+                                        value: (widget.indicatorBorderRadius ??
+                                                (widget.barBorderRadius - 4)
+                                                    .clamp(4.0, 30.0))
+                                            .clamp(4.0, 30.0),
+                                        min: 4,
+                                        max: 30,
+                                        divisions: 26,
+                                        onChanged: widget
+                                            .onIndicatorBorderRadiusChanged,
+                                      ),
+                                    ),
+                                  ),
+                                  if (widget.indicatorBorderRadius == null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 2, bottom: 2),
+                                      child: Text(
+                                        widget.barBorderRadius >=
+                                                _kCapsuleSentinel
+                                            ? 'auto: capsule  ·  drag to override'
+                                            : 'auto: bar − 4 = ${(widget.barBorderRadius - 4).clamp(0, 999).round()} px  ·  drag to override',
+                                        style: TextStyle(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.35),
+                                          fontSize: 10,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ],
                         ),

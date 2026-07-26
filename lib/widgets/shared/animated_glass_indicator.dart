@@ -143,7 +143,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
     required this.quality,
     required this.indicatorColor,
     required this.isBackgroundIndicator,
-    this.borderRadius = 9999.0,
+    this.borderRadius = GlassDefaults.capsuleRadius,
     this.settings,
     this.padding = EdgeInsets.zero,
     this.expansion = const EdgeInsets.all(8.0),

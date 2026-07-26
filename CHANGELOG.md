@@ -1,5 +1,6 @@
 # 0.24.0
 
+
 ## ⚠️ Breaking Changes
 
 - **`GlassAppBar.preferredSize` constructor parameter removed.** Replace with `toolbarHeight: double` (default `44.0`).
@@ -15,9 +16,19 @@
 ## 🐛 Bug Fixes
 
 - **`GlassScaffold` dark-mode gradient flash fixed.** When `backgroundColor` is set and the device is in dark mode, the edge-fade gradient around `GlassTabBar` / `GlassBottomBar` could briefly flash dark. The scaffold now always renders with a transparent Material background (preventing theme bleed), and passes the explicit `backgroundColor` to the edge-effect fallback gradient.
+- **`GlassBottomBar` default radius inconsistency fixed.** Was `32.0`; now `GlassDefaults.capsuleRadius` — consistent with `GlassTabBar.bottom`.
+- **Indicator radius inconsistent across widgets.** All interactive widgets (`GlassSegmentedControl`, `GlassTabBar`, `GlassBottomBar`) now share a unified radius calculation that is guaranteed correct during jelly-bloom expansion.
 
 ## ✨ New Features
 
+- **3-tier indicator radius system** — all interactive bar/control widgets now follow iOS 26 defaults out of the box:
+  - **Tier 1 (default):** bar and indicator are both a perfect capsule — no configuration needed.
+  - **Tier 2:** set `barBorderRadius` to a custom value and the indicator automatically tracks at `barBorderRadius − padding` (concentric nested arcs).
+  - **Tier 3:** set `indicatorBorderRadius` explicitly to override everything.
+- **`GlassDefaults.capsuleRadius`** — named constant (`9999.0`) for the capsule sentinel:
+  ```dart
+  GlassBottomBar(barBorderRadius: GlassDefaults.capsuleRadius)
+  ```
 
 - **`GlassAppBar.bottom`** — Accepts any `PreferredSizeWidget` (typically a `TabBar`) rendered below the navigation bar title. The scaffold automatically reserves the combined height — no manual sizing needed.
 

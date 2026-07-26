@@ -7,6 +7,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
+import '../../../constants/glass_defaults.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../types/glass_quality.dart';
@@ -531,8 +532,21 @@ class TabIndicatorState extends State<TabIndicator>
         _fallbackIndicatorColor;
     final targetAlignment = computeTabAlignment(widget.tabIndex);
 
-    final indicatorRadius =
-        widget.indicatorBorderRadius ?? widget.barBorderRadius;
+    // Nested-arc default: if the outer bar is a capsule sentinel (≥ 9999),
+    // the indicator is also passed 9999 directly, so the glass shader clamps to
+    // a true capsule even during jelly-bloom expansion (where the pill canvas
+    // grows beyond its rest size and a finite radius would appear boxy).
+    // For custom radii (e.g. GlassBottomBar default 32), the indicator subtracts
+    // the padding inset (4 px) to produce concentric nested arcs (32 − 4 = 28).
+    // An explicit indicatorBorderRadius always takes priority.
+    const indicatorPadding = 4.0;
+    final indicatorRadius = widget.indicatorBorderRadius ??
+        (widget.barBorderRadius >= GlassDefaults.capsuleRadius
+            ? GlassDefaults.capsuleRadius
+            : (widget.barBorderRadius - indicatorPadding).clamp(
+                0.0,
+                GlassDefaults.capsuleRadius,
+              ));
 
     // Lateral sway: the bar body subtly follows the interactive pill during
     // horizontal drags, mimicking iOS 26 bottom bar physics. The SpringBuilder
@@ -771,6 +785,7 @@ class TabIndicatorState extends State<TabIndicator>
               padding: const EdgeInsets.all(4),
               expansion: widget.indicatorExpansion,
               settings: widget.indicatorSettings,
+              borderRadius: indicatorRadius,
               pinchStrength: widget.indicatorPinchStrength,
               backgroundKey: widget.platformViewBackdrop
                   ? _iconLayerKey
@@ -849,6 +864,7 @@ class TabIndicatorState extends State<TabIndicator>
                     padding: const EdgeInsets.all(4),
                     expansion: widget.indicatorExpansion,
                     settings: widget.indicatorSettings,
+                    borderRadius: indicatorRadius,
                     backgroundKey: widget.platformViewBackdrop
                         ? _iconLayerKey
                         : widget.backgroundKey,
@@ -972,6 +988,7 @@ class TabIndicatorState extends State<TabIndicator>
             expansion:
                 widget.indicatorExpansion.resolve(Directionality.of(context)),
             settings: widget.indicatorSettings,
+            borderRadius: indicatorRadius,
             pinchStrength: widget.indicatorPinchStrength,
             backgroundKey: widget.platformViewBackdrop
                 ? _iconLayerKey

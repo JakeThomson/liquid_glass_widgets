@@ -147,7 +147,7 @@ void main() {
       );
 
       expect(control.height, equals(32));
-      expect(control.borderRadius, equals(9999.0));
+      expect(control.borderRadius, equals(GlassDefaults.capsuleRadius));
       expect(control.useOwnLayer, isFalse);
       expect(control.quality, isNull);
     });
@@ -563,6 +563,68 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(GlassSegmentedControl), findsOneWidget);
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Indicator Radius Tiers
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('GlassSegmentedControl 3-Tier Indicator Radius', () {
+    testWidgets('Tier 1: capsule sentinel passes directly to indicator',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSegmentedControl(
+            segments: [GlassSegment(label: 'A'), GlassSegment(label: 'B')],
+            selectedIndex: 0,
+            onSegmentSelected: (_) {},
+            // Implicitly barBorderRadius is GlassDefaults.capsuleRadius
+          ),
+        ),
+      );
+
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      expect(indicator.borderRadius, equals(GlassDefaults.capsuleRadius));
+    });
+
+    testWidgets('Tier 2: custom finite radius applies padding inset',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSegmentedControl(
+            segments: [GlassSegment(label: 'A'), GlassSegment(label: 'B')],
+            selectedIndex: 0,
+            onSegmentSelected: (_) {},
+            borderRadius: 16.0,
+          ),
+        ),
+      );
+
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      // Outer 16.0 minus 2.0 padding = 14.0
+      expect(indicator.borderRadius, equals(14.0));
+    });
+
+    testWidgets('Tier 3: explicit indicatorBorderRadius overrides everything',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassSegmentedControl(
+            segments: [GlassSegment(label: 'A'), GlassSegment(label: 'B')],
+            selectedIndex: 0,
+            onSegmentSelected: (_) {},
+            borderRadius: GlassDefaults.capsuleRadius,
+            indicatorBorderRadius: 8.0,
+          ),
+        ),
+      );
+
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      expect(indicator.borderRadius, equals(8.0));
     });
   });
 }
