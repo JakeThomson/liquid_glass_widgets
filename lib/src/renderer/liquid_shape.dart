@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'liquid_glass_renderer.dart';
@@ -33,6 +35,20 @@ sealed class LiquidShape extends OutlinedBorder with EquatableMixin {
 
   @override
   List<Object?> get props => [side];
+
+  /// The effective corner radius passed to the shader for this shape.
+  ///
+  /// For symmetric shapes this is the single corner radius value. For
+  /// asymmetric shapes (e.g. [LiquidVerticalRoundedRectangle]) it is the
+  /// dominant / largest corner radius; the shader receives the per-corner
+  /// breakdown separately. For shapes that are inherently circular (e.g.
+  /// [LiquidOval]) this returns [double.infinity], which callers clamp to
+  /// `min(width, height) / 2`.
+  ///
+  /// This getter is the single source of truth consumed by all rendering paths
+  /// and is obfuscation-safe — unlike `runtimeType.toString()` heuristics or
+  /// `dynamic` property access, which break under `--obfuscate`.
+  double get effectiveRadius;
 }
 
 /// Represents a squircle shape that can be used by a [LiquidGlass] widget.
@@ -49,6 +65,9 @@ class LiquidRoundedSuperellipse extends LiquidShape {
   ///
   /// This is the radius of the corners of the squircle.
   final double borderRadius;
+
+  @override
+  double get effectiveRadius => borderRadius;
 
   @override
   OutlinedBorder get _equivalentOutlinedBorder => RoundedSuperellipseBorder(
@@ -86,6 +105,10 @@ class LiquidOval extends LiquidShape {
   /// Creates a new [LiquidOval] with the given [side].
   const LiquidOval({super.side = BorderSide.none});
 
+  /// Returns [double.infinity] — callers clamp to `min(width, height) / 2`.
+  @override
+  double get effectiveRadius => double.infinity;
+
   @override
   OutlinedBorder get _equivalentOutlinedBorder => const OvalBorder();
 
@@ -119,6 +142,9 @@ class LiquidRoundedRectangle extends LiquidShape {
   ///
   /// This is the radius of the corners of the rounded rectangle.
   final double borderRadius;
+
+  @override
+  double get effectiveRadius => borderRadius;
 
   @override
   OutlinedBorder get _equivalentOutlinedBorder => RoundedRectangleBorder(
@@ -163,6 +189,14 @@ class LiquidVerticalRoundedRectangle extends LiquidShape {
 
   /// The radius of the bottom corners.
   final double bottomRadius;
+
+  /// Returns the larger of [topRadius] and [bottomRadius].
+  ///
+  /// The shader receives individual per-corner radii separately via the
+  /// asymmetric data path; this value is used only when a single representative
+  /// radius is needed (e.g. for the lightweight shader fallback).
+  @override
+  double get effectiveRadius => math.max(topRadius, bottomRadius);
 
   @override
   OutlinedBorder get _equivalentOutlinedBorder => RoundedRectangleBorder(
@@ -215,6 +249,14 @@ class LiquidVerticalRoundedSuperellipse extends LiquidShape {
 
   /// The radius of the bottom corners.
   final double bottomRadius;
+
+  /// Returns the larger of [topRadius] and [bottomRadius].
+  ///
+  /// The shader receives individual per-corner radii separately via the
+  /// asymmetric data path; this value is used only when a single representative
+  /// radius is needed.
+  @override
+  double get effectiveRadius => math.max(topRadius, bottomRadius);
 
   @override
   OutlinedBorder get _equivalentOutlinedBorder => RoundedSuperellipseBorder(

@@ -979,42 +979,11 @@ class _RenderLightweightGlass extends RenderProxyBox {
       bottomLeftR = s.bottomRadius.clamp(0.0, maxBot);
       isAsymmetric = true;
     } else {
-      final dynamic dynShape = _shape;
-      final shapeStr = _shape.runtimeType.toString().toLowerCase();
-
-      // 1. Try dynamic property extraction (Highest Accuracy)
-      try {
-        if (dynShape.borderRadius is num) {
-          cornerRadius = (dynShape.borderRadius as num).toDouble();
-        } else if (dynShape.borderRadius is BorderRadius) {
-          cornerRadius = (dynShape.borderRadius as BorderRadius).topLeft.x;
-        } else if (dynShape.borderRadius is BorderRadiusGeometry) {
-          final resolved = (dynShape.borderRadius as BorderRadiusGeometry)
-              .resolve(TextDirection.ltr);
-          cornerRadius = resolved.topLeft.x;
-        } else if (dynShape.radius is num) {
-          cornerRadius = (dynShape.radius as num).toDouble();
-        } else if (dynShape.radius is Radius) {
-          cornerRadius = (dynShape.radius as Radius).x;
-        }
-      } catch (_) {}
-
-      // 2. Class Name Heuristics (Robustness fallback)
-      // Only apply if the property extraction failed completely
-      if (cornerRadius == null) {
-        if (shapeStr.contains('rounded') || shapeStr.contains('superellipse')) {
-          cornerRadius = 16.0; // Standard pill/card radius
-        } else if (shapeStr.contains('oval') ||
-            shapeStr.contains('circle') ||
-            shapeStr.contains('stadium')) {
-          cornerRadius = math.min(size.width, size.height) / 2.0;
-        } else {
-          cornerRadius = 0.0;
-        }
-      }
-
+      // effectiveRadius is obfuscation-safe: typed virtual dispatch on the
+      // sealed LiquidShape hierarchy — not a dynamic property lookup or a
+      // runtimeType.toString() heuristic (both break under --obfuscate).
       final maxRadius = math.min(size.width, size.height) / 2.0;
-      cornerRadius = cornerRadius.clamp(0.0, maxRadius);
+      cornerRadius = _shape.effectiveRadius.clamp(0.0, maxRadius);
     }
 
     shader.setFloat(index++, isAsymmetric ? -1.0 : cornerRadius!);
