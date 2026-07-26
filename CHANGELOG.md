@@ -1,3 +1,9 @@
+# 0.24.1
+
+## 🐛 Bug Fixes
+
+- **`GlassButton.custom` border invisible in release builds with `--obfuscate`** — `GlassEffect` and `LightweightLiquidGlass` were using `dynamic` property access and `runtimeType.toString()` heuristics to extract the shape's corner radius for the shader. Both techniques are silently broken by the Dart AOT obfuscator: property names are mangled and class names become single-character tokens. The fallback silently resolved to `0.0`, producing a perfectly square (borderless) shape in release builds. Fixed by adding a typed `effectiveRadius` abstract getter to `LiquidShape` implemented by every concrete shape class — a single virtual dispatch that the compiler can optimise and the obfuscator cannot break.
+
 # 0.24.0
 
 
