@@ -10,6 +10,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../../constants/glass_defaults.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
@@ -268,8 +269,20 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
         theme.textTheme.textStyle.color?.withValues(alpha: .1) ??
         _fallbackIndicatorColor;
     final targetAlignment = computeTabAlignment(widget.tabIndex);
-    final indicatorRadius =
-        widget.indicatorBorderRadius ?? widget.barBorderRadius;
+    // Nested-arc default: if the outer bar is a capsule sentinel (≥ 9999),
+    // the indicator is also passed 9999 directly, so the glass shader clamps to
+    // a true capsule even during jelly-bloom expansion. For custom radii (e.g.
+    // GlassTabBar.inline default 100), the indicator subtracts the padding inset
+    // (4 px) to produce concentric nested arcs (100 − 4 = 96). An explicit
+    // indicatorBorderRadius always takes priority.
+    const indicatorPadding = 4.0;
+    final indicatorRadius = widget.indicatorBorderRadius ??
+        (widget.barBorderRadius >= GlassDefaults.capsuleRadius
+            ? GlassDefaults.capsuleRadius
+            : (widget.barBorderRadius - indicatorPadding).clamp(
+                0.0,
+                GlassDefaults.capsuleRadius,
+              ));
 
     // Lateral sway: the bar body subtly follows the interactive pill during
     // horizontal drags, mimicking iOS 26 bottom bar physics. The SpringBuilder
@@ -484,6 +497,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
               padding: const EdgeInsets.all(4),
               expansion: widget.indicatorExpansion,
               settings: widget.indicatorSettings,
+              borderRadius: indicatorRadius,
               pinchStrength: widget.indicatorPinchStrength,
               backgroundKey: widget.backgroundKey,
             ),
@@ -556,6 +570,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                     padding: const EdgeInsets.all(4),
                     expansion: widget.indicatorExpansion,
                     settings: widget.indicatorSettings,
+                    borderRadius: indicatorRadius,
                     pinchStrength: widget.indicatorPinchStrength,
                     backgroundKey: widget.backgroundKey,
                   ),
@@ -647,6 +662,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
             expansion:
                 widget.indicatorExpansion.resolve(Directionality.of(context)),
             settings: widget.indicatorSettings,
+            borderRadius: indicatorRadius,
             pinchStrength: widget.indicatorPinchStrength,
             // Over a PlatformView the normal backdrop (map region) can't be
             // captured by toImageSync, so the premium indicator refracts the

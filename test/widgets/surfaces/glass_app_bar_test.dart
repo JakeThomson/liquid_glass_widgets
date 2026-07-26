@@ -192,7 +192,8 @@ void main() {
     });
 
     group('bottom parameter', () {
-      testWidgets('preferredSize includes bottom widget height', (tester) async {
+      testWidgets('preferredSize includes bottom widget height',
+          (tester) async {
         const bottomHeight = 48.0;
         final appBar = GlassAppBar(
           bottom: PreferredSize(
@@ -315,7 +316,6 @@ void main() {
         expect(appBar.preferredSize, equals(const Size.fromHeight(104.0)));
       });
     });
-
 
     testWidgets('renders as StatelessWidget (no glass rendering)',
         (tester) async {

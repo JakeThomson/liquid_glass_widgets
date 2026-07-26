@@ -46,6 +46,28 @@ class GlassDefaults {
   /// Large border radius for prominent elements (20.0)
   static const double borderRadiusLarge = 20.0;
 
+  /// Sentinel radius that produces a perfect capsule (stadium) shape at any
+  /// widget height.
+  ///
+  /// Internally, interactive widgets such as [GlassSegmentedControl],
+  /// [GlassTabBar], and [GlassBottomBar] detect this value via a
+  /// `>= capsuleRadius` guard and pass it straight through to the glass shader
+  /// without subtracting the indicator padding inset. This guarantees a
+  /// true circular pill even during jelly-bloom expansion, where the physics
+  /// canvas grows well beyond the widget’s at-rest height.
+  ///
+  /// Use this constant instead of a raw `9999` literal:
+  /// ```dart
+  /// GlassBottomBar(
+  ///   barBorderRadius: GlassDefaults.capsuleRadius, // true capsule
+  /// )
+  /// ```
+  ///
+  /// Why 9999 and not [double.infinity]? The shader SDF receives the radius
+  /// as a uniform float and guards against infinity, so a large-but-finite
+  /// sentinel is the safe cross-platform choice.
+  static const double capsuleRadius = 9999.0;
+
   // ============================================================================
   // Padding
   // ============================================================================

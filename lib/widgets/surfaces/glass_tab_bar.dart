@@ -2,6 +2,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 
+import '../../constants/glass_defaults.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../src/types/glass_interaction_behavior.dart';
@@ -355,7 +356,7 @@ class GlassTabBar extends StatefulWidget {
           indicatorColor: indicatorColor,
           indicatorSettings: indicatorSettings,
           indicatorPinchStrength: indicatorPinchStrength,
-          indicatorBorderRadius: indicatorBorderRadius ?? barBorderRadius,
+          indicatorBorderRadius: indicatorBorderRadius,
           selectedIconColor: selectedIconColor,
           unselectedIconColor: unselectedIconColor,
           selectedLabelColor: selectedLabelColor,
@@ -681,10 +682,19 @@ class GlassTabBar extends StatefulWidget {
   // ---------------------------------------------------------------------------
   final _GlassTabBarPlacement _placement;
 
-  // ---------------------------------------------------------------------------
-  // Default border radius for bottom/searchable constructors
-  // ---------------------------------------------------------------------------
-  static const double _kDefaultBottomBorderRadius = 32.0;
+  // GlassDefaults.capsuleRadius is intentional: Flutter's RoundedRectangleBorder
+  // clamps the radius to min(r, halfHeight), so any value ≥ halfHeight produces
+  // a stadium/capsule. Using a large sentinel means the default capsule look
+  // holds at ANY barHeight — if we used 32, a user who sets barHeight: 100 would
+  // get visible corners (capsule threshold = 50 > 32) without setting
+  // barBorderRadius explicitly.
+  //
+  // The indicator also receives GlassDefaults.capsuleRadius when the bar is a
+  // capsule — the internal "barRadius >= capsuleRadius" guard passes it through
+  // directly rather than doing capsuleRadius - 4. This ensures the glass shader
+  // always clamps to a true capsule even during jelly-bloom expansion, where
+  // the pill canvas grows beyond its rest height.
+  static const double _kDefaultBottomBorderRadius = GlassDefaults.capsuleRadius;
 
   // ---------------------------------------------------------------------------
   // Bottom / searchable fields (all have defaults — safe for inline too)

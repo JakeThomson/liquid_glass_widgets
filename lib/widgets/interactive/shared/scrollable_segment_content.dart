@@ -6,6 +6,7 @@ library;
 import 'package:flutter/cupertino.dart' show CupertinoColors, CupertinoTheme;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../../../constants/glass_defaults.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
@@ -65,7 +66,7 @@ class ScrollableSegmentContent extends StatefulWidget {
   final double iconSize;
   final EdgeInsetsGeometry labelPadding;
   final GlassQuality quality;
-  final BorderRadius? indicatorBorderRadius;
+  final double? indicatorBorderRadius;
   final LiquidGlassSettings? indicatorSettings;
 
   /// Maximum concave lens pinch strength. Forwarded to [AnimatedGlassIndicator].
@@ -688,6 +689,20 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                       exactWidth:
                           widget.isScrollable ? _indWidthSpring.value : null,
                       exactOffset: widget.isScrollable ? screenLeft : null,
+                      // Nested-arc default: if the outer bar is a capsule sentinel
+                      // (>= GlassDefaults.capsuleRadius), pass capsuleRadius directly so
+                      // the glass shader clamps to a true capsule even during
+                      // jelly-bloom expansion.
+                      // For custom radii, subtract the indicator inset (2 px) to
+                      // produce concentric nested arcs.
+                      // An explicit indicatorBorderRadius always takes priority.
+                      borderRadius: widget.indicatorBorderRadius ??
+                          ((widget.tabBarBorderRadius?.topLeft.x ??
+                                      GlassDefaults.capsuleRadius) >=
+                                  GlassDefaults.capsuleRadius
+                              ? GlassDefaults.capsuleRadius
+                              : ((widget.tabBarBorderRadius!.topLeft.x) - 2.0)
+                                  .clamp(0.0, GlassDefaults.capsuleRadius)),
                     );
                   }
 
