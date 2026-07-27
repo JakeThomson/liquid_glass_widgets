@@ -552,13 +552,22 @@ class GlassScaffold extends StatelessWidget {
       stackWidget = GlassContentAwareScope(child: stackWidget);
     }
 
+    // Resolve effective background: explicit widget > backgroundColor colour >
+    // null (Scaffold inherits Theme.scaffoldBackgroundColor).
+    final Widget? effectiveBackground = background ??
+        (backgroundColor != null
+            ? SizedBox.expand(
+                child: ColoredBox(color: backgroundColor!),
+              )
+            : null);
+
     Widget scaffold = Scaffold(
-      // Always transparent — GlassPage owns the background rendering.
-      // Without this, the Material Scaffold inherits the dark-mode
-      // Theme.scaffoldBackgroundColor even when backgroundColor is
-      // explicitly set, causing glass bar backdrop captures to see a dark
-      // background and the edge-fade fallback gradient to flicker dark.
-      backgroundColor: Colors.transparent,
+      // Only force transparent when GlassPage will render a background widget
+      // behind the scaffold. When no background is provided the scaffold must
+      // be opaque so that MaterialPageRoute transitions don't show the
+      // underlying route through the incoming page.
+      backgroundColor:
+          effectiveBackground != null ? Colors.transparent : null,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
       floatingActionButton: floatingActionButton,
       body: stackWidget,
@@ -575,14 +584,7 @@ class GlassScaffold extends StatelessWidget {
       );
     }
 
-    // Resolve effective background: explicit widget > backgroundColor colour >
-    // null (Scaffold inherits Theme.scaffoldBackgroundColor).
-    final Widget? effectiveBackground = background ??
-        (backgroundColor != null
-            ? SizedBox.expand(
-                child: ColoredBox(color: backgroundColor!),
-              )
-            : null);
+
 
     return GlassPage(
       background: effectiveBackground,
