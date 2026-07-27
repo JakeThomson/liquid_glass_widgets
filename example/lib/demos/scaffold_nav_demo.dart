@@ -61,7 +61,7 @@ class _ScreenAState extends State<ScreenA> {
             icon: const Icon(CupertinoIcons.arrow_right),
             label: 'Go to B',
             width: 40,
-          height: 40,
+            height: 40,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const ScreenB()),
             ),

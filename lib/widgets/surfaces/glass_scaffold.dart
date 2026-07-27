@@ -566,8 +566,7 @@ class GlassScaffold extends StatelessWidget {
       // behind the scaffold. When no background is provided the scaffold must
       // be opaque so that MaterialPageRoute transitions don't show the
       // underlying route through the incoming page.
-      backgroundColor:
-          effectiveBackground != null ? Colors.transparent : null,
+      backgroundColor: effectiveBackground != null ? Colors.transparent : null,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
       floatingActionButton: floatingActionButton,
       body: stackWidget,
@@ -583,8 +582,6 @@ class GlassScaffold extends StatelessWidget {
         child: scaffold,
       );
     }
-
-
 
     return GlassPage(
       background: effectiveBackground,
