@@ -334,4 +334,73 @@ void main() {
       GlassModalSheetController().snapToState(GlassSheetState.full);
     });
   });
+
+  group('SheetGeometry.resolvePeek', () {
+    const dismissible = GlassSheetMode.dismissible;
+    const persistent = GlassSheetMode.persistent;
+    const twoStop = {GlassSheetDetent.medium, GlassSheetDetent.large};
+    const withSmall = {
+      GlassSheetDetent.small,
+      GlassSheetDetent.medium,
+      GlassSheetDetent.large,
+    };
+
+    test('small in detents enables the peek floor', () {
+      expect(
+        SheetGeometry.resolvePeek(
+            enablePeek: null, detents: withSmall, mode: dismissible),
+        isTrue,
+      );
+    });
+
+    test('no small, dismissible → no peek', () {
+      expect(
+        SheetGeometry.resolvePeek(
+            enablePeek: null, detents: twoStop, mode: dismissible),
+        isFalse,
+      );
+    });
+
+    test('persistent keeps its floor without small (back-compat)', () {
+      // A persistent sheet is DEFINED by resting instead of dismissing, so the
+      // default {medium, large} must not silently strip its floor — that would
+      // break every released persistent sheet.
+      expect(
+        SheetGeometry.resolvePeek(
+            enablePeek: null, detents: twoStop, mode: persistent),
+        isTrue,
+      );
+    });
+
+    test('explicit enablePeek wins over the detents set, both ways', () {
+      // The deprecated flag is still an existing caller's stated intent.
+      expect(
+        SheetGeometry.resolvePeek(
+            enablePeek: false, detents: withSmall, mode: persistent),
+        isFalse,
+        reason: 'enablePeek: false must defeat small + persistent',
+      );
+      expect(
+        SheetGeometry.resolvePeek(
+            enablePeek: true, detents: twoStop, mode: dismissible),
+        isTrue,
+        reason: 'enablePeek: true must add a floor with no small present',
+      );
+    });
+
+    test('peek detent feeds orderedStates as a real rest state', () {
+      final geo = SheetGeometry(
+        mode: dismissible,
+        halfSize: 400,
+        fullSize: 800,
+        peekSize: 100,
+        enablePeek: SheetGeometry.resolvePeek(
+            enablePeek: null, detents: withSmall, mode: dismissible),
+        enableHalf: withSmall.contains(GlassSheetDetent.medium),
+        enableFull: withSmall.contains(GlassSheetDetent.large),
+      );
+      expect(geo.orderedStates, contains(GlassSheetState.peek));
+    });
+  });
+
 }

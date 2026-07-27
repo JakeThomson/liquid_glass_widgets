@@ -168,17 +168,27 @@ class GlassModalSheet extends StatefulWidget {
   ///
   /// If null, it defaults to false for [GlassSheetMode.dismissible] and true for
   /// [GlassSheetMode.persistent].
+  @Deprecated(
+    'Use GlassSheetDetent.small in `detents` instead. Peek is now a detent '
+    'like medium and large, so one mechanism describes every resting stop. '
+    'Still honoured when set (it wins over `detents`); will be removed in a '
+    'future release.',
+  )
   final bool? enablePeek;
 
   /// The resting detents this sheet offers. Appearance follows the detent:
-  /// [GlassSheetDetent.medium] is content-height glass, [GlassSheetDetent
-  /// .large] is screen-height opaque.
+  /// [GlassSheetDetent.small] is the peek floor, [GlassSheetDetent.medium] is
+  /// content-height glass, [GlassSheetDetent.large] is screen-height opaque.
   ///
-  ///   • `{medium}`         → half-only glass (Apple Pay / Sign in with Apple)
-  ///   • `{large}`          → full-only opaque, opens straight to full (Maps / Music)
-  ///   • `{medium, large}`  → the default two-stop sheet
+  ///   • `{medium}`             → half-only glass (Apple Pay / Sign in with Apple)
+  ///   • `{large}`              → full-only opaque, opens straight to full (Maps / Music)
+  ///   • `{medium, large}`      → the default two-stop sheet
+  ///   • `{small, medium, large}` → adds the maps-style peek floor underneath
   ///
-  /// Must be non-empty. The peek floor is separate — see [enablePeek].
+  /// Must be non-empty. [GlassSheetMode.persistent] keeps its peek floor even
+  /// when [GlassSheetDetent.small] is absent — a persistent sheet is defined by
+  /// resting somewhere instead of dismissing. Style the small detent with the
+  /// `peek*` params ([peekSettings], [peekWidth], …).
   final Set<GlassSheetDetent> detents;
 
   /// Whether a downward drag can dismiss the sheet. When false, a peek-less
@@ -267,8 +277,8 @@ class GlassModalSheet extends StatefulWidget {
     this.peekTopBorderRadius,
     this.peekBottomRadius,
   }) : assert(detents.length > 0,
-            'GlassModalSheet needs at least one detent (peek is a minimized '
-            'floor, not a standalone detent — see enablePeek).');
+            'GlassModalSheet needs at least one detent — add medium and/or large '
+            '(small alone is a floor, not a resting height).');
 
   /// Shows a high-fidelity glass modal sheet.
   static Future<T?> show<T>({
@@ -330,8 +340,8 @@ class GlassModalSheet extends StatefulWidget {
     double? peekBottomRadius,
   }) {
     assert(detents.isNotEmpty,
-        'GlassModalSheet.show() needs at least one detent (peek is a '
-        'minimized floor, not a standalone detent — see enablePeek).');
+        'GlassModalSheet.show() needs at least one detent — add medium '
+        'and/or large (small alone is a floor, not a resting height).');
     assert(() {
       if (mode == GlassSheetMode.persistent &&
           barrierColor == Colors.transparent) {

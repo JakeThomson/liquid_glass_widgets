@@ -11,11 +11,25 @@
     straight to full.
   - `{GlassSheetDetent.medium, GlassSheetDetent.large}` → the default two-stop
     sheet.
+  - `{GlassSheetDetent.small, ...}` → adds the maps-style **peek floor**
+    underneath, so one mechanism now describes every resting stop.
   - `dismissible: false` → the sheet rubber-bands at its lowest detent instead
     of swiping away (the Apple Pay / Sign in with Apple pattern).
 
-  The set must be non-empty (asserted). The peek floor is separate — it stays
-  `enablePeek` (the persistent-mode resting floor, with its own styling).
+  The set must be non-empty (asserted). Style the small detent with the
+  existing `peek*` params (`peekSettings`, `peekWidth`, …), which stay
+  top-level: a `Set` whose members carried per-instance payload would need
+  equality that ignores that payload, or `detents.contains(small)` breaks and
+  two differently-configured smalls could sit in one set.
+
+## ⚠️ Deprecations
+
+- **`GlassModalSheet.enablePeek`** → use `GlassSheetDetent.small` in `detents`.
+  Peek is now a detent like medium and large. `enablePeek` is still honoured
+  and takes precedence over the set when set explicitly, so existing code keeps
+  working unchanged; it will be removed in a future release.
+  `GlassSheetMode.persistent` keeps its peek floor with or without the detent —
+  a persistent sheet is defined by resting rather than dismissing.
 
 ## 🐛 Bug Fixes
 

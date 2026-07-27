@@ -16,10 +16,17 @@ enum GlassSheetState { hidden, peek, half, full }
 ///
 /// A sheet declares any non-empty subset: `{medium}` is half-only glass,
 /// `{large}` is full-only opaque, `{medium, large}` is the default two-stop
-/// sheet. The peek floor is NOT a detent here — it stays [GlassModalSheet
-/// .enablePeek] (it's the persistent-mode resting floor with its own
-/// styling, and folding it in would break that released API).
-enum GlassSheetDetent { medium, large }
+/// sheet, and adding [small] puts a peek floor underneath.
+///
+/// [small] is the maps-style resting floor — the state a persistent sheet
+/// returns to instead of dismissing. Its styling lives in the top-level
+/// `peek*` params ([GlassModalSheet.peekSettings], `peekWidth`, …) rather
+/// than on the detent itself, deliberately: a `Set` whose members carried
+/// per-instance payload would need equality that IGNORES that payload, or
+/// `detents.contains(small)` stops working and two smalls with different
+/// settings could sit in one set at once. Keeping the detent a plain enum
+/// keeps set membership meaning exactly one thing.
+enum GlassSheetDetent { small, medium, large }
 
 enum GlassSheetMode {
   /// Scenario 1: hidden ↔ half ↔ full
@@ -106,6 +113,25 @@ class SheetGeometry {
     this.enableFull = true,
     this.dismissible = true,
   });
+
+  /// Resolve whether the peek floor is active, from the public API's three
+  /// inputs. Pure and static so the precedence is testable and reviewable in
+  /// one place instead of inline in the widget's state.
+  ///
+  /// Precedence:
+  ///   1. [enablePeek] when set explicitly — deprecated, but an existing
+  ///      caller's intent must keep winning.
+  ///   2. [GlassSheetDetent.small] in [detents] — the current way.
+  ///   3. [GlassSheetMode.persistent], which is DEFINED by resting on a floor
+  ///      instead of dismissing, so it keeps peek under the default detents.
+  static bool resolvePeek({
+    required bool? enablePeek,
+    required Set<GlassSheetDetent> detents,
+    required GlassSheetMode mode,
+  }) =>
+      enablePeek ??
+      (detents.contains(GlassSheetDetent.small) ||
+          mode == GlassSheetMode.persistent);
 
   /// The rest states this sheet can occupy, ordered low → high. This is the
   /// single source of truth for the state machine — snapping, min/max bounds,
