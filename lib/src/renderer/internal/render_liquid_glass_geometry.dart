@@ -252,6 +252,12 @@ abstract class RenderLiquidGlassGeometry extends RenderProxyBox {
   ) {
     final bounds = geometryBounds.snapToPixels(devicePixelRatio);
 
+    if (bounds.isEmpty || !bounds.isFinite) {
+      final recorder = PictureRecorder();
+      Canvas(recorder); // Recorder must be started by a Canvas
+      return recorder.endRecording();
+    }
+
     final width = (bounds.width * devicePixelRatio).ceil();
     final height = (bounds.height * devicePixelRatio).ceil();
 

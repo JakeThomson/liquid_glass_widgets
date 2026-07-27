@@ -1,4 +1,12 @@
+# 0.24.2
+
+## 🐛 Bug Fixes
+
+- **Android cold-launch crash fixed** — On Android, Flutter's warm-up frame can produce zero-width or unbounded (`Infinity`) layout constraints before the window fully resolves. `RenderLiquidGlassGeometry._buildGeometryPicture` would attempt to scale and `ceil()` those non-finite bounds, throwing `UnsupportedError: Infinity or NaN toInt`. Fixed by guarding against empty or non-finite bounds and returning a safe empty `Picture` for the one affected frame. A matching guard was added in `LiquidGlassRenderObject.paint` to prevent the same non-finite values propagating into `toImageSync`.
+- **Compositing bits race condition fixed (Vulkan/Impeller)** — When `LightweightLiquidGlass` or `LiquidGlassRenderObject` changed settings that affect `alwaysNeedsCompositing`, the compositing bit was not synchronised, causing incorrect layer decisions on the first paint under Vulkan. Fixed by calling `markNeedsCompositingBitsUpdate()` whenever the compositing contract changes.
+
 # 0.24.1
+
 
 ## 🐛 Bug Fixes
 

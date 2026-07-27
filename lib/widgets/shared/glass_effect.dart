@@ -736,7 +736,14 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
       _cachedLightCos = math.cos(value.lightAngle);
       _cachedLightSin = -math.sin(value.lightAngle);
     }
+    final wasCompositing = alwaysNeedsCompositing;
     _settings = value;
+    // alwaysNeedsCompositing depends on effectiveBlur. Dirty the compositing
+    // bit whenever blur crosses zero so the framework re-evaluates instead of
+    // keeping a stale needsCompositing value.
+    if (wasCompositing != alwaysNeedsCompositing) {
+      markNeedsCompositingBitsUpdate();
+    }
     markNeedsPaint();
   }
 
