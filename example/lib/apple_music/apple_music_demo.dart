@@ -30,7 +30,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-const _kMusicRed = Color(0xFFFA2D48);
+const _kMusicRed = Color(0xFFFF2D55);
 const _kBackground = CupertinoDynamicColor.withBrightness(
     color: Color(0xFFF2F2F7), darkColor: Color(0xFF000000));
 const _kCardGray = CupertinoDynamicColor.withBrightness(
@@ -43,14 +43,26 @@ const _kSpacing = 8.0;
 
 /// Glass shared by every pill (play bar, home icon, search icon).
 LiquidGlassSettings _kPillGlass(BuildContext context) => LiquidGlassSettings(
-      glassColor: CupertinoTheme.of(context).brightness == Brightness.dark
-          ? const Color(0xCC1C1C1E)
-          : const Color(0xCCF2F2F7),
-      thickness: 30,
-      blur: 3,
-      lightIntensity: 0.35,
-      chromaticAberration: .01,
-    );
+    glassColor: CupertinoTheme.of(context).brightness == Brightness.dark
+        ? const Color(0xCC1C1C1E)
+        : const Color(0xCCF2F2F7),
+    thickness: 30,
+    blur: 2,
+    lightIntensity: 0.18,
+    chromaticAberration: .01,
+    saturation: 1.2,
+    fresnelStrength: 0.0);
+
+//  thickness: 30,
+//     blur: 2,
+//     chromaticAberration: .01,
+//     lightAngle: GlassDefaults.lightAngle,
+//     lightIntensity: 0.15,
+//     ambientStrength: 0,
+//     refractiveIndex: 1.2,
+//     fresnelStrength: 1.0,
+//     saturation: 1.2,
+//     specularSharpness: GlassSpecularSharpness.medium,
 
 // ─────────────────────────────────────────────────────────────────────────────
 // APP
@@ -185,9 +197,10 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
         blur: 2,
         chromaticAberration: .01,
         lightAngle: GlassDefaults.lightAngle,
-        lightIntensity: .5,
+        lightIntensity: 0.2,
         ambientStrength: 0,
         refractiveIndex: 1.2,
+        fresnelStrength: 0.0,
         saturation: 1.2,
         specularSharpness: GlassSpecularSharpness.medium,
       );
@@ -426,7 +439,14 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
             title: 'Music just for you.\n2 months free.',
             subtitle: 'Accept Free Trial',
             subtext: '2 months free, then \$12.99/month',
-            color: _kMusicRed,
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFF83E4F), // Vibrant Apple Music pinkish-red
+                Color(0xFFE2072C), // Deeper red at the bottom
+              ],
+            ),
             textColor: Colors.white,
             child: const _AppleMusicLogo(),
           ),
@@ -436,8 +456,17 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
             title: 'Music for the whole\nfamily. 2 months free.',
             subtitle: 'Accept Free Trial',
             subtext: '2 months free, then \$19.99/month',
-            color: _kCardGray.resolveFrom(context),
+            // gradient: const LinearGradient(
+            //   begin: Alignment.topCenter,
+            //   end: Alignment.bottomCenter,
+            //   colors: [
+            //     Color(0xFF2C2C2E), // dark charcoal top
+            //     Color(0xFF1C1C1E), // near-black bottom
+            //   ],
+            // ),
+            color: Color(0xFF1D1B1E),
             showBorder: true,
+            textColor: Colors.white,
             child: Icon(
               CupertinoIcons.person_3_fill,
               color: _kMusicRed,
@@ -888,7 +917,8 @@ class _HeroCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final String subtext;
-  final Color color;
+  final Color? color;
+  final Gradient? gradient;
   final Color? textColor;
   final Widget child;
   final bool showBorder;
@@ -897,11 +927,12 @@ class _HeroCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.subtext,
-    required this.color,
     required this.child,
+    this.color,
+    this.gradient,
     this.textColor,
     this.showBorder = false,
-  });
+  }) : assert(color != null || gradient != null, 'Provide color or gradient');
 
   @override
   Widget build(BuildContext context) {
@@ -910,6 +941,7 @@ class _HeroCard extends StatelessWidget {
       height: 400,
       decoration: BoxDecoration(
         color: color,
+        gradient: gradient,
         borderRadius: BorderRadius.circular(24),
         border: showBorder
             ? Border.all(
