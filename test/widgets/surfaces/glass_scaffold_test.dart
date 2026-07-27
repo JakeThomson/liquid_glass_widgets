@@ -537,7 +537,7 @@ void main() {
     });
 
     testWidgets(
-        'inner Material Scaffold is transparent even with no background set',
+        'inner Material Scaffold is opaque (null backgroundColor) with no background set',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -556,7 +556,11 @@ void main() {
           matching: find.byType(Scaffold),
         ),
       );
-      expect(scaffold.backgroundColor, Colors.transparent);
+      // Without a background widget the Scaffold must NOT be forced transparent.
+      // A null backgroundColor means the Scaffold inherits the theme's opaque
+      // scaffoldBackgroundColor, preventing the previous route bleeding through
+      // during MaterialPageRoute slide transitions (issue #177).
+      expect(scaffold.backgroundColor, isNull);
     });
   });
 }
