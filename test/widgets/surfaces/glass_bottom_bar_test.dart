@@ -5,6 +5,10 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../shared/test_helpers.dart';
 
+double _transitionScale(WidgetTester tester, Finder finder) {
+  return tester.widget<ScaleTransition>(finder).scale.value;
+}
+
 void main() {
   group('GlassBottomBar', () {
     final testTabs = [
@@ -333,6 +337,43 @@ void main() {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
+  // GlassBottomBar collapse config
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('GlassBottomBar collapse config', () {
+    test('direction enum has both values', () {
+      expect(
+        GlassBottomBarCollapseDirection.values,
+        contains(GlassBottomBarCollapseDirection.towardsExtraButton),
+      );
+      expect(
+        GlassBottomBarCollapseDirection.values,
+        contains(GlassBottomBarCollapseDirection.awayFromExtraButton),
+      );
+    });
+
+    test('config defaults are correct', () {
+      const config = GlassBottomBarCollapseConfig();
+      expect(
+        config.direction,
+        GlassBottomBarCollapseDirection.towardsExtraButton,
+      );
+      expect(config.expandOnTap, isTrue);
+      expect(config.animationDuration, const Duration(milliseconds: 220));
+      expect(config.collapsedExtraButtonScale, 0.9);
+    });
+
+    test('config accepts custom duration and collapsed scale', () {
+      const config = GlassBottomBarCollapseConfig(
+        animationDuration: Duration(milliseconds: 360),
+        collapsedExtraButtonScale: 0.82,
+      );
+      expect(config.animationDuration, const Duration(milliseconds: 360));
+      expect(config.collapsedExtraButtonScale, 0.82);
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
   // GlassBottomBar extended rendering scenarios
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -542,6 +583,538 @@ void main() {
         ),
       );
       expect(find.byType(GlassBottomBar), findsOneWidget);
+    });
+
+    testWidgets('up swipe collapses and tap expands before extra action fires',
+        (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: testTabs3,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            extraButton: GlassTabBarExtraButton(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'Add',
+              onTap: () => taps++,
+            ),
+            collapseConfig: const GlassBottomBarCollapseConfig(),
+          ),
+        ),
+      );
+
+      await tester.fling(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_gesture_region')),
+        const Offset(0, -300),
+        1200,
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(CupertinoIcons.add));
+      await tester.pumpAndSettle();
+      expect(taps, 0);
+
+      await tester.tap(find.byIcon(CupertinoIcons.add));
+      await tester.pump();
+      expect(taps, 1);
+    });
+
+    testWidgets('collapse keeps tab content visible during the animation',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: testTabs3,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            extraButton: GlassTabBarExtraButton(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'Add',
+              onTap: () {},
+            ),
+            collapseConfig: const GlassBottomBarCollapseConfig(
+              animationDuration: Duration(milliseconds: 220),
+            ),
+          ),
+        ),
+      );
+
+      await tester.fling(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_gesture_region')),
+        const Offset(0, -300),
+        1200,
+        warnIfMissed: false,
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Home'), findsWidgets);
+    });
+
+    testWidgets('collapse direction changes the tab pill resting edge',
+        (tester) async {
+      Future<Offset> collapsedTopLeft(
+        GlassBottomBarCollapseDirection direction,
+      ) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: GlassBottomBar(
+              tabs: testTabs3,
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              maskingQuality: MaskingQuality.off,
+              extraButton: GlassTabBarExtraButton(
+                icon: const Icon(CupertinoIcons.add),
+                label: 'Add',
+                onTap: () {},
+              ),
+              collapseConfig: GlassBottomBarCollapseConfig(
+                direction: direction,
+              ),
+            ),
+          ),
+        );
+
+        await tester.fling(
+          find.byKey(const ValueKey<String>('glass_bottom_bar_gesture_region')),
+          const Offset(0, -300),
+          1200,
+          warnIfMissed: false,
+        );
+        await tester.pumpAndSettle();
+
+        return tester.getTopLeft(
+          find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill')),
+        );
+      }
+
+      final towards = await collapsedTopLeft(
+        GlassBottomBarCollapseDirection.towardsExtraButton,
+      );
+      final away = await collapsedTopLeft(
+        GlassBottomBarCollapseDirection.awayFromExtraButton,
+      );
+
+      expect(towards.dx, greaterThan(away.dx));
+    });
+
+    testWidgets('collapse towards extra button removes the gap to extra button',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: testTabs3,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            extraButton: GlassTabBarExtraButton(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'Add',
+              onTap: () {},
+            ),
+            collapseConfig: const GlassBottomBarCollapseConfig(
+              direction: GlassBottomBarCollapseDirection.towardsExtraButton,
+            ),
+          ),
+        ),
+      );
+
+      await tester.fling(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_gesture_region')),
+        const Offset(0, -300),
+        1200,
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      final extraRect = tester.getRect(find.byKey(
+        const ValueKey<String>('glass_bottom_bar_extra_button_scale'),
+      ));
+      final pillRect = tester.getRect(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill')),
+      );
+
+      expect(pillRect.right, greaterThanOrEqualTo(extraRect.left - 0.5));
+    });
+
+    testWidgets(
+        'collapse towards extra button ends with the tab pill centered inside the extra button',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: testTabs3,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            extraButton: GlassTabBarExtraButton(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'Add',
+              onTap: () {},
+            ),
+            collapseConfig: const GlassBottomBarCollapseConfig(
+              direction: GlassBottomBarCollapseDirection.towardsExtraButton,
+            ),
+          ),
+        ),
+      );
+
+      await tester.fling(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_gesture_region')),
+        const Offset(0, -300),
+        1200,
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      final extraRect = tester.getRect(find.byKey(
+        const ValueKey<String>('glass_bottom_bar_extra_button_scale'),
+      ));
+      final pillRect = tester.getRect(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill')),
+      );
+
+      expect(pillRect.center.dx, greaterThan(extraRect.left));
+      expect(pillRect.center.dx, lessThan(extraRect.right));
+    });
+
+    testWidgets(
+        'left extra button also collapses without leaving a gap to the tab pill',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: testTabs3,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            extraButton: GlassTabBarExtraButton(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'Add',
+              placement: GlassExtraButtonPlacement.left,
+              onTap: () {},
+            ),
+            collapseConfig: const GlassBottomBarCollapseConfig(
+              direction: GlassBottomBarCollapseDirection.towardsExtraButton,
+            ),
+          ),
+        ),
+      );
+
+      await tester.fling(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_gesture_region')),
+        const Offset(0, -300),
+        1200,
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      final extraRect = tester.getRect(find.byKey(
+        const ValueKey<String>('glass_bottom_bar_extra_button_scale'),
+      ));
+      final pillRect = tester.getRect(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill')),
+      );
+
+      expect(pillRect.left, lessThanOrEqualTo(extraRect.right + 0.5));
+    });
+
+    testWidgets(
+        'left extra button collapse also ends with the tab pill centered inside the extra button',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: testTabs3,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            extraButton: GlassTabBarExtraButton(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'Add',
+              placement: GlassExtraButtonPlacement.left,
+              onTap: () {},
+            ),
+            collapseConfig: const GlassBottomBarCollapseConfig(
+              direction: GlassBottomBarCollapseDirection.towardsExtraButton,
+            ),
+          ),
+        ),
+      );
+
+      await tester.fling(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_gesture_region')),
+        const Offset(0, -300),
+        1200,
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      final extraRect = tester.getRect(find.byKey(
+        const ValueKey<String>('glass_bottom_bar_extra_button_scale'),
+      ));
+      final pillRect = tester.getRect(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill')),
+      );
+
+      expect(pillRect.center.dx, greaterThan(extraRect.left));
+      expect(pillRect.center.dx, lessThan(extraRect.right));
+    });
+
+    testWidgets('collapse shrinks both width and height', (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: testTabs3,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            maskingQuality: MaskingQuality.off,
+            extraButton: GlassTabBarExtraButton(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'Add',
+              onTap: () {},
+            ),
+            collapseConfig: const GlassBottomBarCollapseConfig(),
+          ),
+        ),
+      );
+
+      final pillFinder =
+          find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill'));
+      final expandedSize = tester.getSize(pillFinder);
+
+      await tester.fling(
+        find.byKey(const ValueKey<String>('glass_bottom_bar_gesture_region')),
+        const Offset(0, -300),
+        1200,
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      final collapsedSize = tester.getSize(pillFinder);
+      expect(collapsedSize.width, lessThan(expandedSize.width));
+      expect(collapsedSize.height, lessThan(expandedSize.height));
+    });
+
+    testWidgets('scrolling up collapses and scrolling down expands',
+        (tester) async {
+      final scrollController = ScrollController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: Colors.transparent,
+          ),
+          home: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: ListView.builder(
+              controller: scrollController,
+              itemCount: 60,
+              itemBuilder: (context, index) => SizedBox(
+                height: 80,
+                child: Text('Row $index'),
+              ),
+            ),
+            bottomNavigationBar: GlassBottomBar(
+              tabs: testTabs3,
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              maskingQuality: MaskingQuality.off,
+              extraButton: GlassTabBarExtraButton(
+                icon: const Icon(CupertinoIcons.add),
+                label: 'Add',
+                onTap: () {},
+              ),
+              collapseConfig: const GlassBottomBarCollapseConfig(),
+              scrollController: scrollController,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final expanded = tester.getTopLeft(
+          find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill')));
+
+      await tester.drag(find.byType(ListView), const Offset(0, -220));
+      await tester.pumpAndSettle();
+
+      final collapsed = tester.getTopLeft(
+          find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill')));
+      expect(collapsed.dx, greaterThan(expanded.dx));
+
+      await tester.drag(find.byType(ListView), const Offset(0, 220));
+      await tester.pumpAndSettle();
+
+      final expandedAgain = tester.getTopLeft(
+          find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill')));
+      expect(expandedAgain.dx, lessThan(collapsed.dx));
+    });
+
+    testWidgets('extra button scales down on collapse and back up on expand',
+        (tester) async {
+      final scrollController = ScrollController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: Colors.transparent,
+          ),
+          home: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: ListView.builder(
+              controller: scrollController,
+              itemCount: 60,
+              itemBuilder: (context, index) => SizedBox(
+                height: 80,
+                child: Text('Row $index'),
+              ),
+            ),
+            bottomNavigationBar: GlassBottomBar(
+              tabs: testTabs3,
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              maskingQuality: MaskingQuality.off,
+              extraButton: GlassTabBarExtraButton(
+                icon: const Icon(CupertinoIcons.add),
+                label: 'Add',
+                onTap: () {},
+              ),
+              collapseConfig: const GlassBottomBarCollapseConfig(),
+              scrollController: scrollController,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final extraScaleFinder = find.byKey(
+        const ValueKey<String>('glass_bottom_bar_extra_button_scale'),
+      );
+      expect(_transitionScale(tester, extraScaleFinder), closeTo(1.0, 0.001));
+
+      await tester.drag(find.byType(ListView), const Offset(0, -220));
+      await tester.pumpAndSettle();
+      expect(
+        _transitionScale(tester, extraScaleFinder),
+        closeTo(0.9, 0.001),
+      );
+
+      await tester.tap(find.byIcon(CupertinoIcons.add));
+      await tester.pumpAndSettle();
+      expect(_transitionScale(tester, extraScaleFinder), closeTo(1.0, 0.001));
+    });
+
+    testWidgets('custom collapse config drives duration and scale',
+        (tester) async {
+      final scrollController = ScrollController();
+      const config = GlassBottomBarCollapseConfig(
+        animationDuration: Duration(milliseconds: 360),
+        collapsedExtraButtonScale: 0.82,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: Colors.transparent,
+          ),
+          home: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: ListView.builder(
+              controller: scrollController,
+              itemCount: 60,
+              itemBuilder: (context, index) => SizedBox(
+                height: 80,
+                child: Text('Row $index'),
+              ),
+            ),
+            bottomNavigationBar: GlassBottomBar(
+              tabs: testTabs3,
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              maskingQuality: MaskingQuality.off,
+              extraButton: GlassTabBarExtraButton(
+                icon: const Icon(CupertinoIcons.add),
+                label: 'Add',
+                onTap: () {},
+              ),
+              collapseConfig: config,
+              scrollController: scrollController,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final extraScaleFinder = find.byKey(
+        const ValueKey<String>('glass_bottom_bar_extra_button_scale'),
+      );
+
+      await tester.drag(find.byType(ListView), const Offset(0, -220));
+      await tester.pumpAndSettle();
+
+      expect(
+        _transitionScale(tester, extraScaleFinder),
+        closeTo(0.82, 0.001),
+      );
+    });
+
+    testWidgets('expand briefly overshoots before settling', (tester) async {
+      final scrollController = ScrollController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: Colors.transparent,
+          ),
+          home: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: ListView.builder(
+              controller: scrollController,
+              itemCount: 60,
+              itemBuilder: (context, index) => SizedBox(
+                height: 80,
+                child: Text('Row $index'),
+              ),
+            ),
+            bottomNavigationBar: GlassBottomBar(
+              tabs: testTabs3,
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              maskingQuality: MaskingQuality.off,
+              extraButton: GlassTabBarExtraButton(
+                icon: const Icon(CupertinoIcons.add),
+                label: 'Add',
+                onTap: () {},
+              ),
+              collapseConfig: const GlassBottomBarCollapseConfig(),
+              scrollController: scrollController,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final pillFinder =
+          find.byKey(const ValueKey<String>('glass_bottom_bar_tab_pill'));
+      final expandedWidth = tester.getSize(pillFinder).width;
+
+      await tester.drag(find.byType(ListView), const Offset(0, -220));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(CupertinoIcons.add));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 190));
+
+      final overshootWidth = tester.getSize(pillFinder).width;
+      expect(overshootWidth, greaterThan(expandedWidth));
     });
 
     testWidgets('assertion: selected index not negative', (tester) async {
