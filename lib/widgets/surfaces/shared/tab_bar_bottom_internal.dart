@@ -7,6 +7,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
+import '../../../constants/glass_defaults.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../types/glass_quality.dart';
@@ -360,9 +361,9 @@ class BottomBarExtraBtn extends StatelessWidget {
     // Shape selection for the frosted fallback (BackdropFilter) path:
     //
     // When platformViewBackdrop is true, LiquidOval is swapped for
-    // LiquidRoundedSuperellipse (radius = size / 2). Both produce a circle,
-    // but LiquidRoundedSuperellipse forwards its clip path to the engine's
-    // PlatformView mutator stack via _ShapeClip. This constrains the UIKitView
+    // LiquidRoundedRectangle (radius = size / 2). Both produce a circle,
+    // but AdaptiveGlass forwards LiquidRoundedRectangle's ClipRRect to the
+    // PlatformView mutator stack. This constrains the UIKitView
     // compositing sample area to the circle boundary, preventing a rectangular
     // "light square" bleed from the BackdropFilter's rectangular capture region.
     // LiquidOval relies on a shader-side SDF clip which the mutator stack cannot
@@ -370,7 +371,7 @@ class BottomBarExtraBtn extends StatelessWidget {
     final effectiveShape = borderRadius != null
         ? LiquidRoundedRectangle(borderRadius: borderRadius!)
         : (platformViewBackdrop
-            ? LiquidRoundedSuperellipse(borderRadius: config.size / 2)
+            ? LiquidRoundedRectangle(borderRadius: config.size / 2)
             : const LiquidOval());
 
     final button = GlassButton(
@@ -509,8 +510,8 @@ class TabIndicatorState extends State<TabIndicator>
   final GlobalKey _iconLayerKey = GlobalKey();
 
   // Cached shape to avoid recreation on every animation frame
-  late LiquidRoundedSuperellipse _barShape =
-      LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
+  late LiquidRoundedRectangle _barShape =
+      LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
 
   @override
   void didUpdateWidget(covariant TabIndicator oldWidget) {
@@ -519,8 +520,7 @@ class TabIndicatorState extends State<TabIndicator>
 
     // Update cached shape if border radius changes
     if (oldWidget.barBorderRadius != widget.barBorderRadius) {
-      _barShape =
-          LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
+      _barShape = LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
     }
   }
 
@@ -532,10 +532,21 @@ class TabIndicatorState extends State<TabIndicator>
         _fallbackIndicatorColor;
     final targetAlignment = computeTabAlignment(widget.tabIndex);
 
-    // AnimatedGlassIndicator multiplies by 2 for the glass superellipse shape,
-    // but uses the value directly for the background DecoratedBox.
-    final indicatorRadius =
-        widget.indicatorBorderRadius ?? widget.barBorderRadius;
+    // Nested-arc default: if the outer bar is a capsule sentinel (≥ 9999),
+    // the indicator is also passed 9999 directly, so the glass shader clamps to
+    // a true capsule even during jelly-bloom expansion (where the pill canvas
+    // grows beyond its rest size and a finite radius would appear boxy).
+    // For custom radii (e.g. GlassBottomBar default 32), the indicator subtracts
+    // the padding inset (4 px) to produce concentric nested arcs (32 − 4 = 28).
+    // An explicit indicatorBorderRadius always takes priority.
+    const indicatorPadding = 4.0;
+    final indicatorRadius = widget.indicatorBorderRadius ??
+        (widget.barBorderRadius >= GlassDefaults.capsuleRadius
+            ? GlassDefaults.capsuleRadius
+            : (widget.barBorderRadius - indicatorPadding).clamp(
+                0.0,
+                GlassDefaults.capsuleRadius,
+              ));
 
     // Lateral sway: the bar body subtly follows the interactive pill during
     // horizontal drags, mimicking iOS 26 bottom bar physics. The SpringBuilder
@@ -771,10 +782,10 @@ class TabIndicatorState extends State<TabIndicator>
               indicatorColor: indicatorColor,
               isBackgroundIndicator: false,
               innerBlur: widget.innerBlur,
-              borderRadius: indicatorRadius,
               padding: const EdgeInsets.all(4),
               expansion: widget.indicatorExpansion,
               settings: widget.indicatorSettings,
+              borderRadius: indicatorRadius,
               pinchStrength: widget.indicatorPinchStrength,
               backgroundKey: widget.platformViewBackdrop
                   ? _iconLayerKey
@@ -850,10 +861,10 @@ class TabIndicatorState extends State<TabIndicator>
                     paintBackground: true,
                     paintGlass: false,
                     innerBlur: widget.innerBlur,
-                    borderRadius: indicatorRadius,
                     padding: const EdgeInsets.all(4),
                     expansion: widget.indicatorExpansion,
                     settings: widget.indicatorSettings,
+                    borderRadius: indicatorRadius,
                     backgroundKey: widget.platformViewBackdrop
                         ? _iconLayerKey
                         : widget.backgroundKey,
@@ -973,11 +984,11 @@ class TabIndicatorState extends State<TabIndicator>
             isBackgroundIndicator: false,
             paintBackground: false,
             paintGlass: true,
-            borderRadius: indicatorRadius,
             padding: const EdgeInsets.all(4),
             expansion:
                 widget.indicatorExpansion.resolve(Directionality.of(context)),
             settings: widget.indicatorSettings,
+            borderRadius: indicatorRadius,
             pinchStrength: widget.indicatorPinchStrength,
             backgroundKey: widget.platformViewBackdrop
                 ? _iconLayerKey
@@ -994,7 +1005,7 @@ class TabIndicatorState extends State<TabIndicator>
 class _InverseBarClipper extends CustomClipper<Path> {
   const _InverseBarClipper(this.shape);
 
-  final LiquidRoundedSuperellipse shape;
+  final LiquidShape shape;
 
   @override
   Path getClip(Size size) {

@@ -1,4 +1,122 @@
+# 0.24.1
+
+## 🐛 Bug Fixes
+
+- **`GlassButton.custom` border invisible in release builds with `--obfuscate`** — `GlassEffect` and `LightweightLiquidGlass` were using `dynamic` property access and `runtimeType.toString()` heuristics to extract the shape's corner radius for the shader. Both techniques are silently broken by the Dart AOT obfuscator: property names are mangled and class names become single-character tokens. The fallback silently resolved to `0.0`, producing a perfectly square (borderless) shape in release builds. Fixed by adding a typed `effectiveRadius` abstract getter to `LiquidShape` implemented by every concrete shape class — a single virtual dispatch that the compiler can optimise and the obfuscator cannot break.
+
+# 0.24.0
+
+
+## ⚠️ Breaking Changes
+
+- **`GlassAppBar.preferredSize` constructor parameter removed.** Replace with `toolbarHeight: double` (default `44.0`).
+
+  ```dart
+  // Before
+  GlassAppBar(preferredSize: Size.fromHeight(52))
+
+  // After
+  GlassAppBar(toolbarHeight: 52)
+  ```
+
+## 🐛 Bug Fixes
+
+- **`GlassScaffold` dark-mode gradient flash fixed.** When `backgroundColor` is set and the device is in dark mode, the edge-fade gradient around `GlassTabBar` / `GlassBottomBar` could briefly flash dark. The scaffold now always renders with a transparent Material background (preventing theme bleed), and passes the explicit `backgroundColor` to the edge-effect fallback gradient.
+- **`GlassBottomBar` default radius inconsistency fixed.** Was `32.0`; now `GlassDefaults.capsuleRadius` — consistent with `GlassTabBar.bottom`.
+- **Indicator radius inconsistent across widgets.** All interactive widgets (`GlassSegmentedControl`, `GlassTabBar`, `GlassBottomBar`) now share a unified radius calculation that is guaranteed correct during jelly-bloom expansion.
+
+## ✨ New Features
+
+- **3-tier indicator radius system** — all interactive bar/control widgets now follow iOS 26 defaults out of the box:
+  - **Tier 1 (default):** bar and indicator are both a perfect capsule — no configuration needed.
+  - **Tier 2:** set `barBorderRadius` to a custom value and the indicator automatically tracks at `barBorderRadius − padding` (concentric nested arcs).
+  - **Tier 3:** set `indicatorBorderRadius` explicitly to override everything.
+- **`GlassDefaults.capsuleRadius`** — named constant (`9999.0`) for the capsule sentinel:
+  ```dart
+  GlassBottomBar(barBorderRadius: GlassDefaults.capsuleRadius)
+  ```
+
+- **`GlassAppBar.bottom`** — Accepts any `PreferredSizeWidget` (typically a `TabBar`) rendered below the navigation bar title. The scaffold automatically reserves the combined height — no manual sizing needed.
+
+  ```dart
+  GlassAppBar(
+    title: const Text('Browse'),
+    bottom: TabBar(tabs: [...]),
+  )
+  ```
+
+---
+
+# 0.23.0
+
+
+## ⚠️ Breaking Changes
+
+- **`AnimatedGlassIndicator.useSuperellipse` removed.** This parameter has been deleted from the constructor. Any call site passing `useSuperellipse: true` or `useSuperellipse: false` will fail to compile.
+
+  **Migration:** simply remove the parameter. The indicator is always a rounded rectangle (capsule) now, which is mathematically correct. Squircle geometry is unstable for dynamic stretching elements.
+
+  ```dart
+  // Before (0.22.1)
+  AnimatedGlassIndicator(
+    useSuperellipse: false,
+    ...
+  )
+
+  // After (0.23.0) — just remove the parameter
+  AnimatedGlassIndicator(
+    ...
+  )
+  ```
+
+---
+
+## ✨ New Features
+
+- **`LiquidGlassSettings.fresnelStrength`** — New parameter (range `0.0`–`1.0`, default `1.0`) that scales the natural Fresnel edge luminosity on the Premium rendering path. At `1.0` the glass behaves as physically lit glass with a rim highlight at grazing angles (existing default). At `0.0` the rim is completely suppressed, producing a pure blur-overlay appearance that matches iOS 26 system UI glass (Messages buttons, notification banners, lock screen controls). Intermediate values interpolate smoothly. Fully backwards compatible — omitting the parameter preserves all existing rendering. Also exposed on `GlassThemeSettings` so it can be set app-wide via `GlassTheme`.
+
+- **`GlassMenuItem.enablePressScale`** — New `bool` parameter (default `true`) that controls the 0.98× scale-down animation on press. Set to `false` on fill-rate-limited devices to eliminate the per-frame GPU cost of animating a `Transform.scale` over the glass layer. Fully backwards compatible.
+- **`GlassExtraButtonPlacement`** — Added `GlassExtraButtonPlacement.left` and `right` for non-searchable bottom bars so `GlassTabBarExtraButton` can be placed on either side. Defaults to `right` to preserve existing behavior. Thanks to @jingluoguo (#169).
+
+
+---
+
+## 🐛 Bug Fixes
+
+- Fixed hard clip at the top of `useOwnLayer: true` buttons during press-scale animation on Impeller.
+- **GlassSlider** — Fixed an issue where discrete slider snapping would round the absolute value and shift the snapped range when using a non-zero minimum. Thanks to @huanglizhuo (#168).
+
+---
+
+## ♻️ Refactoring — Pure Geometry & iOS 26 Shape Parity
+
+This release fundamentally solves the long-standing geometry tension between Flutter's path rendering and our GPU shaders. We completely rewrote the squircle math to use pure analytical curves, fixed stretching bugs in tab indicators, and simplified the API.
+
+### 1. Pure Analytic Lamé Squircles
+- **Shader Rewrite (`sdf.glsl`)**: We completely removed the old piecewise 45-degree seam approach and the hacky `blend` safety valve. `sdfSquircle` now uses a pure, analytic Lamé curve (`|x|^n + |y|^n = 1`). Squircles now perfectly match Apple's continuous curve geometry with zero flattening on the edges.
+- **Graceful Degradation (The Ghost-Glow Fix)**: When a squircle is given a radius that physically cannot fit (e.g. `r = 18` on a `36px` tall button), the shader now dynamically recalculates the exponent `n` based on the clamped available space. As space runs out, `n` smoothly degrades to `2.0`, collapsing into a perfect circle. This mathematically guarantees that the shader's interaction glow always aligns perfectly flush against Flutter's clipping path, eliminating the dark corner gaps.
+
+### 2. Perfect iOS 26 Pills (Capsules)
+Apple never uses squircles for pill shapes (like "Edit" buttons or Tab Indicators). They use pure circular-arc capsules. We audited the library to align with this:
+- **`GlassChip` & Demo Buttons**: Replaced `LiquidRoundedSuperellipse` with `LiquidRoundedRectangle` for all pill-shaped elements. They now explicitly use `sdfRRectAsym`, ensuring perfect circular ends.
+- **`GlassMenu` & `GlassPopover` morph blobs**: Replaced `LiquidOval` with `LiquidRoundedRectangle`. The rounded rect SDF is mathematically stable at all aspect ratios during dynamic morphs.
+
+### 3. AnimatedGlassIndicator API Cleanup
+The glass tab indicator previously suffered from a "stretching bug" where it turned squarish during drag expansion because its finite `borderRadius` was outgrown by its expanding height.
+- **Removed `useSuperellipse`** *(see Breaking Changes above)*: This parameter was mathematically incorrect for dynamic stretching indicators.
+- **Optional `borderRadius` (Default `9999.0`)**: `borderRadius` is no longer required. It defaults to `9999.0`, which offloads the math entirely to the shader's `min(r, shortest)` clamp. This guarantees a perfect capsule at *any* drag size.
+- **Segmented Controls**: `GlassSegmentedControl` explicitly passes `borderRadius: containerRadius - 3`, ensuring it retains its correct inset rounded-rectangle geometry rather than defaulting to a capsule.
+
+
+## 📚 Documentation
+
+- **`shape_debug_demo.dart`** — corrected the Standard-mode description banner from the inaccurate `"_SquircleClipper + lightweight shader (CPU L4/L2 path)"` to the accurate `"ShapeBorderClipper + lightweight blur shader (shape-blind)"`. There is no `_SquircleClipper` class; the lightweight shader is shape-type-blind by design.
+
+
+---
+
 # 0.22.1
+
 
 ## 🐛 Bug Fixes
 
@@ -3986,418 +4104,7 @@ production code, set it through `wrap()`.
 - **NEW**: `GlassBottomBarExtraButton.collapseOnSearchFocus` (default `true`) — controls whether the extra button collapses when the search field is focused. When `true`, the button fades out and its layout space spring-animates to zero, giving the search input the full available width (matching native iOS behaviour). When `false`, the button remains fully visible and tappable alongside the search input — useful for contextually relevant actions like a Filter button that applies to search results.
 - **EXAMPLE**: `searchable_bar_repro.dart` added to the example app — exercises `GlassSearchableBottomBar` edge cases (extra-button fade, spring desync, bar-height scale, dismiss pill) in isolation. Run standalone: `flutter run -t example/lib/searchable_bar_repro.dart`.
 
-# 0.7.13
 
-### New — `GlassQuality.minimal`
+# 0.7.x — 0.1.0
 
-- **FEAT**: `GlassQuality.minimal` — third quality tier: a crisp frosted glass surface with
-  zero custom fragment shader execution on any platform. Uses `BackdropFilter` blur
-  + Rec. 709 saturation matrix + a light-angle specular rim stroke. No refraction
-  warping or chromatic aberration — a deliberately flat, clean aesthetic that looks
-  excellent on any background and never adds GPU shader cost.
-
-  Two distinct use cases:
-
-  **Device fallback** — for hardware where even [standard] is too heavy:
-  very old Android devices with limited shader driver support, or any device where
-  `ImageFilter.isShaderFilterSupported` returns `false`.
-
-  **GPU budget management** — for shader-dense screens: use [minimal] for background
-  panels, list cards, and decorative containers while keeping [standard] or [premium]
-  on the focal element. A screen with 15 glass list cards running [minimal] fires
-  zero shader invocations during scroll — only `BackdropFilter` compositing.
-
-  ```dart
-  AdaptiveGlass(
-    quality: GlassQuality.minimal,
-    child: child,
-  )
-  ```
-
-- **FEAT**: `GlassThemeVariant.minimal` — static preset that applies `.minimal` quality globally via
-  `GlassThemeData`:
-
-  ```dart
-  GlassTheme(
-    data: GlassThemeData(
-      light: GlassThemeVariant.minimal,
-      dark:  GlassThemeVariant.minimal,
-    ),
-    child: child,
-  )
-  ```
-
-### New — `GlassPerformanceMonitor`
-
-- **FEAT**: Debug/profile-only performance monitor that watches raster frame durations while
-  `GlassQuality.premium` surfaces are active. When frames exceed the GPU budget
-  for 60 consecutive frames, a single `FlutterError` is emitted with actionable guidance
-  (specific widget parameters, device compatibility notes, and alternative quality tiers).
-
-  **Zero production overhead** — the monitor never registers a callback in release builds.
-  Enabled by default in debug/profile builds via `LiquidGlassWidgets.initialize()`:
-
-  ```dart
-  // Default: auto-enabled in debug/profile, zero-cost in release
-  await LiquidGlassWidgets.initialize();
-
-  // Opt out:
-  await LiquidGlassWidgets.initialize(enablePerformanceMonitor: false);
-
-  // Custom thresholds (advanced):
-  GlassPerformanceMonitor.rasterBudget = const Duration(microseconds: 8333); // 120 fps
-  GlassPerformanceMonitor.sustainedFrameThreshold = 120; // 2 seconds at 60 fps
-  ```
-
-  The monitor correctly attributes slowdowns to premium glass by counting active
-  `GlassQuality.premium` surfaces. It stays silent when no premium widgets are mounted,
-  avoiding false positives from other parts of the app.
-
----
-
-# 0.7.12
-
-### Bug Fixes
-
-- **FIX**: Interactive blend-group stretch asymmetry — `LiquidStretch` now expands geometry symmetrically from the widget centre, fixing the left-leans-in / right-resists imbalance during touch-drag on button groups.
-
-- **FIX**: Erroneous highlight bias — removed a legacy shader hack that skewed surface normals horizontally. Normals are now derived accurately from the SDF gradient, eliminating optical hotspots that made straight groups look crooked.
-
-- **PERF**: Zero-jitter animation bounds — geometry texture mapping is now strictly bound to the physical size it was rasterised for, stopping frame-lag wobble when buttons change scale during interactive drags.
-
-- **FIX**: Theme quality cascade — audited 15+ widgets (`GlassBottomBar`, `GlassSwitch`, `GlassTextField`, and others) that were silently overriding the global `GlassThemeVariant` quality setting with `GlassQuality.premium`. All widgets now correctly inherit and respect the global quality profile, protecting frame rate and thermal limits on older devices (e.g. iPhone 12 and below).
-
-- **FIX**: Zero-thickness blur — setting `thickness: 0` no longer makes the glass fully transparent. Backdrop blur now renders correctly on glass surfaces regardless of geometric thickness, restoring backward-compatible behaviour.
-
-- **FEAT**: `GlassSearchBarConfig.focusNode` — optional `FocusNode` for `GlassSearchBarConfig`. When provided, the caller has full programmatic focus control (`requestFocus()`, `unfocus()`, `addListener()`) independent of `autoFocusOnExpand`. The widget adopts the caller-provided node without disposing it (caller owns lifecycle), matching Flutter's own `TextField.focusNode` contract.
-
-- **FEAT**: `GlassSearchBar.focusNode` — same `FocusNode` support added to the standalone `GlassSearchBar` for consistency. `GlassTextField` already had this.
-
-- **FIX**: `ExtraButtonPosition` — new enum on `GlassBottomBarExtraButton`. Set `.position = ExtraButtonPosition.afterSearch` to pin the extra button to the **right** of the search pill. Spring geometry calculations reserve space correctly to prevent `RenderFlex` overflows during expand/collapse. Default is `ExtraButtonPosition.beforeSearch` — fully backwards-compatible.
-
-- **FIX**: Windows / SkSL shader compilation — eliminated all dynamic array index expressions from `sdf.glsl`. The previous `getShapeSDFFromArray(int index)` computed offsets at runtime, which SkSL/glslang on Windows rejects with *"index expression must be constant"*. Replaced with literal-indexed `sdf0()`…`sdf15()` helpers and a fully-unrolled `sceneSDF` for 1–16 shapes. `MAX_SHAPES` stays 16; no API or visual change.
-
-- **TOOLING**: `scripts/validate_shaders.sh` — macOS script that validates all shaders against Windows/SkSL compiler rules using `glslangValidator`. Run `bash scripts/validate_shaders.sh` before releasing. Requires `brew install glslang` (one-time).
-
----
-
-# 0.7.11
-
-### Bug Fixes
-
-- **FIX**: Windows/Android build failure — three shader compilation errors on the SPIR-V/glslang path: loop bounds must be compile-time constants; `dFdx`/`dFdy` on a scalar `float` is rejected by glslang (geometry shader now uses `#ifdef IMPELLER_TARGET_METAL` to keep hardware derivatives on iOS/macOS and fall back to ±0.5 px finite differences on Vulkan/OpenGL ES); global non-constant initialisers at file scope in `liquid_glass_final_render.frag` moved into `main()`.
-
-- **FIX**: Blend-group asymmetry — the liquid-glass merge neck between grouped buttons leaned toward the left button. Fixed with a bidirectional smooth-union pass (L→R + R→L, averaged 50/50) that cancels the directional bias exactly.
-
----
-
-# 0.7.10
-
-### Bug Fixes
-
-- **FIX**: Windows build (`flutter build windows`) — two shader issues fatal on SkSL/glslang but silently accepted on Metal: `no match for min(int, int)` (replaced with a ternary) and global non-constant initialisers (moved into `main()`). No visual change on any platform.
-
----
-
-# 0.7.9
-
-### Bug Fixes
-
-- **FIX**: Windows build failure — `uShapeData[MAX_SHAPES * 6]` was passed as a by-value function parameter, which glslang rejects. Fixed by accessing it as a global uniform. No visual change.
-
-### Tweaks
-
-- **TWEAK**: `GlassSearchableBottomBar` iOS 26 Apple News parity — animated inline `×` clear button replaces microphone when text is present; simplified hit-testing layout replaces `Overlay` layers; guaranteed GPU liquid-glass merging between the search and dismiss pills in a single shader pass.
-
----
-
-# 0.7.8
-
-### Tweaks
-
-- **TWEAK**: `GlassThemeVariant.light` now defaults to a cool-tinted `glassColor` (`Color(0x32D2DCF0)`), stronger `refractiveIndex`, and boosted `ambientStrength` to ensure premium specular rendering and visible refraction on flat white backgrounds.
-
-### Examples
-
-- **Apple News demo** — replaced `Image.network` calls with pre-sized bundled assets (`example/assets/news_images/`) to fix Impeller GPU command-buffer overflow on iOS 26 physical devices.
-- **Apple News demo** — `collapsedLogoBuilder` now mirrors the active tab icon instead of a static badge.
-
----
-
-# 0.7.7
-
-### Refactor
-
-- **Internal**: Removed `GlassIndicatorTapMixin` and migrated `GlassTabBar` and `GlassSegmentedControl` fully to raw `Listener` pointer events, matching `GlassBottomBar`'s robust drag-cancel and press-and-hold handling. No API change.
-
----
-
-# 0.7.6
-
-### Bug Fixes
-
-- **FIX**: `LiquidGlassBlendGroup` asymmetry — left buttons attracted their neighbours more strongly than right buttons in groups of 3+. Fixed with a bidirectional smooth-union pass (L→R + R→L, averaged 50/50). Two-shape groups are mathematically identical to before.
-
-- **FIX**: `GlassButtonGroup` — glass effect could bleed as a dark rectangle on Impeller with `GlassQuality.premium` and `useOwnLayer: true`. A `ClipRRect(antiAlias)` now hard-clips the bleed at the superellipse boundary without forcing a quality downgrade.
-
----
-
-# 0.7.5
-
-### Bug Fixes
-
-- **FIX**: `GlassBottomBar` / `GlassSearchableBottomBar` — added `HitTestBehavior.opaque` to the root `GestureDetector` so the full bar height reliably consumes pointer events on simulator and desktop.
-
-- **FIX**: `GlassSearchableBottomBar` — keyboard no longer flickers on physical devices; focus is requested after the expansion animation completes.
-
-- **FIX**: `GlassSearchableBottomBar` — dead zone at expanded search pill edges resolved; the full glass surface now claims taps and routes them to the search field.
-
-### New — `GlassSearchBarConfig` parameters
-
-Seven new parameters (all backwards-compatible):
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `autoFocusOnExpand` | `bool` | `false` | Keyboard opens automatically on expand. |
-| `trailingBuilder` | `WidgetBuilder?` | `null` | Replaces the mic icon with any custom widget. |
-| `textInputAction` | `TextInputAction?` | `null` | Keyboard action key (`search`, `done`, `go`, …). |
-| `keyboardType` | `TextInputType?` | `null` | Keyboard layout (`url`, `emailAddress`, …). |
-| `autocorrect` | `bool` | `true` | Disable for codes, usernames, etc. |
-| `enableSuggestions` | `bool` | `true` | Controls QuickType bar on iOS. |
-| `onTapOutside` | `TapRegionCallback?` | `null` | Called when user taps outside the field. |
-
----
-
-# 0.7.4
-
-### New Components
-
-- **`GlassSearchableBottomBar`** — `GlassBottomBar` with a morphing search pill that shares the same `AdaptiveLiquidGlassLayer` as the tab pill, producing iOS 26 liquid-merge blending. When `isSearchActive` is `true` the tab pill collapses and the search pill expands via spring animation. Configured via `GlassSearchBarConfig`.
-
-### Examples
-
-- **Apple News demo** (`example/lib/apple_news/apple_news_demo.dart`) — iOS 26 Apple News replica showcasing `GlassSearchableBottomBar`.
-
-### Visual Fixes
-
-- **FIX**: Default glow color on press changed from iOS system blue to a brightness-adaptive neutral white (~35% light / ~22% dark), matching iOS 26 glass press behaviour.
-
----
-
-# 0.7.3
-
-### Performance
-
-- **PERF**: Deleted unused `rotate2d()` from `render.glsl` — it was compiled into every shader binary but never called.
-- **PERF**: Eliminated a redundant `normalize()` in `interactive_indicator.frag` by reusing an already-computed length.
-- **PERF**: Removed a no-op `canvas.save()`/`canvas.restore()` pair in `GlassGlow` paint.
-
-### Bug Fixes
-
-- **FIX**: `GlassGlow` tracking — glow gradient is now correctly recreated each frame when `glowOffset` changes, fixing the spotlight freezing at its initial position.
-- **FIX**: Glow on Skia/Web — `LightweightLiquidGlass` now wraps in `GlassGlowLayer`, giving the Skia path the same light-follows-touch behaviour as Impeller.
-- **FIX**: Glow on first touch — spotlight now appears immediately at the tap position instead of sliding in from the widget's top-left corner.
-- **FIX**: Glow tracking inside button groups — converted from widget-local to global coordinates so the spotlight correctly follows touches regardless of nesting depth.
-- **FIX**: Glow radius on wide buttons — switched from `shortestSide` to `√(width × height)` so the spotlight scales proportionally to the button area.
-
----
-
-# 0.7.2
-
-### Performance & Polish
-
-- **PERF**: Lightweight shader (`lightweight_glass.frag`) — reduced ALU instruction count ~10–15 ops per fragment; restored the `normalZ` Fresnel ramp to `sqrt(1 − dot(n,n))`.
-- **PERF**: Impeller final render shader — eliminated `length()`/`normalize()` from anisotropic specular; made `getHeight()` fully branchless; collapsed four `step()` multiplications into one.
-- **PERF**: Dart side — cached light direction trig in `LiquidGlassRenderObject` (only recomputed when `lightAngle` changes); changed `GlassGroupLink.shapeEntries` from `List` to `Iterable` to eliminate per-frame heap allocation.
-- **FIX**: Adjusted `GlassBottomBar`, `GlassTabBar`, and `GlassSegmentedControl` spring from 500ms `bouncySpring` to 350ms `snappySpring`, matching iOS 26 segment-indicator physics.
-
----
-
-# 0.7.1
-
-### Bug Fixes
-
-- **FIX**: `GlassBottomBar`, `GlassTabBar`, `GlassSegmentedControl` — rapid taps no longer prematurely snap the indicator, killing spring physics. Removed pixel-snapping from `onHorizontalDragDown` so taps correctly use spatial distance for the iOS 26 jump animation.
-
----
-
-# 0.7.0
-
-### New Components
-
-- **`GlassDivider`** — iOS 26-style hairline separator, horizontal and vertical. Theme-adaptive opacity (dark: 20% white / light: 10% black).
-- **`GlassListTile`** — iOS 26 Settings-style row with leading icon, title, subtitle, trailing widget, and automatic grouped dividers. Use inside a zero-padding `GlassCard`. Convenience constants: `GlassListTile.chevron`, `GlassListTile.infoButton`.
-- **`GlassStepper`** — iOS 26 `UIStepper` equivalent. Compact `−`/`+` glass pill with auto-repeat on hold, `min`/`max` clamping, `wraps` cycling, fractional `step`, and haptic feedback.
-- **`GlassWizard` + `GlassWizardStep`** — multi-step flow with numbered indicators, checkmarks, and expandable step content.
-
-### Accessibility
-
-- **`GlassAccessibilityScope`** — reads platform Reduce Motion and Reduce Transparency preferences and propagates them to all glass widgets in its subtree:
-  - **Reduce Motion**: spring animations snap instantly.
-  - **Reduce Transparency**: replaces the full glass shader pipeline with a plain `BackdropFilter(blur)` + frosted container.
-- Semantics updated across all remaining widgets to match iOS `UIAccessibility` conventions.
-
-### Performance
-
-- **PERF**: `GlassSpecularSharpness` enum — replaces `pow(lightCatch, exponent)` (two transcendentals per fragment) with a pure squaring chain in `lightweight_glass.frag`. Zero transcendentals. Default: `.medium`.
-- **PERF**: `pow(x, 1.5)` → `x·√x` in Impeller edge lighting — `sqrt()` is a single hardware SFU instruction.
-- **PERF**: Anisotropic specular and Fresnel rim brightening ported from the Impeller path to `lightweight_glass.frag`, closing the largest visual gap between rendering paths.
-- **PERF**: Content-adaptive glass strength — intensity auto-adjusts based on backdrop luminance on Impeller, or `MediaQuery.platformBrightness` on Skia/Web.
-
-### Developer Experience
-
-- **`GlassRefractionSource`** — renamed from `LiquidGlassBackground` to better reflect its role. `LiquidGlassBackground` remains as a deprecated `typedef` (removed in 1.0.0).
-- **Synchronous background capture** — rebuilt using `boundary.toImageSync()` on native (zero CPU↔GPU readback) and async `toImage()` on web.
-
----
-
-# 0.6.1
-
-### Visual Quality
-
-- **FIX**: True surface normal storage in geometry texture — the geometry pass now stores the SDF-gradient-derived surface normal instead of the refraction displacement vector. The render shader decodes and recomputes displacement via `refract()`. Specular highlights on blended glass shapes (e.g. two overlapping pills) now correctly follow true surface curvature rather than the refraction direction. Single-shape surfaces are visually identical to 0.6.0.
-- **FIX**: Anisotropic specular highlights (Impeller) — specular lobe stretched 20% along the surface tangent, producing the horizontal oval highlight that matches iOS 26.
-- **FIX**: Fresnel edge luminosity ramp (Impeller) — gentle brightness ramp at grazing angles matching iOS 26's centre-to-edge luminosity gradient.
-- **FIX**: Luminosity-preserving glass tint in lightweight shader — replaced additive tint with the same `applyGlassColor()` model as the Impeller path: achromatic glass lifts toward white, chromatic glass shifts hue while preserving luminance.
-
-### Performance
-
-- **PERF**: Branchless `smoothUnion` — eliminated a conditional branch that caused warp divergence when glass shapes transition between merged and separate.
-- **PERF**: `if/else if` dispatch in shape SDF — GPU now short-circuits after the first type match; default changed to `0.0` for a clearly visible failure mode.
-- **PERF**: Single texture fetch when chromatic aberration is disabled — `interactive_indicator.frag` previously sampled the background three times unconditionally; 66% fewer texture reads in the common case.
-- **PERF**: Flat-interior early-exit in final render shader — pixels where `normalXY ≈ 0` skip `refract()` and all texture samples, replaced with a single background sample. Lossless.
-
----
-
-# 0.6.0
-
-### Breaking Changes
-
-- **`LiquidGlassLayer.useBackdropGroup` removed.** Glass layers now automatically detect a `BackdropGroup` ancestor. Remove `useBackdropGroup: true` from any `LiquidGlassLayer(...)` calls.
-
-### New Features
-
-- **`LiquidGlassWidgets.wrap()`** — wraps your app in a `GlassBackdropScope` in one line:
-  ```dart
-  runApp(LiquidGlassWidgets.wrap(const MyApp()));
-  ```
-- **`GlassMotionScope`** — drives glass specular angle from any `Stream<double>` (e.g. device gyroscope). No new dependencies required.
-
-### Performance
-
-- **PERF**: `GlassBackdropScope` auto-activation — glass layers automatically share a single GPU backdrop capture when a scope ancestor is present.
-- **PERF**: Local-space geometry rasterization — geometry texture cached until pill size or shape changes, eliminating per-frame rebuilds during animation.
-- **PERF**: Shader UV bounds check — discards fragments where geometry UV falls outside `[0, 1]`, preventing the thin "protruding line" artifact during jelly-physics expansion.
-
-### Visual
-
-- **FIX**: Refraction UV — uses `uSize` uniform (always valid on first frame) instead of `textureSize()` which returns `(0,0)` on the first frame in Impeller.
-- **FIX**: `precision highp float` in final render shader (was `mediump`, risking colour banding on mobile).
-- **FIX**: iOS 26 glass tint model — preserves backdrop luminance while shifting chroma. Replaces Photoshop Overlay mode.
-- **FIX**: Leading-dot rim artifact — `x / (1 + x)` soft-clamping on highlight intensity prevents bright corner artifact during drag.
-- **FIX**: Impeller indicator clipping — jelly physics animations no longer clip at the static bounding box (`clipExpansion` parameter added).
-- **FIX**: Web & WASM — removed `dart:io` imports from shader resolution logic.
-
-### Dependencies
-
-- **Removed `motor` dependency** — replaced with self-contained `glass_spring.dart`. Zero third-party runtime dependencies beyond the Flutter SDK.
-
----
-
-# 0.5.0
-
-### Breaking Changes
-
-**`LiquidGlass` removed from the public API.**
-It was inadvertently exposed and silently renders nothing on Skia/Web. Use `AdaptiveGlass` instead:
-
-```dart
-// Before
-LiquidGlass(settings: LiquidGlassSettings(...), child: ...)
-
-// After
-AdaptiveGlass(settings: LiquidGlassSettings(...), child: ...)
-```
-
-`LiquidGlassLayer`, `LiquidGlassBlendGroup`, `LiquidGlassSettings`, `LiquidShape`, `GlassGlow`, and `debugPaintLiquidGlassGeometry` remain public.
-
-### New Features
-
-- **`GlassBackdropScope`** — halves GPU blur capture cost when multiple glass surfaces are on screen simultaneously. Wrap your `MaterialApp` or `Scaffold` to activate:
-
-```dart
-GlassBackdropScope(
-  child: MaterialApp(
-    home: Scaffold(
-      appBar: GlassAppBar(...),
-      bottomNavigationBar: GlassBottomBar(...),
-    ),
-  ),
-)
-```
-
-### Renderer
-
-The renderer from `liquid_glass_renderer` (whynotmake.it, MIT) is now vendored directly, giving full control over the rendering pipeline with no user-facing API changes.
-
----
-
-# 0.4.1
-
-### Bug Fixes
-
-- **FIX**: `GlassBottomBar` and other surfaces now correctly respond to dynamic `glassSettings` changes on `GlassQuality.standard` — `AdaptiveGlass` in grouped mode now inherits settings from `InheritedLiquidGlass` instead of using empty defaults.
-- **FIX**: Luminance-aware ambient floor for white glass on `GlassQuality.standard` — high-opacity white glass no longer renders as dark grey.
-
-### New
-
-- **FEAT**: `GlassBottomBar.iconLabelSpacing` — configurable vertical gap between tab icon and label (default: `4.0`). Thanks @baneizalfe (#11).
-
-### Breaking Changes
-
-**Library-wide `IconData` → `Widget` API migration.** All icon parameters now accept any `Widget`:
-
-```dart
-// Before
-GlassButton(icon: CupertinoIcons.heart, onTap: () {})
-
-// After
-GlassButton(icon: Icon(CupertinoIcons.heart), onTap: () {})
-// Or any custom widget:
-GlassButton(icon: SvgPicture.asset('assets/heart.svg'), onTap: () {})
-```
-
-`GlassBottomBarTab.selectedIcon` renamed to `activeIcon` to match Flutter's `BottomNavigationBarItem` convention.
-
----
-
-# 0.4.0
-
-### New Components
-
-- **`GlassMenu` / `GlassMenuItem` / `GlassPullDownButton`** — iOS 26 morphing context menu with spring physics and position-aware expansion.
-- **`GlassButtonGroup`** — joined-style container for related actions (e.g. Bold/Italic/Underline toolbar).
-- **`GlassFormField`** / **`GlassPasswordField`** / **`GlassTextArea`** / **`GlassPicker`** — full iOS 26 input suite.
-- **`GlassSideBar`** — vertical navigation surface with header, footer, and scrollable items.
-- **`GlassToolbar`** — standard iOS-style action toolbar.
-- **`GlassTabBar`** — horizontal tab navigation bar with animated indicator and scrollable mode for 5+ tabs.
-- **`GlassProgressIndicator`** — circular and linear variants (indeterminate and determinate), iOS 26 specs.
-- **`GlassToast` / `GlassSnackBar`** — 5 notification types, 3 positions, auto-dismiss, swipe-to-dismiss.
-- **`GlassBadge`** — count and dot status badges, 4 positions.
-- **`GlassActionSheet`** — iOS-style bottom-anchored action list.
-
-### Performance
-
-- **Universal Platform Support** — `AdaptiveGlass` and `AdaptiveLiquidGlassLayer` introduced. All 26 widgets deliver consistent glass quality on Web, Skia, and Impeller.
-- **Batch-blur optimisation** — glass containers share a single `BackdropFilter` (was: one per widget). ~5× faster in common multi-widget layouts.
-- **Impeller pipeline warm-up** — shaders pre-compile at startup to eliminate first-frame jank.
-
-### Theme System
-
-- **`GlassTheme` / `GlassThemeData` / `GlassThemeVariant`** — global styling and quality inheritance across all widgets. Set once, inherited everywhere.
-
----
-
-# 0.3.0 — 0.1.0
-
-Early access and preview releases establishing the core widget library, initial glass rendering pipeline (`LiquidGlass`, `LiquidGlassLayer`, `LiquidGlassBlendGroup`), and foundational components (`GlassBottomBar`, `GlassButton`, `GlassSwitch`, `GlassCard`, `GlassSearchBar`, `GlassSlider`, `GlassChip`, `GlassSegmentedControl`, `GlassSheet`, `GlassDialog`, `GlassIconButton`).
+Early access and preview releases. See [GitHub Releases](https://github.com/sdegenaar/liquid_glass_widgets/releases) for full details.

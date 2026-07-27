@@ -202,7 +202,7 @@ void main() {
 
       expect(bar.spacing, equals(8));
       expect(bar.barHeight, equals(64));
-      expect(bar.barBorderRadius, equals(32));
+      expect(bar.barBorderRadius, equals(GlassDefaults.capsuleRadius));
       expect(bar.showIndicator, isTrue);
       expect(bar.quality, isNull);
     });
@@ -1663,6 +1663,77 @@ void main() {
       );
       expect(find.byType(GlassBottomBar), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Indicator Radius Tiers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('GlassBottomBar 3-Tier Indicator Radius', () {
+    testWidgets('Tier 1: capsule sentinel passes directly to indicator',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: const [
+              GlassBottomBarTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+              GlassBottomBarTab(label: 'B', icon: Icon(CupertinoIcons.search)),
+            ],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            // Implicitly barBorderRadius is GlassDefaults.capsuleRadius
+          ),
+        ),
+      );
+
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      expect(indicator.borderRadius, equals(GlassDefaults.capsuleRadius));
+    });
+
+    testWidgets('Tier 2: custom finite radius applies padding inset',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: const [
+              GlassBottomBarTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+              GlassBottomBarTab(label: 'B', icon: Icon(CupertinoIcons.search)),
+            ],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            barBorderRadius: 24.0,
+          ),
+        ),
+      );
+
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      // Outer 24.0 minus 4.0 padding = 20.0
+      expect(indicator.borderRadius, equals(20.0));
+    });
+
+    testWidgets('Tier 3: explicit indicatorBorderRadius overrides everything',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassBottomBar(
+            tabs: const [
+              GlassBottomBarTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+              GlassBottomBarTab(label: 'B', icon: Icon(CupertinoIcons.search)),
+            ],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            barBorderRadius: GlassDefaults.capsuleRadius,
+            indicatorBorderRadius: 10.0,
+          ),
+        ),
+      );
+
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      expect(indicator.borderRadius, equals(10.0));
     });
   });
 }
