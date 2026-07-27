@@ -616,7 +616,14 @@ class _RenderLightweightGlass extends RenderProxyBox {
   ui.FragmentShader? get shader => _shader;
   set shader(ui.FragmentShader? value) {
     if (_shader == value) return;
+    final wasCompositing = alwaysNeedsCompositing;
     _shader = value;
+    // alwaysNeedsCompositing depends on _shader (null → non-null on first async
+    // load). Notify the framework so _updateCompositingBits() re-evaluates;
+    // without this the stale needsCompositing=false bit persists.
+    if (wasCompositing != alwaysNeedsCompositing) {
+      markNeedsCompositingBitsUpdate();
+    }
     markNeedsPaint();
   }
 
@@ -634,7 +641,13 @@ class _RenderLightweightGlass extends RenderProxyBox {
       _cachedLightCos = math.cos(value.lightAngle);
       _cachedLightSin = -math.sin(value.lightAngle);
     }
+    final wasCompositing = alwaysNeedsCompositing;
     _settings = value;
+    // alwaysNeedsCompositing depends on effectiveBlur. If blur crosses zero
+    // the compositing bit must be re-evaluated by the framework.
+    if (wasCompositing != alwaysNeedsCompositing) {
+      markNeedsCompositingBitsUpdate();
+    }
     markNeedsPaint();
   }
 
@@ -650,7 +663,13 @@ class _RenderLightweightGlass extends RenderProxyBox {
   bool get skipBlur => _skipBlur;
   set skipBlur(bool value) {
     if (_skipBlur == value) return;
+    final wasCompositing = alwaysNeedsCompositing;
     _skipBlur = value;
+    // alwaysNeedsCompositing depends on _skipBlur. Dirty the compositing bit
+    // so the framework re-evaluates when blur-skipping toggles.
+    if (wasCompositing != alwaysNeedsCompositing) {
+      markNeedsCompositingBitsUpdate();
+    }
     markNeedsPaint();
   }
 
