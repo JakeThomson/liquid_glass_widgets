@@ -11,7 +11,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
-const _kPodcastsPurple = Color(0xFFA855F7);
+const _kPodcastsPurple = Color(0xFFB877FF);
 const _kBackground = CupertinoDynamicColor.withBrightness(
     color: Color(0xFFF2F2F7), darkColor: Color(0xFF000000));
 const _kBarH = 64.0;
@@ -386,7 +386,11 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
                           ? const Color(0xCC1C1C1E)
                           : const Color(0xCCF2F2F7),
                   thickness: 30,
-                  blur: 3,
+                  blur: 2,
+                  lightIntensity: 0.18,
+                  chromaticAberration: .01,
+                  saturation: 1.2,
+                  fresnelStrength: 0.0,
                 ),
                 child: const _MiniPlayerContent(),
               ),
@@ -416,7 +420,9 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
         spacing: _kSpacing,
         selectedIconColor: _kPodcastsPurple,
         unselectedIconColor: CupertinoColors.label.resolveFrom(context),
-        indicatorColor: CupertinoColors.tertiaryLabel.resolveFrom(context),
+        indicatorColor: CupertinoTheme.brightnessOf(context) == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.15)
+            : Colors.black.withValues(alpha: 0.10),
         labelFontSize: 10,
         iconSize: 28,
         iconLabelSpacing: 0,
@@ -424,15 +430,16 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
         interactionBehavior: GlassInteractionBehavior.full,
         settings: LiquidGlassSettings(
           glassColor: CupertinoTheme.brightnessOf(context) == Brightness.dark
-              ? const Color.fromRGBO(28, 28, 30, 0.8)
-              : const Color.fromRGBO(242, 242, 247, 0.8),
-          thickness: 30,
-          blur: 4,
+              ? const Color(0xAA1C1C1E)
+              : const Color(0xAAF2F2F7),
+          thickness: 24,
+          blur: 3,
           chromaticAberration: .01,
           lightAngle: GlassDefaults.lightAngle,
-          lightIntensity: .5,
+          lightIntensity: 0.2,
           ambientStrength: 0,
           refractiveIndex: 1.2,
+          fresnelStrength: 0.0,
           saturation: 1.2,
           specularSharpness: GlassSpecularSharpness.medium,
         ),
