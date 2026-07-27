@@ -402,6 +402,10 @@ class GlassScaffold extends StatelessWidget {
         fadeTop: doFadeTop,
         fadeBottom: doFadeBottom,
         style: edgeStyle,
+        // Pass the explicit background colour so the async-capture fallback
+        // gradient uses the correct colour in dark mode instead of defaulting
+        // to CupertinoTheme.scaffoldBackgroundColor (which is near-black).
+        fadeColor: backgroundColor,
         child: bodyContent,
       );
     }
@@ -537,7 +541,8 @@ class GlassScaffold extends StatelessWidget {
       GlassStatusBarStyle.none => true, // doesn't matter — no region
     };
 
-    Widget stackWidget = Stack(children: stackChildren);
+    Widget stackWidget =
+        Stack(clipBehavior: Clip.none, children: stackChildren);
 
     // Wrap in GlassContentAwareScope when content-aware brightness is on.
     // The scope must be an ancestor of both the sampled body
@@ -548,11 +553,12 @@ class GlassScaffold extends StatelessWidget {
     }
 
     Widget scaffold = Scaffold(
-      // Only force transparent when a background widget is provided — mirrors
-      // GlassPage's own logic. Without a background the Scaffold should
-      // inherit Theme.scaffoldBackgroundColor so callers can control the
-      // page colour through the standard Material theme.
-      backgroundColor: background != null ? Colors.transparent : null,
+      // Always transparent — GlassPage owns the background rendering.
+      // Without this, the Material Scaffold inherits the dark-mode
+      // Theme.scaffoldBackgroundColor even when backgroundColor is
+      // explicitly set, causing glass bar backdrop captures to see a dark
+      // background and the edge-fade fallback gradient to flicker dark.
+      backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
       floatingActionButton: floatingActionButton,
       body: stackWidget,

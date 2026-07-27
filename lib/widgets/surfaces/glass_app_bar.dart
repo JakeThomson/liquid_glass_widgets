@@ -92,10 +92,11 @@ class GlassAppBar extends StatelessWidget
     this.actions,
     this.centerTitle = true,
     this.backgroundColor = Colors.transparent,
-    this.preferredSize = const Size.fromHeight(44.0),
+    this.toolbarHeight = 44.0,
     this.padding = const EdgeInsets.symmetric(horizontal: 8),
     this.buttonSettings,
     this.largeTitleController,
+    this.bottom,
   });
 
   // ===========================================================================
@@ -121,9 +122,24 @@ class GlassAppBar extends StatelessWidget
   /// (e.g. WhatsApp conversation, music player).
   final Color backgroundColor;
 
-  /// The preferred height of the app bar.
+  /// The height of the toolbar row (excluding [bottom]).
+  ///
+  /// Defaults to `44.0` to match iOS 26 navigation bar height.
+  final double toolbarHeight;
+
+  /// A widget to display at the bottom of the app bar, below the title row.
+  ///
+  /// Typically a [TabBar]. Must implement [PreferredSizeWidget] so the
+  /// scaffold can measure the total bar height correctly.
+  ///
+  /// When non-null, [preferredSize] is `toolbarHeight + bottom.preferredSize.height`.
+  final PreferredSizeWidget? bottom;
+
+  /// The total preferred size of the app bar (toolbar + bottom widget).
   @override
-  final Size preferredSize;
+  Size get preferredSize => Size.fromHeight(
+        toolbarHeight + (bottom?.preferredSize.height ?? 0.0),
+      );
 
   /// Whether this app bar fully obstructs the content behind it.
   ///
@@ -175,37 +191,44 @@ class GlassAppBar extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    Widget content = ColoredBox(
-      color: backgroundColor,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: padding,
-          child: SizedBox(
-            height: preferredSize.height,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Leading widget
-                if (leading != null) leading!,
+    final Widget toolbarRow = SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: padding,
+        child: SizedBox(
+          height: toolbarHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Leading widget
+              if (leading != null) leading!,
 
-                // Flexible title — optionally driven by collapse controller
-                Expanded(
-                  child: _buildTitle(),
+              // Flexible title — optionally driven by collapse controller
+              Expanded(
+                child: _buildTitle(),
+              ),
+
+              // Trailing actions
+              if (actions != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 8,
+                  children: actions!,
                 ),
-
-                // Trailing actions
-                if (actions != null)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 8,
-                    children: actions!,
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
+    );
+
+    Widget content = ColoredBox(
+      color: backgroundColor,
+      child: bottom != null
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [toolbarRow, bottom!],
+            )
+          : toolbarRow,
     );
 
     // Wrap with default button settings if provided.

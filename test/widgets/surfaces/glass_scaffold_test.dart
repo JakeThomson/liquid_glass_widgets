@@ -452,5 +452,111 @@ void main() {
       expect(find.byType(GlassContentAwareContent), findsNothing);
       expect(find.text('Body'), findsOneWidget);
     });
+
+    // ── Dark-mode gradient flash regression (fix: fadeColor + transparent scaffold) ──
+
+    testWidgets(
+        'passes backgroundColor to GlassScrollEdgeEffect.fadeColor '
+        'so fallback gradient uses correct colour in dark mode',
+        (tester) async {
+      // Regression test for: GlassTabBar gradient flickering dark when
+      // GlassScaffold(backgroundColor: Colors.white) is used in dark mode.
+      // GlassScrollEdgeEffect's async-capture fallback previously defaulted
+      // to CupertinoTheme.scaffoldBackgroundColor (near-black in dark mode).
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassScaffold(
+              backgroundColor: Colors.white,
+              topEdgeFade: true,
+              bottomEdgeFade: true,
+              body: SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+
+      final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
+        find.byType(GlassScrollEdgeEffect),
+      );
+      // fadeColor must be the explicit white, not null/dark theme default.
+      expect(scrollEdge.fadeColor, Colors.white);
+    });
+
+    testWidgets(
+        'GlassScrollEdgeEffect.fadeColor is null when no backgroundColor set',
+        (tester) async {
+      // When no backgroundColor is provided, fadeColor should be null so
+      // GlassScrollEdgeEffect falls back to the theme default (existing behaviour).
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassScaffold(
+              topEdgeFade: true,
+              body: SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+
+      final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
+        find.byType(GlassScrollEdgeEffect),
+      );
+      expect(scrollEdge.fadeColor, isNull);
+    });
+
+    testWidgets(
+        'inner Material Scaffold is always Colors.transparent '
+        'regardless of background or backgroundColor', (tester) async {
+      // Regression test: Scaffold.backgroundColor was conditionally null when
+      // only backgroundColor (not background widget) was provided, causing the
+      // Material dark-mode theme colour to bleed through and corrupt glass
+      // bar backdrop captures.
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassScaffold(
+              backgroundColor: Colors.white,
+              body: Text('Body'),
+            ),
+          ),
+        ),
+      );
+
+      // Find the inner Material Scaffold inside GlassScaffold specifically.
+      final scaffold = tester.widget<Scaffold>(
+        find.descendant(
+          of: find.byType(GlassScaffold),
+          matching: find.byType(Scaffold),
+        ),
+      );
+      expect(scaffold.backgroundColor, Colors.transparent);
+    });
+
+    testWidgets(
+        'inner Material Scaffold is transparent even with no background set',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassScaffold(
+              body: Text('Body'),
+            ),
+          ),
+        ),
+      );
+
+      final scaffold = tester.widget<Scaffold>(
+        find.descendant(
+          of: find.byType(GlassScaffold),
+          matching: find.byType(Scaffold),
+        ),
+      );
+      expect(scaffold.backgroundColor, Colors.transparent);
+    });
   });
 }

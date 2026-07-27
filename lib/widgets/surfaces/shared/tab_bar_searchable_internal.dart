@@ -10,6 +10,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../../constants/glass_defaults.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
@@ -78,7 +79,7 @@ class DismissPill extends StatelessWidget {
               (safeColor != null
                   ? LiquidGlassSettings(glassColor: safeColor)
                   : null),
-      shape: LiquidRoundedSuperellipse(borderRadius: barBorderRadius),
+      shape: LiquidRoundedRectangle(borderRadius: barBorderRadius),
       icon: cancelIcon ??
           Icon(
             CupertinoIcons.xmark,
@@ -202,16 +203,15 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
   final GlobalKey _iconLayerKey = GlobalKey();
 
   // Cached shape to avoid recreation on every animation frame
-  late LiquidRoundedSuperellipse _barShape =
-      LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
+  late LiquidRoundedRectangle _barShape =
+      LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
 
   @override
   void didUpdateWidget(covariant SearchableTabIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
     updateTabAlignIfNeeded(oldWidget.tabIndex, oldWidget.tabCount);
     if (oldWidget.barBorderRadius != widget.barBorderRadius) {
-      _barShape =
-          LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
+      _barShape = LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
     }
   }
 
@@ -269,8 +269,20 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
         theme.textTheme.textStyle.color?.withValues(alpha: .1) ??
         _fallbackIndicatorColor;
     final targetAlignment = computeTabAlignment(widget.tabIndex);
-    final indicatorRadius =
-        widget.indicatorBorderRadius ?? widget.barBorderRadius;
+    // Nested-arc default: if the outer bar is a capsule sentinel (≥ 9999),
+    // the indicator is also passed 9999 directly, so the glass shader clamps to
+    // a true capsule even during jelly-bloom expansion. For custom radii (e.g.
+    // GlassTabBar.inline default 100), the indicator subtracts the padding inset
+    // (4 px) to produce concentric nested arcs (100 − 4 = 96). An explicit
+    // indicatorBorderRadius always takes priority.
+    const indicatorPadding = 4.0;
+    final indicatorRadius = widget.indicatorBorderRadius ??
+        (widget.barBorderRadius >= GlassDefaults.capsuleRadius
+            ? GlassDefaults.capsuleRadius
+            : (widget.barBorderRadius - indicatorPadding).clamp(
+                0.0,
+                GlassDefaults.capsuleRadius,
+              ));
 
     // Lateral sway: the bar body subtly follows the interactive pill during
     // horizontal drags, mimicking iOS 26 bottom bar physics. The SpringBuilder
@@ -482,10 +494,10 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
               indicatorColor: indicatorColor,
               isBackgroundIndicator: false,
               innerBlur: widget.innerBlur,
-              borderRadius: indicatorRadius,
               padding: const EdgeInsets.all(4),
               expansion: widget.indicatorExpansion,
               settings: widget.indicatorSettings,
+              borderRadius: indicatorRadius,
               pinchStrength: widget.indicatorPinchStrength,
               backgroundKey: widget.backgroundKey,
             ),
@@ -555,10 +567,10 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                     paintBackground: true,
                     paintGlass: false,
                     innerBlur: widget.innerBlur,
-                    borderRadius: effRadius,
                     padding: const EdgeInsets.all(4),
                     expansion: widget.indicatorExpansion,
                     settings: widget.indicatorSettings,
+                    borderRadius: indicatorRadius,
                     pinchStrength: widget.indicatorPinchStrength,
                     backgroundKey: widget.backgroundKey,
                   ),
@@ -646,11 +658,11 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
             isBackgroundIndicator: false,
             paintBackground: false,
             paintGlass: true,
-            borderRadius: effRadius,
             padding: const EdgeInsets.all(4),
             expansion:
                 widget.indicatorExpansion.resolve(Directionality.of(context)),
             settings: widget.indicatorSettings,
+            borderRadius: indicatorRadius,
             pinchStrength: widget.indicatorPinchStrength,
             // Over a PlatformView the normal backdrop (map region) can't be
             // captured by toImageSync, so the premium indicator refracts the
@@ -875,8 +887,7 @@ class SearchPillState extends State<SearchPill> {
     final iconColor = resolveIconColor(rawIconColor);
     final micColor =
         resolveIconColor(widget.config.micIconColor ?? rawIconColor);
-    final shape =
-        LiquidRoundedSuperellipse(borderRadius: widget.barBorderRadius);
+    final shape = LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
 
     // LayoutBuilder reads the ACTUAL rendered width on every frame.
     // When isActive flips true, AnimatedContainer starts at compact width
@@ -892,8 +903,8 @@ class SearchPillState extends State<SearchPill> {
           final isOval = (w - constraints.maxHeight).abs() < 2;
           final currentShape = isOval
               ? (widget.platformViewBackdrop
-                  ? LiquidRoundedSuperellipse(borderRadius: w / 2)
-                  : const LiquidOval())
+                  ? LiquidRoundedRectangle(borderRadius: w / 2)
+                  : LiquidRoundedRectangle(borderRadius: w / 2))
               : shape;
 
           return Stack(

@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
+import '../../constants/glass_defaults.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../src/types/glass_interaction_behavior.dart';
 import '../../types/glass_quality.dart';
@@ -462,8 +463,15 @@ class GlassBottomBar extends StatelessWidget {
 
   /// Border radius of the tab bar.
   ///
-  /// Defaults to 32 for a pill-shaped appearance.
-  static const _defaultBarBorderRadius = 32.0;
+  /// Defaults to [GlassDefaults.capsuleRadius] (9999.0) — a capsule shape that
+  /// matches the iOS 26 UITabBar appearance at any bar height. Internally the
+  /// shader receives `9999.0` directly (rather than `9999 − indicatorPadding`),
+  /// so the indicator stays a true circle even during jelly-bloom expansion.
+  ///
+  /// Set to a finite value (e.g. 20) for rounded-rectangle corners, in which
+  /// case the indicator automatically tracks at `barBorderRadius − 4` to
+  /// maintain concentric nested arcs.
+  static const _defaultBarBorderRadius = GlassDefaults.capsuleRadius;
   final double barBorderRadius;
 
   /// Internal padding of the tab bar.

@@ -180,7 +180,8 @@ class GlassSegmentedControl extends StatefulWidget {
     required this.onSegmentSelected,
     super.key,
     this.height = GlassDefaults.heightControl,
-    this.borderRadius = GlassDefaults.borderRadius,
+    this.borderRadius = GlassDefaults.capsuleRadius,
+    this.indicatorBorderRadius,
     this.padding = const EdgeInsets.all(2),
     this.selectedTextStyle,
     this.unselectedTextStyle,
@@ -248,7 +249,8 @@ class GlassSegmentedControl extends StatefulWidget {
     required this.onSegmentSelected,
     super.key,
     this.height = 44.0,
-    this.borderRadius = GlassDefaults.borderRadius,
+    this.borderRadius = GlassDefaults.capsuleRadius,
+    this.indicatorBorderRadius,
     this.padding = const EdgeInsets.all(2),
     this.selectedTextStyle,
     this.unselectedTextStyle,
@@ -343,8 +345,22 @@ class GlassSegmentedControl extends StatefulWidget {
 
   /// Border radius of the segmented control.
   ///
-  /// Defaults to 16 (height / 2) for a pill shape.
+  /// Defaults to [9999.0] — a capsule that matches the iOS 26 UISegmentedControl
+  /// appearance regardless of bar height. Set to a finite value (e.g. 16) to
+  /// produce rounded-rectangle corners.
   final double borderRadius;
+
+  /// Optional override for the active indicator's corner radius.
+  ///
+  /// The radius is resolved in priority order:
+  /// 1. **Manual override** (this value) — always wins.
+  /// 2. **Capsule guard** — if [borderRadius] ≥ 9999.0 the indicator also
+  ///    receives 9999.0, keeping the glass shader in true-capsule mode even
+  ///    during jelly-bloom expansion where the pill canvas grows beyond its
+  ///    rest size.
+  /// 3. **Concentric math** — otherwise `(borderRadius − 2).clamp(0, 9999)`
+  ///    so the indicator arcs nest concentrically inside the container.
+  final double? indicatorBorderRadius;
 
   /// Padding around the indicator inside the background.
   ///
@@ -559,7 +575,7 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
           iconSize: widget.iconSize,
           labelPadding: widget.labelPadding,
           quality: effectiveQuality,
-          indicatorBorderRadius: null, // derived from tabBarBorderRadius
+          indicatorBorderRadius: widget.indicatorBorderRadius,
           indicatorSettings: widget.indicatorSettings,
           indicatorPinchStrength: widget.indicatorPinchStrength,
           indicatorExpansion: widget.indicatorExpansion,
@@ -614,6 +630,7 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
             indicatorPinchStrength: widget.indicatorPinchStrength,
             indicatorExpansion: widget.indicatorExpansion,
             borderRadius: widget.borderRadius,
+            indicatorBorderRadius: widget.indicatorBorderRadius,
             quality: effectiveQuality,
             backgroundKey: widget.backgroundKey,
             interactionBehavior: widget.interactionBehavior,

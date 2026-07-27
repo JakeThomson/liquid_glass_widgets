@@ -18,6 +18,7 @@
 
 import 'package:flutter/cupertino.dart';
 
+import '../../../constants/glass_defaults.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../src/types/glass_interaction_behavior.dart';
 import '../../../theme/glass_theme.dart';
@@ -44,6 +45,7 @@ class SegmentedControlContent extends StatefulWidget {
     required this.unselectedTextStyle,
     required this.indicatorColor,
     required this.borderRadius,
+    this.indicatorBorderRadius,
     required this.quality,
     this.direction = Axis.horizontal,
     this.indicatorSettings,
@@ -73,6 +75,7 @@ class SegmentedControlContent extends StatefulWidget {
   /// Expansion padding applied to the pill during drag — mirrors [GlassBottomBar].
   final EdgeInsetsGeometry indicatorExpansion;
   final double borderRadius;
+  final double? indicatorBorderRadius;
   final GlassQuality quality;
   final Axis direction;
   final GlobalKey? backgroundKey;
@@ -221,8 +224,14 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
     final targetAlignment = _computeAlignmentForSegment(widget.selectedIndex);
 
     // Indicator is slightly less rounded than the container to account for
-    // the inset padding.
-    final indicatorRadius = widget.borderRadius - 3;
+    // the inset padding (2 px), unless explicitly overridden.
+    // If the outer container is a perfect capsule (e.g. 9999.0), the indicator
+    // is also a perfect capsule.
+    final indicatorRadius = widget.indicatorBorderRadius ??
+        (widget.borderRadius >= GlassDefaults.capsuleRadius
+            ? GlassDefaults.capsuleRadius
+            : (widget.borderRadius - 2.0)
+                .clamp(0.0, GlassDefaults.capsuleRadius));
 
     final dynamicLabelColor =
         CupertinoTheme.of(context).textTheme.textStyle.color ??
@@ -308,9 +317,9 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
                       quality: widget.quality,
                       indicatorColor: indicatorColor,
                       isBackgroundIndicator: false,
+                      borderRadius: indicatorRadius,
                       paintBackground: true,
                       paintGlass: !isPremiumQuality,
-                      borderRadius: indicatorRadius,
                       settings: widget.indicatorSettings,
                       pinchStrength: widget.indicatorPinchStrength,
                       expansion: widget.indicatorExpansion,
@@ -333,9 +342,9 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
                         quality: widget.quality,
                         indicatorColor: indicatorColor,
                         isBackgroundIndicator: false,
+                        borderRadius: indicatorRadius,
                         paintBackground: false,
                         paintGlass: true,
-                        borderRadius: indicatorRadius,
                         settings: widget.indicatorSettings,
                         pinchStrength: widget.indicatorPinchStrength,
                         expansion: widget.indicatorExpansion,
