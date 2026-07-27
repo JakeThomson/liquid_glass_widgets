@@ -640,7 +640,8 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Custom glass settings for content specifically for the 'full' state.
   final LiquidGlassSettings? fullStateContentSettings;
 
-  /// The resting detents offered (medium = half glass, large = full opaque).
+  /// The resting detents offered (small = peek floor, medium = half glass,
+  /// large = full opaque).
   /// Must be non-empty. Forwarded to the sheet.
   final Set<GlassSheetDetent> detents;
 
@@ -719,8 +720,8 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.peekTopBorderRadius,
     this.peekBottomRadius,
   }) : assert(detents.length > 0,
-            'GlassModalSheet needs at least one detent (peek is a minimized '
-            'floor, not a standalone detent — see enablePeek).');
+            'GlassModalSheet needs at least one detent — add medium and/or '
+            'large (small alone is a floor, not a resting height).');
 
   @override
   Widget build(BuildContext context) {
