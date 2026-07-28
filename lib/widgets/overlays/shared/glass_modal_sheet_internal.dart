@@ -44,6 +44,9 @@ class _SheetLayout extends StatelessWidget {
   final bool enableTopFade;
   final double topFadeHeight;
   final bool enableSaturationGlow;
+  // TODO(sdegenaar): wire up onFocusGained — declared and threaded through
+  // the constructor but never invoked anywhere in the package. Pre-existing
+  // on main before this PR; wiring it up is a separate decision. See #156.
   final VoidCallback onFocusGained;
   final bool suppressInteractionOnChildren;
 
@@ -719,9 +722,10 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.peekWidth,
     this.peekTopBorderRadius,
     this.peekBottomRadius,
-  }) : assert(detents.length > 0,
-            'GlassModalSheet needs at least one detent — add medium and/or '
-            'large (small alone is a floor, not a resting height).');
+  }) : assert(
+            detents.length > 0,
+            'GlassModalSheetScaffold needs at least one detent — add medium '
+            'and/or large (small alone is a floor, not a resting height).');
 
   @override
   Widget build(BuildContext context) {

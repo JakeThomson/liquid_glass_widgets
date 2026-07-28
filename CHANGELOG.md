@@ -1,4 +1,4 @@
-# Unreleased
+# 0.25.0
 
 ## ✨ New Features
 
@@ -42,6 +42,8 @@
 - **Half-only content scrolling** — a sheet's inner scroll view now enables at
   the sheet's *topmost* detent rather than hardcoding the `full` state, so a
   half-only sheet scrolls its content correctly.
+
+Thanks to [@jfhair](https://github.com/jfhair) for the contribution (#178).
 
 # 0.24.4
 

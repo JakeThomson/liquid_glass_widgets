@@ -276,7 +276,8 @@ class GlassModalSheet extends StatefulWidget {
     this.peekWidth,
     this.peekTopBorderRadius,
     this.peekBottomRadius,
-  }) : assert(detents.length > 0,
+  }) : assert(
+            detents.length > 0,
             'GlassModalSheet needs at least one detent — add medium and/or large '
             '(small alone is a floor, not a resting height).');
 
@@ -339,7 +340,8 @@ class GlassModalSheet extends StatefulWidget {
     double? peekTopBorderRadius,
     double? peekBottomRadius,
   }) {
-    assert(detents.isNotEmpty,
+    assert(
+        detents.isNotEmpty,
         'GlassModalSheet.show() needs at least one detent — add medium '
         'and/or large (small alone is a floor, not a resting height).');
     assert(() {
