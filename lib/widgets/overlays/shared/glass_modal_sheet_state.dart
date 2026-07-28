@@ -53,8 +53,17 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _currentStateNotifier = ValueNotifier(widget.initialState);
-    _settledState = widget.initialState;
+    // Mirror the coercion show() applies: if the caller passed an initialState
+    // that isn't in the offered detents, snap to the nearest one that is.
+    // Without this an embedded GlassModalSheet whose initialState doesn't match
+    // its detents would wedge (no orderedStates entry → no rest position).
+    final resolvedInitial = _resolveInitialState(
+      widget.initialState,
+      widget.detents,
+    );
+
+    _currentStateNotifier = ValueNotifier(resolvedInitial);
+    _settledState = resolvedInitial;
     _geometry = _buildGeometry();
 
     _animationController = AnimationController.unbounded(vsync: this);
@@ -147,6 +156,27 @@ class _GlassModalSheetState extends State<GlassModalSheet>
         enableFull: widget.detents.contains(GlassSheetDetent.large),
         dismissible: widget.dismissible,
       );
+
+  /// Coerce [requested] to the nearest detent the sheet actually offers.
+  ///
+  /// Mirrors the fallback [GlassModalSheet.show] performs before pushing the
+  /// route, so that embedded [GlassModalSheet] widgets are consistent: without
+  /// this an `initialState` that isn't in [detents] leaves the sheet with no
+  /// matching rest position and it renders stuck.
+  static GlassSheetState _resolveInitialState(
+    GlassSheetState requested,
+    Set<GlassSheetDetent> detents,
+  ) {
+    if (requested == GlassSheetState.half &&
+        !detents.contains(GlassSheetDetent.medium)) {
+      return GlassSheetState.full;
+    }
+    if (requested == GlassSheetState.full &&
+        !detents.contains(GlassSheetDetent.large)) {
+      return GlassSheetState.half;
+    }
+    return requested;
+  }
 
   void _updateScreenSize() {
     final view = View.of(context);
@@ -434,9 +464,12 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   /// which is exactly why the scroll gate needs its own signal.
   double get _contentScrollProgress {
     final states = _geometry.orderedStates;
+    // A sheet with only one rest state (e.g. the release fallback that adds
+    // `half` when all detents are disabled) is always at its max — treat its
+    // content as immediately scrollable rather than gating on a transition
+    // that can never happen.
     if (states.length < 2) return 1.0;
-    final maxPos =
-        _geometry.positionForState(states.last, _screenSize.height);
+    final maxPos = _geometry.positionForState(states.last, _screenSize.height);
     final prevPos = _geometry.positionForState(
         states[states.length - 2], _screenSize.height);
     if (maxPos <= prevPos) return 0.0;
