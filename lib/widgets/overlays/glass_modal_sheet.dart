@@ -168,7 +168,34 @@ class GlassModalSheet extends StatefulWidget {
   ///
   /// If null, it defaults to false for [GlassSheetMode.dismissible] and true for
   /// [GlassSheetMode.persistent].
+  @Deprecated(
+    'Use GlassSheetDetent.small in `detents` instead. Peek is now a detent '
+    'like medium and large, so one mechanism describes every resting stop. '
+    'Still honoured when set (it wins over `detents`); will be removed in a '
+    'future release.',
+  )
   final bool? enablePeek;
+
+  /// The resting detents this sheet offers. Appearance follows the detent:
+  /// [GlassSheetDetent.small] is the peek floor, [GlassSheetDetent.medium] is
+  /// content-height glass, [GlassSheetDetent.large] is screen-height opaque.
+  ///
+  ///   • `{medium}`             → half-only glass (Apple Pay / Sign in with Apple)
+  ///   • `{large}`              → full-only opaque, opens straight to full (Maps / Music)
+  ///   • `{medium, large}`      → the default two-stop sheet
+  ///   • `{small, medium, large}` → adds the maps-style peek floor underneath
+  ///
+  /// Must be non-empty. [GlassSheetMode.persistent] keeps its peek floor even
+  /// when [GlassSheetDetent.small] is absent — a persistent sheet is defined by
+  /// resting somewhere instead of dismissing. Style the small detent with the
+  /// `peek*` params ([peekSettings], [peekWidth], …).
+  final Set<GlassSheetDetent> detents;
+
+  /// Whether a downward drag can dismiss the sheet. When false, a peek-less
+  /// sheet rubber-bands at its lowest detent instead of closing on swipe-down
+  /// (guarding against an accidental dismiss — the Apple Pay pattern); close
+  /// it programmatically via the controller. Default: true.
+  final bool dismissible;
 
   // ===========================================================================
   // Drag Indicator Properties
@@ -242,12 +269,16 @@ class GlassModalSheet extends StatefulWidget {
     this.maintainContentGlass = true,
     this.fullStateContentSettings,
     this.enablePeek,
+    this.detents = const {GlassSheetDetent.medium, GlassSheetDetent.large},
+    this.dismissible = true,
     this.peekHorizontalMargin,
     this.peekBottomMargin,
     this.peekWidth,
     this.peekTopBorderRadius,
     this.peekBottomRadius,
-  });
+  }) : assert(detents.length > 0,
+            'GlassModalSheet needs at least one detent — add medium and/or large '
+            '(small alone is a floor, not a resting height).');
 
   /// Shows a high-fidelity glass modal sheet.
   static Future<T?> show<T>({
@@ -296,6 +327,11 @@ class GlassModalSheet extends StatefulWidget {
     double topFadeHeight = 40.0,
     bool maintainContentGlass = true,
     LiquidGlassSettings? fullStateContentSettings,
+    Set<GlassSheetDetent> detents = const {
+      GlassSheetDetent.medium,
+      GlassSheetDetent.large
+    },
+    bool dismissible = true,
     bool? enablePeek,
     double? peekHorizontalMargin,
     double? peekBottomMargin,
@@ -303,6 +339,9 @@ class GlassModalSheet extends StatefulWidget {
     double? peekTopBorderRadius,
     double? peekBottomRadius,
   }) {
+    assert(detents.isNotEmpty,
+        'GlassModalSheet.show() needs at least one detent — add medium '
+        'and/or large (small alone is a floor, not a resting height).');
     assert(() {
       if (mode == GlassSheetMode.persistent &&
           barrierColor == Colors.transparent) {
@@ -314,6 +353,17 @@ class GlassModalSheet extends StatefulWidget {
       }
       return true;
     }());
+
+    // Fall back to an offered detent if the caller asked to open on one
+    // that isn't in the set (the assert guarantees the set is non-empty).
+    GlassSheetState resolvedInitialState = initialState;
+    if (initialState == GlassSheetState.half &&
+        !detents.contains(GlassSheetDetent.medium)) {
+      resolvedInitialState = GlassSheetState.full;
+    } else if (initialState == GlassSheetState.full &&
+        !detents.contains(GlassSheetDetent.large)) {
+      resolvedInitialState = GlassSheetState.half;
+    }
 
     final effectiveController = controller ?? GlassModalSheetController();
     bool isClosing = false;
@@ -339,7 +389,7 @@ class GlassModalSheet extends StatefulWidget {
           controller: effectiveController,
           halfSize: halfSize,
           fullSize: fullSize,
-          initialState: initialState,
+          initialState: resolvedInitialState,
           fillThreshold: fillThreshold,
           settings: settings,
           expandedColor: expandedColor,
@@ -375,6 +425,8 @@ class GlassModalSheet extends StatefulWidget {
           topFadeHeight: topFadeHeight,
           maintainContentGlass: maintainContentGlass,
           fullStateContentSettings: fullStateContentSettings,
+          detents: detents,
+          dismissible: dismissible,
           enablePeek: enablePeek,
           peekHorizontalMargin: peekHorizontalMargin,
           peekBottomMargin: peekBottomMargin,

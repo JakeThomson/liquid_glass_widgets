@@ -652,7 +652,12 @@ class _ShowcaseHomeScreenState extends State<ShowcaseHomeScreen> {
       context: context,
       quality: widget.currentQuality,
       initialState: GlassSheetState.peek,
-      enablePeek: true,
+      // Peek is a detent now — `small` alongside the two resting heights.
+      detents: const {
+        GlassSheetDetent.small,
+        GlassSheetDetent.medium,
+        GlassSheetDetent.large,
+      },
       peekTopBorderRadius: 46,
       builder: (context) => const BaseScenario(
         title: 'Standard Peek',
@@ -859,7 +864,11 @@ class MapsExperienceScreen extends StatelessWidget {
     return Scaffold(
       body: GlassModalSheetScaffold(
         mode: GlassSheetMode.persistent,
-        enablePeek: true,
+        detents: const {
+          GlassSheetDetent.small,
+          GlassSheetDetent.medium,
+          GlassSheetDetent.large,
+        },
         initialState: GlassSheetState.peek,
         peekSize: 90,
         halfSize: 0.445,
