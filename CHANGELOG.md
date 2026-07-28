@@ -1,4 +1,21 @@
+# 0.24.4
+
+## 🐛 Bug Fixes
+
+- **`GlassBottomBar` collapse trajectory fixed** — when `GlassBottomBarCollapseConfig` with `direction: towardsExtraButton` was set, the collapsed tab pill stopped short of the extra button, leaving a visible gap between the two circles. The pill now travels to the exact horizontal centre of the extra button on both left and right placements, and the extra button correctly overlays the pill at the end of the animation. Thanks to [@jingluoguo](https://github.com/jingluoguo) for the contribution (#176).
+
+## ✨ Improvements
+
+- **`GlassBottomBarCollapseConfig` default `animationDuration` bumped from 220 ms → 280 ms** — the collapse animation carries semantic meaning (the tab pill merges into the action button) and the extra 60 ms is enough for the eye to track the trajectory without feeling sluggish. Override it any time via the config:
+
+  ```dart
+  collapseConfig: GlassBottomBarCollapseConfig(
+    animationDuration: Duration(milliseconds: 220), // snappier
+  ),
+  ```
+
 # 0.24.3
+
 
 ## 🐛 Bug Fixes
 

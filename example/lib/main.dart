@@ -13,6 +13,7 @@ import 'package:liquid_glass_widgets_example/demos/glass_modal_sheet_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/video_player_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/text_field_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/bottom_bar_tab_width_demo.dart';
+import 'package:liquid_glass_widgets_example/demos/collapse_bar_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/buttons_and_shadows_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/content_aware_brightness_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/indicator_parity_demo.dart';
@@ -780,6 +781,23 @@ class _ExamplesTab extends StatelessWidget {
                           destination: const PlatformViewDemo(),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Row 4: Collapse Bar
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SmallDemoCard(
+                          title: 'Collapse Bar',
+                          icon: CupertinoIcons.arrow_down_right_circle_fill,
+                          color: const Color(0xFF30D158),
+                          destination: const CollapseBarDemoPage(),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(child: SizedBox()),
                     ],
                   ),
                   const SizedBox(height: 14),

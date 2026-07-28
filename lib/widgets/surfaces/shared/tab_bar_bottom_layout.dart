@@ -181,7 +181,7 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
       _collapseEnabled && widget.scrollController != null;
   Duration get _collapseDuration =>
       widget.collapseConfig?.animationDuration ??
-      const Duration(milliseconds: 220);
+      const Duration(milliseconds: 280);
   double get _collapsedExtraButtonScale =>
       widget.collapseConfig?.collapsedExtraButtonScale ?? 0.9;
 
