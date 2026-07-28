@@ -154,3 +154,37 @@ jobs:
 
       - name: Publish dry-run
         run: dart pub publish --dry-run
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Job 4: Oldest-supported Flutter floor check
+  # Pins Flutter 3.41.0 — the version declared in pubspec.yaml — to verify
+  # the package actually installs and its tests pass on the declared minimum.
+  # The matrix above (stable/beta channels) always resolves to the latest
+  # release and structurally cannot catch floor violations.
+  # ─────────────────────────────────────────────────────────────────────────
+  floor-check:
+    name: Flutter Floor Check (3.41.0)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.0"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --fatal-warnings
+
+      - name: Run tests
+        shell: bash
+        run: |
+          TEST_FILES=$(find test -name '*_test.dart' \
+            ! -path '*/golden/*' \
+            ! -path '*/renderer/*' \
+            | sort | tr '\n' ' ')
+          flutter test $TEST_FILES
