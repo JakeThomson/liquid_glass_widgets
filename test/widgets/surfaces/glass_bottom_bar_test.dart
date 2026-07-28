@@ -359,7 +359,7 @@ void main() {
         GlassBottomBarCollapseDirection.towardsExtraButton,
       );
       expect(config.expandOnTap, isTrue);
-      expect(config.animationDuration, const Duration(milliseconds: 220));
+      expect(config.animationDuration, const Duration(milliseconds: 280));
       expect(config.collapsedExtraButtonScale, 0.9);
     });
 

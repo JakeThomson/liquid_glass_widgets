@@ -848,7 +848,7 @@ class GlassBottomBarCollapseConfig {
   const GlassBottomBarCollapseConfig({
     this.direction = GlassBottomBarCollapseDirection.towardsExtraButton,
     this.expandOnTap = true,
-    this.animationDuration = const Duration(milliseconds: 220),
+    this.animationDuration = const Duration(milliseconds: 280),
     this.collapsedExtraButtonScale = 0.9,
   }) : assert(
           collapsedExtraButtonScale > 0,
@@ -865,7 +865,9 @@ class GlassBottomBarCollapseConfig {
 
   /// Duration of the collapse/expand animation.
   ///
-  /// Defaults to 220 milliseconds.
+  /// Defaults to 280 milliseconds — long enough for the collapse trajectory
+  /// to read clearly while still feeling responsive. Apple's equivalent
+  /// Dynamic Island and Live Activity transitions run at 300–400 ms.
   final Duration animationDuration;
 
   /// Scale applied to the extra button while collapsed.
