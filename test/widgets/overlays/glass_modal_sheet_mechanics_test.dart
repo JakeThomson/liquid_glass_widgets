@@ -401,6 +401,39 @@ void main() {
       );
       expect(geo.orderedStates, contains(GlassSheetState.peek));
     });
+
+    test('all primary detents disabled still yields an openable sheet', () {
+      // The widget asserts a non-empty detent set in debug, but release
+      // builds don't run asserts — a sheet reaching this state with no
+      // primary detent would render permanently un-openable. orderedStates
+      // falls back to half rather than returning an empty rest set.
+      final geo = SheetGeometry(
+        mode: dismissible,
+        halfSize: 400,
+        fullSize: 800,
+        peekSize: 0,
+        enablePeek: false,
+        enableHalf: false,
+        enableFull: false,
+      );
+      expect(geo.orderedStates, contains(GlassSheetState.half));
+      expect(geo.maxState, GlassSheetState.half);
+    });
+
+    test('half disabled by a zero halfSize also falls back', () {
+      // enableHalf is true here, but `halfSize > 0` gates it — the guardrail
+      // has to catch this second route to an empty set too.
+      final geo = SheetGeometry(
+        mode: dismissible,
+        halfSize: 0,
+        fullSize: 800,
+        peekSize: 0,
+        enablePeek: false,
+        enableHalf: true,
+        enableFull: false,
+      );
+      expect(geo.orderedStates, contains(GlassSheetState.half));
+    });
   });
 
 }
