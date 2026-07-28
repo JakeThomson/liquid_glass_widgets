@@ -130,6 +130,71 @@ void main() {
       expect(find.text('Modal Content'), findsOneWidget);
     });
 
+    testWidgets('show() falls back when initialState is not an offered detent',
+        (tester) async {
+      // A caller can ask to open on a detent the sheet doesn't offer — most
+      // easily by leaving initialState at its default while narrowing the
+      // set. Opening on a state that isn't in orderedStates leaves the sheet
+      // wedged (no rest position resolves), so show() coerces it to one that
+      // IS offered rather than trusting the caller.
+      final controller = GlassModalSheetController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => GlassModalSheet.show(
+                  context: context,
+                  controller: controller,
+                  // Asks for full; only medium is on offer.
+                  initialState: GlassSheetState.full,
+                  detents: const {GlassSheetDetent.medium},
+                  builder: (context) => const Text('Modal Content'),
+                ),
+                child: const Text('Show'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modal Content'), findsOneWidget);
+      expect(controller.currentState, GlassSheetState.half,
+          reason: 'full was not offered, so the sheet opens at the medium '
+              'detent instead of a state it cannot rest at');
+    });
+
+    testWidgets('show() coerces the other direction too', (tester) async {
+      // The mirror case: half requested, only large offered.
+      final controller = GlassModalSheetController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => GlassModalSheet.show(
+                  context: context,
+                  controller: controller,
+                  initialState: GlassSheetState.half,
+                  detents: const {GlassSheetDetent.large},
+                  builder: (context) => const Text('Modal Content'),
+                ),
+                child: const Text('Show'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show'));
+      await tester.pumpAndSettle();
+
+      expect(controller.currentState, GlassSheetState.full);
+    });
+
     testWidgets('respects custom border radius', (tester) async {
       const customRadius = 24.0;
       await tester.pumpWidget(

@@ -103,6 +103,7 @@ export 'widgets/overlays/glass_modal_sheet.dart'
         GlassModalSheet,
         GlassSheetState,
         GlassSheetMode,
+        GlassSheetDetent, // the `detents` set on GlassModalSheet / .show()
         GlassFillTransition,
         GlassModalSheetController,
         GlassModalSheetScaffold, // used directly for maps-style hit-through layouts

@@ -28,6 +28,12 @@ class _SheetLayout extends StatelessWidget {
   final ScrollController scrollController;
   final ValueNotifier<GlassSheetState> currentStateNotifier;
   final double expandProgressValue;
+
+  /// Progress toward the topmost detent; gates inner content scrolling.
+  /// Distinct from [expandProgressValue] (the half→full visual crossfade) so
+  /// a half-only sheet — whose crossfade stays 0 to keep the glass look —
+  /// still scrolls its content once it reaches its max (half) detent.
+  final double contentScrollProgress;
   final Widget child;
   final bool showDragIndicator;
   final Color? dragIndicatorColor;
@@ -69,6 +75,7 @@ class _SheetLayout extends StatelessWidget {
     required this.scrollController,
     required this.currentStateNotifier,
     required this.expandProgressValue,
+    required this.contentScrollProgress,
     required this.child,
     required this.showDragIndicator,
     this.dragIndicatorColor,
@@ -89,7 +96,7 @@ class _SheetLayout extends StatelessWidget {
 
     final contentZone = _SheetContent(
       scrollController: scrollController,
-      isFullScreen: expandProgressValue > 0.95,
+      isFullScreen: contentScrollProgress > 0.95,
       padding: padding,
       child: child,
     );
@@ -141,9 +148,14 @@ class _SheetLayout extends StatelessWidget {
 
             // Compute dynamic glass visibility for current expansion state.
             final bool isFullyExpanded = expandProgressValue > 0.98;
-            final double glassVisibility = isFullyExpanded
-                ? (maintainContentGlass ? 1.0 : 0.0)
-                : (glassOpacity * 5.0).clamp(0.0, 1.0);
+            // Below full, hold the glass at full strength — including on the way
+            // down to dismiss. This previously ramped glassVisibility to 0 over
+            // the last stretch of the collapse (glassOpacity × 5), fading the
+            // sheet's own surface out as it closed; Apple instead keeps the
+            // surface opaque and just slides it off the bottom (only the
+            // background dim fades). See discussions #130 / #156.
+            final double glassVisibility =
+                isFullyExpanded ? (maintainContentGlass ? 1.0 : 0.0) : 1.0;
 
             // Fade glass uniformly via settings rather than an Opacity widget.
             //
@@ -628,6 +640,15 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Custom glass settings for content specifically for the 'full' state.
   final LiquidGlassSettings? fullStateContentSettings;
 
+  /// The resting detents offered (small = peek floor, medium = half glass,
+  /// large = full opaque).
+  /// Must be non-empty. Forwarded to the sheet.
+  final Set<GlassSheetDetent> detents;
+
+  /// Whether the sheet can be swiped down to dismiss. When false the sheet
+  /// rubber-bands at its lowest detent instead. Forwarded to the sheet.
+  final bool dismissible;
+
   /// Whether the 'peek' state is enabled.
   final bool? enablePeek;
 
@@ -690,13 +711,17 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.topFadeHeight = 40.0,
     this.maintainContentGlass = true,
     this.fullStateContentSettings,
+    this.detents = const {GlassSheetDetent.medium, GlassSheetDetent.large},
+    this.dismissible = true,
     this.enablePeek,
     this.peekHorizontalMargin,
     this.peekBottomMargin,
     this.peekWidth,
     this.peekTopBorderRadius,
     this.peekBottomRadius,
-  });
+  }) : assert(detents.length > 0,
+            'GlassModalSheet needs at least one detent — add medium and/or '
+            'large (small alone is a floor, not a resting height).');
 
   @override
   Widget build(BuildContext context) {
@@ -755,6 +780,8 @@ class GlassModalSheetScaffold extends StatelessWidget {
           topFadeHeight: topFadeHeight,
           maintainContentGlass: maintainContentGlass,
           fullStateContentSettings: fullStateContentSettings,
+          detents: detents,
+          dismissible: dismissible,
           enablePeek: enablePeek,
           peekHorizontalMargin: peekHorizontalMargin,
           peekBottomMargin: peekBottomMargin,
