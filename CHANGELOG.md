@@ -1,3 +1,9 @@
+# 0.24.3
+
+## 🐛 Bug Fixes
+
+- **Transparent scaffold during navigation fixed** — `GlassScaffold` was unconditionally setting the inner `Scaffold.backgroundColor` to `Colors.transparent`, even when no `background` widget was provided. This caused the previous route to bleed through the incoming screen during `MaterialPageRoute` slide transitions, making the new page appear transparent. Fixed by only forcing the scaffold transparent when `GlassScaffold` actually has a background widget or `backgroundColor` to render — matching the existing `GlassPage` behaviour. Screens without an explicit background now inherit the theme's opaque `scaffoldBackgroundColor`, producing correct, opaque transitions (issue #177).
+
 # 0.24.2
 
 ## 🐛 Bug Fixes
