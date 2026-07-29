@@ -1,11 +1,66 @@
-# Roadmap: 0.15.0 → 1.0.0
+# Roadmap: 0.25.x → 1.0.0
 
-> Last updated: 2026-07-02
+> Last updated: 2026-07-29
 
-This document tracks the planned work to get `liquid_glass_widgets` from the
-current 0.14.x series to a stable 1.0.0 release. The guiding principle is:
-**fewer, better widgets that map 1:1 to real iOS 26 components** — nothing
-half-baked, nothing Material-flavoured.
+This document tracks the planned work to get `liquid_glass_widgets` to a stable
+1.0.0 release. The guiding principle is: **fewer, better widgets that map 1:1
+to real iOS 26 components** — nothing half-baked, nothing Material-flavoured.
+
+---
+
+## Current Status (0.25.1)
+
+> Honest scored audit against the 1.0.0 entry criteria. Updated 2026-07-29.
+
+**Overall: ~65–70% of the way to 1.0.0.** The rendering engine, physics, and
+theming infrastructure are complete and production-quality. What remains is
+platform hygiene work — accessibility, RTL, test coverage, and documentation.
+
+| Criterion | Status | Notes |
+|---|---|---|
+| No known P0/P1 bugs | ✅ Clear | No open crash reports |
+| Dartdoc complete on all public API | ⚠️ Partial | Needs a full audit pass |
+| Test coverage ≥ 90% | ⚠️ Unknown | 137 test files vs 112 source — line coverage not yet measured |
+| Example app demos every widget | ⚠️ Likely partial | Not verified against current widget catalogue |
+| No `Icons.*` (Material) in implementations | ✅ Clean | Zero hits — fully Cupertino |
+| No hardcoded `Colors.*` in implementations | ❌ Remaining | ~30+ hits: barrier colours, drag handles, overlay gradients — needs audit pass |
+| Light mode + dark mode acceptable | ✅ Done | `GlassTheme.brightnessOf` shipped in 0.18.6, all widgets migrated |
+| RTL layout verified | ❌ Not started | No RTL audit or golden tests exist |
+| Keyboard / Tab focus / Enter-Space activation | ❌ Significant gap | Only 17 of 70 widget files have any `Semantics` — see blocker below |
+| Platform testing matrix complete | ⚠️ Partial | iOS + Android confirmed; Web, Windows, macOS need explicit QA |
+| `docs/PLATFORM_SUPPORT.md` exists | ❌ Missing | File does not exist |
+| CHANGELOG complete with migration guides | ⚠️ Likely partial | Not audited against 0.20–0.25 changes |
+| README widget table accurate | ⚠️ Likely stale | Written for 0.15.x era, not audited since |
+
+### 🔴 Biggest Blocker: Accessibility & Keyboard Support
+
+Only **17 of 70** widget files have any `Semantics`, `semanticsLabel`, or
+`excludeSemantics` usage. The 1.0.0 criterion requires every interactive widget
+to support Tab focus traversal and Enter/Space activation for macOS/iPadOS
+keyboard users. This affects:
+
+`GlassButton`, `GlassSwitch`, `GlassSlider`, `GlassSegmentedControl`,
+`GlassMenu`, `GlassSheet`, `GlassDialog`, `GlassActionSheet`, `GlassPicker`,
+`GlassTextField`, `GlassSearchBar`, `GlassChip`, `GlassListTile`, and more.
+
+**Estimated effort:** 4–6 weeks of focused work.
+
+### 🔴 Second Blocker: RTL Layout
+
+No RTL audit or RTL golden tests exist. Every widget using `Row`, `Positioned`,
+or directional `EdgeInsets` needs verification. **Estimated effort:** 3–4 weeks.
+
+### Realistic Timeline to 1.0.0
+
+| Work Area | Estimated Effort |
+|---|---|
+| Accessibility / keyboard focus (all interactive widgets) | 4–6 weeks |
+| RTL audit + golden tests | 3–4 weeks |
+| Platform testing matrix + `PLATFORM_SUPPORT.md` | 1–2 weeks |
+| Dartdoc audit + coverage push to 90% | 2–3 weeks |
+| `Colors.*` hardcode cleanup + API polish | 1 week |
+| README, CHANGELOG, pub.dev screenshots | 1 week |
+| **Total** | **~12–17 weeks focused / 3–4 months part-time** |
 
 ---
 
@@ -313,57 +368,45 @@ widget-level RTL testing exists.
 
 ---
 
-## 0.20.0 — Breaking-Change Release
+## 0.20.0 — Breaking-Change Release ✅
 
-A coordinated breaking release to clean up API design debt before 1.0. All
-changes here are either already deprecated or have been flagged as design
-mistakes. No new widgets.
+Shipped. `GlassListTile` divider ownership moved to `GlassGroupedSection`.
+`GlassBackdropScope` and all pre-0.15 deprecated symbols removed.
 
-### `GlassListTile` — Remove `isLast` and `showDivider`
+---
 
-**Problem:** `isLast` and `showDivider` are positional/layout concepts that
-belong to the container, not the tile. `GlassListTile` currently has to know
-whether it is the last item in a group to suppress its own bottom divider —
-that is the container's responsibility. `GlassGroupedSection` already works
-around this via an internal `_LastTileWrapper` that reconstructs the tile with
-`isLast: true`, which is a code smell confirming the design was wrong.
+## 0.21.0 – 0.25.x — Shipped ✅
 
-The correct pattern (used by Flutter's own `ListTile` + `ListView.separated`):
-the tile is a clean content widget; the parent decides whether and how to draw
-separators between items.
+Five minor versions shipped between the 0.20.0 breaking-change release and the
+current 0.25.1. This section acknowledges their existence; full changelogs are
+in `CHANGELOG.md`.
 
-**Plan:**
-1. **Deprecate** `isLast` and `showDivider` on `GlassListTile` in a pre-0.20
-   patch. Annotate with `@Deprecated` pointing to `GlassGroupedSection`.
-2. **Move** all divider logic into `GlassGroupedSection` (it already handles
-   90% of this via `_LastTileWrapper`). Add a `dividerStyle` parameter for
-   customisation (standard, inset, none).
-3. **Delete** `isLast`, `showDivider`, and `dividerIndent` from `GlassListTile`
-   in 0.20.0. Remove the `_LastTileWrapper` internal workaround.
+Notable work in this range (non-exhaustive):
 
-**Migration:**
-```dart
-// BEFORE — tile decides its own divider
-GlassListTile(title: Text('Wi-Fi'), isLast: true, showDivider: false)
+- **Liquid Morph Engine** (`GlassMenu`) — two-pass GPU pipeline with SDF normal
+  pre-computation, true `refract()` call per pixel, dynamic metaball blend
+  scaling, bidirectional symmetric smooth-union, and J-curve spring physics.
+  Reached performance ceiling of the Flutter/Impeller engine.
+- **`GlassPopover`** — iOS 26 popover with arrow, progressive blur ramp, and
+  adaptive sizing.
+- **`LiquidStretch`** — squash-and-stretch anchor effect matching iOS 26 buttons.
+- **Progressive blur** — scroll-edge and popover blur ramp infrastructure.
+- **0.19.5:** `platformViewFallbackColor` added (`backerColor` API design fix).
+- **0.19.6:** `GlassAppBar` Phase 1 + 2 large-title / search bar controller.
+- **0.25.x:** Various stability patches; test count at ~2219+; coverage ceiling
+  reached for the Liquid Morph physics engine.
 
-// AFTER — container decides (GlassGroupedSection already handles this automatically)
-GlassGroupedSection(
-  children: [
-    GlassListTile(title: Text('Wi-Fi')), // clean — no divider params needed
-  ],
-)
-```
+> **Note:** The ROADMAP was last updated in detail up to 0.20.0 and is being
+> brought current as of 0.25.1. If you worked on 0.21–0.25 and have additions,
+> please update this section or the CHANGELOG.
 
-Standalone `GlassListTile` (outside a `GlassGroupedSection`) never showed a
-divider anyway — `GlassListTile.standalone` already hardcodes `isLast: true,
-showDivider: false`. So this change only affects tiles used inside grouped
-sections, which is precisely where `GlassGroupedSection` should own the
-decision.
+---
+## 0.26.0 — Next Breaking-Change Release (Planned)
 
-### Cleanup
-
-- Remove `GlassBackdropScope` — deprecated since 0.14.0 (no-op shim).
-- Remove any remaining pre-0.15 deprecated symbols.
+No items committed yet. Candidates will be drawn from the API polish and
+deprecation work completed during the 0.26.x hardening cycle. Any symbol
+deprecated in 0.25.x or earlier that has been stable for at least two minor
+versions is eligible for removal here.
 
 ---
 
@@ -371,30 +414,68 @@ decision.
 
 ### Entry Criteria
 
-All of the following must be true before tagging 1.0.0:
+All of the following must be true before tagging 1.0.0.
+Status markers reflect the 0.25.1 audit (2026-07-29).
 
-- [ ] No known P0/P1 bugs.
-- [ ] All public API documentation is complete (dartdoc on every public class,
-  method, and parameter).
+#### ✅ Done
+- [x] No known P0/P1 bugs.
+- [x] No Material `Icons.*` in widget implementations.
+- [x] Light mode and dark mode produce acceptable visuals for all widgets.
+  *(0.18.6 shipped `GlassTheme.brightnessOf` as the single brightness authority;
+  all 26+ widget files migrated. Remaining gap: golden coverage in
+  `Brightness.light`.)*
+- [x] No deprecated symbols from pre-0.15 remain (0.18.0 shims stay through 1.x).
+
+#### ⚠️ Partial / Needs Verification
+- [ ] All public API dartdoc complete (every public class, method, parameter).
+  *Needs a full audit pass — coverage is uneven across the 112 source files.*
 - [ ] Test coverage ≥ 90% on public API surface.
+  *137 test files, ~2219+ tests. Line coverage needs measurement.*
 - [ ] Example app demonstrates every widget with working code.
-- [ ] No Material `InkWell`, `Icons.*`, or hardcoded `Colors.*` in widget
-  implementations (doc examples may still reference them for familiarity).
-- [ ] Light mode and dark mode both produce acceptable visuals for all widgets.
-  *(0.18.6: brightness resolution infrastructure is now solid — all widgets honour
-  `ThemeMode`. Remaining gap: golden coverage in `Brightness.light`.)*
-- [ ] RTL layout verified for all widgets that lay out children horizontally.
-- [ ] Tested on: iOS (Impeller), Android (Impeller), Android (Skia), Web,
-  macOS, Windows.
-- [ ] **Platform limitation docs** — a `docs/PLATFORM_SUPPORT.md` documenting
-  known limitations per platform (e.g. web shader fallbacks, Skia vs Impeller
-  quality differences, Windows SkSL compatibility rules).
+  *Not verified against the current widget catalogue.*
+- [ ] Tested on all platforms: iOS (Impeller), Android (Impeller), Android (Skia),
+  Web, macOS, Windows.
+  *iOS + Android confirmed. Web, Windows, macOS need explicit QA passes.*
+- [ ] CHANGELOG documents every breaking change from 0.x with migration guides.
+  *Not audited against 0.20–0.25 changes.*
+- [ ] README widget table is accurate and complete.
+  *Written for 0.15.x era — likely stale.*
+
+#### ❌ Not Done — Blocking
+
+> **Accessibility & Keyboard Support** *(estimated 4–6 weeks)*
+>
+> Only 17 of 70 widget files have any `Semantics` usage. Every interactive widget
+> must support Tab focus traversal and Enter/Space activation before 1.0.
+> Affected widgets include `GlassButton`, `GlassSwitch`, `GlassSlider`,
+> `GlassSegmentedControl`, `GlassMenu`, `GlassSheet`, `GlassDialog`,
+> `GlassActionSheet`, `GlassPicker`, `GlassTextField`, `GlassSearchBar`,
+> `GlassChip`, `GlassListTile`, and more.
+>
+> This is the largest remaining body of work.
+
 - [ ] **Keyboard & focus support** — all interactive widgets support Tab
   focus traversal and Enter/Space activation for macOS/iPadOS keyboard use.
-- [ ] No deprecated symbols from pre-0.15 remain (0.18.0 deprecation shims stay through 1.x).
-- [ ] CHANGELOG documents every breaking change from the 0.x series with
-  migration instructions.
-- [ ] README widget table is accurate and complete.
+  `FocusNode` handling, `Semantics` wrapping, and activate callbacks required
+  across all interactive widgets listed above.
+
+- [ ] **RTL layout verified** *(estimated 3–4 weeks)*
+  No RTL audit or RTL golden tests exist. Every widget using `Row`,
+  `Positioned`, or directional `EdgeInsets` must be verified and, where needed,
+  migrated to `EdgeInsetsDirectional`. Golden tests required at minimum for
+  `GlassListTile`, `GlassAppBar`, `GlassTabBar.bottom()`, and
+  `GlassTabBar.searchable()`.
+
+- [ ] **No hardcoded `Colors.*`** *(estimated 1 week)*
+  ~30+ hits in widget implementations including barrier colours
+  (`Colors.black54`), drag handles (`Colors.white/black.withValues(...)`), and
+  overlay gradients. Each needs to either be converted to `CupertinoColors` or
+  explicitly whitelisted with a comment justifying the semantic hardcode.
+
+- [ ] **`docs/PLATFORM_SUPPORT.md`** *(estimated 2–3 days)*
+  File does not exist. Must document known per-platform limitations: Web shader
+  fallbacks, Skia vs Impeller quality differences, Windows SkSL compatibility
+  rules, `platformViewBackdrop` quality cliff.
 
 ### Semver Commitment
 
