@@ -101,6 +101,9 @@ app.*.symbols
 # AI agent working/planning notes (not for repo)
 .agent/
 
+# Internal architectural notes, performance audits, Flutter issue drafts (not for repo)
+.internal/
+
 # Test golden failure/diff images
 test/golden/**/failures/
 
