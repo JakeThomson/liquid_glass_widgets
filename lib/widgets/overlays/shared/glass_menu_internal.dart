@@ -190,9 +190,25 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
             // Overlay portal for morphing animation
             // The overlay contents fade out during the handoff so the real button shows instead
+            //
+            // Must target the ROOT overlay: _openMenu() below captures
+            // _triggerGlobalPosition via renderBox.localToGlobal(Offset.zero)
+            // with no `ancestor`, which resolves to true screen-global
+            // coordinates (relative to the root RenderView). Positioned
+            // children built in _buildMorphingOverlay are laid out relative to
+            // whichever Overlay hosts them, so that Overlay's origin must
+            // coincide with the screen's true (0,0) for the math to line up.
+            // The default `nearestOverlay` breaks this whenever GlassMenu is
+            // used inside a nested Navigator (e.g. a multi-pane/shell layout
+            // where each pane owns its own Navigator+Overlay offset from the
+            // screen edge by a sidebar) — the menu then renders shifted by
+            // exactly that Overlay's offset from the screen, and the further
+            // the nested Overlay sits from the screen edge, the further the
+            // menu drifts from its trigger.
             OverlayPortal(
               controller: _overlayController,
               overlayChildBuilder: _buildMorphingOverlay,
+              overlayLocation: OverlayChildLocation.rootOverlay,
             ),
           ],
         );
