@@ -188,23 +188,17 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               ),
             ),
 
-            // Overlay portal for morphing animation
-            // The overlay contents fade out during the handoff so the real button shows instead
+            // Overlay portal for morphing animation.
+            // The overlay contents fade out during the handoff so the real button shows instead.
             //
-            // Must target the ROOT overlay: _openMenu() below captures
-            // _triggerGlobalPosition via renderBox.localToGlobal(Offset.zero)
-            // with no `ancestor`, which resolves to true screen-global
-            // coordinates (relative to the root RenderView). Positioned
-            // children built in _buildMorphingOverlay are laid out relative to
-            // whichever Overlay hosts them, so that Overlay's origin must
-            // coincide with the screen's true (0,0) for the math to line up.
-            // The default `nearestOverlay` breaks this whenever GlassMenu is
-            // used inside a nested Navigator (e.g. a multi-pane/shell layout
-            // where each pane owns its own Navigator+Overlay offset from the
-            // screen edge by a sidebar) — the menu then renders shifted by
-            // exactly that Overlay's offset from the screen, and the further
-            // the nested Overlay sits from the screen edge, the further the
-            // menu drifts from its trigger.
+            // Target the ROOT overlay: the morph is placed with absolute,
+            // root-relative coordinates (the trigger's localToGlobal(Offset.zero)),
+            // so it must render in the overlay that shares that coordinate space.
+            // Rendering into a *nested* overlay (e.g. a ShellRoute / nested-Navigator
+            // content area offset by a side rail) shifts the menu by that overlay's
+            // origin — the trigger's global position gets double-counted. The root
+            // overlay always coincides with the global coordinate space, so the menu
+            // lands exactly on its trigger in every embedding.
             OverlayPortal(
               controller: _overlayController,
               overlayChildBuilder: _buildMorphingOverlay,
