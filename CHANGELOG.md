@@ -1,20 +1,13 @@
-# Unreleased
+# 0.25.1
 
 ## 🐛 Bug Fixes
 
-- **`GlassMenu` mispositioned inside nested `Navigator`s** — the menu's popup
-  is now hosted on the root `Overlay` instead of the nearest one.
-  `_openMenu()` captures the trigger's anchor via
-  `renderBox.localToGlobal(Offset.zero)`, which resolves to screen-global
-  coordinates, but the overlay content built in `_buildMorphingOverlay` was
-  positioned inside whichever `Overlay` happened to be nearest — the default
-  target for `OverlayPortal`. Those only agree when the nearest `Overlay`
-  sits at the screen's true origin. Any layout with its own nested
-  `Navigator`s not flush against the screen edge (e.g. a persistent side
-  rail/drawer next to a `StatefulShellRoute.indexedStack` branch, each branch
-  owning its own `Navigator`/`Overlay`) broke this assumption: the menu
-  rendered shifted by exactly that `Overlay`'s offset from the screen edge,
-  and the offset — and therefore the drift — grew with the rail's width.
+- **`GlassMenu` mispositioned inside nested `Navigator`s** — `OverlayPortal`
+  now targets the root `Overlay` (via `OverlayChildLocation.rootOverlay`),
+  matching the screen-global coordinates captured by `localToGlobal`. Previously
+  the menu drifted by the offset of the nearest nested `Overlay` from the screen
+  edge (e.g. a side-rail in a `StatefulShellRoute` layout). Thanks to
+  [@sinanhaci](https://github.com/sinanhaci) for the contribution (#179).
 
 # 0.25.0
 
