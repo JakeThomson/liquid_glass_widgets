@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../src/renderer/liquid_glass_renderer.dart';
 
 /// Theme-level configuration for glass widget interaction physics.

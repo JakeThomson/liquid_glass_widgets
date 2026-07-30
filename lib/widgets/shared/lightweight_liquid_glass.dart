@@ -4,10 +4,11 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../theme/glass_theme.dart';
 
 import 'inherited_liquid_glass.dart';
 
@@ -439,7 +440,7 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
     // is used as the luma estimate — dark mode → richer glass (0.15),
     // light mode → subtler glass (0.85). Maps to adaptiveStrength [1.2, 0.8]
     // in the shader, matching iOS 26's adaptive material behaviour.
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
     final backdropLuma = isDark ? 0.15 : 0.85;
 
     // IMPORTANT — always return the same widget tree structure regardless of
@@ -917,6 +918,7 @@ class _RenderLightweightGlass extends RenderProxyBox {
         (whitenStrength * kWhitenVeilGain).clamp(0.0, 1.0).toDouble();
     final color = whitenVeil <= 0.0
         ? _settings.effectiveGlassColor
+        // Whitelisted: Used in Color.lerp for glass veil tint math anchor, not a theme color.
         : Color.lerp(_settings.effectiveGlassColor, const Color(0xFFFFFFFF),
             whitenVeil)!;
     shader.setFloat(index++, (color.r * 255.0).round().clamp(0, 255) / 255.0);

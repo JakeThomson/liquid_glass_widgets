@@ -113,4 +113,18 @@ class GlassDefaults {
 
   /// Slow animation duration for deliberate effects (300ms)
   static const Duration animationDurationSlow = Duration(milliseconds: 300);
+
+  // ============================================================================
+  // Overlay / Compositor
+  // ============================================================================
+
+  /// Barrier colour for modal overlays (sheets, action sheets).
+  /// iOS 26 uses 54% black to dim content behind modals.
+  static const Color barrierColor = Color(0x8A000000); // ~54% black
+
+  /// Specular tint applied to drag handles and pill surfaces (light mode).
+  static const double specularLightAlpha = 0.15;
+
+  /// Specular tint applied to drag handles and pill surfaces (dark mode).
+  static const double specularDarkAlpha = 0.10;
 }

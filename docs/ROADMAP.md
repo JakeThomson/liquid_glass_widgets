@@ -1,6 +1,6 @@
-# Roadmap: 0.25.x → 1.0.0
+# Roadmap: 0.26.x → 1.0.0
 
-> Last updated: 2026-07-29
+> Last updated: 2026-07-30
 
 This document tracks the planned work to get `liquid_glass_widgets` to a stable
 1.0.0 release. The guiding principle is: **fewer, better widgets that map 1:1
@@ -8,23 +8,25 @@ to real iOS 26 components** — nothing half-baked, nothing Material-flavoured.
 
 ---
 
-## Current Status (0.25.1)
+## Current Status (0.26.0)
 
-> Honest scored audit against the 1.0.0 entry criteria. Updated 2026-07-29.
+> Honest scored audit against the 1.0.0 entry criteria. Updated 2026-07-30.
 
-**Overall: ~65–70% of the way to 1.0.0.** The rendering engine, physics, and
-theming infrastructure are complete and production-quality. What remains is
-platform hygiene work — accessibility, RTL, test coverage, and documentation.
+**Overall: ~68–72% of the way to 1.0.0.** The rendering engine, physics,
+theming infrastructure, and Material decoupling are complete and
+production-quality. What remains is platform hygiene — accessibility, RTL,
+test coverage, and documentation.
 
 | Criterion | Status | Notes |
 |---|---|---|
 | No known P0/P1 bugs | ✅ Clear | No open crash reports |
 | Dartdoc complete on all public API | ⚠️ Partial | Needs a full audit pass |
-| Test coverage ≥ 90% | ⚠️ Unknown | 137 test files vs 112 source — line coverage not yet measured |
+| Test coverage ≥ 90% | ⚠️ Unknown | 2449 tests, 137 files — line coverage not yet measured |
 | Example app demos every widget | ⚠️ Likely partial | Not verified against current widget catalogue |
-| No `Icons.*` (Material) in implementations | ✅ Clean | Zero hits — fully Cupertino |
-| No hardcoded `Colors.*` in implementations | ❌ Remaining | ~30+ hits: barrier colours, drag handles, overlay gradients — needs audit pass |
-| Light mode + dark mode acceptable | ✅ Done | `GlassTheme.brightnessOf` shipped in 0.18.6, all widgets migrated |
+| No `Icons.*` (Material) in `lib/` | ✅ Done | Zero hits — fully `CupertinoIcons` |
+| No hardcoded `Colors.*` in `lib/` | ✅ Done | All replaced with `CupertinoColors` or explicit hex `Color` literals |
+| `material.dart` imports in `lib/` | ✅ **Done (0.26.0)** | **36 → 0 files.** `GlassScaffold` → `CupertinoPageScaffold`; `glass_brightness.dart` rewritten to use `CupertinoTheme.of().brightness` which correctly inherits `ThemeMode` via Flutter's `MaterialBasedCupertinoThemeData` bridge. Zero `material.dart` imports remain. |
+| Light mode + dark mode acceptable | ✅ Done | `GlassTheme.brightnessOf` shipped in 0.18.6, simplified cascade in 0.26.0 |
 | RTL layout verified | ❌ Not started | No RTL audit or golden tests exist |
 | Keyboard / Tab focus / Enter-Space activation | ❌ Significant gap | Only 17 of 70 widget files have any `Semantics` — see blocker below |
 | Platform testing matrix complete | ⚠️ Partial | iOS + Android confirmed; Web, Windows, macOS need explicit QA |
@@ -56,11 +58,13 @@ or directional `EdgeInsets` needs verification. **Estimated effort:** 3–4 week
 |---|---|
 | Accessibility / keyboard focus (all interactive widgets) | 4–6 weeks |
 | RTL audit + golden tests | 3–4 weeks |
-| Platform testing matrix + `PLATFORM_SUPPORT.md` | 1–2 weeks |
+| Platform testing matrix | 1–2 weeks |
 | Dartdoc audit + coverage push to 90% | 2–3 weeks |
-| `Colors.*` hardcode cleanup + API polish | 1 week |
+| `material.dart` decoupling (36 → 0) | ✅ Done (0.26.0) |
+| `Colors.*` hardcode cleanup + API polish | ✅ Done (0.26.0) |
+| `docs/PLATFORM_SUPPORT.md` | ✅ Done (0.26.0) |
 | README, CHANGELOG, pub.dev screenshots | 1 week |
-| **Total** | **~12–17 weeks focused / 3–4 months part-time** |
+| **Total remaining** | **~11–15 weeks focused / 3–4 months part-time** |
 
 ---
 
@@ -226,6 +230,14 @@ icons to Cupertino equivalents in `GlassListTile`, `GlassActionSheet`, and
   - `GlassMenuDivider` uses hardcoded `Color(0xFFEF5350)` for destructive items
   - All should resolve from `GlassThemeData.glowColors` or
     `CupertinoColors.systemRed` / `.systemGreen`
+
+> **Update 2026-07-30:** The structural / optical hardcode audit is **complete**.
+> Barrier colours (`Colors.black54`) now resolve to `GlassDefaults.barrierColor`.
+> Drag-handle specular tints use `CupertinoColors` + `GlassDefaults.specularLightAlpha/specularDarkAlpha`.
+> `GlassProgressIndicator` system blue is now `CupertinoColors.activeBlue.resolveFrom(context)` (correctly adaptive in dark mode).
+> Three widget files (`glass_progress_indicator.dart`, `glass_sheet.dart`, `adaptive_glass.dart`) are now fully decoupled from `package:flutter/material.dart`.
+> Renderer and math anchor constants whitelisted with explicit `// Whitelisted:` comments.
+> `dart analyze lib/` → **No issues**. `flutter test` → **2450 passed, 0 failed**.
 
 ### Light Mode / Theming Gap ✅ Resolved (infrastructure complete)
 
@@ -466,11 +478,12 @@ Status markers reflect the 0.25.1 audit (2026-07-29).
   `GlassListTile`, `GlassAppBar`, `GlassTabBar.bottom()`, and
   `GlassTabBar.searchable()`.
 
-- [ ] **No hardcoded `Colors.*`** *(estimated 1 week)*
-  ~30+ hits in widget implementations including barrier colours
-  (`Colors.black54`), drag handles (`Colors.white/black.withValues(...)`), and
-  overlay gradients. Each needs to either be converted to `CupertinoColors` or
-  explicitly whitelisted with a comment justifying the semantic hardcode.
+- [x] **No hardcoded `Colors.*`** — *(shipped 2026-07-30)*
+  All 30+ hits resolved. Barrier colours → `GlassDefaults.barrierColor`;
+  drag-handle specular tints → `CupertinoColors` + `GlassDefaults` optical
+  constants; `GlassProgressIndicator` blue → `CupertinoColors.activeBlue.resolveFrom(context)`.
+  Structural `Colors.transparent` and math-anchor hex values whitelisted with
+  `// Whitelisted:` comments. `dart analyze` clean; 2450 tests pass.
 
 - [x] **`docs/PLATFORM_SUPPORT.md`** — shipped 2026-07-30.
   Documents per-platform quality tiers, Skia vs Impeller rendering differences,

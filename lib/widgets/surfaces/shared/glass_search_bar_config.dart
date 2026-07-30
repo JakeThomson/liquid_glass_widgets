@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 /// Configuration for the morphing search bar in [GlassSearchableBottomBar].
 ///

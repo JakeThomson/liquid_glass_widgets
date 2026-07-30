@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show listEquals;
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
@@ -406,7 +406,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
       edgeAlphaMultiplier:
           isStdPath ? 0.15 : 0.4, // Match GlassSlider/Switch (subtle rim)
       child: const GlassGlow(
-        glowColor: Colors.transparent,
+        // Whitelisted: Structural no-glow default.
+        glowColor: Color(0x00000000),
         child: SizedBox.expand(),
       ),
     );
