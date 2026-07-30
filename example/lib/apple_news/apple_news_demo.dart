@@ -7,7 +7,9 @@
 library;
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
+
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../constants/sf_symbols.dart';
@@ -221,16 +223,6 @@ class AppleNewsDemoApp extends StatelessWidget {
     return CupertinoApp(
       title: 'Apple News',
       theme: const CupertinoThemeData(brightness: Brightness.dark),
-      builder: (context, child) => Theme(
-        data: ThemeData.dark(useMaterial3: true).copyWith(
-          scaffoldBackgroundColor: _kBackground,
-          colorScheme: const ColorScheme.dark(
-            primary: _kNewsRed,
-            surface: _kBackground,
-          ),
-        ),
-        child: child!,
-      ),
       home: const AppleNewsHomeScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -257,9 +249,8 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
   Widget build(BuildContext context) {
     // Android 3-button nav requires us to push the bar above the opaque buttons.
     // On iOS and gesture-nav Android, viewPaddingOf returns 0 so no offset applies.
-    final platform = Theme.of(context).platform;
-    final isIOS =
-        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
     final sysBottom = isIOS ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
 
     return GlassScaffold(
@@ -310,8 +301,8 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           spacing: 8,
           indicatorColor:
               CupertinoTheme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withValues(alpha: 0.14)
-                  : Colors.black.withValues(alpha: 0.10),
+                  ? CupertinoColors.white.withValues(alpha: 0.14)
+                  : CupertinoColors.black.withValues(alpha: 0.10),
           quality: GlassQuality.premium,
           interactionBehavior: GlassInteractionBehavior.full,
           settings: LiquidGlassSettings(
@@ -492,7 +483,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
 
   Widget _buildNewsHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 16, 0),
+      padding: EdgeInsets.fromLTRB(10, 8, 16, 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -502,7 +493,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.apple,
+                  Icon(CupertinoIcons.star,
                       color: CupertinoColors.label.resolveFrom(context),
                       size: 38),
                   //  SizedBox(width: 4),
@@ -530,7 +521,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           ),
           const Spacer(),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(
               color: _kNewsRed,
               borderRadius: BorderRadius.circular(24),
@@ -538,7 +529,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             child: Text(
               'Try News+ Free',
               style: TextStyle(
-                color: Colors.white,
+                color: CupertinoColors.white,
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
               ),
@@ -554,9 +545,9 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
       height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: _kCategories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => SizedBox(width: 8),
         itemBuilder: (context, index) =>
             _CategoryChip(label: _kCategories[index]),
       ),
@@ -565,7 +556,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
 
   Widget _buildSectionHeader(String title, String? subtitle) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -585,7 +576,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                 fontSize: 14,
               ),
             ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
         ],
       ),
     );
@@ -593,7 +584,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
 
   Widget _buildHeroArticleCard(_Article article) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: Column(
@@ -608,12 +599,12 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             ),
             Container(
               color: _kCardBackground.resolveFrom(context),
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (article.isLive) _buildLiveBadge(),
-                  if (article.isLive) const SizedBox(height: 8),
+                  if (article.isLive) SizedBox(height: 8),
                   Text(
                     article.publication,
                     style: TextStyle(
@@ -623,7 +614,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                       fontStyle: FontStyle.italic,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   Text(
                     article.headline,
                     style: TextStyle(
@@ -634,10 +625,10 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                     ),
                   ),
                   if (article.moreCoverage) ...[
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     Container(
                         height: 1, color: _kSeparator.resolveFrom(context)),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     Text(
                       'MORE COVERAGE',
                       style: TextStyle(
@@ -660,12 +651,12 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
 
   Widget _buildCompactArticleCard(_Article article) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: Container(
           color: _kCardBackground.resolveFrom(context),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -675,7 +666,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                   children: [
                     if (article.isLive) ...[
                       _buildLiveBadge(),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                     ],
                     Text(
                       article.publication,
@@ -686,7 +677,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                         fontStyle: FontStyle.italic,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       article.headline,
                       maxLines: 3,
@@ -699,7 +690,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                       ),
                     ),
                     if (article.moreCoverage) ...[
-                      const SizedBox(height: 10),
+                      SizedBox(height: 10),
                       Text(
                         'MORE COVERAGE',
                         style: TextStyle(
@@ -714,7 +705,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
@@ -733,7 +724,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
 
   Widget _buildLiveBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: _kLiveBadge,
         borderRadius: BorderRadius.circular(4),
@@ -741,7 +732,9 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
       child: Text(
         'Live',
         style: TextStyle(
-            color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+            color: CupertinoColors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -759,14 +752,14 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             child: SizedBox(height: MediaQuery.paddingOf(context).top + 8)),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 16, 20),
+            padding: EdgeInsets.fromLTRB(20, 8, 16, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Apple News logo row — matches reference screenshot
                 Row(
                   children: [
-                    Icon(Icons.apple,
+                    Icon(CupertinoIcons.star,
                         color: CupertinoColors.label.resolveFrom(context),
                         size: 22),
                     SizedBox(width: 4),
@@ -837,7 +830,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                   size: 64,
                   color: CupertinoColors.tertiaryLabel.resolveFrom(context),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(
                   'No Recent Searches',
                   style: TextStyle(
@@ -847,7 +840,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                     letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text(
                   'Your recent searches will appear here.',
                   style: TextStyle(
@@ -877,7 +870,7 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: CupertinoColors.systemFill.resolveFrom(context),
         borderRadius: BorderRadius.circular(20),

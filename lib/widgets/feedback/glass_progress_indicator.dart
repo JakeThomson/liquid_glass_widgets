@@ -258,7 +258,8 @@ class _GlassProgressIndicatorState extends State<GlassProgressIndicator>
     final themeData = GlassThemeData.of(context);
     final effectiveColor = widget.color ??
         themeData.glowColorsFor(context).primary ??
-        CupertinoColors.activeBlue.resolveFrom(context); // iOS system blue (adaptive: 007AFF light / 0A84FF dark)
+        CupertinoColors.activeBlue.resolveFrom(
+            context); // iOS system blue (adaptive: 007AFF light / 0A84FF dark)
     final effectiveBackgroundColor =
         widget.backgroundColor ?? const Color(0x26FFFFFF); // 15% white
 

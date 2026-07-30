@@ -2,7 +2,6 @@ import 'package:liquid_glass_widgets_example/constants/glass_settings.dart';
 
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 class InputPage extends StatefulWidget {
   const InputPage({super.key});
@@ -36,8 +35,7 @@ class _InputPageState extends State<InputPage> {
       statusBarStyle: CupertinoTheme.of(context).brightness == Brightness.dark
           ? GlassStatusBarStyle.light
           : GlassStatusBarStyle.dark,
-      child: Scaffold(
-        extendBodyBehindAppBar: true,
+      child: GlassScaffold(
         appBar: GlassAppBar(
           leading: GlassButton(
             quality: GlassQuality.premium,
@@ -76,7 +74,7 @@ class _InputPageState extends State<InputPage> {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.all(24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -158,7 +156,7 @@ class _InputPageState extends State<InputPage> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.all(24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -298,7 +296,7 @@ class _InputPageState extends State<InputPage> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.all(24),
                           child: Column(
                             children: [
                               GlassFormField(

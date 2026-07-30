@@ -2,6 +2,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:liquid_glass_widgets_example/constants/glass_settings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets_example/apple_messages/apple_messages_demo.dart';
 import 'package:liquid_glass_widgets_example/apple_music/apple_music_demo.dart';
 import 'package:liquid_glass_widgets_example/apple_news/apple_news_demo.dart';
@@ -133,7 +134,7 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
     ),
     GlassTab(
       label: 'Demos',
-      icon: Icon(Icons.apple, size: 30),
+      icon: Icon(Icons.apple_outlined, size: 30),
       activeIcon: Icon(Icons.apple, size: 30),
     ),
     GlassTab(
@@ -209,7 +210,7 @@ class _ExploreTab extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -222,7 +223,7 @@ class _ExploreTab extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     'iOS 26 Widget Toolkit',
                     style: TextStyle(
@@ -232,7 +233,7 @@ class _ExploreTab extends StatelessWidget {
                       letterSpacing: -0.2,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32),
 
                   // ── Featured demo — large card ────────────────────
                   GestureDetector(
@@ -251,40 +252,42 @@ class _ExploreTab extends StatelessWidget {
                         ),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.apple, color: Colors.white, size: 30),
-                              const SizedBox(width: 6),
-                              const Text(
+                              Icon(Icons.apple_outlined,
+                                  color: CupertinoColors.white, size: 30),
+                              SizedBox(width: 6),
+                              Text(
                                 'Music',
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  color: CupertinoColors.white,
                                 ),
                               ),
                             ],
                           ),
                           const Spacer(),
-                          const Text(
+                          Text(
                             'Apple Music recreation\n with Liquid Glass Widgets',
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: CupertinoColors.white,
                               height: 1.3,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'Searchable bottom bar · Play pill · Tab navigation',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.white.withValues(alpha: 0.7),
+                              color:
+                                  CupertinoColors.white.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -292,7 +295,7 @@ class _ExploreTab extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
 
                   // ── Two smaller demo cards ────────────────────────
                   Row(
@@ -305,7 +308,7 @@ class _ExploreTab extends StatelessWidget {
                           destination: const MessagesScreen(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Podcasts',
@@ -317,7 +320,7 @@ class _ExploreTab extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32),
 
                   // ── Staggered widget preview ──────────────────────
                   Text(
@@ -329,7 +332,7 @@ class _ExploreTab extends StatelessWidget {
                       letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
 
                   // ── Masonry: tall card + two stacked ──────────
                   IntrinsicHeight(
@@ -346,7 +349,7 @@ class _ExploreTab extends StatelessWidget {
                             destination: const SurfacesPage(),
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        SizedBox(width: 14),
                         // Right: two stacked cards
                         Expanded(
                           flex: 1,
@@ -360,7 +363,7 @@ class _ExploreTab extends StatelessWidget {
                                 height: 120,
                                 destination: const InteractivePage(),
                               ),
-                              const SizedBox(height: 14),
+                              SizedBox(height: 14),
                               _StaggeredCatalogCard(
                                 icon: CupertinoIcons.hourglass,
                                 title: 'Feedback',
@@ -374,7 +377,7 @@ class _ExploreTab extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   // ── Row of two ──────────────────────────────────
                   Row(
@@ -388,7 +391,7 @@ class _ExploreTab extends StatelessWidget {
                           destination: const InputPage(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _StaggeredCatalogCard(
                           icon: CupertinoIcons.square_stack_fill,
@@ -400,7 +403,7 @@ class _ExploreTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   // ── Full-width card ─────────────────────────────
                   Row(
@@ -417,7 +420,7 @@ class _ExploreTab extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 120),
+                  SizedBox(height: 120),
                 ],
               ),
             ),
@@ -443,7 +446,7 @@ class _WidgetsTab extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -456,7 +459,7 @@ class _WidgetsTab extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     'Browse the full widget catalog.',
                     style: TextStyle(
@@ -465,7 +468,7 @@ class _WidgetsTab extends StatelessWidget {
                           CupertinoColors.secondaryLabel.resolveFrom(context),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
 
                   // Row 1: Containers + Interactive
                   Row(
@@ -478,7 +481,7 @@ class _WidgetsTab extends StatelessWidget {
                           destination: const ContainersPage(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Interactive',
@@ -489,7 +492,7 @@ class _WidgetsTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   // Row 2: Feedback + Overlays
                   Row(
@@ -502,7 +505,7 @@ class _WidgetsTab extends StatelessWidget {
                           destination: const FeedbackPage(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Overlays',
@@ -513,7 +516,7 @@ class _WidgetsTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   // Row 3: Surfaces + Input
                   Row(
@@ -526,7 +529,7 @@ class _WidgetsTab extends StatelessWidget {
                           destination: const SurfacesPage(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Input',
@@ -538,7 +541,7 @@ class _WidgetsTab extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 120),
+                  SizedBox(height: 120),
                 ],
               ),
             ),
@@ -564,7 +567,7 @@ class _DemosTab extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -577,7 +580,7 @@ class _DemosTab extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     'Polished Apple app reproductions.',
                     style: TextStyle(
@@ -586,7 +589,7 @@ class _DemosTab extends StatelessWidget {
                           CupertinoColors.secondaryLabel.resolveFrom(context),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
 
                   // Large featured card
                   _LargeDemoCard(
@@ -600,7 +603,7 @@ class _DemosTab extends StatelessWidget {
                     ],
                     destination: const AppleMusicHomeScreen(),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   _LargeDemoCard(
                     title: 'Messages',
@@ -612,7 +615,7 @@ class _DemosTab extends StatelessWidget {
                     ],
                     destination: const MessagesScreen(),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   _LargeDemoCard(
                     title: 'Podcasts',
@@ -625,19 +628,19 @@ class _DemosTab extends StatelessWidget {
                     ],
                     destination: const ApplePodcastsHomeScreen(),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   Row(
                     children: [
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'News',
-                          icon: CupertinoIcons.news_solid,
+                          icon: CupertinoIcons.news,
                           color: const Color(0xFFFF3B30),
                           destination: const AppleNewsHomeScreen(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Lock Screen',
@@ -649,7 +652,7 @@ class _DemosTab extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 120),
+                  SizedBox(height: 120),
                 ],
               ),
             ),
@@ -675,7 +678,7 @@ class _ExamplesTab extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -688,7 +691,7 @@ class _ExamplesTab extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     'Widget modes & configuration reference.',
                     style: TextStyle(
@@ -697,7 +700,7 @@ class _ExamplesTab extends StatelessWidget {
                           CupertinoColors.secondaryLabel.resolveFrom(context),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
 
                   // Row 1: Nav Patterns + Context Menus
                   Row(
@@ -710,7 +713,7 @@ class _ExamplesTab extends StatelessWidget {
                           destination: const NavBarPatternsDemo(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Menus',
@@ -721,7 +724,7 @@ class _ExamplesTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   // Large card: Modal Sheets
                   _LargeDemoCard(
@@ -735,7 +738,7 @@ class _ExamplesTab extends StatelessWidget {
                     ],
                     destination: const ShowcaseApp(),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   // Row 2: Text Fields + Video Player
                   Row(
@@ -748,7 +751,7 @@ class _ExamplesTab extends StatelessWidget {
                           destination: const TextFieldDemo(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Video Player',
@@ -759,7 +762,7 @@ class _ExamplesTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   // Row 3: Tab Widths
                   Row(
@@ -772,7 +775,7 @@ class _ExamplesTab extends StatelessWidget {
                           destination: const TabWidthDemoPage(),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Platform View',
@@ -783,7 +786,7 @@ class _ExamplesTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   // Row 4: Collapse Bar
                   Row(
@@ -796,11 +799,11 @@ class _ExamplesTab extends StatelessWidget {
                           destination: const CollapseBarDemoPage(),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      const Expanded(child: SizedBox()),
+                      SizedBox(width: 14),
+                      Expanded(child: SizedBox()),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   _LargeDemoCard(
                     title: 'Buttons & Shadows',
@@ -812,7 +815,7 @@ class _ExamplesTab extends StatelessWidget {
                     ],
                     destination: const ShadowClippingDemoPage(),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   _LargeDemoCard(
                     title: 'Adaptive Brightness',
@@ -825,7 +828,7 @@ class _ExamplesTab extends StatelessWidget {
                     ],
                     destination: const ContentAwareBrightnessDemo(),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
                   _LargeDemoCard(
                     title: 'Indicator Parity',
@@ -838,9 +841,9 @@ class _ExamplesTab extends StatelessWidget {
                     ],
                     destination: const IndicatorParityDemoPage(),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
 
-                  const SizedBox(height: 120),
+                  SizedBox(height: 120),
                 ],
               ),
             ),
@@ -856,9 +859,9 @@ class _ExamplesTab extends StatelessWidget {
 // =============================================================================
 
 void _openDemo(BuildContext context, Widget destination) {
-  Navigator.of(context).push(
-    CupertinoPageRoute<void>(builder: (_) => destination),
-  );
+  final nav = Navigator.of(context);
+  if (nav.userGestureInProgress) return;
+  nav.push(CupertinoPageRoute<void>(builder: (_) => destination));
 }
 
 /// Staggered glass catalog card — variable height, glass background.
@@ -888,7 +891,7 @@ class _StaggeredCatalogCard extends StatelessWidget {
       stretch: 0.15,
       alignment: Alignment.topLeft,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -904,7 +907,7 @@ class _StaggeredCatalogCard extends StatelessWidget {
                 color: CupertinoColors.label.resolveFrom(context),
               ),
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(
               subtitle,
               style: TextStyle(
@@ -952,18 +955,18 @@ class _SmallDemoCard extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(16),
         ),
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.white, size: 22),
+            Icon(icon, color: CupertinoColors.white, size: 22),
             const Spacer(),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: CupertinoColors.white,
               ),
             ),
           ],
@@ -1003,7 +1006,7 @@ class _LargeDemoCard extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(20),
         ),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         child: Row(
           children: [
             Expanded(
@@ -1013,33 +1016,33 @@ class _LargeDemoCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: CupertinoColors.white,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: CupertinoColors.white.withValues(alpha: 0.7),
                       height: 1.3,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             Container(
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: CupertinoColors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: Colors.white, size: 26),
+              child: Icon(icon, color: CupertinoColors.white, size: 26),
             ),
           ],
         ),

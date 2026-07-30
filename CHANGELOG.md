@@ -47,7 +47,10 @@ injection).
 
 With this final swap, **`liquid_glass_widgets` now has zero imports of
 `package:flutter/material.dart` in its `lib/` directory.** It is fully
-decoupled and ready for the `cupertino_ui` package split.
+decoupled and ready for the `cupertino_ui` package split. The example's
+Apple replica demos (`apple_music`, `apple_podcasts`, `apple_messages`,
+`apple_news`, `apple_lockscreen`) run with zero Material imports as well,
+proving the library works purely within a Cupertino-only context.
 
 ## 🐛 Bug Fixes
 

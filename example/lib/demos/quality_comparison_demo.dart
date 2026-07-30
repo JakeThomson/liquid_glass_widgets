@@ -14,6 +14,7 @@ library;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 // ── Thematic presets for testing ─────────────────────────────────────────────
@@ -44,7 +45,7 @@ class _ThemePreset {
 const _kThemePresets = [
   _ThemePreset(
     name: 'Default White',
-    glassColor: Colors.white,
+    glassColor: CupertinoColors.white,
     baseOpacity: 0.12,
     thickness: 28.0,
     lightIntensity: 0.9,
@@ -270,10 +271,10 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             fit: BoxFit.cover,
           ),
           // Subtle dark veil for readability
-          Container(color: Colors.black.withValues(alpha: 0.28)),
+          Container(color: CupertinoColors.black.withValues(alpha: 0.28)),
         ],
       ),
-      child: Scaffold(
+      child: GlassScaffold(
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -281,29 +282,29 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               _buildHeader(),
               if (_showTuning)
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   child: SizedBox(
                     height:
                         280, // Safe bounded height to prevent visual overflow
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
+                        color: CupertinoColors.black.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1)),
+                            color:
+                                CupertinoColors.white.withValues(alpha: 0.1)),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.all(12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _buildPremiumTuningPanel(),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                               _buildStandardTuningPanel(),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                               _buildDiagnosticsPanel(),
                             ],
                           ),
@@ -312,9 +313,9 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                     ),
                   ),
                 ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               _buildColumnLabels(),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Expanded(child: _buildComparisonList()),
             ],
           ),
@@ -327,18 +328,18 @@ class _ComparisonPageState extends State<_ComparisonPage> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Quality Comparison',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: CupertinoColors.white,
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.5,
@@ -347,9 +348,11 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               ),
               Row(
                 children: [
-                  const Text('BG Sample',
-                      style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  const SizedBox(width: 8),
+                  Text('BG Sample',
+                      style: TextStyle(
+                          color: CupertinoColors.white.withValues(alpha: 0.70),
+                          fontSize: 12)),
+                  SizedBox(width: 8),
                   SizedBox(
                     height: 24,
                     width: 40,
@@ -366,19 +369,19 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
 
           // Thematic Preset Selector (Glass Menu)
-          const Text(
+          Text(
             'THEME PRESETS',
             style: TextStyle(
-              color: Colors.white38,
+              color: CupertinoColors.white.withValues(alpha: 0.38),
               fontSize: 9,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           SizedBox(
             height: 38,
             child: ListView.builder(
@@ -404,18 +407,17 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(right: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    margin: EdgeInsets.only(right: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? presetColor.withValues(alpha: 0.2)
-                          : Colors.white.withValues(alpha: 0.05),
+                          : CupertinoColors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
                             ? presetColor.withValues(alpha: 0.8)
-                            : Colors.white.withValues(alpha: 0.08),
+                            : CupertinoColors.white.withValues(alpha: 0.08),
                         width: isSelected ? 1.5 : 1.0,
                       ),
                       boxShadow: isSelected
@@ -445,11 +447,13 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
                           preset.name,
                           style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.white70,
+                            color: isSelected
+                                ? CupertinoColors.white
+                                : CupertinoColors.white.withValues(alpha: 0.70),
                             fontSize: 12,
                             fontWeight: isSelected
                                 ? FontWeight.w600
@@ -463,7 +467,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               },
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
           // Tuning toggle
           GestureDetector(
@@ -475,22 +479,21 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                       ? '▲ Hide Advanced Tuning'
                       : '▼ Tune Premium & Standard',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.55),
+                    color: CupertinoColors.white.withValues(alpha: 0.55),
                     fontSize: 11,
                     fontFamily: 'monospace',
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (!_showTuning) ...[
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 1.5),
+                    padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFB830).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text(
+                    child: Text(
                       'PREMIUM OVERRIDES',
                       style: TextStyle(
                         color: Color(0xFFFFB830),
@@ -512,7 +515,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'GLOBAL PREMIUM CONFIG (Interactive Playground)',
           style: TextStyle(
             color: Color(0xFFFFB830),
@@ -521,27 +524,27 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             letterSpacing: 0.8,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _Slider('Opacity', _baseOpacity, 0.01, 1.0,
             (v) => setState(() => _baseOpacity = v),
-            color: Colors.white),
+            color: CupertinoColors.white),
         _Slider('Thickness', _thickness, 1.0, 60.0,
             (v) => setState(() => _thickness = v),
-            color: Colors.white),
+            color: CupertinoColors.white),
         _Slider('Specularity', _lightIntensity, 0.0, 2.5,
             (v) => setState(() => _lightIntensity = v),
-            color: Colors.white),
+            color: CupertinoColors.white),
         _Slider('Blur', _blur, 0.0, 20.0, (v) => setState(() => _blur = v),
-            color: Colors.white),
+            color: CupertinoColors.white),
         _Slider(
             'Ambient', _ambient, 0.0, 0.6, (v) => setState(() => _ambient = v),
-            color: Colors.white),
+            color: CupertinoColors.white),
         _Slider('Saturation', _saturation, 0.0, 3.0,
             (v) => setState(() => _saturation = v),
-            color: Colors.white),
+            color: CupertinoColors.white),
         _Slider('Refraction', _refractiveIndex, 1.0, 2.0,
             (v) => setState(() => _refractiveIndex = v),
-            color: Colors.white),
+            color: CupertinoColors.white),
       ],
     );
   }
@@ -553,7 +556,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'STANDARD ONLY  ·  Premium is locked',
               style: TextStyle(
                   color: Color(0xFF5AC8FA),
@@ -570,14 +573,14 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFF5AC8FA).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                       color: const Color(0xFF5AC8FA).withValues(alpha: 0.3)),
                 ),
-                child: const Text(
+                child: Text(
                   'RESET TO DEFAULTS',
                   style: TextStyle(
                     color: Color(0xFF5AC8FA),
@@ -590,13 +593,15 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             ),
           ],
         ),
-        const SizedBox(height: 2, width: double.infinity),
-        const Text(
+        SizedBox(height: 2, width: double.infinity),
+        Text(
           'saturation → bgBoost  ·  ambient → lift  ·  glow → fresnel edge',
           style: TextStyle(
-              color: Colors.white24, fontSize: 8, fontFamily: 'monospace'),
+              color: CupertinoColors.white.withValues(alpha: 0.24),
+              fontSize: 8,
+              fontFamily: 'monospace'),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _PresetSection(
             label: '● PILL / INDICATOR',
             color: const Color(0xFF5AC8FA),
@@ -605,7 +610,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             thicknessMin: 0.1,
             thicknessMax: 8.0,
             thicknessLabel: 'rim px'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _PresetSection(
             label: '● BUTTON',
             color: const Color(0xFF4ADE80),
@@ -613,7 +618,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             onChanged: (p) => setState(() => _btn = p),
             thicknessMin: 0.0,
             thicknessMax: 30.0),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _PresetSection(
             label: '● CARD / SURFACE',
             color: const Color(0xFFBB86FC),
@@ -629,15 +634,15 @@ class _ComparisonPageState extends State<_ComparisonPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'REAL-TIME STANDARD PARITY MATHEMATICS',
           style: TextStyle(
-              color: Colors.white38,
+              color: CupertinoColors.white.withValues(alpha: 0.38),
               fontSize: 9,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           'pill  th=${_pill.thickness.toStringAsFixed(1)} amb=${_pill.ambient.toStringAsFixed(3)}\n'
           '      glow=${_pill.glow.toStringAsFixed(2)} li=${_pill.light.toStringAsFixed(2)} blur=${_pill.blur.toStringAsFixed(1)}',
@@ -647,7 +652,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             fontFamily: 'monospace',
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           'btn   th=${_btn.thickness.toStringAsFixed(0)} amb=${_btn.ambient.toStringAsFixed(3)}\n'
           '      glow=${_btn.glow.toStringAsFixed(2)} li=${_btn.light.toStringAsFixed(2)} blur=${_btn.blur.toStringAsFixed(1)}',
@@ -657,7 +662,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             fontFamily: 'monospace',
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           'card  th=${_card.thickness.toStringAsFixed(0)} amb=${_card.ambient.toStringAsFixed(3)}\n'
           '      glow=${_card.glow.toStringAsFixed(2)} li=${_card.light.toStringAsFixed(2)} blur=${_card.blur.toStringAsFixed(1)}',
@@ -675,7 +680,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
 
   Widget _buildColumnLabels() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           Expanded(
@@ -685,7 +690,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               color: const Color(0xFFFFB830),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: _QualityBadge(
               label: 'STANDARD',
@@ -702,7 +707,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
 
   Widget _buildComparisonList() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 40),
       child: Column(
         children: [
           // ── GlassButton ─────────────────────────────────────────────────
@@ -713,7 +718,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               settings: _kGlass,
               quality: GlassQuality.premium,
               onTap: () {},
-              icon: const Icon(CupertinoIcons.play_arrow_solid),
+              icon: Icon(CupertinoIcons.play_fill),
               label: 'Press',
             ),
             standard: GlassButton(
@@ -721,12 +726,12 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               settings: _kGlassBtn,
               quality: GlassQuality.standard,
               onTap: () {},
-              icon: const Icon(CupertinoIcons.play_arrow_solid),
+              icon: Icon(CupertinoIcons.play_fill),
               label: 'Press',
             ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // ── GlassSegmentedControl ────────────────────────────────────────
           _ComparisonRow(
@@ -759,7 +764,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // ── GlassCard ───────────────────────────────────────────────────
           _ComparisonRow(
@@ -768,7 +773,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               useOwnLayer: true,
               settings: _kGlass,
               quality: GlassQuality.premium,
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,7 +781,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                     Text(
                       'Premium',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: CupertinoColors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
@@ -785,7 +790,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                     Text(
                       '3D bevel · specular\nreflection',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: CupertinoColors.white.withValues(alpha: 0.70),
                         fontSize: 11,
                         height: 1.4,
                       ),
@@ -798,7 +803,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               useOwnLayer: true,
               settings: _kGlassCard,
               quality: GlassQuality.standard,
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,7 +811,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                     Text(
                       'Standard',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: CupertinoColors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
@@ -815,7 +820,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                     Text(
                       '2D rim · normalised\nthickness & light',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: CupertinoColors.white.withValues(alpha: 0.70),
                         fontSize: 11,
                         height: 1.4,
                       ),
@@ -826,7 +831,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // ── GlassTabBar (full-width stacked) ─────────────────────────────
           _FullWidthRow(
@@ -836,9 +841,9 @@ class _ComparisonPageState extends State<_ComparisonPage> {
               settings: _kGlass,
               quality: GlassQuality.premium,
               segments: [
-                GlassSegment(icon: const Icon(CupertinoIcons.home)),
-                GlassSegment(icon: const Icon(CupertinoIcons.search)),
-                GlassSegment(icon: const Icon(CupertinoIcons.person)),
+                GlassSegment(icon: Icon(CupertinoIcons.home)),
+                GlassSegment(icon: Icon(CupertinoIcons.search)),
+                GlassSegment(icon: Icon(CupertinoIcons.person)),
               ],
               selectedIndex: _tabIndex,
               onSegmentSelected: (i) => setState(() => _tabIndex = i),
@@ -850,16 +855,16 @@ class _ComparisonPageState extends State<_ComparisonPage> {
                   _kGlassPill, // the pill indicator glass ← tuned here
               quality: GlassQuality.standard,
               segments: [
-                GlassSegment(icon: const Icon(CupertinoIcons.home)),
-                GlassSegment(icon: const Icon(CupertinoIcons.search)),
-                GlassSegment(icon: const Icon(CupertinoIcons.person)),
+                GlassSegment(icon: Icon(CupertinoIcons.home)),
+                GlassSegment(icon: Icon(CupertinoIcons.search)),
+                GlassSegment(icon: Icon(CupertinoIcons.person)),
               ],
               selectedIndex: _tabIndex,
               onSegmentSelected: (i) => setState(() => _tabIndex = i),
             ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // ── GlassSwitch ───────────────────────────────────────────────────
           _ComparisonRow(
@@ -876,7 +881,7 @@ class _ComparisonPageState extends State<_ComparisonPage> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // ── GlassSlider ───────────────────────────────────────────────────
           _FullWidthRow(
@@ -923,7 +928,7 @@ class _QualityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
@@ -971,11 +976,11 @@ class _ComparisonRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: EdgeInsets.only(bottom: 10),
           child: Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: CupertinoColors.white.withValues(alpha: 0.70),
               fontSize: 13,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.3,
@@ -988,7 +993,7 @@ class _ComparisonRow extends StatelessWidget {
             Expanded(
               child: Center(child: premium),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Center(child: standard),
             ),
@@ -1017,11 +1022,11 @@ class _FullWidthRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: EdgeInsets.only(bottom: 10),
           child: Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: CupertinoColors.white.withValues(alpha: 0.70),
               fontSize: 13,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.3,
@@ -1033,18 +1038,18 @@ class _FullWidthRow extends StatelessWidget {
         Row(
           children: [
             _QualityPill('PREMIUM', const Color(0xFFFFB830)),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(child: premiumWidget),
           ],
         ),
 
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         // Standard
         Row(
           children: [
             _QualityPill('STANDARD', const Color(0xFF5AC8FA)),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(child: standardWidget),
           ],
         ),
@@ -1065,7 +1070,7 @@ class _QualityPill extends StatelessWidget {
     return RotatedBox(
       quarterTurns: 3,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(6),
@@ -1116,7 +1121,7 @@ class _PresetSectionState extends State<_PresetSection> {
     final p = widget.preset;
     final c = widget.color;
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+      padding: EdgeInsets.fromLTRB(8, 6, 8, 4),
       decoration: BoxDecoration(
         color: c.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
@@ -1135,7 +1140,7 @@ class _PresetSectionState extends State<_PresetSection> {
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.1)),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Flexible(
                   child: Text(
                     'th=${p.thickness.toStringAsFixed(0)} '
@@ -1151,7 +1156,7 @@ class _PresetSectionState extends State<_PresetSection> {
                         fontFamily: 'monospace'),
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Text(_expanded ? '▲' : '▼',
                     style: TextStyle(
                         color: c.withValues(alpha: 0.5), fontSize: 8)),
@@ -1159,7 +1164,7 @@ class _PresetSectionState extends State<_PresetSection> {
             ),
           ),
           if (_expanded) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             _Slider(
                 widget.thicknessLabel,
                 p.thickness,
@@ -1191,7 +1196,7 @@ class _PresetSectionState extends State<_PresetSection> {
 
 class _Slider extends StatelessWidget {
   const _Slider(this.label, this.value, this.min, this.max, this.onChanged,
-      {this.color = Colors.white70});
+      {this.color = const Color(0xB2FFFFFF)});
 
   final String label;
   final double value;
@@ -1216,21 +1221,12 @@ class _Slider extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 1.5,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-              overlayShape: SliderComponentShape.noOverlay,
-              activeTrackColor: color.withValues(alpha: 0.5),
-              inactiveTrackColor: color.withValues(alpha: 0.15),
-              thumbColor: color,
-            ),
-            child: Slider(
-              value: value.clamp(min, max),
-              min: min,
-              max: max,
-              onChanged: onChanged,
-            ),
+          child: CupertinoSlider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            activeColor: color,
+            onChanged: onChanged,
           ),
         ),
       ],

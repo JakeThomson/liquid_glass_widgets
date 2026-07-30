@@ -654,8 +654,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
             glowOnTapOnly: widget.glowOnTapOnly,
             glowColor: widget.glowColor ??
                 (isDark
-                    ? CupertinoColors.white.withValues(alpha: GlassDefaults.specularLightAlpha)
-                    : CupertinoColors.black.withValues(alpha: GlassDefaults.specularDarkAlpha)),
+                    ? CupertinoColors.white
+                        .withValues(alpha: GlassDefaults.specularLightAlpha)
+                    : CupertinoColors.black
+                        .withValues(alpha: GlassDefaults.specularDarkAlpha)),
             glowRadius: widget.glowRadius,
             glowBlurRadius: 40,
             clipper: ShapeBorderClipper(
