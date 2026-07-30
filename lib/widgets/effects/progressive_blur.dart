@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 /// The edge a [ProgressiveBlur] is *strongest* at; it eases to perfectly sharp
 /// at the opposite edge. Named after the direction the blur travels — e.g.

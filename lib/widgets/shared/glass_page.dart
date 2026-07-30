@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
@@ -38,31 +38,27 @@ enum GlassStatusBarStyle {
 /// [GlassPage] eliminates the boilerplate required to set up a correct,
 /// performant glass UI on any route. In a single widget it handles:
 ///
-/// 1. **Transparent Scaffold** — forces the [Scaffold]'s default background
-///    colour to transparent via a [Theme] override, so your [background] shows
-///    through without any extra configuration.
-///
-/// 2. **Backdrop Isolation** — each glass layer manages its own GPU backdrop
+/// 1. **Backdrop Isolation** — each glass layer manages its own GPU backdrop
 ///    capture, preventing ghost artefacts when navigating between routes.
 ///
-/// 3. **Background Scope** — wraps the route in a [LiquidGlassScope] so that
+/// 2. **Background Scope** — wraps the route in a [LiquidGlassScope] so that
 ///    [GlassBackgroundSource] can locate the capture key when
 ///    [enableBackgroundSampling] is `true`. Required for real colour absorption.
 ///
-/// 4. **System Status Bar** — optionally adjusts icon brightness to match your
+/// 3. **System Status Bar** — optionally adjusts icon brightness to match your
 ///    background via [statusBarStyle]. Automatically restores the previous style
 ///    when the page is disposed.
 ///
-/// 5. **Edge-to-Edge** — optionally enables [SystemUiMode.edgeToEdge] so
+/// 4. **Edge-to-Edge** — optionally enables [SystemUiMode.edgeToEdge] so
 ///    content draws behind the status and navigation bars. Restores the
 ///    previous mode on dispose.
 ///
-/// 6. **Per-Page Theme Override** — optionally wraps the subtree in a scoped
+/// 5. **Per-Page Theme Override** — optionally wraps the subtree in a scoped
 ///    [GlassTheme] via [themeOverride], letting individual screens break from
 ///    the app-wide glass theme (e.g. a more dramatic onboarding or paywall
 ///    screen). Widget-level `settings` parameters still take precedence.
 ///
-/// 7. **Setup Guard (debug only)** — emits a [FlutterError] in debug mode if
+/// 6. **Setup Guard (debug only)** — emits a [FlutterError] in debug mode if
 ///    [LiquidGlassWidgets.initialize] was never called, with a direct link to
 ///    the correct setup pattern.
 ///
@@ -398,31 +394,7 @@ class _GlassPageState extends State<GlassPage> {
           Positioned.fill(
             child: AdaptiveLiquidGlassLayer(
               settings: widget.settings,
-              child: widget.background != null
-                  ? Builder(
-                      builder: (context) {
-                        // Make the scaffold background transparent so the
-                        // glass layer shows through. Use MaterialLocalizations
-                        // presence to guard against pure CupertinoApp hosts
-                        // which have no Material Theme in scope.
-                        final hasMaterial =
-                            Localizations.of<MaterialLocalizations>(
-                                  context,
-                                  MaterialLocalizations,
-                                ) !=
-                                null;
-                        final child = widget.child;
-                        if (!hasMaterial) return child;
-                        return Theme(
-                          data: Theme.of(context).copyWith(
-                            scaffoldBackgroundColor:
-                                const Color(0x00000000), // transparent
-                          ),
-                          child: child,
-                        );
-                      },
-                    )
-                  : widget.child,
+              child: widget.child,
             ),
           ),
         ],

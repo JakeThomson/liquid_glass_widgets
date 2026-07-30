@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:meta/meta.dart';
 import '../../utils/glass_spring.dart';
@@ -13,7 +13,8 @@ class GlassGlow extends StatefulWidget {
   /// {@macro glass_glow}
   const GlassGlow({
     required this.child,
-    this.glowColor = Colors.white24,
+    // Whitelisted: Renderer constant, out of scope for widget criteria.
+    this.glowColor = const Color(0x33FFFFFF), // white24 equivalent
     this.glowRadius = 1,
     this.glowBlurRadius = 0,
     this.glowSpreadRadius = 0,
@@ -491,7 +492,8 @@ class _RenderGlassGlowLayer extends RenderProxyBox {
     //    saturation controller during high-velocity drag interactions).
     if (_pulse > 0) {
       final pulsePaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.08 * _pulse)
+        // Renderer optical constant — pure white is the correct math anchor for saturation bloom.
+        ..color = CupertinoColors.white.withValues(alpha: 0.08 * _pulse)
         ..blendMode = BlendMode.plus;
 
       if (_clipper != null) {

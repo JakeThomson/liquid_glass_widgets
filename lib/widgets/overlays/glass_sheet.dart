@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'package:flutter/material.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../src/renderer/internal/interaction_notification.dart';
 
@@ -8,7 +7,9 @@ import '../shared/adaptive_glass.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../../theme/glass_theme.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/cupertino.dart';
 import 'shared/glass_sheet_defaults.dart';
+import '../../constants/glass_defaults.dart';
 
 /// A glass morphism bottom sheet following Apple's iOS 26 design patterns.
 ///
@@ -314,7 +315,7 @@ class GlassSheet extends StatefulWidget {
       context: context,
       barrierDismissible: isDismissible,
       barrierLabel: 'Dismiss',
-      barrierColor: barrierColor ?? Colors.black54,
+      barrierColor: barrierColor ?? GlassDefaults.barrierColor,
       useRootNavigator: useRootNavigator,
       transitionDuration: const Duration(milliseconds: 350),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -587,8 +588,8 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
           result = GlassGlow(
             glowColor: widget.glowColor ??
                 (isDark
-                    ? Colors.white.withValues(alpha: 0.15)
-                    : Colors.black.withValues(alpha: 0.10)),
+                    ? CupertinoColors.white.withValues(alpha: GlassDefaults.specularLightAlpha)
+                    : CupertinoColors.black.withValues(alpha: GlassDefaults.specularDarkAlpha)),
             glowRadius: widget.glowRadius,
             clipper: ShapeBorderClipper(shape: shape),
             child: result,

@@ -1,6 +1,6 @@
 import 'dart:ui' show lerpDouble;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../src/renderer/liquid_glass_renderer.dart';
 import '../utils/glass_brightness.dart';
 import 'glass_interaction_settings.dart';

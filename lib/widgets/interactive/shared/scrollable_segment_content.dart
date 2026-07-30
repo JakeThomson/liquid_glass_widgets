@@ -3,9 +3,8 @@
 // NOT part of the public API — do not export from liquid_glass_widgets.dart.
 library;
 
-import 'package:flutter/cupertino.dart' show CupertinoColors, CupertinoTheme;
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../constants/glass_defaults.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
@@ -13,6 +13,7 @@ import '../../types/glass_quality.dart';
 import '../shared/adaptive_glass.dart';
 import '../../src/renderer/internal/interaction_notification.dart';
 import 'shared/glass_sheet_defaults.dart';
+import '../../constants/glass_defaults.dart';
 
 part 'shared/glass_modal_sheet_mechanics.dart';
 part 'shared/glass_modal_sheet_internal.dart';
@@ -296,7 +297,7 @@ class GlassModalSheet extends StatefulWidget {
     double peekSize = 90.0,
     GlassQuality? quality,
     bool platformViewBackdrop = false,
-    Color barrierColor = Colors.black54,
+    Color barrierColor = GlassDefaults.barrierColor,
     bool isDismissible = true,
     bool useRootNavigator = false,
     double interactionScale = 1.01,
@@ -346,7 +347,7 @@ class GlassModalSheet extends StatefulWidget {
         'and/or large (small alone is a floor, not a resting height).');
     assert(() {
       if (mode == GlassSheetMode.persistent &&
-          barrierColor == Colors.transparent) {
+          barrierColor == const Color(0x00000000)) {
         debugPrint(
           '[GlassModalSheet] WARNING: show() with persistent mode and '
           'transparent barrier does NOT provide true hit-through interaction. '

@@ -262,11 +262,11 @@ class _SheetLayout extends StatelessWidget {
                                           expandProgress < 0.9)
                                       ? (glowColor ??
                                           (isDark
-                                              ? Colors.white
-                                                  .withValues(alpha: 0.15)
-                                              : Colors.black
-                                                  .withValues(alpha: 0.10)))
-                                      : Colors.transparent,
+                                              ? CupertinoColors.white
+                                                  .withValues(alpha: GlassDefaults.specularLightAlpha)
+                                              : CupertinoColors.black
+                                                  .withValues(alpha: GlassDefaults.specularDarkAlpha)))
+                                      : const Color(0x00000000),
                                   glowRadius: glowRadius,
                                   hitTestBehavior: HitTestBehavior.translucent,
                                   pulse: (enableSaturationGlow &&
@@ -276,10 +276,9 @@ class _SheetLayout extends StatelessWidget {
                                   child: Stack(
                                     children: [
                                       Positioned.fill(
-                                        child: Material(
-                                          color: Colors.transparent,
-                                          child: child!,
-                                        ),
+                                        // Replaces Material(color: transparent) — SizedBox.expand
+                                        // provides identical visual output for a glass sheet child.
+                                        child: SizedBox.expand(child: child!),
                                       ),
                                       if (showDragIndicator)
                                         Positioned(
@@ -324,8 +323,8 @@ class _SheetLayout extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: const [
-            Colors.transparent,
-            Colors.black,
+            Color(0x00000000),
+            Color(0xFF000000),
           ],
           stops: [0.0, (stop / bounds.height).clamp(0.0, 1.0)],
         ).createShader(bounds);

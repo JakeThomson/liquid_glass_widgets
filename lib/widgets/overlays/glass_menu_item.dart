@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 /// A menu item for use within a [GlassMenu].
 ///
@@ -234,12 +233,12 @@ class _GlassMenuItemState extends State<GlassMenuItem> {
     final bool effectiveSelected = widget.isSelected;
 
     final Color backgroundColor = effectiveSelected
-        ? Colors.transparent // Parent renders the sliding pill
+        ? const Color(0x00000000) // Parent renders the sliding pill
         : effectivePressed
             ? const Color(0x26FFFFFF) // Standalone press
             : _isHovered
                 ? const Color(0x1AFFFFFF)
-                : Colors.transparent;
+                : const Color(0x00000000);
 
     // Scale effect on press (subtle squash like iOS buttons)
     final double scale =

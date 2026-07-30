@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../liquid_glass_setup.dart';
 import '../src/renderer/liquid_glass_renderer.dart';

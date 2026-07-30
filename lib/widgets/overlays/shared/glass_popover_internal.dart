@@ -644,7 +644,7 @@ class _GlassPopoverState extends State<GlassPopover>
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onTap: _closePopover,
-                  child: const ColoredBox(color: Colors.transparent),
+                  child: const ColoredBox(color: Color(0x00000000)),
                 ),
               ),
 
@@ -781,8 +781,8 @@ class _GlassPopoverState extends State<GlassPopover>
           glowOnTapOnly: widget.glowOnTapOnly,
           glowColor: widget.glowColor ??
               (isDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.10)),
+                  ? CupertinoColors.white.withValues(alpha: GlassDefaults.specularLightAlpha)
+                  : CupertinoColors.black.withValues(alpha: GlassDefaults.specularDarkAlpha)),
           glowRadius: widget.glowRadius,
           glowBlurRadius: 40,
           clipper: ShapeBorderClipper(shape: teardropShape),
