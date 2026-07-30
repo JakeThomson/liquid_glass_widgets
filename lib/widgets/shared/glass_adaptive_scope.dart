@@ -290,11 +290,12 @@ class GlassAdaptiveScopeConfig {
   /// The raster frame duration target in milliseconds. Defaults to `16` (60 fps).
   final int targetFrameMs;
 
-  /// When `true`, the scope may step quality **up** after a sustained period
-  /// of good performance (e.g. after thermal recovery).
-  /// Defaults to `true` — allows Phase 3 to self-correct a conservative Phase 2
-  /// warmup decision. Step-up requires 10 consecutive under-budget windows
-  /// (≈ 20 seconds) plus an 8-second cooldown, so the transition is invisible.
+  /// Whether the scope may increase quality after sustained good performance.
+  /// Defaults to `true`.
+  ///
+  /// When enabled, recovery requires 10 consecutive under-budget windows
+  /// (about 20 seconds) plus an 8-second cooldown, keeping the transition
+  /// stable and unobtrusive.
   final bool allowStepUp;
 
   /// The P75 warmup threshold (ms) below which the device is classified as
@@ -469,14 +470,13 @@ class GlassAdaptiveScope extends StatefulWidget {
   /// Defaults to `16` (60 fps budget).
   final int targetFrameMs;
 
-  /// When `true`, the scope may step quality **up** to [maxQuality] after a
-  /// sustained period of good performance (e.g. after thermal recovery or a
-  /// conservative Phase 2 warmup decision).
+  /// Whether the scope may increase quality to [maxQuality] after sustained
+  /// good performance, such as after thermal recovery or a conservative warm-up
+  /// decision.
   ///
-  /// Defaults to `true`. Step-up uses a 10-window window (≈ 20 seconds) plus
-  /// an 8-second cooldown to prevent oscillation — users should not perceive
-  /// any flicker. Setting this to `false` locks quality at whatever Phase 2
-  /// decided for the entire session.
+  /// Defaults to `true`. Recovery uses 10 consecutive under-budget windows
+  /// (about 20 seconds) plus an 8-second cooldown to prevent oscillation.
+  /// Set this to `false` to keep quality from increasing after warm-up.
   final bool allowStepUp;
 
   /// The P75 warmup threshold (ms) below which the device is classified as
