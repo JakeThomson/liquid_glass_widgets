@@ -28,7 +28,7 @@ platform hygiene work — accessibility, RTL, test coverage, and documentation.
 | RTL layout verified | ❌ Not started | No RTL audit or golden tests exist |
 | Keyboard / Tab focus / Enter-Space activation | ❌ Significant gap | Only 17 of 70 widget files have any `Semantics` — see blocker below |
 | Platform testing matrix complete | ⚠️ Partial | iOS + Android confirmed; Web, Windows, macOS need explicit QA |
-| `docs/PLATFORM_SUPPORT.md` exists | ❌ Missing | File does not exist |
+| `docs/PLATFORM_SUPPORT.md` exists | ✅ Done | Shipped 2026-07-30 — all platforms, shader tiers, known bugs documented |
 | CHANGELOG complete with migration guides | ⚠️ Likely partial | Not audited against 0.20–0.25 changes |
 | README widget table accurate | ⚠️ Likely stale | Written for 0.15.x era, not audited since |
 
@@ -472,10 +472,11 @@ Status markers reflect the 0.25.1 audit (2026-07-29).
   overlay gradients. Each needs to either be converted to `CupertinoColors` or
   explicitly whitelisted with a comment justifying the semantic hardcode.
 
-- [ ] **`docs/PLATFORM_SUPPORT.md`** *(estimated 2–3 days)*
-  File does not exist. Must document known per-platform limitations: Web shader
-  fallbacks, Skia vs Impeller quality differences, Windows SkSL compatibility
-  rules, `platformViewBackdrop` quality cliff.
+- [x] **`docs/PLATFORM_SUPPORT.md`** — shipped 2026-07-30.
+  Documents per-platform quality tiers, Skia vs Impeller rendering differences,
+  Web CanvasKit `LiquidOval` clipping bug, Windows SkSL shader rules, the
+  `platformViewBackdrop` quality cliff, the QA status matrix, and issue
+  filing guidance.
 
 ### Semver Commitment
 
