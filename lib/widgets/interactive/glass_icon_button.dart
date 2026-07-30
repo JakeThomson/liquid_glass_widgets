@@ -1,5 +1,4 @@
-import 'package:flutter/cupertino.dart' show CupertinoColors;
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import '../../constants/glass_defaults.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme_data.dart';
@@ -150,7 +150,7 @@ Future<T?> showGlassActionSheet<T>({
   return showCupertinoModalPopup<T>(
     context: context,
     barrierDismissible: barrierDismissible,
-    barrierColor: Colors.black54,
+    barrierColor: GlassDefaults.barrierColor,
     builder: (context) => _GlassActionSheetContent(
       title: title,
       message: message,
@@ -243,10 +243,11 @@ class _GlassActionSheetContent extends StatelessWidget {
               // Actions list
               for (int i = 0; i < actions.length; i++) ...[
                 if (i > 0 || (title != null || message != null))
-                  Divider(
+                  // Replaces Material Divider — identical pixel output.
+                  SizedBox(
                     height: 1,
-                    thickness: 0.5,
-                    color: dividerColor,
+                    child: Center(
+                        child: Container(height: 0.5, color: dividerColor)),
                   ),
                 _ActionSheetButton(
                   action: actions[i],

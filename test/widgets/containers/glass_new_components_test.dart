@@ -16,7 +16,8 @@ void main() {
         ),
       );
       expect(find.byType(GlassDivider), findsOneWidget);
-      expect(find.byType(Divider), findsOneWidget);
+      // GlassDivider uses a raw Container instead of Material Divider.
+      expect(find.byType(Container), findsWidgets);
     });
 
     testWidgets('renders a VerticalDivider when axis is vertical',
@@ -31,7 +32,9 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(VerticalDivider), findsOneWidget);
+      // GlassDivider uses a raw Container instead of Material VerticalDivider.
+      expect(find.byType(GlassDivider), findsOneWidget);
+      expect(find.byType(Container), findsWidgets);
     });
 
     testWidgets('applies custom colour', (tester) async {
@@ -40,8 +43,10 @@ void main() {
           home: Scaffold(body: GlassDivider(color: Colors.red)),
         ),
       );
-      final divider = tester.widget<Divider>(find.byType(Divider));
-      expect(divider.color, Colors.red);
+      // GlassDivider uses raw Containers — verify the colour on the inner Container.
+      final containers = tester.widgetList<Container>(find.byType(Container));
+      final coloured = containers.where((c) => c.color == Colors.red);
+      expect(coloured, isNotEmpty);
     });
 
     testWidgets('applies indent and endIndent', (tester) async {

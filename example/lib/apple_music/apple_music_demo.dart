@@ -23,7 +23,9 @@
 library;
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,16 +93,6 @@ class AppleMusicDemoApp extends StatelessWidget {
     return CupertinoApp(
       title: 'Apple Music',
       theme: const CupertinoThemeData(brightness: Brightness.dark),
-      builder: (context, child) => Theme(
-        data: ThemeData.dark(useMaterial3: true).copyWith(
-          scaffoldBackgroundColor: _kBackground,
-          colorScheme: const ColorScheme.dark(
-            primary: _kMusicRed,
-            surface: _kBackground,
-          ),
-        ),
-        child: child!,
-      ),
       home: const AppleMusicHomeScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -236,9 +228,8 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
     // iOS native design floats the pill over the home indicator (ignoring safe area).
     // Android 3-button nav requires us to clear the opaque system buttons.
     // On gesture-nav devices safeBottom is 0, so no offset is applied.
-    final platform = Theme.of(context).platform;
-    final isIOS =
-        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
     final sysBottom = isIOS ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
 
     // GlassSearchableBottomBar handles keyboard avoidance internally (floatY),
@@ -411,12 +402,13 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                 : CupertinoColors.label
                     .resolveFrom(context)
                     .withValues(alpha: 0.9);
-            return Center(
-              child: IconTheme(
-                data: IconThemeData(color: iconColor, size: 28),
-                child: tab.activeIcon ?? tab.icon ?? const SizedBox.shrink(),
-              ),
-            );
+            final icon = tab.activeIcon ?? tab.icon;
+            if (icon is Icon) {
+              return Center(
+                child: Icon(icon.icon, color: iconColor, size: 28),
+              );
+            }
+            return icon ?? const SizedBox.shrink();
           },
         ),
         tabs: _kTabs,
@@ -447,7 +439,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                 Color(0xFFE2072C), // Deeper red at the bottom
               ],
             ),
-            textColor: Colors.white,
+            textColor: CupertinoColors.white,
             child: const _AppleMusicLogo(),
           ),
         ),
@@ -466,7 +458,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
             // ),
             color: Color(0xFF1D1B1E),
             showBorder: true,
-            textColor: Colors.white,
+            textColor: CupertinoColors.white,
             child: Icon(
               CupertinoIcons.person_3_fill,
               color: _kMusicRed,
@@ -499,7 +491,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
         ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 16, 20),
+            padding: EdgeInsets.fromLTRB(20, 4, 16, 20),
             child: Text(
               'Radio',
               style: TextStyle(
@@ -518,7 +510,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
               (context, i) {
                 final s = stations[i % stations.length];
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
+                  margin: EdgeInsets.only(bottom: 12),
                   height: 72,
                   decoration: BoxDecoration(
                     color: _kCardGray.resolveFrom(context),
@@ -538,7 +530,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                             color: CupertinoColors.label.resolveFrom(context),
                             size: 28),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,7 +582,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
         ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 16, 8),
+            padding: EdgeInsets.fromLTRB(20, 4, 16, 8),
             child: Text(
               'Library',
               style: TextStyle(
@@ -608,28 +600,40 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, i) => Column(
                 children: [
-                  ListTile(
-                    leading: Icon(
-                      CupertinoIcons.music_albums_fill,
-                      color: _kMusicRed,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          CupertinoIcons.music_albums_fill,
+                          color: _kMusicRed,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            sections[i % sections.length],
+                            style: TextStyle(
+                                color:
+                                    CupertinoColors.label.resolveFrom(context),
+                                fontSize: 17),
+                          ),
+                        ),
+                        Icon(CupertinoIcons.chevron_forward,
+                            color: CupertinoColors.tertiaryLabel
+                                .resolveFrom(context),
+                            size: 16),
+                      ],
                     ),
-                    title: Text(
-                      sections[i % sections.length],
-                      style: TextStyle(
-                          color: CupertinoColors.label.resolveFrom(context),
-                          fontSize: 17),
-                    ),
-                    trailing: Icon(CupertinoIcons.chevron_forward,
-                        color:
-                            CupertinoColors.tertiaryLabel.resolveFrom(context),
-                        size: 16),
                   ),
-                  Divider(
-                      height: 1,
-                      color: CupertinoColors.label
-                          .resolveFrom(context)
-                          .withValues(alpha: 0.1),
-                      indent: 56),
+                  Container(
+                    height: 0.33,
+                    margin: const EdgeInsets.only(left: 56),
+                    color: CupertinoColors.label
+                        .resolveFrom(context)
+                        .withValues(alpha: 0.1),
+                  ),
                 ],
               ),
               childCount: sections.length * 4,
@@ -642,7 +646,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
 
   Widget _buildListenNowHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 16, 12),
+      padding: EdgeInsets.fromLTRB(20, 4, 16, 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -659,7 +663,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
           Container(
             width: 36,
             height: 36,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Color(0xFF4C4556),
               shape: BoxShape.circle,
             ),
@@ -685,13 +689,13 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
         ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 16, 20),
+            padding: EdgeInsets.fromLTRB(20, 4, 16, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.apple,
+                    Icon(CupertinoIcons.star,
                         color: CupertinoColors.label.resolveFrom(context),
                         size: 22),
                     SizedBox(width: 4),
@@ -756,7 +760,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                 Icon(CupertinoIcons.search,
                     size: 64,
                     color: CupertinoColors.tertiaryLabel.resolveFrom(context)),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(
                   'No Recent Searches',
                   style: TextStyle(
@@ -766,7 +770,7 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
                     letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text(
                   'Your recent searches will appear here.',
                   style: TextStyle(
@@ -827,7 +831,7 @@ class _PlayBarPill extends StatelessWidget {
       shape: const LiquidRoundedRectangle(borderRadius: _kBarH / 2),
       settings: _kPillGlass(context),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
             // Album art
@@ -836,17 +840,17 @@ class _PlayBarPill extends StatelessWidget {
               child: Container(
                 width: 32,
                 height: 32,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFFB22222), Color(0xFF4A0000)],
                   ),
                 ),
-                child: Icon(Icons.music_note,
+                child: Icon(CupertinoIcons.music_note,
                     color: CupertinoColors.secondaryLabel.resolveFrom(context),
                     size: 20),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             // Title + artist
             Expanded(
               child: Column(
@@ -875,13 +879,13 @@ class _PlayBarPill extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(CupertinoIcons.play_arrow_solid,
+            Icon(CupertinoIcons.play_fill,
                 color: CupertinoColors.label.resolveFrom(context), size: 24),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Icon(CupertinoIcons.forward_end_fill,
                 color: CupertinoColors.secondaryLabel.resolveFrom(context),
                 size: 20),
-            const SizedBox(width: 2),
+            SizedBox(width: 2),
           ],
         ),
       ),
@@ -897,7 +901,7 @@ class _AppleMusicLogo extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.apple,
+        Icon(CupertinoIcons.star,
             color: CupertinoColors.label.resolveFrom(context), size: 56),
         Text(
           'Music',
@@ -937,7 +941,7 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       height: 400,
       decoration: BoxDecoration(
         color: color,
@@ -952,7 +956,7 @@ class _HeroCard extends StatelessWidget {
               )
             : null,
       ),
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+      padding: EdgeInsets.symmetric(vertical: 24, horizontal: 24),
       child: Column(
         children: [
           Text(
@@ -965,9 +969,9 @@ class _HeroCard extends StatelessWidget {
               height: 1.2,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Expanded(child: child),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             subtitle,
             style: TextStyle(
@@ -976,7 +980,7 @@ class _HeroCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             subtext,
             style: TextStyle(
@@ -1003,7 +1007,7 @@ class _BrowseCategory extends StatelessWidget {
       child: Container(
         color: color,
         alignment: Alignment.bottomLeft,
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         child: Text(
           name,
           style: TextStyle(

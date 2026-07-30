@@ -1,3 +1,64 @@
+# 0.26.0
+
+## 💥 Breaking Changes
+
+- **`GlassScaffold.floatingActionButton` removed** — iOS does not use Floating
+  Action Buttons. `floatingActionButton` is removed entirely; this package is
+  pre-v1 and that is the window to get the API right.
+
+  **Migration:**
+
+  ```dart
+  // Before
+  GlassScaffold(
+    floatingActionButton: FloatingActionButton(onPressed: _add, child: Icon(Icons.add)),
+    body: ...,
+  )
+
+  // After — glass-treated, iOS-idiomatic
+  GlassScaffold(
+    bodyOverlays: [
+      Positioned(
+        bottom: 24, right: 24,
+        child: GlassButton(
+          onTap: _add,
+          child: const Icon(CupertinoIcons.add, color: CupertinoColors.white),
+        ),
+      ),
+    ],
+    body: ...,
+  )
+  ```
+
+  `bodyOverlays` is above the body and below the bars. `GlassButton` applies
+  the correct liquid glass treatment.
+
+## ♻️ Refactoring — Material Decoupling (`material.dart` 36 → 0)
+
+`GlassScaffold` now uses `CupertinoPageScaffold` internally. `GlassPage` no
+longer injects a Material `Theme` shim. All `Colors.*` constants replaced with
+`CupertinoColors` or explicit hex literals. **No visual changes.**
+
+`glass_brightness.dart` was completely rewritten to drop its dependency on
+`Theme.maybeBrightnessOf`. It now reads `CupertinoTheme.of(context).brightness`,
+which natively inherits from the Material `ThemeMode` when used inside a
+`MaterialApp` (thanks to Flutter's automatic `MaterialBasedCupertinoThemeData`
+injection).
+
+With this final swap, **`liquid_glass_widgets` now has zero imports of
+`package:flutter/material.dart` in its `lib/` directory.** It is fully
+decoupled and ready for the `cupertino_ui` package split. The example's
+Apple replica demos (`apple_music`, `apple_podcasts`, `apple_messages`,
+`apple_news`, `apple_lockscreen`) run with zero Material imports as well,
+proving the library works purely within a Cupertino-only context.
+
+## 🐛 Bug Fixes
+
+- **`LightweightLiquidGlass` incorrect brightness in `GlassTheme` override
+  contexts** — was calling `Theme.of(context).brightness` instead of the
+  canonical `GlassTheme.brightnessOf(context)`. Could produce wrong brightness
+  when `GlassTheme` set a different mode than the ambient Material theme. Fixed.
+
 # 0.25.1
 
 ## 🐛 Bug Fixes

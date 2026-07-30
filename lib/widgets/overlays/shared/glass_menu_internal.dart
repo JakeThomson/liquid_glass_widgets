@@ -438,7 +438,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: _closeMenu,
-              child: Container(color: Colors.black.withValues(alpha: 0.0)),
+              child: Container(color: const Color(0x00000000)),
             ),
           ),
 
@@ -654,8 +654,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
             glowOnTapOnly: widget.glowOnTapOnly,
             glowColor: widget.glowColor ??
                 (isDark
-                    ? Colors.white.withValues(alpha: 0.15)
-                    : Colors.black.withValues(alpha: 0.10)),
+                    ? CupertinoColors.white
+                        .withValues(alpha: GlassDefaults.specularLightAlpha)
+                    : CupertinoColors.black
+                        .withValues(alpha: GlassDefaults.specularDarkAlpha)),
             glowRadius: widget.glowRadius,
             glowBlurRadius: 40,
             clipper: ShapeBorderClipper(

@@ -14,6 +14,7 @@ library;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 // Capsule sentinel — delegates to GlassDefaults so the demo stays in sync
@@ -147,13 +148,13 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           // ── Background — rich gradient so glass refraction is visible ─────
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -197,28 +198,28 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
           SafeArea(
             bottom: false,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 240),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 240),
               children: [
                 // Title
-                const Text(
+                Text(
                   'Indicator Parity',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: CupertinoColors.white,
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   'iOS 26 calibration — all six pill widgets, live tuning',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: CupertinoColors.white.withValues(alpha: 0.5),
                     fontSize: 13,
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
 
                 // ── Tuner panel ─────────────────────────────────────────────
                 _TunerPanel(
@@ -244,15 +245,14 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                       setState(() => _indicatorBorderRadiusOverride = null),
                 ),
 
-                const SizedBox(height: 28),
+                SizedBox(height: 28),
 
                 // ── GlassSegmentedControl ────────────────────────────────────
                 _WidgetSection(
                   label: 'GlassSegmentedControl',
                   color: const Color(0xFF5E3AFF),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     child: GlassSegmentedControl(
                       segments: _segments,
                       selectedIndex: _segSelected,
@@ -268,14 +268,14 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── GlassSegmentedControl ──────────────────────────────────────────────
                 _WidgetSection(
                   label: 'GlassSegmentedControl',
                   color: const Color(0xFF0A84FF),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     child: GlassSegmentedControl(
                       segments: _tabs,
                       selectedIndex: _tabSelected,
@@ -287,11 +287,11 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                       height: 56,
                       // Full-pill radius is now the default out of the box!
                       iconSize: 20,
-                      selectedTextStyle: const TextStyle(
+                      selectedTextStyle: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
-                      unselectedTextStyle: const TextStyle(
+                      unselectedTextStyle: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
                       ),
@@ -304,7 +304,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── GlassTabBar.inline ───────────────────────────────────────
                 _WidgetSection(
@@ -314,9 +314,9 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                     children: [
                       // Extra breathing room — the 40px glass track refracts
                       // anything within ~20px. Push label clear of the surface.
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: EdgeInsets.symmetric(horizontal: 16),
                         child: GlassTabBar.inline(
                           tabs: _inlineTabs,
                           selectedIndex: _inlineSelected,
@@ -329,19 +329,19 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                           indicatorSettings: _indicatorSettings,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 _WidgetSection(
                   label: 'GlassTabBar.inline (icon + text)',
                   color: const Color(0xFF5AC8FA),
                   child: Column(
                     children: [
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24),
                       GlassTabBar.inline(
                         tabs: _barTabs,
                         selectedIndex: _inlineIconSelected,
@@ -354,12 +354,12 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                         indicatorPinchStrength: _pinchStrength,
                         indicatorSettings: _indicatorSettings,
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── GlassTabBar.bottom (Premium) ─────────────────────────────
                 _WidgetSection(
@@ -378,7 +378,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── GlassTabBar.bottom (Standard) ─────────────────────────────
                 _WidgetSection(
@@ -397,7 +397,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── GlassSearchableBottomBar ─────────────────────────────────
                 _WidgetSection(
@@ -423,7 +423,7 @@ class _IndicatorParityDemoPageState extends State<IndicatorParityDemoPage> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // ── Live values badge ────────────────────────────────────────
                 _LiveValuesBadge(
@@ -504,13 +504,13 @@ class _TunerPanelState extends State<_TunerPanel> {
         curve: Curves.easeInOut,
         decoration: BoxDecoration(
           color: _isOpen
-              ? Colors.white.withValues(alpha: 0.09)
-              : Colors.white.withValues(alpha: 0.06),
+              ? CupertinoColors.white.withValues(alpha: 0.09)
+              : CupertinoColors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _isOpen
-                ? Colors.white.withValues(alpha: 0.18)
-                : Colors.white.withValues(alpha: 0.10),
+                ? CupertinoColors.white.withValues(alpha: 0.18)
+                : CupertinoColors.white.withValues(alpha: 0.10),
           ),
         ),
         child: ClipRRect(
@@ -524,17 +524,19 @@ class _TunerPanelState extends State<_TunerPanel> {
                 onTap: () => setState(() => _isOpen = !_isOpen),
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                  padding: EdgeInsets.fromLTRB(16, 14, 12, 14),
                   child: Row(
                     children: [
-                      const Icon(CupertinoIcons.tuningfork,
-                          color: Colors.white70, size: 14),
-                      const SizedBox(width: 6),
+                      Icon(CupertinoIcons.tuningfork,
+                          color: CupertinoColors.white.withValues(alpha: 0.70),
+                          size: 14),
+                      SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           'LIVE TUNER — bottom bar, searchable & segmented controls',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.55),
+                            color:
+                                CupertinoColors.white.withValues(alpha: 0.55),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.6,
@@ -547,21 +549,21 @@ class _TunerPanelState extends State<_TunerPanel> {
                             label: 'P',
                             value: widget.pinchStrength.toStringAsFixed(1),
                             color: const Color(0xFF5E3AFF)),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         _MiniValuePill(
                             label: 'E',
                             value:
                                 '${widget.expansionH.round()}×${widget.expansionV.round()}',
                             color: const Color(0xFF0A84FF)),
                       ],
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       AnimatedRotation(
                         turns: _isOpen ? 0.5 : 0.0,
                         duration: const Duration(milliseconds: 280),
                         curve: Curves.easeInOut,
                         child: Icon(
                           CupertinoIcons.chevron_down,
-                          color: Colors.white.withValues(alpha: 0.4),
+                          color: CupertinoColors.white.withValues(alpha: 0.4),
                           size: 14,
                         ),
                       ),
@@ -576,15 +578,15 @@ class _TunerPanelState extends State<_TunerPanel> {
                 curve: Curves.easeInOut,
                 child: _isOpen
                     ? Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        padding: EdgeInsets.fromLTRB(16, 0, 16, 10),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 thickness: 0.5,
                                 color: Color(0x22FFFFFF)),
-                            const SizedBox(height: 10),
+                            SizedBox(height: 10),
                             _SliderRow(
                               label: 'Pinch Strength',
                               value: widget.pinchStrength,
@@ -648,12 +650,12 @@ class _TunerPanelState extends State<_TunerPanel> {
                               accentColor: const Color(0xFF64D2FF),
                               onChanged: widget.onRefractionChanged,
                             ),
-                            const SizedBox(height: 6),
-                            const Divider(
+                            SizedBox(height: 6),
+                            Divider(
                                 height: 1,
                                 thickness: 0.5,
                                 color: Color(0x22FFFFFF)),
-                            const SizedBox(height: 6),
+                            SizedBox(height: 6),
                             // ── Shape — 3-tier radius ──────────────────────
                             // Slider travels 4..36 in the UI; the max value (36)
                             // is mapped to the 9999 capsule sentinel on write.
@@ -679,7 +681,7 @@ class _TunerPanelState extends State<_TunerPanel> {
                             ),
                             // Indicator radius — Tier 2 (auto) / Tier 3 (override)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
+                              padding: EdgeInsets.only(bottom: 8),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -690,7 +692,7 @@ class _TunerPanelState extends State<_TunerPanel> {
                                       Text(
                                         'Indicator Radius  (Tier 2→3)',
                                         style: TextStyle(
-                                          color: Colors.white
+                                          color: CupertinoColors.white
                                               .withValues(alpha: 0.7),
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
@@ -705,18 +707,18 @@ class _TunerPanelState extends State<_TunerPanel> {
                                               onTap: widget
                                                   .onResetIndicatorBorderRadius,
                                               child: Padding(
-                                                padding: const EdgeInsets.only(
-                                                    right: 6),
+                                                padding:
+                                                    EdgeInsets.only(right: 6),
                                                 child: Icon(
-                                                  Icons.refresh_rounded,
+                                                  CupertinoIcons.refresh,
                                                   size: 14,
-                                                  color: Colors.white
+                                                  color: CupertinoColors.white
                                                       .withValues(alpha: 0.5),
                                                 ),
                                               ),
                                             ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(
+                                            padding: EdgeInsets.symmetric(
                                                 horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFFFF375F)
@@ -758,43 +760,30 @@ class _TunerPanelState extends State<_TunerPanel> {
                                   ),
                                   SizedBox(
                                     height: 30,
-                                    child: SliderTheme(
-                                      data: SliderTheme.of(context).copyWith(
-                                        activeTrackColor:
-                                            const Color(0xFFFF375F),
-                                        inactiveTrackColor: Colors.white
-                                            .withValues(alpha: 0.12),
-                                        thumbColor: const Color(0xFFFF375F),
-                                        thumbShape: const RoundSliderThumbShape(
-                                            enabledThumbRadius: 7),
-                                        trackHeight: 3,
-                                        overlayShape:
-                                            SliderComponentShape.noOverlay,
-                                      ),
-                                      child: Slider(
-                                        value: (widget.indicatorBorderRadius ??
-                                                (widget.barBorderRadius - 4)
-                                                    .clamp(4.0, 30.0))
-                                            .clamp(4.0, 30.0),
-                                        min: 4,
-                                        max: 30,
-                                        divisions: 26,
-                                        onChanged: widget
-                                            .onIndicatorBorderRadiusChanged,
-                                      ),
+                                    child: CupertinoSlider(
+                                      value: (widget.indicatorBorderRadius ??
+                                              (widget.barBorderRadius - 4)
+                                                  .clamp(4.0, 30.0))
+                                          .clamp(4.0, 30.0),
+                                      min: 4,
+                                      max: 30,
+                                      divisions: 26,
+                                      activeColor: const Color(0xFFFF375F),
+                                      onChanged:
+                                          widget.onIndicatorBorderRadiusChanged,
                                     ),
                                   ),
                                   if (widget.indicatorBorderRadius == null)
                                     Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 2, bottom: 2),
+                                      padding:
+                                          EdgeInsets.only(top: 2, bottom: 2),
                                       child: Text(
                                         widget.barBorderRadius >=
                                                 _kCapsuleSentinel
                                             ? 'auto: capsule  ·  drag to override'
                                             : 'auto: bar − 4 = ${(widget.barBorderRadius - 4).clamp(0, 999).round()} px  ·  drag to override',
                                         style: TextStyle(
-                                          color: Colors.white
+                                          color: CupertinoColors.white
                                               .withValues(alpha: 0.35),
                                           fontSize: 10,
                                           fontStyle: FontStyle.italic,
@@ -828,7 +817,7 @@ class _MiniValuePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(6),
@@ -870,7 +859,7 @@ class _SliderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -880,13 +869,13 @@ class _SliderRow extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: CupertinoColors.white.withValues(alpha: 0.7),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
@@ -905,22 +894,13 @@ class _SliderRow extends StatelessWidget {
           ),
           SizedBox(
             height: 30,
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: accentColor,
-                inactiveTrackColor: Colors.white.withValues(alpha: 0.12),
-                thumbColor: Colors.white,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                trackHeight: 3,
-                overlayShape: SliderComponentShape.noOverlay,
-              ),
-              child: Slider(
-                value: value.clamp(min, max),
-                min: min,
-                max: max,
-                divisions: divisions,
-                onChanged: onChanged,
-              ),
+            child: CupertinoSlider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              divisions: divisions,
+              activeColor: accentColor,
+              onChanged: onChanged,
             ),
           ),
         ],
@@ -960,11 +940,11 @@ class _WidgetSection extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.55),
+                color: CupertinoColors.white.withValues(alpha: 0.55),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.6,
@@ -972,7 +952,7 @@ class _WidgetSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         // Glass sits directly against the demo backdrop — no wrapper container.
         // Wrapping in a styled container would create a glass-in-glass situation
         // and cause the indicator glow to refract the container colour.
@@ -1002,11 +982,11 @@ class _LiveValuesBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: CupertinoColors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: CupertinoColors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1014,16 +994,16 @@ class _LiveValuesBadge extends StatelessWidget {
           Text(
             'CURRENT CODE SNIPPET',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.4),
+              color: CupertinoColors.white.withValues(alpha: 0.4),
               fontSize: 10,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.8,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Text(
             _buildSnippet(),
-            style: const TextStyle(
+            style: TextStyle(
               color: Color(0xFF9EF8A8), // code green
               fontSize: 11,
               fontFamily: 'Menlo',
