@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() async {
@@ -52,53 +53,53 @@ class _GlassBottomBarDemoPageState extends State<GlassBottomBarDemoPage> {
         fit: BoxFit.cover,
       ),
       statusBarStyle: GlassStatusBarStyle.auto,
-      child: Scaffold(
+      child: GlassScaffold(
         extendBody: true,
         body: Center(
           child: Text(
             'Tab $_selectedIndex Selected',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: CupertinoColors.white,
               fontSize: 24,
               fontWeight: FontWeight.bold,
               shadows: [
                 Shadow(
                   blurRadius: 10,
-                  color: Colors.black,
+                  color: CupertinoColors.black,
                 ),
               ],
             ),
           ),
         ),
-        bottomNavigationBar: GlassTabBar.bottom(
+        bottomBar: GlassTabBar.bottom(
           selectedIndex: _selectedIndex,
           onTabSelected: (index) => setState(() => _selectedIndex = index),
           // Use distinct colors to verify masking
-          selectedIconColor: Colors.white,
-          unselectedIconColor: Colors.white.withValues(alpha: 0.4),
-          indicatorColor: Colors.blue.withValues(alpha: 0.2),
+          selectedIconColor: CupertinoColors.white,
+          unselectedIconColor: CupertinoColors.white.withValues(alpha: 0.4),
+          indicatorColor: CupertinoColors.activeBlue.withValues(alpha: 0.2),
           maskingQuality: MaskingQuality.high,
           extraButton: GlassTabBarExtraButton(
-            icon: const Icon(CupertinoIcons.info),
+            icon: Icon(CupertinoIcons.info),
             label: 'something',
             onTap: () {},
           ),
           tabs: [
             GlassTab(
               label: 'Home',
-              icon: const Icon(CupertinoIcons.home),
-              activeIcon: const Icon(CupertinoIcons.home),
+              icon: Icon(CupertinoIcons.home),
+              activeIcon: Icon(CupertinoIcons.home),
             ),
             GlassTab(
               // Empty label - should center icon
               label: null,
-              icon: const Icon(CupertinoIcons.add_circled),
-              activeIcon: const Icon(CupertinoIcons.add_circled_solid),
+              icon: Icon(CupertinoIcons.add_circled),
+              activeIcon: Icon(CupertinoIcons.add_circled),
             ),
             GlassTab(
               label: 'Profile',
-              icon: const Icon(CupertinoIcons.person),
-              activeIcon: const Icon(CupertinoIcons.person_fill),
+              icon: Icon(CupertinoIcons.person),
+              activeIcon: Icon(CupertinoIcons.person_fill),
             ),
           ],
         ),

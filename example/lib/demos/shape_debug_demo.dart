@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:liquid_glass_widgets_example/constants/glass_settings.dart';
 
@@ -49,7 +50,7 @@ class _ShapeDebugPageState extends State<ShapeDebugPage> {
   Widget build(BuildContext context) {
     return GlassPage(
       background: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -57,8 +58,8 @@ class _ShapeDebugPageState extends State<ShapeDebugPage> {
           ),
         ),
       ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
+      child: GlassScaffold(
+        backgroundColor: const Color(0x00000000),
         body: AdaptiveLiquidGlassLayer(
           settings: RecommendedGlassSettings.standard,
           quality: _quality,
@@ -67,10 +68,10 @@ class _ShapeDebugPageState extends State<ShapeDebugPage> {
               children: [
                 // ── Header + quality toggle ──────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -79,7 +80,7 @@ class _ShapeDebugPageState extends State<ShapeDebugPage> {
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: CupertinoColors.white,
                               ),
                             ),
                             SizedBox(height: 2),
@@ -87,7 +88,8 @@ class _ShapeDebugPageState extends State<ShapeDebugPage> {
                               'RoundedRect vs Superellipse',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.white54,
+                                color: CupertinoColors.white
+                                    .withValues(alpha: 0.54),
                               ),
                             ),
                           ],
@@ -101,80 +103,80 @@ class _ShapeDebugPageState extends State<ShapeDebugPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
 
                 // ── Quality badge ─────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: EdgeInsets.symmetric(horizontal: 20),
                   child: _QualityBadge(quality: _quality),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── Scrollable content ────────────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 40),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Moderate radii — squircle difference is visible here
                         const _SectionLabel('Moderate Radius'),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         const _SectionHint(
                           'Squircle corners fill further into the diagonal — '
                           'look for the smoother "sweep" vs the circular arc pop.',
                         ),
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         for (final r in [16.0, 24.0, 32.0]) ...[
                           _CardComparisonRow(
                             radius: r,
                             quality: _quality,
                             cardHeight: 100,
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                         ],
 
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
 
                         // Button-sized shapes — still distinguishable at r=12-18
                         const _SectionLabel('Button Size'),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         const _SectionHint(
                           'Smaller shapes at typical button radii (r = 12–18).',
                         ),
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         for (final r in [12.0, 18.0]) ...[
                           _CardComparisonRow(
                             radius: r,
                             quality: _quality,
                             cardHeight: 52,
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                         ],
 
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
 
                         // Pill / Stadium — BOTH identical by design
                         const _SectionLabel('Pill / Stadium (r ≥ half-height)'),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         const _SectionHint(
                           'When radius is clamped to the half-height, both '
                           'shapes become a perfect stadium — identical by design.',
                         ),
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         _CardComparisonRow(
                           radius: 999,
                           quality: _quality,
                           cardHeight: 62,
                           radiusLabel: '∞ (pill)',
                         ),
-                        const SizedBox(height: 32),
+                        SizedBox(height: 32),
 
                         // Inline buttons
                         const _SectionLabel('Inline Buttons'),
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         _ButtonComparisonRow(quality: _quality),
-                        const SizedBox(height: 32),
+                        SizedBox(height: 32),
                       ],
                     ),
                   ),
@@ -214,22 +216,22 @@ class _QualityToggle extends StatelessWidget {
       useOwnLayer: true,
       shape: const LiquidRoundedRectangle(borderRadius: 18),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: EdgeInsets.symmetric(horizontal: 14),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               quality == GlassQuality.premium
-                  ? Icons.diamond_outlined
-                  : Icons.layers_outlined,
-              color: Colors.white70,
+                  ? CupertinoIcons.circle
+                  : CupertinoIcons.square_stack_3d_up,
+              color: CupertinoColors.white.withValues(alpha: 0.70),
               size: 14,
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Text(
               quality == GlassQuality.premium ? 'Premium' : 'Standard',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: CupertinoColors.white,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -249,16 +251,16 @@ class _QualityBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPremium = quality == GlassQuality.premium;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: isPremium
             ? const Color(0xFF7B61FF).withValues(alpha: 0.15)
-            : Colors.white.withValues(alpha: 0.05),
+            : CupertinoColors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isPremium
               ? const Color(0xFF7B61FF).withValues(alpha: 0.4)
-              : Colors.white.withValues(alpha: 0.1),
+              : CupertinoColors.white.withValues(alpha: 0.1),
         ),
       ),
       child: Text(
@@ -269,7 +271,7 @@ class _QualityBadge extends StatelessWidget {
           fontSize: 11,
           color: isPremium
               ? const Color(0xFFB09FFF)
-              : Colors.white.withValues(alpha: 0.5),
+              : CupertinoColors.white.withValues(alpha: 0.5),
           fontFamily: 'monospace',
         ),
       ),
@@ -289,10 +291,10 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w600,
-        color: Colors.white70,
+        color: CupertinoColors.white.withValues(alpha: 0.70),
         letterSpacing: 0.2,
       ),
     );
@@ -309,7 +311,7 @@ class _SectionHint extends StatelessWidget {
       text,
       style: TextStyle(
         fontSize: 12,
-        color: Colors.white.withValues(alpha: 0.38),
+        color: CupertinoColors.white.withValues(alpha: 0.38),
         height: 1.4,
       ),
     );
@@ -341,12 +343,12 @@ class _CardComparisonRow extends StatelessWidget {
         Text(
           'r = ${radiusLabel ?? radius.toInt()}',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.3),
+            color: CupertinoColors.white.withValues(alpha: 0.3),
             fontSize: 11,
             fontFamily: 'monospace',
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Row(
           children: [
             Expanded(
@@ -359,7 +361,7 @@ class _CardComparisonRow extends StatelessWidget {
                 accentColor: const Color(0xFF4A9EFF),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: _LabelledCard(
                 shape: LiquidRoundedSuperellipse(borderRadius: radius),
@@ -404,7 +406,7 @@ class _LabelledCard extends StatelessWidget {
       height: height,
       child: showSublabel
           ? Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: 10),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -417,11 +419,11 @@ class _LabelledCard extends StatelessWidget {
                       letterSpacing: 0.2,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   Text(
                     sublabel,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: CupertinoColors.white.withValues(alpha: 0.3),
                       fontSize: 9,
                       fontFamily: 'monospace',
                     ),
@@ -464,7 +466,7 @@ class _ButtonComparisonRow extends StatelessWidget {
           quality: quality,
           accentColor: const Color(0xFF4A9EFF),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         _LabelledButton(
           shape: const LiquidRoundedSuperellipse(borderRadius: 14),
           label: 'Superellipse',
@@ -509,11 +511,11 @@ class _LabelledButton extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Text(
           'r = 14',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.3),
+            color: CupertinoColors.white.withValues(alpha: 0.3),
             fontSize: 10,
             fontFamily: 'monospace',
           ),

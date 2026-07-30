@@ -15,8 +15,8 @@
 library;
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../constants/sf_symbols.dart';
@@ -47,8 +47,9 @@ LiquidGlassSettings _kTriggerGlass(BuildContext context) {
     // to match the flat UIVisualEffectView material iOS 26 uses. lightIntensity: 0.2
     // gives a soft, realistic press specular rather than an over-bright flash.
     // Light mode: full bevel (18) + Fresnel for premium 3D pressed feel.
-    glassColor:
-        isDark ? const Color(0xA6262626) : Colors.white.withValues(alpha: 0.15),
+    glassColor: isDark
+        ? const Color(0xA6262626)
+        : CupertinoColors.white.withValues(alpha: 0.15),
     thickness: 18.0,
     blur: isDark ? 1.8 : 8.0, // Slightly more blur dims/softens text underneath
     lightIntensity: isDark ? 0.18 : 0.45,
@@ -65,8 +66,9 @@ LiquidGlassSettings _kTriggerGlass(BuildContext context) {
 LiquidGlassSettings _kSearchGlass(BuildContext context) {
   final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
   return LiquidGlassSettings(
-    glassColor:
-        isDark ? const Color(0xA6262626) : Colors.white.withValues(alpha: 0.15),
+    glassColor: isDark
+        ? const Color(0xA6262626)
+        : CupertinoColors.white.withValues(alpha: 0.15),
     thickness: isDark ? 25.0 : 18.0,
     blur: isDark ? 1.8 : 8.0, // Slightly more blur dims/softens text underneath
     lightIntensity: isDark ? 0.18 : 0.45,
@@ -87,7 +89,7 @@ LiquidGlassSettings _kMenuGlass(BuildContext context) {
         ? const Color(0xFF262626).withValues(
             alpha:
                 0.5) // Standard Figma approximation for systemThinMaterialDark
-        : Colors.white.withValues(alpha: 0.15),
+        : CupertinoColors.white.withValues(alpha: 0.15),
     thickness: isDark ? 25.0 : 18.0,
     blur: isDark ? 8 : 8.0, // Slightly more blur dims/softens text underneath
     lightIntensity: isDark ? 0.18 : 0.45,
@@ -249,16 +251,6 @@ class AppleMessagesDemoApp extends StatelessWidget {
     return CupertinoApp(
       title: 'Messages',
       theme: const CupertinoThemeData(brightness: Brightness.dark),
-      builder: (context, child) => Theme(
-        data: ThemeData.dark(useMaterial3: true).copyWith(
-          scaffoldBackgroundColor: _kBg,
-          colorScheme: ColorScheme.dark(
-            primary: _kBlue,
-            surface: _kBg,
-          ),
-        ),
-        child: child!,
-      ),
       home: const MessagesScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -320,7 +312,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           GlassLargeTitle(
             text: 'Messages',
             controller: _titleController,
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
           ),
 
           // Conversation rows
@@ -373,7 +365,7 @@ class _NavBar extends StatelessWidget {
       ),
       largeTitleController: titleController,
       // The menus get their own paddings so we override the default AppBar insets
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: EdgeInsets.symmetric(horizontal: 12),
       leading: const _EditMenu(),
       actions: [
         _FilterMenu(
@@ -539,8 +531,7 @@ class _ConversationRow extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding:
-                const EdgeInsets.only(left: 8, right: 16, top: 10, bottom: 12),
+            padding: EdgeInsets.only(left: 8, right: 16, top: 10, bottom: 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -558,11 +549,11 @@ class _ConversationRow extends StatelessWidget {
                         )
                       : null,
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
 
                 // ── Avatar ──────────────────────────────────────────────────
                 _Avatar(initial: c.initial),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
 
                 // ── Content ─────────────────────────────────────────────────
                 Expanded(
@@ -586,7 +577,7 @@ class _ConversationRow extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: 6),
                           Text(
                             c.time,
                             style: TextStyle(
@@ -595,7 +586,7 @@ class _ConversationRow extends StatelessWidget {
                               fontSize: 13,
                             ),
                           ),
-                          const SizedBox(width: 3),
+                          SizedBox(width: 3),
                           Icon(
                             SFSymbols.chevron_right,
                             size: 12,
@@ -604,7 +595,7 @@ class _ConversationRow extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         c.hasAttachment ? '📷  ${c.preview}' : c.preview,
                         style: TextStyle(
@@ -630,10 +621,9 @@ class _ConversationRow extends StatelessWidget {
               final isDark =
                   CupertinoTheme.of(context).brightness == Brightness.dark;
               return Padding(
-                padding: const EdgeInsets.only(left: 76),
-                child: Divider(
-                  height: 1,
-                  thickness: 0.33,
+                padding: EdgeInsets.only(left: 76),
+                child: Container(
+                  height: 0.33,
                   color: isDark
                       ? const Color(
                           0x60FFFFFF) // ~38% white — matches iOS 26 hairline
@@ -771,7 +761,7 @@ class _SearchBarState extends State<_SearchBar> {
                       duration: const Duration(milliseconds: 180),
                       child: !_isFocused
                           ? Padding(
-                              padding: const EdgeInsets.only(left: 10),
+                              padding: EdgeInsets.only(left: 10),
                               child: GlassButton(
                                 onTap: () {},
                                 width: 48,

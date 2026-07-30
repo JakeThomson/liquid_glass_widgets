@@ -55,14 +55,12 @@ void main() {
       // Any Theme found inside GlassPage should not be from GlassPage itself
       // (i.e., no scoped GlassTheme themeOverride wrapper — we didn't set one).
       expect(
-          tester
-              .widgetList<Theme>(themesInsidePage)
-              .where((t) => t.data.scaffoldBackgroundColor == const Color(0x00000000)),
+          tester.widgetList<Theme>(themesInsidePage).where(
+              (t) => t.data.scaffoldBackgroundColor == const Color(0x00000000)),
           isEmpty);
     });
 
-    testWidgets(
-        'works in pure CupertinoApp host with no Material ancestor',
+    testWidgets('works in pure CupertinoApp host with no Material ancestor',
         (tester) async {
       await tester.pumpWidget(
         CupertinoApp(

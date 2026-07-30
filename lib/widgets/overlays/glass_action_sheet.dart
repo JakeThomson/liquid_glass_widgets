@@ -246,7 +246,8 @@ class _GlassActionSheetContent extends StatelessWidget {
                   // Replaces Material Divider — identical pixel output.
                   SizedBox(
                     height: 1,
-                    child: Center(child: Container(height: 0.5, color: dividerColor)),
+                    child: Center(
+                        child: Container(height: 0.5, color: dividerColor)),
                   ),
                 _ActionSheetButton(
                   action: actions[i],

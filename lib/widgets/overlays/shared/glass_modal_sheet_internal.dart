@@ -263,9 +263,13 @@ class _SheetLayout extends StatelessWidget {
                                       ? (glowColor ??
                                           (isDark
                                               ? CupertinoColors.white
-                                                  .withValues(alpha: GlassDefaults.specularLightAlpha)
+                                                  .withValues(
+                                                      alpha: GlassDefaults
+                                                          .specularLightAlpha)
                                               : CupertinoColors.black
-                                                  .withValues(alpha: GlassDefaults.specularDarkAlpha)))
+                                                  .withValues(
+                                                      alpha: GlassDefaults
+                                                          .specularDarkAlpha)))
                                       : const Color(0x00000000),
                                   glowRadius: glowRadius,
                                   hitTestBehavior: HitTestBehavior.translucent,

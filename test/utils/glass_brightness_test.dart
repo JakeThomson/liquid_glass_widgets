@@ -92,7 +92,8 @@ void main() {
   // direct Material API access.
   // ──────────────────────────────────────────────────────────────────────────
 
-  group('resolveGlassBrightness — Level 1: MaterialApp ThemeMode (via MaterialBasedCupertinoThemeData)',
+  group(
+      'resolveGlassBrightness — Level 1: MaterialApp ThemeMode (via MaterialBasedCupertinoThemeData)',
       () {
     testWidgets(
         'returns Brightness.light for ThemeMode.light when device is dark',
@@ -213,8 +214,7 @@ void main() {
   // ──────────────────────────────────────────────────────────────────────────
 
   group('resolveGlassBrightness — cascade priority order', () {
-    testWidgets(
-        'CupertinoTheme explicit pin beats MaterialApp ThemeMode',
+    testWidgets('CupertinoTheme explicit pin beats MaterialApp ThemeMode',
         (tester) async {
       // All three disagree: device dark, Material ThemeMode light, Cupertino dark.
       // Expected: explicit CupertinoThemeData pin wins (dark).
@@ -239,7 +239,8 @@ void main() {
         ),
       );
       expect(result, Brightness.dark,
-          reason: 'Explicit CupertinoThemeData.brightness wins over Material ThemeMode');
+          reason:
+              'Explicit CupertinoThemeData.brightness wins over Material ThemeMode');
     });
 
     testWidgets('MaterialApp ThemeMode beats system device brightness',

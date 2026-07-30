@@ -14,6 +14,7 @@ library;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() async {
@@ -91,10 +92,10 @@ class _CollapseBarDemoPageState extends State<CollapseBarDemoPage> {
     return GlassPage(
       // Pure black — the canonical iOS dark mode base that lets
       // #1C1C1E cells read cleanly and the glass bar float naturally.
-      background: const ColoredBox(color: Colors.black),
+      background: const ColoredBox(color: CupertinoColors.black),
       statusBarStyle: GlassStatusBarStyle.light,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
+      child: GlassScaffold(
+        backgroundColor: const Color(0x00000000),
         extendBody: true,
         body: SafeArea(
           bottom: false,
@@ -102,12 +103,12 @@ class _CollapseBarDemoPageState extends State<CollapseBarDemoPage> {
             children: [
               // ── Controls ───────────────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Label('Collapse Direction'),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     CupertinoSlidingSegmentedControl<int>(
                       groupValue: _directionIndex,
                       children: const {
@@ -124,9 +125,9 @@ class _CollapseBarDemoPageState extends State<CollapseBarDemoPage> {
                         if (v != null) setState(() => _directionIndex = v);
                       },
                     ),
-                    const SizedBox(height: 14),
+                    SizedBox(height: 14),
                     _Label('Extra Button Side'),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     CupertinoSlidingSegmentedControl<GlassExtraButtonPlacement>(
                       groupValue: _placement,
                       children: const {
@@ -143,18 +144,18 @@ class _CollapseBarDemoPageState extends State<CollapseBarDemoPage> {
                         if (v != null) setState(() => _placement = v);
                       },
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     Text(
                       _directionIndex == 0
                           ? '↓ Scroll down — pill should slide INTO the + button with no gap'
                           : '↓ Scroll down — pill collapses to the opposite edge',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.45),
+                        color: CupertinoColors.white.withValues(alpha: 0.45),
                         fontSize: 12,
                         height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                   ],
                 ),
               ),
@@ -165,7 +166,7 @@ class _CollapseBarDemoPageState extends State<CollapseBarDemoPage> {
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 120),
                   itemCount: _sections.length,
                   itemBuilder: (_, i) => _SectionGroup(section: _sections[i]),
                 ),
@@ -175,7 +176,7 @@ class _CollapseBarDemoPageState extends State<CollapseBarDemoPage> {
         ),
 
         // ── Bottom bar — premium quality, proper glass settings ─────────────
-        bottomNavigationBar: GlassTabBar.bottom(
+        bottomBar: GlassTabBar.bottom(
           selectedIndex: _selectedTab,
           onTabSelected: (i) => setState(() => _selectedTab = i),
           maskingQuality: MaskingQuality.high,
@@ -193,7 +194,7 @@ class _CollapseBarDemoPageState extends State<CollapseBarDemoPage> {
           ),
           scrollController: _scrollController,
           extraButton: GlassTabBarExtraButton(
-            icon: const Icon(CupertinoIcons.add),
+            icon: Icon(CupertinoIcons.add),
             label: 'Add',
             placement: _placement,
             onTap: () => _showActionFiredDialog(context),
@@ -215,14 +216,14 @@ class _CollapseBarDemoPageState extends State<CollapseBarDemoPage> {
     showCupertinoDialog<void>(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: const Text('Add tapped'),
-        content: const Text(
+        title: Text('Add tapped'),
+        content: Text(
           'If the bar was collapsed, the first tap expanded it.\n'
           'This second tap fired the action.',
         ),
         actions: [
           CupertinoDialogAction(
-            child: const Text('OK'),
+            child: Text('OK'),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -242,8 +243,8 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         text,
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: CupertinoColors.white.withValues(alpha: 0.70),
           fontSize: 13,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.4,
@@ -296,7 +297,7 @@ const _sections = <_Section>[
         color: Color(0xFF34C759),
         title: 'Phone'),
     _Row(
-        icon: CupertinoIcons.mail_solid,
+        icon: CupertinoIcons.mail,
         color: Color(0xFF007AFF),
         title: 'Mail',
         subtitle: '2 unread'),
@@ -362,18 +363,18 @@ class _SectionGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
+      padding: EdgeInsets.only(bottom: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 6),
+            padding: EdgeInsets.only(left: 16, bottom: 6),
             child: Text(
               section.header.toUpperCase(),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.4),
+                color: CupertinoColors.white.withValues(alpha: 0.4),
                 letterSpacing: 0.8,
               ),
             ),
@@ -406,17 +407,17 @@ class _SectionGroup extends StatelessWidget {
                 color: row.color,
                 borderRadius: BorderRadius.circular(7),
               ),
-              child: Icon(row.icon, color: Colors.white, size: 17),
+              child: Icon(row.icon, color: CupertinoColors.white, size: 17),
             ),
             title: Text(
               row.title,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: TextStyle(color: CupertinoColors.white, fontSize: 16),
             ),
             subtitle: row.subtitle != null
                 ? Text(
                     row.subtitle!,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.45),
+                      color: CupertinoColors.white.withValues(alpha: 0.45),
                       fontSize: 13,
                     ),
                   )
@@ -427,8 +428,8 @@ class _SectionGroup extends StatelessWidget {
           if (!isLast)
             Container(
               height: 0.5,
-              margin: const EdgeInsets.only(left: 58),
-              color: Colors.white.withValues(alpha: 0.1),
+              margin: EdgeInsets.only(left: 58),
+              color: CupertinoColors.white.withValues(alpha: 0.1),
             ),
         ],
       ),
