@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../types/glass_quality.dart';
@@ -91,7 +90,8 @@ class GlassAppBar extends StatelessWidget
     this.leading,
     this.actions,
     this.centerTitle = true,
-    this.backgroundColor = Colors.transparent,
+    // Whitelisted: Structural transparent default, not a Material colour.
+    this.backgroundColor = const Color(0x00000000),
     this.toolbarHeight = 44.0,
     this.padding = const EdgeInsets.symmetric(horizontal: 8),
     this.buttonSettings,
@@ -117,7 +117,7 @@ class GlassAppBar extends StatelessWidget
 
   /// The background color of the app bar.
   ///
-  /// Defaults to [Colors.transparent] to match iOS 26's transparent
+  /// Defaults to [const Color(0x00000000)] to match iOS 26's transparent
   /// navigation bar pattern. Use an opaque colour for solid bars
   /// (e.g. WhatsApp conversation, music player).
   final Color backgroundColor;

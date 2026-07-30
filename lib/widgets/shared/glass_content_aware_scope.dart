@@ -515,6 +515,7 @@ class GlassContentAwareScopeState extends State<GlassContentAwareScope> {
       final rgba = byteData.buffer.asUint8List();
       final background = widget.backgroundColor ??
           (MediaQuery.maybePlatformBrightnessOf(context) == Brightness.dark
+              // Whitelisted: Raw black/white used for contrast detection math, not theming.
               ? const Color(0xFF000000)
               : const Color(0xFFFFFFFF));
 

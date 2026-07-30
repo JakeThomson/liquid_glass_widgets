@@ -1,6 +1,7 @@
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets_example/constants/glass_settings.dart';
 
 class InteractivePage extends StatefulWidget {
@@ -39,9 +40,8 @@ class _InteractivePageState extends State<InteractivePage> {
       statusBarStyle: CupertinoTheme.of(context).brightness == Brightness.dark
           ? GlassStatusBarStyle.light
           : GlassStatusBarStyle.dark,
-      child: Scaffold(
-        extendBodyBehindAppBar: true,
-        backgroundColor: Colors.transparent,
+      child: GlassScaffold(
+        backgroundColor: const Color(0x00000000),
         appBar: GlassAppBar(
           leading: GlassButton(
             quality: GlassQuality.premium,
@@ -81,7 +81,7 @@ class _InteractivePageState extends State<InteractivePage> {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.all(24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -129,25 +129,29 @@ class _InteractivePageState extends State<InteractivePage> {
                             icon: Icon(CupertinoIcons.heart),
                             onTap: () {},
                             label: 'Favorite',
-                            glowColor: Colors.red.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.systemRed
+                                .withValues(alpha: 0.3),
                           ),
                           GlassButton(
                             icon: Icon(CupertinoIcons.star),
                             onTap: () {},
                             label: 'Star',
-                            glowColor: Colors.amber.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.activeOrange
+                                .withValues(alpha: 0.3),
                           ),
                           GlassButton(
                             icon: Icon(CupertinoIcons.share),
                             onTap: () {},
                             label: 'Share',
-                            glowColor: Colors.blue.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.activeBlue
+                                .withValues(alpha: 0.3),
                           ),
                           GlassButton(
                             icon: Icon(CupertinoIcons.bookmark),
                             onTap: () {},
                             label: 'Save',
-                            glowColor: Colors.green.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.activeGreen
+                                .withValues(alpha: 0.3),
                           ),
                         ],
                       ),
@@ -161,21 +165,24 @@ class _InteractivePageState extends State<InteractivePage> {
                             icon: Icon(CupertinoIcons.play_fill),
                             onTap: () {},
                             shape: const LiquidOval(),
-                            glowColor: Colors.purple.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.systemPurple
+                                .withValues(alpha: 0.3),
                           ),
                           GlassButton(
                             icon: Icon(CupertinoIcons.pause_fill),
                             onTap: () {},
                             shape:
                                 const LiquidRoundedRectangle(borderRadius: 16),
-                            glowColor: Colors.blue.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.activeBlue
+                                .withValues(alpha: 0.3),
                           ),
                           GlassButton(
                             icon: Icon(CupertinoIcons.stop_fill),
                             onTap: () {},
                             shape: const LiquidRoundedSuperellipse(
                                 borderRadius: 16),
-                            glowColor: Colors.red.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.systemRed
+                                .withValues(alpha: 0.3),
                           ),
                         ],
                       ),
@@ -262,7 +269,8 @@ class _InteractivePageState extends State<InteractivePage> {
                           GlassIconButton(
                             icon: Icon(CupertinoIcons.heart),
                             onPressed: () {},
-                            glowColor: Colors.red.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.systemRed
+                                .withValues(alpha: 0.3),
                           ),
                           GlassIconButton(
                             icon: Icon(CupertinoIcons.star),
@@ -272,19 +280,22 @@ class _InteractivePageState extends State<InteractivePage> {
                           GlassIconButton(
                             icon: Icon(CupertinoIcons.bell),
                             onPressed: () {},
-                            glowColor: Colors.blue.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.activeBlue
+                                .withValues(alpha: 0.3),
                           ),
                           GlassIconButton(
                             icon: Icon(CupertinoIcons.share),
                             onPressed: () {},
                             shape: GlassIconButtonShape.roundedSquare,
-                            glowColor: Colors.green.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.activeGreen
+                                .withValues(alpha: 0.3),
                           ),
                           GlassIconButton(
                             icon: Icon(CupertinoIcons.settings),
                             onPressed: () {},
                             shape: GlassIconButtonShape.roundedSquare,
-                            glowColor: Colors.purple.withValues(alpha: 0.3),
+                            glowColor: CupertinoColors.systemPurple
+                                .withValues(alpha: 0.3),
                           ),
                         ],
                       ),
@@ -410,13 +421,17 @@ class _InteractivePageState extends State<InteractivePage> {
                         value: _switch1,
                         onChanged: (v) => setState(() => _switch1 = v),
                       ),
-                      const Divider(color: Colors.white12, height: 32),
+                      Divider(
+                          color: CupertinoColors.white.withValues(alpha: 0.12),
+                          height: 32),
                       _SwitchComparisonRow(
                         title: 'Dark Mode',
                         value: _switch2,
                         onChanged: (v) => setState(() => _switch2 = v),
                       ),
-                      const Divider(color: Colors.white12, height: 32),
+                      Divider(
+                          color: CupertinoColors.white.withValues(alpha: 0.12),
+                          height: 32),
                       _SwitchComparisonRow(
                         title: 'Location',
                         value: _switch3,
@@ -464,8 +479,9 @@ class _InteractivePageState extends State<InteractivePage> {
                       GlassSlider(
                         value: _slider2,
                         onChanged: (v) => setState(() => _slider2 = v),
-                        activeColor: Colors.blue,
-                        thumbColor: Colors.blue.shade100,
+                        activeColor: CupertinoColors.activeBlue,
+                        thumbColor:
+                            CupertinoColors.activeBlue.withValues(alpha: 0.3),
                       ),
 
                       SizedBox(height: 40),
@@ -793,7 +809,7 @@ class _InteractivePageState extends State<InteractivePage> {
                             ),
                           ),
                           GlassBadge.dot(
-                            dotColor: Colors.green,
+                            dotColor: CupertinoColors.activeGreen,
                             child: GlassButton(
                               icon: Icon(CupertinoIcons.person),
                               onTap: () {},
@@ -842,7 +858,8 @@ class _InteractivePageState extends State<InteractivePage> {
                           return GlassChip(
                             label: filter,
                             selected: isSelected,
-                            selectedColor: Colors.blue.withValues(alpha: 0.4),
+                            selectedColor: CupertinoColors.activeBlue
+                                .withValues(alpha: 0.4),
                             onTap: () {
                               setState(() {
                                 if (isSelected) {
@@ -1017,10 +1034,13 @@ class _QualityRow extends StatelessWidget {
     return Row(
       children: [
         if (premiumLabel.isNotEmpty)
-          _QualityBadge(label: premiumLabel, color: Colors.amber),
+          _QualityBadge(
+              label: premiumLabel, color: CupertinoColors.activeOrange),
         const Spacer(),
         if (standardLabel.isNotEmpty)
-          _QualityBadge(label: standardLabel, color: Colors.white38),
+          _QualityBadge(
+              label: standardLabel,
+              color: CupertinoColors.white.withValues(alpha: 0.38)),
       ],
     );
   }
@@ -1034,7 +1054,7 @@ class _QualityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),

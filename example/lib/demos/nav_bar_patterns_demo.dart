@@ -16,6 +16,7 @@ library;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../constants/glass_settings.dart';
 
@@ -50,7 +51,7 @@ class NavBarPatternsDemo extends StatelessWidget {
       statusBarStyle: GlassStatusBarStyle.auto,
       appBar: GlassAppBar(
         leading: GlassButton(
-          icon: const Icon(CupertinoIcons.back),
+          icon: Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
           height: 40,
@@ -66,7 +67,7 @@ class NavBarPatternsDemo extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: 24),
             sliver: SliverList.list(
               children: [
                 Text(
@@ -79,7 +80,7 @@ class NavBarPatternsDemo extends StatelessWidget {
                     height: 1.1,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   'All iOS 26 GlassAppBar modes — tap to preview.',
                   style: TextStyle(
@@ -87,14 +88,14 @@ class NavBarPatternsDemo extends StatelessWidget {
                     color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
                 _PatternTile(
                   title: 'Inline Title',
                   subtitle: 'Title right of back button — standard compact bar',
                   icon: CupertinoIcons.textformat,
                   onTap: () => _push(context, const _InlineTitleDemo()),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _PatternTile(
                   title: 'Large Title → Collapse',
                   subtitle:
@@ -102,14 +103,14 @@ class NavBarPatternsDemo extends StatelessWidget {
                   icon: CupertinoIcons.text_alignleft,
                   onTap: () => _push(context, const _LargeTitleCollapseDemo()),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _PatternTile(
                   title: 'Solid Background',
                   subtitle: 'Opaque colour bar — WhatsApp conversation style',
                   icon: CupertinoIcons.paintbrush,
                   onTap: () => _push(context, const _SolidBackgroundDemo()),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _PatternTile(
                   title: 'Fade Only (No Bar Title)',
                   subtitle:
@@ -117,7 +118,7 @@ class NavBarPatternsDemo extends StatelessWidget {
                   icon: CupertinoIcons.arrow_up_circle,
                   onTap: () => _push(context, const _FadeOnlyDemo()),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _PatternTile(
                   title: 'Tab Bar + Bottom Fade',
                   subtitle:
@@ -125,14 +126,14 @@ class NavBarPatternsDemo extends StatelessWidget {
                   icon: CupertinoIcons.square_grid_2x2,
                   onTap: () => _push(context, const _TabBarBottomFadeDemo()),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _PatternTile(
                   title: 'Fade Header (No App Bar)',
                   subtitle: 'Fixed title fades on scroll — Apple Music style',
                   icon: CupertinoIcons.music_note_2,
                   onTap: () => _push(context, const _FadeHeaderDemo()),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _PatternTile(
                   title: 'Large Title + Search Bar',
                   subtitle:
@@ -140,7 +141,7 @@ class NavBarPatternsDemo extends StatelessWidget {
                   icon: CupertinoIcons.search,
                   onTap: () => _push(context, const _LargeTitleSearchDemo()),
                 ),
-                const SizedBox(height: 100),
+                SizedBox(height: 100),
               ],
             ),
           ),
@@ -181,13 +182,13 @@ class _PatternTile extends StatelessWidget {
       height: 80,
       shape: const LiquidRoundedSuperellipse(borderRadius: 16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
             Icon(icon,
                 color: CupertinoColors.secondaryLabel.resolveFrom(context),
                 size: 28),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -201,7 +202,7 @@ class _PatternTile extends StatelessWidget {
                       color: CupertinoColors.label.resolveFrom(context),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: TextStyle(
@@ -232,7 +233,7 @@ class _PatternTile extends StatelessWidget {
 Widget _buildDummyContent({int count = 25, double topPadding = 0}) {
   return SliverList.separated(
     itemCount: count,
-    separatorBuilder: (_, __) => const SizedBox(height: 12),
+    separatorBuilder: (_, __) => SizedBox(height: 12),
     itemBuilder: (context, index) => Padding(
       padding: EdgeInsets.only(
         top: index == 0 ? topPadding : 0,
@@ -241,7 +242,7 @@ Widget _buildDummyContent({int count = 25, double topPadding = 0}) {
       ),
       child: GlassCard(
         settings: RecommendedGlassSettings.overlay,
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Row(
           children: [
             Container(
@@ -263,7 +264,7 @@ Widget _buildDummyContent({int count = 25, double topPadding = 0}) {
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,7 +277,7 @@ Widget _buildDummyContent({int count = 25, double topPadding = 0}) {
                       color: CupertinoColors.label.resolveFrom(context),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     'Scrollable content to test navigation bar behaviour',
                     style: TextStyle(
@@ -321,7 +322,7 @@ class _InlineTitleDemo extends StatelessWidget {
         ),
         leading: GlassButton(
           quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
+          icon: Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
           height: 40,
@@ -329,7 +330,7 @@ class _InlineTitleDemo extends StatelessWidget {
         ),
         actions: [
           GlassButton(
-            icon: const Icon(CupertinoIcons.ellipsis),
+            icon: Icon(CupertinoIcons.ellipsis),
             onTap: () {},
             width: 40,
             height: 40,
@@ -392,7 +393,7 @@ class _LargeTitleCollapseDemoState extends State<_LargeTitleCollapseDemo> {
         largeTitleController: _titleController,
         leading: GlassButton(
           quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
+          icon: Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
           height: 40,
@@ -400,14 +401,14 @@ class _LargeTitleCollapseDemoState extends State<_LargeTitleCollapseDemo> {
         ),
         actions: [
           GlassButton(
-            icon: const Icon(CupertinoIcons.camera),
+            icon: Icon(CupertinoIcons.camera),
             onTap: () {},
             width: 40,
             height: 40,
             iconSize: 20,
           ),
           GlassButton(
-            icon: const Icon(CupertinoIcons.plus),
+            icon: Icon(CupertinoIcons.plus),
             onTap: () {},
             width: 40,
             height: 40,
@@ -465,7 +466,7 @@ class _SolidBackgroundDemo extends StatelessWidget {
         centerTitle: false,
         leading: GlassButton(
           quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
+          icon: Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
           height: 40,
@@ -473,14 +474,14 @@ class _SolidBackgroundDemo extends StatelessWidget {
         ),
         actions: [
           GlassButton(
-            icon: const Icon(CupertinoIcons.videocam),
+            icon: Icon(CupertinoIcons.videocam),
             onTap: () {},
             width: 40,
             height: 40,
             iconSize: 20,
           ),
           GlassButton(
-            icon: const Icon(CupertinoIcons.phone),
+            icon: Icon(CupertinoIcons.phone),
             onTap: () {},
             width: 40,
             height: 40,
@@ -519,7 +520,7 @@ class _FadeOnlyDemo extends StatelessWidget {
       appBar: GlassAppBar(
         leading: GlassButton(
           quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
+          icon: Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
           height: 40,
@@ -534,7 +535,7 @@ class _FadeOnlyDemo extends StatelessWidget {
           // Large title as part of content
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+              padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
               child: Text(
                 'Browse',
                 style: TextStyle(
@@ -611,7 +612,7 @@ class _TabBarBottomFadeDemoState extends State<_TabBarBottomFadeDemo> {
         ),
         leading: GlassButton(
           quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
+          icon: Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
           height: 40,
@@ -668,7 +669,7 @@ class _FadeHeaderDemoState extends State<_FadeHeaderDemo> {
 
       // ── Fixed header — fades out on scroll ──────────────────────────────
       header: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 16, 0),
+        padding: EdgeInsets.fromLTRB(20, 8, 16, 0),
         child: Row(
           children: [
             Expanded(
@@ -788,7 +789,7 @@ class _LargeTitleSearchDemoState extends State<_LargeTitleSearchDemo> {
         largeTitleController: _titleController,
         leading: GlassButton(
           quality: GlassQuality.premium,
-          icon: const Icon(CupertinoIcons.back),
+          icon: Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
           height: 40,
@@ -796,7 +797,7 @@ class _LargeTitleSearchDemoState extends State<_LargeTitleSearchDemo> {
         ),
         actions: [
           GlassButton(
-            icon: const Icon(CupertinoIcons.pencil),
+            icon: Icon(CupertinoIcons.pencil),
             onTap: () {},
             width: 40,
             height: 40,

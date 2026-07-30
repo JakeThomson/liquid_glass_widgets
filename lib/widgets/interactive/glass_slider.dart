@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
@@ -690,7 +689,7 @@ class _GlassSliderState extends State<GlassSlider>
             clipBehavior: Clip.none,
             children: [
               // Glass shell footprint (crucial for proper shader rendering)
-              Positioned.fill(child: Container(color: Colors.transparent)),
+              Positioned.fill(child: Container(color: const Color(0x00000000))),
 
               // Physical material content (centered, original size)
               materialContent,

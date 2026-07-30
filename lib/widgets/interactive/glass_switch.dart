@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
@@ -460,6 +459,7 @@ class _GlassSwitchState extends State<GlassSwitch>
     // Light mode: solid opaque grey matching native iOS switch track groove.
     // Dark mode: semi-transparent white overlay for glass aesthetic.
     final inactiveTrackColor = widget.inactiveColor ??
+        // Whitelisted: iOS-exact inactive track colours.
         (isDark ? const Color(0x33FFFFFF) : const Color(0xFFC5C5C6));
     final activeTrackColor = widget.activeColor ?? CupertinoColors.systemGreen;
 
@@ -668,7 +668,7 @@ class _GlassSwitchState extends State<GlassSwitch>
           clipBehavior: Clip.none,
           children: [
             // Glass shell footprint
-            Positioned.fill(child: Container(color: Colors.transparent)),
+            Positioned.fill(child: Container(color: const Color(0x00000000))),
 
             // Physical thumb position based on anchor
             Positioned(

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -508,12 +509,12 @@ void main() {
     });
 
     testWidgets(
-        'inner Material Scaffold is always Colors.transparent '
+        'inner CupertinoPageScaffold is always transparent '
         'regardless of background or backgroundColor', (tester) async {
       // Regression test: Scaffold.backgroundColor was conditionally null when
       // only backgroundColor (not background widget) was provided, causing the
       // Material dark-mode theme colour to bleed through and corrupt glass
-      // bar backdrop captures.
+      // bar backdrop captures. Now uses CupertinoPageScaffold.
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
@@ -526,18 +527,18 @@ void main() {
         ),
       );
 
-      // Find the inner Material Scaffold inside GlassScaffold specifically.
-      final scaffold = tester.widget<Scaffold>(
+      // Find the inner CupertinoPageScaffold inside GlassScaffold.
+      final scaffold = tester.widget<CupertinoPageScaffold>(
         find.descendant(
           of: find.byType(GlassScaffold),
-          matching: find.byType(Scaffold),
+          matching: find.byType(CupertinoPageScaffold),
         ),
       );
-      expect(scaffold.backgroundColor, Colors.transparent);
+      expect(scaffold.backgroundColor, const Color(0x00000000));
     });
 
     testWidgets(
-        'inner Material Scaffold is opaque (null backgroundColor) with no background set',
+        'inner CupertinoPageScaffold uses CupertinoTheme background with no background set',
         (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -550,16 +551,16 @@ void main() {
         ),
       );
 
-      final scaffold = tester.widget<Scaffold>(
+      final scaffold = tester.widget<CupertinoPageScaffold>(
         find.descendant(
           of: find.byType(GlassScaffold),
-          matching: find.byType(Scaffold),
+          matching: find.byType(CupertinoPageScaffold),
         ),
       );
-      // Without a background widget the Scaffold must NOT be forced transparent.
-      // A null backgroundColor means the Scaffold inherits the theme's opaque
-      // scaffoldBackgroundColor, preventing the previous route bleeding through
-      // during MaterialPageRoute slide transitions (issue #177).
+      // Without a background widget the CupertinoPageScaffold must NOT be
+      // forced transparent — null lets it use the CupertinoTheme default (opaque)
+      // to prevent the underlying route bleeding through during route transitions
+      // (issue #177). Mirrors prior Scaffold(backgroundColor: null) behaviour.
       expect(scaffold.backgroundColor, isNull);
     });
   });

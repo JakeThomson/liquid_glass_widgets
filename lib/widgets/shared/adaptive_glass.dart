@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../theme/glass_theme.dart';
 import 'package:flutter/foundation.dart'
@@ -787,8 +787,8 @@ class _FrostedFallback extends StatelessWidget {
               decoration: ShapeDecoration(
                 shape: shape,
                 color: (GlassTheme.brightnessOf(context) == Brightness.dark
-                        ? Colors.white
-                        : Colors.black)
+                        ? CupertinoColors.white
+                        : CupertinoColors.black)
                     .withValues(alpha: 0.15 * glowIntensity),
               ),
             ),
@@ -876,7 +876,7 @@ class _SpecularRimPainter extends CustomPainter {
 
     final ambientStrength = settings.effectiveAmbientStrength.clamp(0.0, 1.0);
     final alpha = Curves.easeOut.transform(lightIntensity);
-    final white = Colors.white.withValues(alpha: alpha);
+    final white = CupertinoColors.white.withValues(alpha: alpha);
 
     final rad = settings.lightAngle;
     final x = math.cos(rad);

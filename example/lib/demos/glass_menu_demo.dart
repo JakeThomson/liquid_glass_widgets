@@ -9,13 +9,13 @@
 library;
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 // ── Glass settings matching the Apple Messages demo quality ──────────────────
 
-const _kTriggerGlass = LiquidGlassSettings(
-  glassColor: Colors.white10,
+final _kTriggerGlass = LiquidGlassSettings(
+  glassColor: CupertinoColors.white.withValues(alpha: 0.1),
   thickness: 18,
   blur: 3,
   lightIntensity: 0.4,
@@ -25,8 +25,8 @@ const _kTriggerGlass = LiquidGlassSettings(
   saturation: 1.15,
 );
 
-const _kMenuGlass = LiquidGlassSettings(
-  glassColor: Colors.white12,
+final _kMenuGlass = LiquidGlassSettings(
+  glassColor: CupertinoColors.white.withValues(alpha: 0.12),
   thickness: 18,
   blur: 6,
   lightIntensity: 0.6,
@@ -114,7 +114,7 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
           _itemCount,
           (i) => GlassMenuItem(
             title: 'Option ${i + 1}',
-            icon: const Icon(CupertinoIcons.star_fill),
+            icon: Icon(CupertinoIcons.star_fill),
             onTap: () => debugPrint('tapped ${i + 1}'),
           ),
         ),
@@ -122,7 +122,7 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
         const GlassMenuDivider(),
         GlassMenuItem(
           title: 'Delete',
-          icon: const Icon(CupertinoIcons.trash),
+          icon: Icon(CupertinoIcons.trash),
           isDestructive: true,
           onTap: () => debugPrint('delete'),
         ),
@@ -130,8 +130,12 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final labelColor = _isDark ? Colors.white70 : Colors.black54;
-    final titleColor = _isDark ? Colors.white : Colors.black87;
+    final labelColor = _isDark
+        ? CupertinoColors.white.withValues(alpha: 0.70)
+        : CupertinoColors.black.withValues(alpha: 0.54);
+    final titleColor = _isDark
+        ? CupertinoColors.white
+        : CupertinoColors.black.withValues(alpha: 0.87);
 
     // Wrap with MediaQuery to override text scale for testing
     return MediaQuery(
@@ -151,8 +155,8 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
             // Theme-aware scrim
             Container(
               color: _isDark
-                  ? Colors.black.withValues(alpha: 0.25)
-                  : Colors.white.withValues(alpha: 0.15),
+                  ? CupertinoColors.black.withValues(alpha: 0.25)
+                  : CupertinoColors.white.withValues(alpha: 0.15),
             ),
 
             SafeArea(
@@ -160,7 +164,7 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
                 children: [
                   // ── Title ────────────────────────────────────────────
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       'GlassMenu — All Alignments',
                       style: TextStyle(
@@ -174,7 +178,7 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
 
                   // ── Controls row ─────────────────────────────────────
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       children: [
                         // Item count slider
@@ -236,9 +240,9 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             CupertinoButton(
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: 12,
                                 vertical: 4,
                               ),
@@ -252,10 +256,10 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
                                         : CupertinoIcons.sun_max_fill,
                                     size: 16,
                                   ),
-                                  const SizedBox(width: 6),
+                                  SizedBox(width: 6),
                                   Text(
                                     _isDark ? 'Dark' : 'Light',
-                                    style: const TextStyle(fontSize: 14),
+                                    style: TextStyle(fontSize: 14),
                                   ),
                                 ],
                               ),
@@ -266,13 +270,13 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
 
                   // ── 3×3 grid of menu triggers ─────────────────────────
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 8),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
@@ -411,8 +415,8 @@ class _Trigger extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: CupertinoColors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: -0.2,

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme_data.dart';
@@ -258,7 +258,8 @@ class _GlassProgressIndicatorState extends State<GlassProgressIndicator>
     final themeData = GlassThemeData.of(context);
     final effectiveColor = widget.color ??
         themeData.glowColorsFor(context).primary ??
-        const Color(0xFF007AFF); // iOS blue
+        CupertinoColors.activeBlue.resolveFrom(
+            context); // iOS system blue (adaptive: 007AFF light / 0A84FF dark)
     final effectiveBackgroundColor =
         widget.backgroundColor ?? const Color(0x26FFFFFF); // 15% white
 

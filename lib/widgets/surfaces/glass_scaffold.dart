@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/services.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
@@ -90,8 +91,8 @@ import '../shared/glass_scroll_edge_effect.dart';
 /// ```
 /// GlassPage(
 ///   background: ...,
-///   child: Scaffold(
-///     body: Stack(
+///   child: CupertinoPageScaffold(
+///     child: Stack(
 ///       children: [
 ///         // 1. Body with edge fading (bottom of stack)
 ///         // 2. Body overlays (between body and bars)
@@ -130,7 +131,6 @@ class GlassScaffold extends StatelessWidget {
     this.extendBody = true,
     this.appBarHeight = 44.0,
     this.bottomBarHeight,
-    this.floatingActionButton,
     this.resizeToAvoidBottomInset,
     this.bodyOverlays,
     this.header,
@@ -272,12 +272,9 @@ class GlassScaffold extends StatelessWidget {
   /// explicitly for custom-height bottom bars.
   final double? bottomBarHeight;
 
-  /// An optional floating action button.
-  final Widget? floatingActionButton;
-
   /// Whether the body should resize when the keyboard appears.
   ///
-  /// When null, uses Scaffold's default (true).
+  /// When null, defaults to `true` (the CupertinoPageScaffold default).
   final bool? resizeToAvoidBottomInset;
 
   /// Optional overlay widgets placed between the body and the bars in the
@@ -517,7 +514,7 @@ class GlassScaffold extends StatelessWidget {
             // (the 20px gap straddles the indicator).
             // Android uses a physical nav bar or gesture bar that requires
             // being pushed up explicitly.
-            bottom: Theme.of(context).platform == TargetPlatform.android,
+            bottom: defaultTargetPlatform == TargetPlatform.android,
             child: GlassIsolationScope(
               isolated: true,
               defaultQuality: GlassQuality.premium,
@@ -561,15 +558,15 @@ class GlassScaffold extends StatelessWidget {
               )
             : null);
 
-    Widget scaffold = Scaffold(
+    Widget scaffold = CupertinoPageScaffold(
       // Only force transparent when GlassPage will render a background widget
-      // behind the scaffold. When no background is provided the scaffold must
-      // be opaque so that MaterialPageRoute transitions don't show the
-      // underlying route through the incoming page.
-      backgroundColor: effectiveBackground != null ? Colors.transparent : null,
-      resizeToAvoidBottomInset: resizeToAvoidBottomInset,
-      floatingActionButton: floatingActionButton,
-      body: stackWidget,
+      // behind the scaffold. When no background is provided, null lets
+      // CupertinoPageScaffold use the CupertinoTheme default (opaque) so the
+      // page is not see-through during route transitions (issue #177).
+      backgroundColor:
+          effectiveBackground != null ? const Color(0x00000000) : null,
+      resizeToAvoidBottomInset: resizeToAvoidBottomInset ?? true,
+      child: stackWidget,
     );
 
     // Wrap in AnnotatedRegion so the status bar style sticks even on

@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../theme/glass_theme.dart';
@@ -272,7 +271,7 @@ class _GlassListTileState extends State<GlassListTile> {
                 ? (GlassTheme.brightnessOf(context) == Brightness.light
                     ? CupertinoColors.black.withValues(alpha: 0.08)
                     : CupertinoColors.white.withValues(alpha: 0.08))
-                : Colors.transparent,
+                : const Color(0x00000000),
             child: tile,
           ),
         ),

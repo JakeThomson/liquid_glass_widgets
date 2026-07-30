@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() async {
@@ -46,7 +47,7 @@ class _ScreenAState extends State<ScreenA> {
   Widget build(BuildContext context) {
     return GlassScaffold(
       background: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -55,10 +56,10 @@ class _ScreenAState extends State<ScreenA> {
         ),
       ),
       appBar: GlassAppBar(
-        title: const Text('Screen A'),
+        title: Text('Screen A'),
         actions: [
           GlassButton(
-            icon: const Icon(CupertinoIcons.arrow_right),
+            icon: Icon(CupertinoIcons.arrow_right),
             label: 'Go to B',
             width: 40,
             height: 40,
@@ -80,24 +81,24 @@ class _ScreenAState extends State<ScreenA> {
           GlassTab(
             label: 'Settings',
             icon: Icon(CupertinoIcons.settings),
-            activeIcon: Icon(CupertinoIcons.settings_solid),
+            activeIcon: Icon(CupertinoIcons.settings),
           ),
         ],
       ),
       body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         itemCount: 20,
         itemBuilder: (context, i) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: EdgeInsets.only(bottom: 12),
           child: GlassCard(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Text(
                 'SHARP TEXT ROW $i — must stay crisp',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Colors.white,
+                  color: CupertinoColors.white,
                 ),
               ),
             ),
@@ -117,9 +118,9 @@ class ScreenB extends StatelessWidget {
     return GlassScaffold(
       // No background — exactly like the user's ScreenB / legal screen
       appBar: GlassAppBar(
-        title: const Text('Screen B (no background)'),
+        title: Text('Screen B (no background)'),
         leading: GlassButton(
-          icon: const Icon(CupertinoIcons.back),
+          icon: Icon(CupertinoIcons.back),
           onTap: () => Navigator.of(context).pop(),
           width: 40,
           height: 40,
@@ -127,16 +128,16 @@ class ScreenB extends StatelessWidget {
         ),
       ),
       body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         itemCount: 10,
         itemBuilder: (context, i) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: EdgeInsets.only(bottom: 12),
           child: GlassCard(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Text(
                 'Content item $i',
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: CupertinoColors.white),
               ),
             ),
           ),
