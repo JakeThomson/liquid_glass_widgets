@@ -159,6 +159,8 @@ class GlassButton extends StatefulWidget {
     this.alignment = Alignment.center,
     this.ambientBaseLight = 0.08,
     this.platformViewBackdrop = false,
+    this.canRequestFocus = true,
+    this.excludeFromSemantics = false,
   }) : child = null;
 
   /// Creates a glass button with custom content.
@@ -215,6 +217,8 @@ class GlassButton extends StatefulWidget {
     this.alignment = Alignment.center,
     this.ambientBaseLight = 0.08,
     this.platformViewBackdrop = false,
+    this.canRequestFocus = true,
+    this.excludeFromSemantics = false,
   })  : icon = null,
         iconSize = 24.0,
         iconColor = null;
@@ -544,6 +548,18 @@ class GlassButton extends StatefulWidget {
   /// or confirmation sheet so keyboard users can confirm immediately.
   final bool autofocus;
 
+  /// Whether the button can request focus.
+  ///
+  /// Defaults to true. If false, the button will not be focusable via keyboard
+  /// traversal, but will still be tappable and accessible to screen readers.
+  final bool canRequestFocus;
+
+  /// Whether to exclude this button from the semantics tree.
+  ///
+  /// Useful when the button is used as a purely visual container for other
+  /// interactive widgets (e.g., in [GlassButtonGroup.icons]).
+  final bool excludeFromSemantics;
+
   @override
   State<GlassButton> createState() => _GlassButtonState();
 }
@@ -702,10 +718,10 @@ class _GlassButtonState extends State<GlassButton>
     // matching iOS 26 where active buttons never go completely dark even when
     // the directional glow follows the finger off-edge.
     final ambientOverlay = AnimatedBuilder(
-      animation: Listenable.merge([_saturationAnimation, _isHovered, _isFocused]),
+      animation:
+          Listenable.merge([_saturationAnimation, _isHovered, _isFocused]),
       builder: (context, _) {
-        double opacity =
-            _saturationAnimation.value * widget.ambientBaseLight;
+        double opacity = _saturationAnimation.value * widget.ambientBaseLight;
         if (_isFocused.value) {
           opacity += 0.15;
         } else if (_isHovered.value) {
@@ -715,7 +731,8 @@ class _GlassButtonState extends State<GlassButton>
         return Positioned.fill(
           child: IgnorePointer(
             child: ColoredBox(
-              color: CupertinoColors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
+              color: CupertinoColors.white
+                  .withValues(alpha: opacity.clamp(0.0, 1.0)),
             ),
           ),
         );
@@ -872,10 +889,10 @@ class _GlassButtonState extends State<GlassButton>
     final focusableWidget = GlassFocusRegion(
       enabled: widget.enabled,
       focusNode: widget.focusNode,
+      canRequestFocus: widget.canRequestFocus,
       autofocus: widget.autofocus,
       semanticLabel: widget.label.isNotEmpty ? widget.label : null,
-      isButton: true,
-      hasTapAction: true,
+      isButton: !widget.excludeFromSemantics,
       shape: widget.shape,
       isFocusedNotifier: _isFocused,
       isHoveredNotifier: _isHovered,
@@ -905,6 +922,7 @@ class _GlassButtonState extends State<GlassButton>
         child: GestureDetector(
           onTap: widget.enabled ? widget.onTap : null,
           behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: widget.excludeFromSemantics,
           child: focusableWidget,
         ),
       );
@@ -917,6 +935,7 @@ class _GlassButtonState extends State<GlassButton>
       onTapUp: _handleTapUp,
       onTapCancel: _handleTapCancel,
       behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: widget.excludeFromSemantics,
       child: focusableWidget,
     );
   }
@@ -959,5 +978,3 @@ class _ExpandedShapeClipper extends CustomClipper<Path> {
   bool shouldReclip(_ExpandedShapeClipper oldClipper) =>
       shape != oldClipper.shape || expansion != oldClipper.expansion;
 }
-
-

@@ -1,3 +1,5 @@
+// ignore: unnecessary_import
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -625,6 +627,59 @@ void main() {
       final indicator = tester.widget<AnimatedGlassIndicator>(
           find.byType(AnimatedGlassIndicator).first);
       expect(indicator.borderRadius, equals(8.0));
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Accessibility & Focus
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('GlassSegmentedControl keyboard focus & accessibility', () {
+    testWidgets('exposes semantics for segments', (tester) async {
+      final handle = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(
+          createTestApp(
+            child: GlassSegmentedControl(
+              segments: [
+                GlassSegment(label: 'Semantics A'),
+                GlassSegment(label: 'Semantics B'),
+              ],
+              selectedIndex: 0,
+              onSegmentSelected: (_) {},
+            ),
+          ),
+        );
+
+        // GlassFocusRegion emits a Semantics node with the label, and the
+        // inner Text widget also emits one. Use first() to get the outer
+        // button-role node which is the one GlassFocusRegion produces.
+        final nodeA = tester.getSemantics(
+          find.bySemanticsLabel('Semantics A').first,
+        );
+        // ignore: deprecated_member_use
+        expect(nodeA.hasFlag(SemanticsFlag.isButton), true);
+        // ignore: deprecated_member_use
+        expect(nodeA.hasFlag(SemanticsFlag.isSelected), true);
+        // ignore: deprecated_member_use
+        expect(nodeA.hasFlag(SemanticsFlag.isEnabled), true);
+        // ignore: deprecated_member_use
+        expect(nodeA.hasFlag(SemanticsFlag.isFocusable), true);
+
+        final nodeB = tester.getSemantics(
+          find.bySemanticsLabel('Semantics B').first,
+        );
+        // ignore: deprecated_member_use
+        expect(nodeB.hasFlag(SemanticsFlag.isButton), true);
+        // ignore: deprecated_member_use
+        expect(nodeB.hasFlag(SemanticsFlag.isSelected), false);
+        // ignore: deprecated_member_use
+        expect(nodeB.hasFlag(SemanticsFlag.isEnabled), true);
+        // ignore: deprecated_member_use
+        expect(nodeB.hasFlag(SemanticsFlag.isFocusable), true);
+      } finally {
+        handle.dispose();
+      }
     });
   });
 }

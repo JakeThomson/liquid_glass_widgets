@@ -1,6 +1,11 @@
 import 'package:flutter/cupertino.dart';
+import 'glass_focus_ring_painter.dart';
 
 /// A shared accessibility and focus region for interactive glass widgets.
+///
+/// ## Modes
+///
+/// ### Interactive mode (default constructor)
 ///
 /// Encapsulates:
 /// - Semantic boundaries and roles.
@@ -9,48 +14,122 @@ import 'package:flutter/cupertino.dart';
 /// - The iOS 26-style focus ring painting (using a [ValueListenableBuilder] to
 ///   ensure zero GPU cost for touch users).
 ///
+/// ### Observe mode ([GlassFocusRegion.observe])
+///
+/// For text inputs and other widgets that already own their [FocusNode]
+/// (e.g. [CupertinoTextField]). In this mode the widget:
+/// - Does **not** create a [FocusableActionDetector].
+/// - Does **not** register any keyboard [Actions].
+/// - Simply listens to the provided [FocusNode] and paints the iOS 26-style
+///   focus ring when the node gains focus.
+///
+/// All keyboard intent handling and semantics remain with the wrapped widget.
+///
+/// **Use this for [GlassTextField], [GlassSearchBar], or any widget where
+/// [CupertinoTextField] already manages the focus lifecycle.**
+///
 /// **State Lifting:**
-/// To maintain strict zero-rebuild performance profiles in glass widgets, this
-/// region does *not* own the hover/focus state. It accepts `ValueNotifier`s
-/// from the parent widget and updates them, allowing the parent to feed them
-/// directly into an `AnimatedBuilder` for visual feedback without full rebuilds.
+/// In interactive mode, this region accepts [ValueNotifier]s from the parent
+/// widget and updates them, allowing the parent to react to hover/focus
+/// changes with zero additional rebuilds.
 class GlassFocusRegion extends StatefulWidget {
+  /// Interactive mode: full keyboard traversal, semantics, and focus ring.
   const GlassFocusRegion({
     required this.child,
-    required this.shape,
     required this.enabled,
-    required this.isFocusedNotifier,
-    required this.isHoveredNotifier,
+    this.shape,
+    this.observedFocusNode,
+    this.isFocusedNotifier,
+    this.isHoveredNotifier,
     this.focusNode,
+    this.canRequestFocus = true,
     this.autofocus = false,
     this.semanticLabel,
     this.isButton = false,
     this.isSlider = false,
-    this.hasTapAction = false,
+    this.isSelected = false,
+    this.toggled,
     this.onKeyboardActivate,
+    this.semanticOnTap,
+    this.semanticValue,
+    this.semanticIncreasedValue,
+    this.semanticDecreasedValue,
+    this.semanticOnIncrease,
+    this.semanticOnDecrease,
     super.key,
   });
+
+  /// Observe mode: paints the focus ring by listening to an external
+  /// [FocusNode] without creating a [FocusableActionDetector].
+  ///
+  /// Use this for [GlassTextField], [GlassSearchBar], or any widget where
+  /// [CupertinoTextField] already manages the focus lifecycle. The wrapped
+  /// widget retains full control of its [FocusNode] and keyboard handling.
+  // ignore: prefer_const_constructors_in_immutables
+  GlassFocusRegion.observe({
+    required this.child,
+    required FocusNode focusNode,
+    required ShapeBorder
+        shape, // non-nullable; field is ShapeBorder? so this.shape would widen the type
+    super.key,
+  })  : observedFocusNode = focusNode,
+        enabled = true,
+        shape = shape, // ignore: prefer_initializing_formals
+        isFocusedNotifier = null,
+        isHoveredNotifier = null,
+        focusNode = null,
+        canRequestFocus = false,
+        autofocus = false,
+        semanticLabel = null,
+        isButton = false,
+        isSlider = false,
+        isSelected = false,
+        toggled = null,
+        onKeyboardActivate = null,
+        semanticOnTap = null,
+        semanticValue = null,
+        semanticIncreasedValue = null,
+        semanticDecreasedValue = null,
+        semanticOnIncrease = null,
+        semanticOnDecrease = null;
+
+  // ── Shared fields ────────────────────────────────────────────────────────
 
   /// The widget tree inside the focus region.
   final Widget child;
 
   /// The exact shape of the widget, used to draw the focus ring.
-  final ShapeBorder shape;
+  /// If null, no visual focus ring is painted by this region.
+  final ShapeBorder? shape;
 
   /// Whether the widget is interactive and focusable.
   final bool enabled;
 
+  // ── Observe-mode only ────────────────────────────────────────────────────
+
+  /// When non-null, this widget operates in "observe" mode.
+  ///
+  /// See [GlassFocusRegion.observe].
+  final FocusNode? observedFocusNode;
+
+  // ── Interactive-mode fields ───────────────────────────────────────────────
+
   /// Externally provided focus node (from the parent's widget parameter).
   final FocusNode? focusNode;
+
+  /// Whether the widget can request focus.
+  final bool canRequestFocus;
 
   /// Whether to request focus immediately.
   final bool autofocus;
 
   /// A notifier that this region will update when keyboard focus arrives/leaves.
-  final ValueNotifier<bool> isFocusedNotifier;
+  /// If null, the region will manage its own internal state.
+  final ValueNotifier<bool>? isFocusedNotifier;
 
   /// A notifier that this region will update when mouse hover enters/exits.
-  final ValueNotifier<bool> isHoveredNotifier;
+  /// If null, the region will manage its own internal state.
+  final ValueNotifier<bool>? isHoveredNotifier;
 
   /// The semantic label for screen readers.
   final String? semanticLabel;
@@ -58,26 +137,97 @@ class GlassFocusRegion extends StatefulWidget {
   /// Whether this region should announce as a button to screen readers.
   final bool isButton;
 
-  /// Whether this region should announce as a slider to screen readers.
+  /// Whether this is a slider for screen readers.
   final bool isSlider;
 
-  /// Whether the control has a tap action (e.g. for accessibility tap gesture).
-  final bool hasTapAction;
+  /// Whether this item is currently selected (e.g. tab or segmented control).
+  final bool isSelected;
+
+  /// The toggled state (for switches). If null, this semantic is not applied.
+  final bool? toggled;
 
   /// Callback fired when the user presses Space or Enter while focused.
   final VoidCallback? onKeyboardActivate;
+
+  /// Callback fired when screen readers invoke a tap.
+  final VoidCallback? semanticOnTap;
+
+  /// Semantic value for sliders (e.g. '50%').
+  final String? semanticValue;
+
+  /// Semantic increased value for sliders.
+  final String? semanticIncreasedValue;
+
+  /// Semantic decreased value for sliders.
+  final String? semanticDecreasedValue;
+
+  /// Callback for increasing the slider value.
+  final VoidCallback? semanticOnIncrease;
+
+  /// Callback for decreasing the slider value.
+  final VoidCallback? semanticOnDecrease;
+
+  // ── Private helpers ───────────────────────────────────────────────────────
+
+  bool get _isObserveMode => observedFocusNode != null;
 
   @override
   State<GlassFocusRegion> createState() => _GlassFocusRegionState();
 }
 
 class _GlassFocusRegionState extends State<GlassFocusRegion> {
-  // Allocated once in initState to avoid per-frame allocations.
-  late final Map<Type, Action<Intent>> _actions;
+  // Interactive-mode only. Empty in observe mode — never accessed there.
+  Map<Type, Action<Intent>> _actions = const {};
+
+  // Observe-mode only tracking to differentiate mouse clicks from Tab traversal.
+  bool _hadRecentPointerEvent = false;
+  bool _suppressRing = false;
+
+  late final ValueNotifier<bool> _isFocusedNotifier;
+  late final ValueNotifier<bool> _isHoveredNotifier;
+
+  // null in observe mode; owned or adopted in interactive mode.
+  FocusNode? _internalFocusNode;
+
+  bool _ownsFocusNotifier = false;
+  bool _ownsHoverNotifier = false;
 
   @override
   void initState() {
     super.initState();
+
+    if (widget._isObserveMode) {
+      // Observe mode: listen to the external FocusNode; no FocusableActionDetector.
+      // We also listen to FocusManager.highlightMode so the ring only shows for
+      // keyboard-driven focus — not mouse clicks. This mirrors iOS 26 behaviour
+      // where text field rings are only visible to keyboard/external-keyboard users.
+      _isFocusedNotifier = ValueNotifier(false); // starts hidden
+      _ownsFocusNotifier = true;
+      _isHoveredNotifier = ValueNotifier(false);
+      _ownsHoverNotifier = true;
+      widget.observedFocusNode!.addListener(_onObservedFocusChange);
+      FocusManager.instance.addHighlightModeListener(_onHighlightModeChange);
+      return;
+    }
+
+    // Interactive mode.
+    _internalFocusNode =
+        widget.focusNode ?? FocusNode(canRequestFocus: widget.canRequestFocus);
+    if (widget.focusNode != null) {
+      widget.focusNode!.canRequestFocus = widget.canRequestFocus;
+    }
+    if (widget.isFocusedNotifier != null) {
+      _isFocusedNotifier = widget.isFocusedNotifier!;
+    } else {
+      _isFocusedNotifier = ValueNotifier(false);
+      _ownsFocusNotifier = true;
+    }
+    if (widget.isHoveredNotifier != null) {
+      _isHoveredNotifier = widget.isHoveredNotifier!;
+    } else {
+      _isHoveredNotifier = ValueNotifier(false);
+      _ownsHoverNotifier = true;
+    }
     _actions = <Type, Action<Intent>>{
       ActivateIntent: CallbackAction<Intent>(
         onInvoke: (Intent intent) {
@@ -88,108 +238,150 @@ class _GlassFocusRegionState extends State<GlassFocusRegion> {
     };
   }
 
+  /// Called by the observed [FocusNode] listener in observe mode.
+  /// Only activates the ring when focus is keyboard-driven.
+  void _onObservedFocusChange() {
+    if (!widget._isObserveMode) return;
+
+    final hasFocus = widget.observedFocusNode!.hasFocus;
+
+    if (!hasFocus) {
+      _suppressRing = false;
+      _isFocusedNotifier.value = false;
+      return;
+    }
+
+    // If focus was gained while the user is actively pressing on this widget,
+    // they used a pointing device. Suppress the focus ring.
+    if (_hadRecentPointerEvent) {
+      _suppressRing = true;
+    }
+
+    final isKeyboard =
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+
+    _isFocusedNotifier.value = isKeyboard && !_suppressRing;
+  }
+
+  /// Called when the global highlight mode changes (e.g. user plugs in
+  /// a keyboard mid-session). Re-evaluates ring visibility immediately.
+  void _onHighlightModeChange(FocusHighlightMode mode) {
+    if (!mounted || !widget._isObserveMode) return;
+    final isKeyboard = mode == FocusHighlightMode.traditional;
+    _isFocusedNotifier.value = (widget.observedFocusNode?.hasFocus ?? false) &&
+        isKeyboard &&
+        !_suppressRing;
+  }
+
+  @override
+  void didUpdateWidget(covariant GlassFocusRegion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget._isObserveMode) {
+      // Rewire the listener if the caller swapped the focus node.
+      if (oldWidget.observedFocusNode != widget.observedFocusNode) {
+        oldWidget.observedFocusNode!.removeListener(_onObservedFocusChange);
+        widget.observedFocusNode!.addListener(_onObservedFocusChange);
+        _isFocusedNotifier.value = widget.observedFocusNode!.hasFocus;
+      }
+      return;
+    }
+
+    // Interactive mode.
+    if (oldWidget.canRequestFocus != widget.canRequestFocus) {
+      _internalFocusNode!.canRequestFocus = widget.canRequestFocus;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget._isObserveMode) {
+      widget.observedFocusNode!.removeListener(_onObservedFocusChange);
+      FocusManager.instance.removeHighlightModeListener(_onHighlightModeChange);
+    } else {
+      if (widget.focusNode == null) _internalFocusNode?.dispose();
+    }
+    if (_ownsFocusNotifier) _isFocusedNotifier.dispose();
+    if (_ownsHoverNotifier) _isHoveredNotifier.dispose();
+    super.dispose();
+  }
+
+  /// Wraps [child] in the iOS 26-style focus ring [Stack] when [isFocused]
+  /// is true and [widget.shape] is non-null.
+  ///
+  /// Shared between interactive and observe mode to eliminate duplication.
+  Widget _buildRing(bool isFocused, Widget child) {
+    if (!isFocused || widget.shape == null) return child;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        child,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: GlassFocusRingPainter(
+                color: CupertinoColors.activeBlue.resolveFrom(context),
+                shape: widget.shape!,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // ── Observe mode ──────────────────────────────────────────────────────────
+    // No semantics wrapper, no FocusableActionDetector.
+    // The wrapped CupertinoTextField handles all of that itself.
+    if (widget._isObserveMode) {
+      return Listener(
+        onPointerDown: (_) => _hadRecentPointerEvent = true,
+        onPointerUp: (_) => _hadRecentPointerEvent = false,
+        onPointerCancel: (_) => _hadRecentPointerEvent = false,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _isFocusedNotifier,
+          builder: (context, isFocused, child) => _buildRing(isFocused, child!),
+          child: widget.child,
+        ),
+      );
+    }
+
+    // ── Interactive mode ──────────────────────────────────────────────────────
     return Semantics(
       button: widget.isButton,
+      focusable: widget.enabled && widget.canRequestFocus,
       slider: widget.isSlider,
+      // Only set `selected` when this region tracks selection state.
+      // Passing `selected: false` unconditionally emits `hasSelectedState`
+      // which breaks semantics checks on plain buttons (GlassButton, GlassChip).
+      selected: widget.isSelected ? true : null,
+      toggled: widget.toggled,
       label: widget.semanticLabel,
+      value: widget.semanticValue,
+      increasedValue: widget.semanticIncreasedValue,
+      decreasedValue: widget.semanticDecreasedValue,
       enabled: widget.enabled,
+      onTap: widget.semanticOnTap,
+      onIncrease: widget.semanticOnIncrease,
+      onDecrease: widget.semanticOnDecrease,
       child: FocusableActionDetector(
         enabled: widget.enabled,
-        focusNode: widget.focusNode,
+        focusNode: _internalFocusNode!,
         autofocus: widget.autofocus,
         actions: _actions,
-        mouseCursor:
-            widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        onShowFocusHighlight: (v) => widget.isFocusedNotifier.value = v,
-        onShowHoverHighlight: (v) => widget.isHoveredNotifier.value = v,
+        mouseCursor: widget.enabled
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
+        onShowFocusHighlight: (v) => _isFocusedNotifier.value = v,
+        onShowHoverHighlight: (v) => _isHoveredNotifier.value = v,
         child: ValueListenableBuilder<bool>(
-          valueListenable: widget.isFocusedNotifier,
-          builder: (context, isFocused, child) {
-            if (!isFocused) return child!;
-            // Focus ring: painted outside the button bounds so it never clips
-            // the glass surface. Uses the same path as the button's shape.
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                child!,
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _GlassFocusRingPainter(
-                        shape: widget.shape,
-                        color: CupertinoColors.activeBlue.resolveFrom(context),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+          valueListenable: _isFocusedNotifier,
+          builder: (context, isFocused, child) => _buildRing(isFocused, child!),
           child: widget.child,
         ),
       ),
     );
   }
-}
-
-/// Paints an iOS 26-style keyboard focus ring around a [ShapeBorder].
-///
-/// Only instantiated when [FocusableActionDetector.onShowFocusHighlight]
-/// fires — i.e. exclusively during hardware-keyboard Tab navigation.
-/// Touch users never trigger this painter.
-///
-/// The ring is drawn 3 logical pixels outside the shape boundary so it
-/// never clips the glass surface underneath. A secondary stroke at a lower
-/// opacity and slightly larger radius provides a faint glow that keeps the
-/// ring legible over any glass background.
-class _GlassFocusRingPainter extends CustomPainter {
-  _GlassFocusRingPainter({
-    required this.shape,
-    required this.color,
-  });
-
-  final ShapeBorder shape;
-  final Color color;
-
-  static const double _outset = 3.0;
-  static const double _ringWidth = 2.0;
-  static const double _glowWidth = 5.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Expand the rect so the ring sits outside the shape boundary.
-    final ringRect = Rect.fromLTWH(
-      -_outset,
-      -_outset,
-      size.width + _outset * 2,
-      size.height + _outset * 2,
-    );
-    final path = shape.getOuterPath(ringRect);
-
-    // Outer glow — wider, lower opacity, makes the ring legible on any surface.
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color.withValues(alpha: 0.30)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _glowWidth
-        ..strokeCap = StrokeCap.round,
-    );
-
-    // Inner ring — crisp, full-opacity stroke.
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _ringWidth
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_GlassFocusRingPainter oldDelegate) =>
-      color != oldDelegate.color || shape != oldDelegate.shape;
 }
