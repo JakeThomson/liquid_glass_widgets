@@ -5,6 +5,7 @@ import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
 import '../../types/glass_button_style.dart';
 import '../shared/adaptive_glass.dart';
+import '../shared/glass_accessibility_scope.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../surfaces/glass_app_bar.dart';
 
@@ -135,6 +136,8 @@ class GlassButton extends StatefulWidget {
     this.settings,
     this.useOwnLayer = false,
     this.quality,
+    this.focusNode,
+    this.autofocus = false,
     // LiquidStretch properties
     this.interactionScale = 1.05,
     this.stretch = 0.5,
@@ -189,6 +192,8 @@ class GlassButton extends StatefulWidget {
     this.settings,
     this.useOwnLayer = false,
     this.quality,
+    this.focusNode,
+    this.autofocus = false,
     // LiquidStretch properties
     this.interactionScale = 1.05,
     this.stretch = 0.5,
@@ -518,6 +523,26 @@ class GlassButton extends StatefulWidget {
   /// the underlying [AdaptiveGlass].
   final bool platformViewBackdrop;
 
+  // ===========================================================================
+  // Focus / Keyboard Properties
+  // ===========================================================================
+
+  /// An optional focus node to use for this button.
+  ///
+  /// Providing a [FocusNode] gives programmatic control over focus:
+  /// - `focusNode.requestFocus()` — focus the button from code.
+  /// - Listen to `focusNode` to react to focus changes.
+  ///
+  /// If null, the button manages its own internal focus node.
+  final FocusNode? focusNode;
+
+  /// Whether this button should be focused automatically when it is inserted
+  /// into the widget tree.
+  ///
+  /// Defaults to false. Set to true for the primary action button in a dialog
+  /// or confirmation sheet so keyboard users can confirm immediately.
+  final bool autofocus;
+
   @override
   State<GlassButton> createState() => _GlassButtonState();
 }
@@ -526,6 +551,12 @@ class _GlassButtonState extends State<GlassButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _saturationController;
   late final Animation<double> _saturationAnimation;
+  final ValueNotifier<bool> _isHovered = ValueNotifier(false);
+  final ValueNotifier<bool> _isFocused = ValueNotifier(false);
+  // Allocated once in initState. The closure captures `this`, so `widget` and
+  // `_saturationController` always refer to the latest State instance — matching
+  // the pattern used by CupertinoButton and Material InkWell.
+  late final Map<Type, Action<Intent>> _actions;
 
   @override
   void initState() {
@@ -538,11 +569,38 @@ class _GlassButtonState extends State<GlassButton>
       parent: _saturationController,
       curve: Curves.easeOut,
     );
+    _actions = <Type, Action<Intent>>{
+      ActivateIntent: CallbackAction<ActivateIntent>(
+        onInvoke: (_) => _activateFromKeyboard(),
+      ),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Keyboard activation — mirrors the touch press animation so sighted
+  // keyboard users receive the same visual feedback as touch users.
+  // Called by ActivateIntent (Space / Enter on focused button).
+  //
+  // Respects GlassAccessibilityData.reduceMotion: when the user has enabled
+  // "Reduce Motion" on their device, the animation pulse is skipped and the
+  // callback fires immediately — matching iOS 26 behaviour.
+  // ---------------------------------------------------------------------------
+  Future<void> _activateFromKeyboard() async {
+    if (!mounted || !widget.enabled) return;
+    final reduceMotion = GlassAccessibilityData.of(context).reduceMotion;
+    if (!reduceMotion) _saturationController.forward();
+    widget.onTap();
+    if (!reduceMotion) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (mounted) _saturationController.reverse();
+    }
   }
 
   @override
   void dispose() {
     _saturationController.dispose();
+    _isHovered.dispose();
+    _isFocused.dispose();
     super.dispose();
   }
 
@@ -651,33 +709,34 @@ class _GlassButtonState extends State<GlassButton>
     // The ambient base light provides a subtle surface brightness when pressed,
     // matching iOS 26 where active buttons never go completely dark even when
     // the directional glow follows the finger off-edge.
-    final ambientOverlay = widget.ambientBaseLight > 0
-        ? AnimatedBuilder(
-            animation: _saturationAnimation,
-            builder: (context, _) {
-              final opacity =
-                  _saturationAnimation.value * widget.ambientBaseLight;
-              if (opacity <= 0) return const SizedBox.shrink();
-              return Positioned.fill(
-                child: IgnorePointer(
-                  child: ColoredBox(
-                    color: CupertinoColors.white.withValues(alpha: opacity),
-                  ),
-                ),
-              );
-            },
-          )
-        : null;
+    final ambientOverlay = AnimatedBuilder(
+      animation: Listenable.merge([_saturationAnimation, _isHovered, _isFocused]),
+      builder: (context, _) {
+        double opacity =
+            _saturationAnimation.value * widget.ambientBaseLight;
+        if (_isFocused.value) {
+          opacity += 0.15;
+        } else if (_isHovered.value) {
+          opacity += 0.08;
+        }
+        if (opacity <= 0) return const SizedBox.shrink();
+        return Positioned.fill(
+          child: IgnorePointer(
+            child: ColoredBox(
+              color: CupertinoColors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
+            ),
+          ),
+        );
+      },
+    );
 
-    final contentWithAmbient = ambientOverlay != null
-        ? Stack(
-            alignment: widget.alignment,
-            children: [
-              contentWidget,
-              ambientOverlay,
-            ],
-          )
-        : contentWidget;
+    final contentWithAmbient = Stack(
+      alignment: widget.alignment,
+      children: [
+        contentWidget,
+        ambientOverlay,
+      ],
+    );
 
     // This part is static relative to the glass saturation pulse
     final glowContent = GlassGlow(
@@ -799,24 +858,76 @@ class _GlassButtonState extends State<GlassButton>
           ? widget.anchorStretchSettings
           : themeInteraction.anchorStretchSettings ??
               widget.anchorStretchSettings,
-      child: Semantics(
-        button: true,
-        label: widget.label.isNotEmpty ? widget.label : null,
-        enabled: widget.enabled,
-        child: glassWidget,
-      ),
+      child: glassWidget,
     );
 
     final stretchWidget =
         skipBoundary ? stretchContent : RepaintBoundary(child: stretchContent);
 
     // Apply opacity when disabled
-    final finalWidget = widget.enabled
+    final innerWidget = widget.enabled
         ? stretchWidget
         : Opacity(
             opacity: 0.5,
             child: stretchWidget,
           );
+
+    // ---------------------------------------------------------------------------
+    // Semantics + FocusableActionDetector sit OUTSIDE LiquidStretch and
+    // RepaintBoundary so the accessibility hit-test rect is stable — it does
+    // not deform with the stretch animation. This matches CupertinoButton and
+    // Material InkWell which also keep Semantics as the outermost wrapper.
+    //
+    // _actions is allocated once in initState — no per-frame allocation.
+    //
+    // Focus ring (iOS 26 style):
+    // - Only visible when _isFocused.value == true (keyboard-driven focus only;
+    //   touch-based focus never triggers onShowFocusHighlight).
+    // - ValueListenableBuilder rebuilds only the ring overlay — the heavy glass
+    //   layers underneath are never touched.
+    // - Zero GPU cost for touch users: the CustomPaint is not inserted into the
+    //   tree at all when isFocused == false.
+    // ---------------------------------------------------------------------------
+    final focusableWidget = Semantics(
+      button: true,
+      label: widget.label.isNotEmpty ? widget.label : null,
+      enabled: widget.enabled,
+      child: FocusableActionDetector(
+        enabled: widget.enabled,
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        actions: _actions,
+        mouseCursor:
+            widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        onShowFocusHighlight: (v) => _isFocused.value = v,
+        onShowHoverHighlight: (v) => _isHovered.value = v,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _isFocused,
+          builder: (context, isFocused, child) {
+            if (!isFocused) return child!;
+            // Focus ring: painted outside the button bounds so it never clips
+            // the glass surface. Uses the same path as the button's shape.
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                child!,
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _GlassFocusRingPainter(
+                        shape: widget.shape,
+                        color: CupertinoColors.activeBlue.resolveFrom(context),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+          child: innerWidget,
+        ),
+      ),
+    );
 
     // ---------------------------------------------------------------------------
     // Interaction wrapper: choose between tap-based and pointer-based press
@@ -840,7 +951,7 @@ class _GlassButtonState extends State<GlassButton>
         child: GestureDetector(
           onTap: widget.enabled ? widget.onTap : null,
           behavior: HitTestBehavior.opaque,
-          child: finalWidget,
+          child: focusableWidget,
         ),
       );
     }
@@ -852,7 +963,7 @@ class _GlassButtonState extends State<GlassButton>
       onTapUp: _handleTapUp,
       onTapCancel: _handleTapCancel,
       behavior: HitTestBehavior.opaque,
-      child: finalWidget,
+      child: focusableWidget,
     );
   }
 }
@@ -893,4 +1004,64 @@ class _ExpandedShapeClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(_ExpandedShapeClipper oldClipper) =>
       shape != oldClipper.shape || expansion != oldClipper.expansion;
+}
+
+/// Paints an iOS 26-style keyboard focus ring around a [ShapeBorder].
+///
+/// Only instantiated when [FocusableActionDetector.onShowFocusHighlight]
+/// fires — i.e. exclusively during hardware-keyboard Tab navigation.
+/// Touch users never trigger this painter.
+///
+/// The ring is drawn 3 logical pixels outside the shape boundary so it
+/// never clips the glass surface underneath. A secondary stroke at a lower
+/// opacity and slightly larger radius provides a faint glow that keeps the
+/// ring legible over any glass background.
+class _GlassFocusRingPainter extends CustomPainter {
+  _GlassFocusRingPainter({
+    required this.shape,
+    required this.color,
+  });
+
+  final ShapeBorder shape;
+  final Color color;
+
+  static const double _outset = 3.0;
+  static const double _ringWidth = 2.0;
+  static const double _glowWidth = 5.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Expand the rect so the ring sits outside the shape boundary.
+    final ringRect = Rect.fromLTWH(
+      -_outset,
+      -_outset,
+      size.width + _outset * 2,
+      size.height + _outset * 2,
+    );
+    final path = shape.getOuterPath(ringRect);
+
+    // Outer glow — wider, lower opacity, makes the ring legible on any surface.
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color.withValues(alpha: 0.30)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _glowWidth
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Inner ring — crisp, full-opacity stroke.
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _ringWidth
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GlassFocusRingPainter oldDelegate) =>
+      color != oldDelegate.color || shape != oldDelegate.shape;
 }
