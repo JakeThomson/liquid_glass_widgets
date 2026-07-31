@@ -1,3 +1,29 @@
+# 0.27.0
+
+## ♿ Accessibility & Keyboard Navigation — Roadmap Milestone Complete
+
+The #1 blocker for 1.0.0 is resolved. Every interactive widget now supports full
+keyboard traversal, Space/Enter activation, and VoiceOver/TalkBack semantics.
+
+### Focus & Keyboard
+
+- **`GlassFocusRegion`** — new shared widget that is the single source of truth for all focus behaviour. Two modes:
+  - *Interactive* — wraps `FocusableActionDetector`, registers `ActivateIntent` (Space/Enter), lifts hover/focus state to parent via `ValueNotifier`, and paints the iOS 26-style outset focus ring.
+  - *Observe* (`.observe()`) — for widgets that own their own `FocusNode` (e.g. `GlassTextField`). Listens passively and paints the ring; no duplicate traversal or intent handling.
+- **iOS 26 focus ring** — 3 px outset, 2 px wide, rounded to the widget's shape. Implemented as `GlassFocusRingPainter` (pure `CustomPainter`; zero cost for touch users via `ValueListenableBuilder`).
+- **`GlassStepper` keyboard fix** — Space/Enter triggers a single-shot activation; the pointer-only long-press repeat timer is no longer erroneously started by keyboard input.
+- All 12 interactive widget families wired: `GlassButton`, `GlassSwitch`, `GlassSlider`, `GlassSegmentedControl`, `GlassListTile`, `GlassMenuItem`, `GlassActionSheet`, `GlassButtonGroup`, `GlassTextField`, `GlassSearchBar`, `GlassStepper`, `GlassChip`.
+
+### Semantics
+
+- Semantic roles (`isButton`, `isSlider`, `isSelected`, `toggled`, `value`) set on every widget matching Material and Cupertino SDK conventions.
+- Destructive and disabled states propagate correctly to the semantic tree.
+
+### State Architecture
+
+- **`GlassInteractionStateMixin`** — internal `State` mixin (modelled on `SingleTickerProviderStateMixin`) providing `isPressed`, `isFocused`, `isHovered` `ValueNotifier`s and their `Listenable.merge` combinations. Replaces ~76 lines of identical boilerplate across `GlassListTile`, `GlassMenuItem`, `_ActionSheetButton`, and `_GlassGroupItemWidget`. No public API change.
+- All container-item widgets migrated to `ValueNotifier` + `ListenableBuilder` — only the `AnimatedContainer` highlight layer rebuilds on interaction; the surrounding subtree is stable.
+
 # 0.26.1
 
 ## 🐛 Bug Fixes

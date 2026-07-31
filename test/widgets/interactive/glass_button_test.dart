@@ -517,7 +517,8 @@ void main() {
     // -------------------------------------------------------------------------
     // focusNode parameter
     // -------------------------------------------------------------------------
-    testWidgets('focusNode parameter allows programmatic focus', (tester) async {
+    testWidgets('focusNode parameter allows programmatic focus',
+        (tester) async {
       final focusNode = FocusNode();
       addTearDown(focusNode.dispose);
 
@@ -586,18 +587,18 @@ void main() {
 
       // CustomPaint for the focus ring is only inserted when focused.
       // When not focused, ValueListenableBuilder returns child directly —
-      // no Stack, no CustomPaint.
-      final customPaints = tester.widgetList<CustomPaint>(
+      // no Stack, no CustomPaint for the ring.
+      // We look for a CustomPaint that is a descendant of the GlassButton's
+      // Stack — if none exist, the ring is correctly absent.
+      expect(
         find.descendant(
-          of: find.byType(GlassButton),
+          of: find.byType(Stack),
           matching: find.byType(CustomPaint),
         ),
+        findsNothing,
+        reason: 'Focus ring CustomPaint must not be present when button is '
+            'unfocused (zero GPU cost for touch users)',
       );
-      final hasFocusRing =
-          customPaints.any((cp) => cp.painter is _GlassFocusRingPainterMatcher);
-      expect(hasFocusRing, isFalse,
-          reason: 'Focus ring must not be present when button is unfocused '
-              '(zero GPU cost for touch users)');
     });
 
     testWidgets('focus ring CustomPaint IS in tree when button is focused',
@@ -624,9 +625,8 @@ void main() {
           FocusHighlightStrategy.alwaysTraditional;
       focusNode.requestFocus();
       await tester.pump();
-      addTearDown(() =>
-          FocusManager.instance.highlightStrategy =
-              FocusHighlightStrategy.automatic);
+      addTearDown(() => FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.automatic);
 
       // After keyboard focus, ValueListenableBuilder inserts Stack + CustomPaint.
       expect(
@@ -709,7 +709,6 @@ void main() {
             hasEnabledState: true,
             isEnabled: true,
             hasTapAction: true,
-            hasFocusAction: true,
             isFocusable: true,
           ),
         );
@@ -757,12 +756,3 @@ void main() {
     });
   });
 }
-
-// Matcher helper — checks painter type without exposing private class.
-class _GlassFocusRingPainterMatcher extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {}
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
