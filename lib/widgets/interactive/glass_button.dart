@@ -6,6 +6,7 @@ import '../../types/glass_quality.dart';
 import '../../types/glass_button_style.dart';
 import '../shared/adaptive_glass.dart';
 import '../shared/glass_accessibility_scope.dart';
+import '../shared/glass_focus_region.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../surfaces/glass_app_bar.dart';
 
@@ -553,10 +554,6 @@ class _GlassButtonState extends State<GlassButton>
   late final Animation<double> _saturationAnimation;
   final ValueNotifier<bool> _isHovered = ValueNotifier(false);
   final ValueNotifier<bool> _isFocused = ValueNotifier(false);
-  // Allocated once in initState. The closure captures `this`, so `widget` and
-  // `_saturationController` always refer to the latest State instance — matching
-  // the pattern used by CupertinoButton and Material InkWell.
-  late final Map<Type, Action<Intent>> _actions;
 
   @override
   void initState() {
@@ -569,11 +566,6 @@ class _GlassButtonState extends State<GlassButton>
       parent: _saturationController,
       curve: Curves.easeOut,
     );
-    _actions = <Type, Action<Intent>>{
-      ActivateIntent: CallbackAction<ActivateIntent>(
-        onInvoke: (_) => _activateFromKeyboard(),
-      ),
-    };
   }
 
   // ---------------------------------------------------------------------------
@@ -873,60 +865,22 @@ class _GlassButtonState extends State<GlassButton>
           );
 
     // ---------------------------------------------------------------------------
-    // Semantics + FocusableActionDetector sit OUTSIDE LiquidStretch and
-    // RepaintBoundary so the accessibility hit-test rect is stable — it does
-    // not deform with the stretch animation. This matches CupertinoButton and
-    // Material InkWell which also keep Semantics as the outermost wrapper.
-    //
-    // _actions is allocated once in initState — no per-frame allocation.
-    //
-    // Focus ring (iOS 26 style):
-    // - Only visible when _isFocused.value == true (keyboard-driven focus only;
-    //   touch-based focus never triggers onShowFocusHighlight).
-    // - ValueListenableBuilder rebuilds only the ring overlay — the heavy glass
-    //   layers underneath are never touched.
-    // - Zero GPU cost for touch users: the CustomPaint is not inserted into the
-    //   tree at all when isFocused == false.
+    // GlassFocusRegion abstracts the focus ring painting and keyboard intent
+    // mapping, while we retain ownership of the state (via isFocusedNotifier)
+    // so we can merge it into our AnimatedBuilder without causing full rebuilds.
     // ---------------------------------------------------------------------------
-    final focusableWidget = Semantics(
-      button: true,
-      label: widget.label.isNotEmpty ? widget.label : null,
+    final focusableWidget = GlassFocusRegion(
       enabled: widget.enabled,
-      child: FocusableActionDetector(
-        enabled: widget.enabled,
-        focusNode: widget.focusNode,
-        autofocus: widget.autofocus,
-        actions: _actions,
-        mouseCursor:
-            widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        onShowFocusHighlight: (v) => _isFocused.value = v,
-        onShowHoverHighlight: (v) => _isHovered.value = v,
-        child: ValueListenableBuilder<bool>(
-          valueListenable: _isFocused,
-          builder: (context, isFocused, child) {
-            if (!isFocused) return child!;
-            // Focus ring: painted outside the button bounds so it never clips
-            // the glass surface. Uses the same path as the button's shape.
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                child!,
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _GlassFocusRingPainter(
-                        shape: widget.shape,
-                        color: CupertinoColors.activeBlue.resolveFrom(context),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-          child: innerWidget,
-        ),
-      ),
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      semanticLabel: widget.label.isNotEmpty ? widget.label : null,
+      isButton: true,
+      hasTapAction: true,
+      shape: widget.shape,
+      isFocusedNotifier: _isFocused,
+      isHoveredNotifier: _isHovered,
+      onKeyboardActivate: _activateFromKeyboard,
+      child: innerWidget,
     );
 
     // ---------------------------------------------------------------------------
@@ -1006,62 +960,4 @@ class _ExpandedShapeClipper extends CustomClipper<Path> {
       shape != oldClipper.shape || expansion != oldClipper.expansion;
 }
 
-/// Paints an iOS 26-style keyboard focus ring around a [ShapeBorder].
-///
-/// Only instantiated when [FocusableActionDetector.onShowFocusHighlight]
-/// fires — i.e. exclusively during hardware-keyboard Tab navigation.
-/// Touch users never trigger this painter.
-///
-/// The ring is drawn 3 logical pixels outside the shape boundary so it
-/// never clips the glass surface underneath. A secondary stroke at a lower
-/// opacity and slightly larger radius provides a faint glow that keeps the
-/// ring legible over any glass background.
-class _GlassFocusRingPainter extends CustomPainter {
-  _GlassFocusRingPainter({
-    required this.shape,
-    required this.color,
-  });
 
-  final ShapeBorder shape;
-  final Color color;
-
-  static const double _outset = 3.0;
-  static const double _ringWidth = 2.0;
-  static const double _glowWidth = 5.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Expand the rect so the ring sits outside the shape boundary.
-    final ringRect = Rect.fromLTWH(
-      -_outset,
-      -_outset,
-      size.width + _outset * 2,
-      size.height + _outset * 2,
-    );
-    final path = shape.getOuterPath(ringRect);
-
-    // Outer glow — wider, lower opacity, makes the ring legible on any surface.
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color.withValues(alpha: 0.30)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _glowWidth
-        ..strokeCap = StrokeCap.round,
-    );
-
-    // Inner ring — crisp, full-opacity stroke.
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _ringWidth
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_GlassFocusRingPainter oldDelegate) =>
-      color != oldDelegate.color || shape != oldDelegate.shape;
-}
