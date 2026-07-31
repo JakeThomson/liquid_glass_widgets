@@ -148,6 +148,25 @@ void main() {
       expect(adapter.currentQuality, GlassQuality.minimal);
     });
 
+    test('warm-up does not promote an already downgraded quality when locked',
+        () {
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(
+        allowStepUp: false,
+        changes: changes,
+      );
+
+      _runWarmup(adapter, rasterUs: 25000); // premium → standard
+      expect(adapter.currentQuality, GlassQuality.standard);
+      changes.clear();
+
+      adapter.reset();
+      _runWarmup(adapter, rasterUs: 5000); // would otherwise promote to premium
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+      expect(changes, isEmpty);
+    });
+
     test('minQuality floor is honoured even when P75 > 20 ms', () {
       final adapter = _makeAdapter(
         min: GlassQuality.standard,

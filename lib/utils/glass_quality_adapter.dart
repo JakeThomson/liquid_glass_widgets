@@ -130,10 +130,11 @@ class GlassQualityAdapter {
   /// from this value.
   final int targetFrameMs;
 
-  /// When `true`, the adapter may step quality **up** after a sustained period
-  /// of good performance. When `false` (the default), only step-downs occur —
-  /// the starting quality from Phase 2 is the permanent ceiling for the
-  /// session (or until [reset] is called).
+  /// Whether the adapter may increase quality after sustained good performance.
+  ///
+  /// When `false`, quality can only stay the same or decrease for the lifetime
+  /// of this adapter. A warm-up triggered by [reset] cannot restore a higher
+  /// quality either; recreate the adapter to clear this restriction.
   final bool allowStepUp;
 
   /// The quality tier to start at, bypassing Phase 2 (the warm-up benchmark).
@@ -524,8 +525,15 @@ class GlassQualityAdapter {
       decided = _capQuality(maxQuality, GlassQuality.minimal);
     }
 
-    // Ensure we never go below minQuality floor.
-    final effective = _floorQuality(decided, minQuality);
+    // Apply the warm-up result while respecting [minQuality] and [allowStepUp].
+    // When [allowStepUp] is false, warm-up may lower the current quality but
+    // never raises it after the quality has been selected.
+    final effective = allowStepUp
+        ? _floorQuality(decided, minQuality)
+        : _floorQuality(
+            _capQuality(decided, _currentQuality),
+            minQuality,
+          );
 
     // Write to session cache so remounts within this app process skip Phase 2.
     _sessionSettledQuality = effective;
