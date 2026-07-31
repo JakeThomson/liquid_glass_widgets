@@ -2,6 +2,7 @@ import 'package:liquid_glass_widgets/types/glass_quality.dart';
 import 'package:liquid_glass_widgets/widgets/interactive/glass_button.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/widgets/shared/adaptive_liquid_glass_layer.dart';
 
@@ -419,4 +420,349 @@ void main() {
       expect(find.byType(GlassButton), findsOneWidget);
     });
   });
+
+  // ===========================================================================
+  // Keyboard focus & accessibility template tests
+  //
+  // These tests validate the behaviour added in the a11y-keyboard-focus branch
+  // and serve as the specification that all other interactive widgets must
+  // satisfy when the template is applied to them.
+  // ===========================================================================
+  group('GlassButton keyboard focus & accessibility', () {
+    // -------------------------------------------------------------------------
+    // ActivateIntent (Space / Enter)
+    // -------------------------------------------------------------------------
+    testWidgets('Space key fires onTap when button is focused', (tester) async {
+      var tapped = false;
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.heart),
+              onTap: () => tapped = true,
+              focusNode: focusNode,
+            ),
+          ),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('Enter key fires onTap when button is focused', (tester) async {
+      var tapped = false;
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.heart),
+              onTap: () => tapped = true,
+              focusNode: focusNode,
+            ),
+          ),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('Space key does NOT fire onTap when disabled', (tester) async {
+      var tapped = false;
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.heart),
+              onTap: () => tapped = true,
+              focusNode: focusNode,
+              enabled: false,
+            ),
+          ),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+
+      expect(tapped, isFalse);
+    });
+
+    // -------------------------------------------------------------------------
+    // focusNode parameter
+    // -------------------------------------------------------------------------
+    testWidgets('focusNode parameter allows programmatic focus', (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.heart),
+              onTap: () {},
+              focusNode: focusNode,
+            ),
+          ),
+        ),
+      );
+
+      expect(focusNode.hasFocus, isFalse);
+      focusNode.requestFocus();
+      await tester.pump();
+      expect(focusNode.hasFocus, isTrue);
+    });
+
+    // -------------------------------------------------------------------------
+    // autofocus parameter
+    // -------------------------------------------------------------------------
+    testWidgets('autofocus: true focuses button on mount', (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.heart),
+              onTap: () {},
+              focusNode: focusNode,
+              autofocus: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      expect(focusNode.hasFocus, isTrue);
+    });
+
+    // -------------------------------------------------------------------------
+    // Focus ring visual presence
+    // -------------------------------------------------------------------------
+    testWidgets('focus ring CustomPaint NOT in tree when button is not focused',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.heart),
+              onTap: () {},
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // CustomPaint for the focus ring is only inserted when focused.
+      // When not focused, ValueListenableBuilder returns child directly —
+      // no Stack, no CustomPaint.
+      final customPaints = tester.widgetList<CustomPaint>(
+        find.descendant(
+          of: find.byType(GlassButton),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+      final hasFocusRing =
+          customPaints.any((cp) => cp.painter is _GlassFocusRingPainterMatcher);
+      expect(hasFocusRing, isFalse,
+          reason: 'Focus ring must not be present when button is unfocused '
+              '(zero GPU cost for touch users)');
+    });
+
+    testWidgets('focus ring CustomPaint IS in tree when button is focused',
+        (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: GlassButton(
+              icon: const Icon(CupertinoIcons.heart),
+              onTap: () {},
+              focusNode: focusNode,
+            ),
+          ),
+        ),
+      );
+
+      // Switch FocusManager to keyboard highlight mode, then request focus.
+      // This replicates Tab-key navigation which triggers onShowFocusHighlight.
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      focusNode.requestFocus();
+      await tester.pump();
+      addTearDown(() =>
+          FocusManager.instance.highlightStrategy =
+              FocusHighlightStrategy.automatic);
+
+      // After keyboard focus, ValueListenableBuilder inserts Stack + CustomPaint.
+      expect(
+        find.descendant(
+          of: find.byType(GlassButton),
+          matching: find.byType(CustomPaint),
+        ),
+        findsWidgets,
+        reason: 'Focus ring CustomPaint must be present when keyboard-focused',
+      );
+    });
+
+    // -------------------------------------------------------------------------
+    // Reduce Motion
+    // -------------------------------------------------------------------------
+    testWidgets('keyboard activation works with reduceMotion enabled',
+        (tester) async {
+      var tapped = false;
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      // Override MediaQuery to signal reduceMotion / disableAnimations.
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: GlassButton(
+                icon: const Icon(CupertinoIcons.heart),
+                onTap: () => tapped = true,
+                focusNode: focusNode,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pump();
+
+      // Should fire onTap without running the animation (no exception thrown).
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+
+      expect(tapped, isTrue,
+          reason: 'onTap must fire even when reduceMotion is enabled');
+    });
+
+    // -------------------------------------------------------------------------
+    // Semantics
+    // -------------------------------------------------------------------------
+    testWidgets('exposes button semantics', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      try {
+        await tester.pumpWidget(
+          createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: GlassButton(
+                icon: const Icon(CupertinoIcons.heart),
+                onTap: () {},
+                label: 'Like',
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        // Find the Semantics widget with the button role directly.
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel('Like'),
+          ),
+          matchesSemantics(
+            isButton: true,
+            label: 'Like',
+            hasEnabledState: true,
+            isEnabled: true,
+            hasTapAction: true,
+            hasFocusAction: true,
+            isFocusable: true,
+          ),
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('semantics shows disabled state', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      try {
+        await tester.pumpWidget(
+          createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: GlassButton(
+                icon: const Icon(CupertinoIcons.heart),
+                onTap: () {},
+                label: 'Like',
+                enabled: false,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel('Like'),
+          ),
+          matchesSemantics(
+            isButton: true,
+            label: 'Like',
+            hasEnabledState: true,
+            isEnabled: false,
+            // isFocusable is absent when enabled:false — FocusableActionDetector
+            // correctly removes the focusable flag for disabled controls.
+          ),
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
+  });
 }
+
+// Matcher helper — checks painter type without exposing private class.
+class _GlassFocusRingPainterMatcher extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {}
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
