@@ -1,3 +1,13 @@
+# 0.26.1
+
+## 🐛 Bug Fixes
+
+- **`GlassAdaptiveScope` quality oscillation after `reset()`** — when
+  `allowStepUp: false`, a `reset()`-triggered warm-up could silently promote
+  quality back up (e.g. `standard → premium`). Warm-up now respects the flag
+  and can only confirm or lower the current quality, never raise it. Thanks to
+  [@jingluoguo](https://github.com/jingluoguo) for the contribution (#180).
+
 # 0.26.0
 
 ## 💥 Breaking Changes
