@@ -1,6 +1,10 @@
+<div align="center">
+
 # Liquid Glass Widgets
 
-Bring Apple's iOS 26 Liquid Glass to your Flutter app — a comprehensive glass widget library with real shader-based blur, physics-driven jelly animations, and dynamic lighting. Works on every platform out of the box.
+Bring Apple's iOS 26 Liquid Glass to your Flutter app — a comprehensive glass widget library with real shader-based blur, physics-driven jelly animations, and dynamic lighting. 
+
+**Now with Max Glass Effect!** Works on every platform out of the box.
 
 [![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg?label=pub.dev&labelColor=333940&logo=dart)](https://pub.dev/packages/liquid_glass_widgets)
 [![pub points](https://img.shields.io/pub/points/liquid_glass_widgets?label=pub%20points&labelColor=333940)](https://pub.dev/packages/liquid_glass_widgets/score)
@@ -9,10 +13,15 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — a comprehensive glass 
 [![codecov](https://codecov.io/gh/sdegenaar/liquid_glass_widgets/graph/badge.svg)](https://codecov.io/gh/sdegenaar/liquid_glass_widgets)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
+<br>
 
-https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
+<video autoplay loop muted playsinline width="100%">
+  <source src="docs/assets/hero.mp4" type="video/mp4">
+</video>
 
 *[Wanderlust](example/showcase/) — a luxury travel showcase built entirely with `liquid_glass_widgets`*
+
+</div>
 
 
 ## Features
@@ -32,23 +41,35 @@ https://github.com/user-attachments/assets/2fe28f46-96ad-459d-b816-e6d6001d90de
 
 ## Examples
 
+> [!TIP]
+> **Max Glass Effect Highlight!**
+> The Apple Music & Apple News demos below feature `GlassQuality.premium` to perfectly replicate the dynamic, real-time refractive glass of iOS 26, complete with a morphing searchable tab bar and a floating play pill!
+
+<table width="100%">
+  <tr>
+    <td width="33%" align="center"><b><a href="example/lib/apple_music/">Apple Music Demo</a></b></td>
+    <td width="33%" align="center"><b><a href="example/lib/apple_news/">Apple News Demo</a></b></td>
+    <td width="33%" align="center"><b><a href="example/">Widget Showcase</a></b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/assets/apple_news_demo.jpg" width="100%"></td>
+    <td align="center"><img src="docs/assets/showcase.jpg" width="100%"></td>
+    <td align="center"><img src="docs/assets/widget_showcase.jpg" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><code>cd example && flutter run -t lib/apple_music/apple_music_demo.dart</code></td>
+    <td align="center"><code>cd example && flutter run -t lib/apple_news/apple_news_demo.dart</code></td>
+    <td align="center"><code>cd example && flutter run</code></td>
+  </tr>
+</table>
+
 ### [Wanderlust](example/showcase/) — Luxury Travel Showcase
 
-A premium app demonstrating `liquid_glass_widgets` in a real-world production context — full-bleed imagery, parallax scroll, hero transitions, and a concierge chat interface. **This is the app shown in the video above.**
+A premium app demonstrating `liquid_glass_widgets` in a real-world production context — full-bleed imagery, parallax scroll, hero transitions, and a concierge chat interface.
 
 ```bash
 cd example/showcase && flutter pub get && flutter run
 ```
-
-
-### [Apple Music Demo](example/lib/apple_music/) — iOS 26 Replica
-
-A recreation of the Apple Music app demonstrating `GlassTabBar.searchable()`, a floating playback pill, and the full iOS 26 navigation model with smooth morphing transitions.
-
-```bash
-cd example && flutter pub get && flutter run -t lib/apple_music/apple_music_demo.dart
-```
-
 
 ### [Apple Messages Demo](example/lib/apple_messages/) — iOS 26 Replica
 
@@ -57,27 +78,6 @@ A replica showcasing the **Liquid Morph Engine** via `GlassMenu`. Tap the menu o
 ```bash
 cd example && flutter pub get && flutter run -t lib/apple_messages/apple_messages_demo.dart
 ```
-
-
-### [Apple News Demo](example/lib/apple_news/) — iOS 26 Replica
-
-A recreation of the Apple News app demonstrating `GlassTabBar.searchable()` with its morphing search pill, category chips, hero cards, and rounded article tiles.
-
-```bash
-cd example && flutter pub get && flutter run -t lib/apple_news/apple_news_demo.dart
-```
-
-<img width="390" height="844" alt="Apple News Demo" src="https://raw.githubusercontent.com/sdegenaar/liquid_glass_widgets/main/docs/assets/apple_news_demo.jpg" />
-
-### [Widget Showcase](example/) — Full Component Library
-
-A complete catalogue of every glass widget organised by category. Use it to explore components, try live settings, and copy patterns directly into your app.
-
-```bash
-cd example && flutter pub get && flutter run
-```
-
-<img width="390" height="847" alt="Widget Showcase" src="https://raw.githubusercontent.com/sdegenaar/liquid_glass_widgets/main/docs/assets/showcase.jpg" />
 
 
 ### [Component Demos](example/lib/demos/) — Copy-Pasteable Examples

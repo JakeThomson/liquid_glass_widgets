@@ -18,6 +18,11 @@ keyboard traversal, Space/Enter activation, and VoiceOver/TalkBack semantics.
 
 - Semantic roles (`isButton`, `isSlider`, `isSelected`, `toggled`, `value`) set on every widget matching Material and Cupertino SDK conventions.
 - Destructive and disabled states propagate correctly to the semantic tree.
+- **`GlassBadge` — `semanticLabel` and `semanticCount` overrides** — resolves two user-reported limitations:
+  - `semanticLabel` (optional `String?`) fully replaces the VoiceOver/TalkBack announcement; enables non-notification domains ("5 downloads", "Online", etc.).
+  - `semanticCount` (optional `int?`) overrides only the spoken *number* while leaving the visual cap (`99+`) unchanged; allows "2500 notifications" to be announced when the badge visually shows "99+".
+  - Both constructors (`GlassBadge` and `GlassBadge.dot`) support `semanticLabel`; `semanticCount` is only applicable to count badges.
+  - Fully backwards-compatible — existing callers with no overrides get identical defaults.
 
 ### State Architecture
 
