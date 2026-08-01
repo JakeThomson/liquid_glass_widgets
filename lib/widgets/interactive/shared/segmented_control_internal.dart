@@ -27,6 +27,7 @@ import '../../../utils/draggable_indicator_physics.dart';
 import '../../../utils/glass_spring.dart';
 import '../../shared/animated_glass_indicator.dart';
 import '../../surfaces/glass_tab_bar.dart' show GlassSegment;
+import '../../shared/glass_focus_region.dart';
 
 // =============================================================================
 // Widget
@@ -102,7 +103,42 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
   /// Current main-axis alignment of the indicator in the range [-1, 1].
   late double _mainAlign = _computeAlignmentForSegment(widget.selectedIndex);
 
+  late List<ValueNotifier<bool>> _focusNotifiers;
+  late List<ValueNotifier<bool>> _hoverNotifiers;
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+  @override
+  void initState() {
+    super.initState();
+    _initNotifiers();
+  }
+
+  void _initNotifiers() {
+    _focusNotifiers = List.generate(
+      widget.segments.length,
+      (_) => ValueNotifier<bool>(false),
+    );
+    _hoverNotifiers = List.generate(
+      widget.segments.length,
+      (_) => ValueNotifier<bool>(false),
+    );
+  }
+
+  void _disposeNotifiers() {
+    for (final notifier in _focusNotifiers) {
+      notifier.dispose();
+    }
+    for (final notifier in _hoverNotifiers) {
+      notifier.dispose();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposeNotifiers();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant SegmentedControlContent oldWidget) {
@@ -112,6 +148,10 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
       setState(() {
         _mainAlign = _computeAlignmentForSegment(widget.selectedIndex);
       });
+    }
+    if (oldWidget.segments.length != widget.segments.length) {
+      _disposeNotifiers();
+      _initNotifiers();
     }
   }
 
@@ -368,12 +408,19 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
                             }
                           },
                           behavior: HitTestBehavior.opaque,
-                          child: Semantics(
-                            button: true,
-                            selected: widget.selectedIndex == i,
-                            label: widget.segments[i].semanticLabel ??
+                          child: GlassFocusRegion(
+                            enabled: widget.segments[i].enabled,
+                            isButton: true,
+                            isSelected: widget.selectedIndex == i,
+                            semanticLabel: widget.segments[i].semanticLabel ??
                                 widget.segments[i].label ??
                                 '',
+                            onKeyboardActivate: () => _onSegmentTap(i),
+                            semanticOnTap: () => _onSegmentTap(i),
+                            isFocusedNotifier: _focusNotifiers[i],
+                            isHoveredNotifier: _hoverNotifiers[i],
+                            shape:
+                                const LiquidRoundedRectangle(borderRadius: 8.0),
                             child: Center(
                               child: IgnorePointer(
                                 ignoring: !widget.segments[i].enabled,

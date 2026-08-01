@@ -21,6 +21,8 @@ import 'package:liquid_glass_widgets_example/demos/indicator_parity_demo.dart';
 
 import 'package:liquid_glass_widgets_example/demos/google_maps_demo.dart'
     show PlatformViewDemo;
+import 'package:liquid_glass_widgets_example/demos/quality_comparison_demo.dart'
+    show GlassQualityComparisonDemo;
 import 'package:liquid_glass_widgets_example/pages/containers_page.dart';
 import 'package:liquid_glass_widgets_example/pages/feedback_page.dart';
 import 'package:liquid_glass_widgets_example/pages/input_page.dart';
@@ -800,7 +802,14 @@ class _ExamplesTab extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 14),
-                      Expanded(child: SizedBox()),
+                      Expanded(
+                        child: _SmallDemoCard(
+                          title: 'Quality Tiers',
+                          icon: CupertinoIcons.sparkles,
+                          color: const Color(0xFFFFB340),
+                          destination: const GlassQualityComparisonDemo(),
+                        ),
+                      ),
                     ],
                   ),
                   SizedBox(height: 14),

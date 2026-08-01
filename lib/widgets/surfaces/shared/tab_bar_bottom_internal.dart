@@ -7,6 +7,9 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
+import '../../shared/glass_focus_region.dart';
 import '../../../constants/glass_defaults.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../theme/glass_theme.dart';
@@ -216,19 +219,20 @@ class BottomBarTabItem extends StatelessWidget {
         ? baseLabelStyle.merge(stateLabelStyle)
         : baseLabelStyle;
 
-    return GestureDetector(
-      // onTap may be null when selection is owned by the outer TabIndicator
-      // (visual path). When non-null it provides accessibility support for
-      // VoiceOver / TalkBack which route through onTap, not onTapDown.
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Semantics(
-        button: true,
-        selected: semanticsSelected ?? selected,
-        // An icon-only tab has no label to announce, so semanticLabel is the
-        // caller's only way to name it — the 'Tab' fallback is a last resort,
-        // not a name.
-        label: tab.semanticLabel ?? tab.label ?? 'Tab',
+    return GlassFocusRegion(
+      enabled: true,
+      isButton: true,
+      isSelected: semanticsSelected ?? selected,
+      semanticLabel: tab.semanticLabel ?? tab.label ?? 'Tab',
+      onKeyboardActivate: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: GestureDetector(
+        // onTap may be null when selection is owned by the outer TabIndicator
+        // (visual path). When non-null it provides accessibility support for
+        // VoiceOver / TalkBack which route through onTap, not onTapDown.
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
         child: SizedBox.expand(
           child: FittedBox(
             fit: BoxFit.scaleDown,

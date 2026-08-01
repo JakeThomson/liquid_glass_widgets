@@ -319,7 +319,13 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
     final bottomOffset = sysBottom;
 
     const double expandedNavBarH = 40 + 2 * _kPaddingV; // 72.0
-    final double aboveBarBottom = expandedNavBarH + 16.0 + bottomOffset;
+    const double collapsedNavBarH = 60.0; // searchBarHeight
+
+    // Shifts down when search is active because the bar is
+    // shorter (50px vs 72px), anchoring to whichever height is current.
+    final double activeNavBarH =
+        _isSearching ? collapsedNavBarH : expandedNavBarH;
+    final double aboveBarBottom = activeNavBarH + 16.0 + bottomOffset;
     final double miniBarBottom = _kPaddingV + bottomOffset;
     final double contentPad = aboveBarBottom + 50.0 + 8.0;
     const double collapsedPillW = 50.0;
@@ -365,15 +371,17 @@ class _ApplePodcastsHomeScreenState extends State<ApplePodcastsHomeScreen> {
         AnimatedPositioned(
           duration: const Duration(milliseconds: 420),
           curve: Curves.easeInOutCubic,
-          bottom: _isMiniMode ? miniBarBottom : aboveBarBottom,
-          left: _isMiniMode ? miniPlayLeft : _kPaddingH,
-          right: _isMiniMode ? miniPlayRight : _kPaddingH,
+          bottom:
+              (_isMiniMode && !_isSearching) ? miniBarBottom : aboveBarBottom,
+          left: (_isMiniMode && !_isSearching) ? miniPlayLeft : _kPaddingH,
+          right: (_isMiniMode && !_isSearching) ? miniPlayRight : _kPaddingH,
           height: 50.0,
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 220),
-            opacity: _isSearching ? 0.0 : 1.0,
+            curve: Curves.easeInOut,
+            opacity: _searchFieldFocused ? 0.0 : 1.0,
             child: IgnorePointer(
-              ignoring: _isSearching,
+              ignoring: _searchFieldFocused,
               child: GlassButton.custom(
                 onTap: () => _showNowPlayingSheet(context),
                 quality: GlassQuality.premium,
