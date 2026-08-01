@@ -37,27 +37,16 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur
 
 ## Examples
 
-> [!TIP]
-> **Max Glass Effect Highlight!**
-> The Apple Music & Apple News demos below feature `GlassQuality.premium` to perfectly replicate the dynamic, real-time refractive glass of iOS 26, complete with a morphing searchable tab bar and a floating play pill!
+Run any demo directly on your device:
 
-<table width="100%">
-  <tr>
-    <td width="33%" align="center"><b><a href="example/lib/apple_music/">Apple Music Demo</a></b></td>
-    <td width="33%" align="center"><b><a href="example/lib/apple_news/">Apple News Demo</a></b></td>
-    <td width="33%" align="center"><b><a href="example/">Widget Showcase</a></b></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="docs/assets/apple_news_demo.jpg" width="100%"></td>
-    <td align="center"><img src="docs/assets/showcase.jpg" width="100%"></td>
-    <td align="center"><img src="docs/assets/widget_showcase.jpg" width="100%"></td>
-  </tr>
-  <tr>
-    <td align="center"><code>cd example && flutter run -t lib/apple_music/apple_music_demo.dart</code></td>
-    <td align="center"><code>cd example && flutter run -t lib/apple_news/apple_news_demo.dart</code></td>
-    <td align="center"><code>cd example && flutter run</code></td>
-  </tr>
-</table>
+| Demo | Command |
+|------|---------|
+| **Apple Music** | `cd example && flutter run -t lib/apple_music/apple_music_demo.dart` |
+| **Apple Podcasts** | `cd example && flutter run -t lib/apple_podcasts/apple_podcasts_demo.dart` |
+| **Apple News** | `cd example && flutter run -t lib/apple_news/apple_news_demo.dart` |
+| **Apple Messages** | `cd example && flutter run -t lib/apple_messages/apple_messages_demo.dart` |
+| **Widget Showcase** | `cd example && flutter run` |
+| **Wanderlust** | `cd example/showcase && flutter pub get && flutter run` |
 
 ### [Wanderlust](example/showcase/) — Luxury Travel Showcase
 
