@@ -28,7 +28,7 @@ test coverage, and documentation.
 | `material.dart` imports in `lib/` | ✅ **Done (0.26.0)** | **36 → 0 files.** `GlassScaffold` → `CupertinoPageScaffold`; `glass_brightness.dart` rewritten to use `CupertinoTheme.of().brightness` which correctly inherits `ThemeMode` via Flutter's `MaterialBasedCupertinoThemeData` bridge. Zero `material.dart` imports remain. |
 | Light mode + dark mode acceptable | ✅ Done | `GlassTheme.brightnessOf` shipped in 0.18.6, simplified cascade in 0.26.0 |
 | RTL layout verified | ❌ Not started | No RTL audit or golden tests exist |
-| Keyboard / Tab focus / Enter-Space activation | ❌ Significant gap | Only 17 of 70 widget files have any `Semantics` — see blocker below |
+| Keyboard / Tab focus / Enter-Space activation | ✅ **Done (0.27.0)** | `GlassFocusRegion` (interactive + observe modes), iOS 26 focus ring, semantics on all 12 widget families, `GlassInteractionStateMixin` |
 | Platform testing matrix complete | ⚠️ Partial | iOS + Android confirmed; Web, Windows, macOS need explicit QA |
 | `docs/PLATFORM_SUPPORT.md` exists | ✅ Done | Shipped 2026-07-30 — all platforms, shader tiers, known bugs documented |
 | CHANGELOG complete with migration guides | ⚠️ Likely partial | Not audited against 0.20–0.25 changes |
