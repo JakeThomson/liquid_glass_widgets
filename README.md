@@ -15,13 +15,9 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — a comprehensive glass 
 
 <br>
 
-<video autoplay loop muted playsinline width="800">
-  <source src="docs/assets/hero_row1.mp4" type="video/mp4">
-</video>
+<img src="docs/assets/hero_row1.webp" width="800" alt="Liquid Glass widgets demo — Apple Music and Podcasts">
 
-<video autoplay loop muted playsinline width="800">
-  <source src="docs/assets/hero_row2.mp4" type="video/mp4">
-</video>
+<img src="docs/assets/hero_row2.webp" width="800" alt="Liquid Glass widgets demo — interactive controls and navigation">
 
 *[Wanderlust](example/showcase/) — a luxury travel showcase built entirely with `liquid_glass_widgets`*
 
