@@ -195,21 +195,23 @@ class _App extends StatelessWidget {
         data: ThemeData.dark(useMaterial3: true),
         child: child!,
       ),
-      home: const _ComparisonPage(),
+      home: const GlassQualityComparisonDemo(),
     );
   }
 }
 
 // ── Demo page ─────────────────────────────────────────────────────────────────
 
-class _ComparisonPage extends StatefulWidget {
-  const _ComparisonPage();
+class GlassQualityComparisonDemo extends StatefulWidget {
+  const GlassQualityComparisonDemo({super.key});
 
   @override
-  State<_ComparisonPage> createState() => _ComparisonPageState();
+  State<GlassQualityComparisonDemo> createState() =>
+      GlassQualityComparisonDemoState();
 }
 
-class _ComparisonPageState extends State<_ComparisonPage> {
+class GlassQualityComparisonDemoState
+    extends State<GlassQualityComparisonDemo> {
   int _segIndex = 0;
   int _tabIndex = 0;
   bool _switchValue = false;
