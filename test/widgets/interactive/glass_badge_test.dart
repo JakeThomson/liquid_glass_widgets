@@ -436,7 +436,8 @@ void main() {
       expect(
         badges.any((s) => s.properties.label == '7 notifications'),
         isTrue,
-        reason: 'Default label must remain unchanged for backward compatibility',
+        reason:
+            'Default label must remain unchanged for backward compatibility',
       );
     });
   });
