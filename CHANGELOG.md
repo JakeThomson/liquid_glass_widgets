@@ -23,6 +23,10 @@ keyboard traversal, Space/Enter activation, and VoiceOver/TalkBack semantics.
   - `semanticCount` (optional `int?`) overrides only the spoken *number* while leaving the visual cap (`99+`) unchanged; allows "2500 notifications" to be announced when the badge visually shows "99+".
   - Both constructors (`GlassBadge` and `GlassBadge.dot`) support `semanticLabel`; `semanticCount` is only applicable to count badges.
   - Fully backwards-compatible — existing callers with no overrides get identical defaults.
+- **`GlassPageControl` — `semanticLabel` param** — the capsule now announces `'Page N of M'` to VoiceOver/TalkBack by default (1-indexed). A `semanticLabel` override lets callers substitute domain-specific wording (e.g. `'Slide 3 of 5'`). Non-interactive controls (no `onPageChanged`) omit the tap hint automatically.
+- **`GlassPasswordField` — toggle button semantics** — the show/hide password suffix icon is now wrapped in `Semantics(label: 'Show password' / 'Hide password', button: true)`. Previously the `GestureDetector` was invisible to screen readers; VoiceOver now correctly announces the button and its toggled state.
+- **`GlassProgressIndicator` — `semanticLabel` param** — the hardcoded `'Progress'` label is now an overridable default. Callers can pass `semanticLabel: 'Download progress'` (or any domain string) to both `.circular()` and `.linear()` constructors. Backwards-compatible.
+- **`GlassPullDownButton` — `semanticLabel` param** — icon-only pull-down buttons previously announced an empty string. A new `semanticLabel` param (e.g. `'More options'`) is used as the `GlassButton.label` in the icon-only code path. Visible-label variants are unaffected.
 
 ### State Architecture
 

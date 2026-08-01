@@ -101,6 +101,7 @@ class GlassProgressIndicator extends StatefulWidget {
     this.useOwnLayer = false,
     this.settings,
     this.quality,
+    this.semanticLabel,
   })  : _type = _ProgressIndicatorType.circular,
         height = null,
         minWidth = null;
@@ -119,6 +120,7 @@ class GlassProgressIndicator extends StatefulWidget {
     this.useOwnLayer = false,
     this.settings,
     this.quality,
+    this.semanticLabel,
   })  : _type = _ProgressIndicatorType.linear,
         size = null,
         strokeWidth = null;
@@ -203,6 +205,19 @@ class GlassProgressIndicator extends StatefulWidget {
   /// If null, inherits from parent or theme, or defaults to [GlassQuality.standard].
   final GlassQuality? quality;
 
+  /// Overrides the VoiceOver / TalkBack label for this indicator.
+  ///
+  /// When null the default is `'Progress'`. Set this to describe what is
+  /// actually loading so screen-reader users get meaningful context:
+  ///
+  /// ```dart
+  /// GlassProgressIndicator.linear(
+  ///   value: downloadProgress,
+  ///   semanticLabel: 'Download progress',
+  /// )
+  /// ```
+  final String? semanticLabel;
+
   // ===========================================================================
   // Private Properties
   // ===========================================================================
@@ -273,7 +288,7 @@ class _GlassProgressIndicatorState extends State<GlassProgressIndicator>
         ? '${(widget.value!.clamp(0.0, 1.0) * 100).round()}%'
         : null;
     final semanticWidget = Semantics(
-      label: 'Progress',
+      label: widget.semanticLabel ?? 'Progress',
       value: valueStr,
       // liveRegion so dynamic changes are announced without needing focus
       liveRegion: widget.value != null,
