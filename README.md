@@ -15,6 +15,8 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur
 
 <img src="docs/assets/hero_row1.webp" width="700" alt="Liquid Glass widgets demo — Apple Music and Podcasts">
 
+<br>
+
 <img src="docs/assets/hero_row2.webp" width="700" alt="Liquid Glass widgets demo — interactive controls and navigation">
 
 </div>
