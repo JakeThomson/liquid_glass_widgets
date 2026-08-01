@@ -15,11 +15,11 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — a comprehensive glass 
 
 <br>
 
-<video autoplay loop muted playsinline width="100%">
+<video autoplay loop muted playsinline width="800">
   <source src="docs/assets/hero_row1.mp4" type="video/mp4">
 </video>
 
-<video autoplay loop muted playsinline width="100%">
+<video autoplay loop muted playsinline width="800">
   <source src="docs/assets/hero_row2.mp4" type="video/mp4">
 </video>
 
