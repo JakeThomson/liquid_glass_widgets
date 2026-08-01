@@ -25,7 +25,10 @@ void main() async {
     ),
   );
 
-  runApp(LiquidGlassWidgets.wrap(child: const WanderlustApp()));
+  runApp(LiquidGlassWidgets.wrap(
+    theme: GlassThemeData.simple(quality: GlassQuality.premium),
+    child: const WanderlustApp(),
+  ));
 }
 
 class WanderlustApp extends StatelessWidget {
