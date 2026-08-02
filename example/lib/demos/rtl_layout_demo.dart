@@ -150,6 +150,7 @@ class _RtlLayoutDemoState extends State<RtlLayoutDemo> {
 
             SliverToBoxAdapter(
               child: SafeArea(
+                top: false,
                 bottom: false,
                 child: Padding(
                   padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 0),
