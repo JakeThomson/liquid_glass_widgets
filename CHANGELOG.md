@@ -1,10 +1,62 @@
+# 0.28.0
+
+## 🌐 Full RTL (Right-to-Left) Support
+
+Completed the Right-to-Left (RTL) layout audit. All directional padding and
+alignment primitives now use `EdgeInsetsDirectional` / `AlignmentDirectional`
+so widgets mirror correctly in RTL locales (Arabic, Hebrew, Persian, etc.)
+without any API changes for existing callers.
+
+### Widgets Updated
+
+- **`GlassGroupedSection`** — header and footer labels now use
+  `EdgeInsetsDirectional.only(start: 16, end: 16)`. Under RTL the text aligns
+  to the correct physical edge.
+- **`GlassDivider`** — horizontal divider `indent` / `endIndent` now use
+  `EdgeInsetsDirectional.only(start: indent, end: endIndent)`. The leading
+  indent is always on the logical leading side regardless of text direction.
+  Vertical divider `top` / `bottom` are unchanged (not directional).
+- **`GlassAppBar`** — non-centered title now uses
+  `AlignmentDirectional.centerStart` + `EdgeInsetsDirectional.only(start: 8)`
+  so the title anchors to the leading edge in both LTR and RTL.
+- **`GlassSearchBar`** — cancel button gap uses
+  `EdgeInsetsDirectional.only(start: 10)` so the gap appears between the
+  search field and the cancel button in both directions.
+- **`GlassDialog`** — horizontal two-button layout gap uses
+  `EdgeInsetsDirectional.only(start: 8)` so buttons remain correctly spaced
+  in RTL.
+- **`GlassLargeTitle`** — two improvements:
+  - `padding` and `searchBarPadding` defaults changed from `EdgeInsets.*` to
+    `EdgeInsetsDirectional.*` — the field types were already `EdgeInsetsGeometry`,
+    so this is a zero-breaking-change improvement. Callers who pass custom
+    asymmetric directional padding (e.g. `EdgeInsetsDirectional.only(start: 32)`)
+    now get correct physical mirroring in RTL.
+  - `Transform.scale` alignment changed from `Alignment.bottomLeft` to
+    `AlignmentDirectional.bottomStart` — under RTL, the rubber-band overscroll
+    stretch now scales from the correct logical leading edge rather than always
+    pinning to the physical left.
+- **`GlassProgressIndicator.linear`** — custom canvas drawing now explicitly
+  respects `Directionality`. In RTL locales, both the determinate fill and
+  indeterminate moving bar correctly animate from the physical right (logical start)
+  to the left.
+- **`GlassSlider`** — drag logic and active track drawing now invert cleanly under
+  RTL. Dragging left increases the value, and the track anchors to the physical right.
+
+### Bug Fixes & Accessibility
+
+- **`GlassTabBar.bottom`** — Resolved an edge-case visual bug in RTL mode where the animated glass pill would jump to the mirror-image tab when selecting an end tab. Fixed by enforcing `Alignment(x, y)` physical coordinates instead of `AlignmentDirectional` within the physics engine bounds.
+- **`GlassSegmentedControl` & `GlassTabBar`** — Unselected segments now correctly emit a "not selected" accessibility state (resolves [#184](https://github.com/sdegenaar/liquid_glass_widgets/issues/184)). Thanks to @Xodus-CO for the detailed report!
+
+
+
+---
+
 # 0.27.0
 
-## ♿ Accessibility & Keyboard Navigation — Roadmap Milestone Complete
 
-The #1 blocker for 1.0.0 is resolved. Every interactive widget now supports full
-keyboard traversal, Space/Enter activation, and VoiceOver/TalkBack semantics.
+## ♿ Accessibility & Keyboard Navigation
 
+Every interactive widget now supports full keyboard traversal, Space/Enter activation, and VoiceOver/TalkBack semantics.
 ### Focus & Keyboard
 
 - **`GlassFocusRegion`** — new shared widget that is the single source of truth for all focus behaviour. Two modes:
@@ -28,7 +80,7 @@ keyboard traversal, Space/Enter activation, and VoiceOver/TalkBack semantics.
 - **`GlassProgressIndicator` — `semanticLabel` param** — the hardcoded `'Progress'` label is now an overridable default. Callers can pass `semanticLabel: 'Download progress'` (or any domain string) to both `.circular()` and `.linear()` constructors. Backwards-compatible.
 - **`GlassPullDownButton` — `semanticLabel` param** — icon-only pull-down buttons previously announced an empty string. A new `semanticLabel` param (e.g. `'More options'`) is used as the `GlassButton.label` in the icon-only code path. Visible-label variants are unaffected.
 
-### State Architecture
+### Layout & Architecture
 
 - **`GlassInteractionStateMixin`** — internal `State` mixin (modelled on `SingleTickerProviderStateMixin`) providing `isPressed`, `isFocused`, `isHovered` `ValueNotifier`s and their `Listenable.merge` combinations. Replaces ~76 lines of identical boilerplate across `GlassListTile`, `GlassMenuItem`, `_ActionSheetButton`, and `_GlassGroupItemWidget`. No public API change.
 - All container-item widgets migrated to `ValueNotifier` + `ListenableBuilder` — only the `AnimatedContainer` highlight layer rebuilds on interaction; the surrounding subtree is stable.

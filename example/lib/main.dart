@@ -18,6 +18,7 @@ import 'package:liquid_glass_widgets_example/demos/collapse_bar_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/buttons_and_shadows_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/content_aware_brightness_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/indicator_parity_demo.dart';
+import 'package:liquid_glass_widgets_example/demos/rtl_layout_demo.dart';
 
 import 'package:liquid_glass_widgets_example/demos/google_maps_demo.dart'
     show PlatformViewDemo;
@@ -849,6 +850,19 @@ class _ExamplesTab extends StatelessWidget {
                       Color(0xFF0A84FF),
                     ],
                     destination: const IndicatorParityDemoPage(),
+                  ),
+                  SizedBox(height: 14),
+
+                  _LargeDemoCard(
+                    title: 'RTL Layout',
+                    subtitle:
+                        'Automatic mirroring of layout and physics in RTL',
+                    icon: CupertinoIcons.arrow_right_arrow_left_square_fill,
+                    gradient: const [
+                      Color(0xFF8E2DE2),
+                      Color(0xFF4A00E0),
+                    ],
+                    destination: const RtlLayoutDemo(),
                   ),
                   SizedBox(height: 14),
 

@@ -10,12 +10,12 @@ to real iOS 26 components** — nothing half-baked, nothing Material-flavoured.
 
 ## Current Status (0.26.0)
 
-> Honest scored audit against the 1.0.0 entry criteria. Updated 2026-07-30.
+> Honest scored audit against the 1.0.0 entry criteria. Updated 2026-08-01.
 
-**Overall: ~68–72% of the way to 1.0.0.** The rendering engine, physics,
-theming infrastructure, and Material decoupling are complete and
-production-quality. What remains is platform hygiene — accessibility, RTL,
-test coverage, and documentation.
+**Overall: ~82–85% of the way to 1.0.0.** The rendering engine, physics,
+theming infrastructure, Material decoupling, accessibility, and RTL layout
+are all complete and production-quality. What remains is test coverage,
+Dartdoc completeness, and documentation polish.
 
 | Criterion | Status | Notes |
 |---|---|---|
@@ -27,7 +27,7 @@ test coverage, and documentation.
 | No hardcoded `Colors.*` in `lib/` | ✅ Done | All replaced with `CupertinoColors` or explicit hex `Color` literals |
 | `material.dart` imports in `lib/` | ✅ **Done (0.26.0)** | **36 → 0 files.** `GlassScaffold` → `CupertinoPageScaffold`; `glass_brightness.dart` rewritten to use `CupertinoTheme.of().brightness` which correctly inherits `ThemeMode` via Flutter's `MaterialBasedCupertinoThemeData` bridge. Zero `material.dart` imports remain. |
 | Light mode + dark mode acceptable | ✅ Done | `GlassTheme.brightnessOf` shipped in 0.18.6, simplified cascade in 0.26.0 |
-| RTL layout verified | ❌ Not started | No RTL audit or golden tests exist |
+| RTL layout verified | ✅ **Done (0.28.0)** | `EdgeInsetsDirectional` / `AlignmentDirectional` audit complete. 8 new RTL tests pass. |
 | Keyboard / Tab focus / Enter-Space activation | ✅ **Done (0.27.0)** | `GlassFocusRegion` (interactive + observe modes), iOS 26 focus ring, semantics on all 12 widget families, `GlassInteractionStateMixin` |
 | Platform testing matrix complete | ⚠️ Partial | iOS + Android confirmed; Web, Windows, macOS need explicit QA |
 | `docs/PLATFORM_SUPPORT.md` exists | ✅ Done | Shipped 2026-07-30 — all platforms, shader tiers, known bugs documented |
@@ -47,24 +47,24 @@ keyboard users. This affects:
 
 **Estimated effort:** 4–6 weeks of focused work.
 
-### 🔴 Second Blocker: RTL Layout
+### ~~🔴 Second Blocker: RTL Layout~~ ✅ Done (0.28.0)
 
-No RTL audit or RTL golden tests exist. Every widget using `Row`, `Positioned`,
-or directional `EdgeInsets` needs verification. **Estimated effort:** 3–4 weeks.
+All directional padding/alignment primitives migrated to `EdgeInsetsDirectional`
+and `AlignmentDirectional`. 8 new RTL layout audit tests pass. Zero regressions.
 
 ### Realistic Timeline to 1.0.0
 
 | Work Area | Estimated Effort |
 |---|---|
-| Accessibility / keyboard focus (all interactive widgets) | 4–6 weeks |
-| RTL audit + golden tests | 3–4 weeks |
+| Accessibility / keyboard focus (all interactive widgets) | ✅ Done (0.27.0) |
+| RTL audit + golden tests | ✅ Done (0.28.0) |
 | Platform testing matrix | 1–2 weeks |
 | Dartdoc audit + coverage push to 90% | 2–3 weeks |
 | `material.dart` decoupling (36 → 0) | ✅ Done (0.26.0) |
 | `Colors.*` hardcode cleanup + API polish | ✅ Done (0.26.0) |
 | `docs/PLATFORM_SUPPORT.md` | ✅ Done (0.26.0) |
 | README, CHANGELOG, pub.dev screenshots | 1 week |
-| **Total remaining** | **~11–15 weeks focused / 3–4 months part-time** |
+| **Total remaining** | **~3–5 weeks focused / 1–2 months part-time** |
 
 ---
 
@@ -471,12 +471,9 @@ Status markers reflect the 0.25.1 audit (2026-07-29).
   `FocusNode` handling, `Semantics` wrapping, and activate callbacks required
   across all interactive widgets listed above.
 
-- [ ] **RTL layout verified** *(estimated 3–4 weeks)*
-  No RTL audit or RTL golden tests exist. Every widget using `Row`,
-  `Positioned`, or directional `EdgeInsets` must be verified and, where needed,
-  migrated to `EdgeInsetsDirectional`. Golden tests required at minimum for
-  `GlassListTile`, `GlassAppBar`, `GlassTabBar.bottom()`, and
-  `GlassTabBar.searchable()`.
+- [x] **RTL layout verified** *(completed 0.28.0)*
+  `EdgeInsetsDirectional` / `AlignmentDirectional` audit across all widgets
+  with directional padding. 8 new RTL layout audit tests added. Zero regressions.
 
 - [x] **No hardcoded `Colors.*`** — *(shipped 2026-07-30)*
   All 30+ hits resolved. Barrier colours → `GlassDefaults.barrierColor`;

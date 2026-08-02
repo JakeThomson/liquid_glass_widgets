@@ -326,11 +326,9 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
           active: _isDragging,
           builder: (context, value, velocity, child) {
             final alignment = widget.direction == Axis.horizontal
-                ? Alignment(value, 0)
+                ? AlignmentDirectional(value, 0)
                 : Alignment(0, value);
-            final alignmentDelta = widget.direction == Axis.horizontal
-                ? alignment.x - targetAlignment
-                : alignment.y - targetAlignment;
+            final alignmentDelta = value - targetAlignment;
 
             return SpringBuilder(
               spring: GlassSpring.snappy(
@@ -411,6 +409,7 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
                           child: GlassFocusRegion(
                             enabled: widget.segments[i].enabled,
                             isButton: true,
+                            tracksSelection: true,
                             isSelected: widget.selectedIndex == i,
                             semanticLabel: widget.segments[i].semanticLabel ??
                                 widget.segments[i].label ??
