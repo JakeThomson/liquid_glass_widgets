@@ -653,7 +653,8 @@ class TabIndicatorState extends State<TabIndicator>
                           case MaskingQuality.off:
                             return _buildSimpleMode(
                               alignment: alignment,
-                              targetAlignment: AlignmentDirectional(targetAlignment, 0),
+                              targetAlignment:
+                                  AlignmentDirectional(targetAlignment, 0),
                               thickness: thickness,
                               velocity: velocity,
                               indicatorRadius: indicatorRadius,
@@ -810,8 +811,8 @@ class TabIndicatorState extends State<TabIndicator>
                   child: Container(
                     padding: widget.tabPadding,
                     height: widget.barHeight,
-                    child: widget.selectedTabBuilder(
-                        context, 1.0, targetAlignment.resolve(Directionality.of(context))),
+                    child: widget.selectedTabBuilder(context, 1.0,
+                        targetAlignment.resolve(Directionality.of(context))),
                   ),
                 ),
               ),
@@ -893,7 +894,8 @@ class TabIndicatorState extends State<TabIndicator>
                                   clipBehavior: Clip.antiAliasWithSaveLayer,
                                   clipper: JellyClipper(
                                     itemCount: widget.tabCount,
-                                    alignment: alignment.resolve(Directionality.of(context)),
+                                    alignment: alignment
+                                        .resolve(Directionality.of(context)),
                                     thickness: thickness,
                                     expansion: widget.indicatorExpansion
                                         .resolve(Directionality.of(context)),
@@ -912,7 +914,8 @@ class TabIndicatorState extends State<TabIndicator>
                                   clipBehavior: Clip.antiAliasWithSaveLayer,
                                   clipper: JellyClipper(
                                     itemCount: widget.tabCount,
-                                    alignment: alignment.resolve(Directionality.of(context)),
+                                    alignment: alignment
+                                        .resolve(Directionality.of(context)),
                                     thickness: thickness,
                                     expansion: widget.indicatorExpansion
                                         .resolve(Directionality.of(context)),
@@ -923,7 +926,10 @@ class TabIndicatorState extends State<TabIndicator>
                                     padding: widget.tabPadding,
                                     height: widget.barHeight,
                                     child: widget.selectedTabBuilder(
-                                        context, thickness, alignment.resolve(Directionality.of(context))),
+                                        context,
+                                        thickness,
+                                        alignment.resolve(
+                                            Directionality.of(context))),
                                   ),
                                 ),
                               ],
@@ -936,7 +942,8 @@ class TabIndicatorState extends State<TabIndicator>
                                 clipBehavior: Clip.antiAliasWithSaveLayer,
                                 clipper: JellyClipper(
                                   itemCount: widget.tabCount,
-                                  alignment: alignment.resolve(Directionality.of(context)),
+                                  alignment: alignment
+                                      .resolve(Directionality.of(context)),
                                   thickness: thickness,
                                   expansion: widget.indicatorExpansion
                                       .resolve(Directionality.of(context)),
@@ -955,7 +962,8 @@ class TabIndicatorState extends State<TabIndicator>
                                 clipBehavior: Clip.antiAliasWithSaveLayer,
                                 clipper: JellyClipper(
                                   itemCount: widget.tabCount,
-                                  alignment: alignment.resolve(Directionality.of(context)),
+                                  alignment: alignment
+                                      .resolve(Directionality.of(context)),
                                   thickness: thickness,
                                   expansion: widget.indicatorExpansion
                                       .resolve(Directionality.of(context)),
@@ -966,7 +974,10 @@ class TabIndicatorState extends State<TabIndicator>
                                   padding: widget.tabPadding,
                                   height: widget.barHeight,
                                   child: widget.selectedTabBuilder(
-                                      context, thickness, alignment.resolve(Directionality.of(context))),
+                                      context,
+                                      thickness,
+                                      alignment
+                                          .resolve(Directionality.of(context))),
                                 ),
                               ),
                             ],

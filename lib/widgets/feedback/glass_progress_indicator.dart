@@ -489,7 +489,7 @@ class _LinearProgressPainter extends CustomPainter {
       // Bar width is 30% of track width
       final barWidth = width * 0.3;
       final position = animation * (width + barWidth) - barWidth;
-      
+
       progressWidth = barWidth;
       progressX = textDirection == TextDirection.rtl
           ? width - position - progressWidth
@@ -497,9 +497,8 @@ class _LinearProgressPainter extends CustomPainter {
     } else {
       // Determinate: fill from left (or right in RTL)
       progressWidth = width * value!.clamp(0.0, 1.0);
-      progressX = textDirection == TextDirection.rtl
-          ? width - progressWidth
-          : 0;
+      progressX =
+          textDirection == TextDirection.rtl ? width - progressWidth : 0;
     }
 
     if (progressWidth > 0) {

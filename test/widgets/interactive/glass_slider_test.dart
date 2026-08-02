@@ -60,11 +60,11 @@ void main() {
           child: Directionality(
             textDirection: TextDirection.rtl,
             child: AdaptiveLiquidGlassLayer(
-            settings: defaultTestGlassSettings,
-            child: GlassSlider(
-              value: value,
-              onChanged: (newValue) => value = newValue,
-            ),
+              settings: defaultTestGlassSettings,
+              child: GlassSlider(
+                value: value,
+                onChanged: (newValue) => value = newValue,
+              ),
             ),
           ),
         ),

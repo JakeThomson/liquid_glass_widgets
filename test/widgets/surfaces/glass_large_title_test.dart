@@ -527,10 +527,8 @@ void main() {
       // contract is correct (start is the logical leading edge).
       final widget = GlassLargeTitle(text: 'T', controller: controller);
       final resolved = widget.padding.resolve(TextDirection.rtl);
-      expect(resolved.right, 24.0,
-          reason: 'start(24) → physical right in RTL');
-      expect(resolved.left, 24.0,
-          reason: 'end(24) → physical left in RTL');
+      expect(resolved.right, 24.0, reason: 'start(24) → physical right in RTL');
+      expect(resolved.left, 24.0, reason: 'end(24) → physical left in RTL');
     });
 
     // ── 3. Custom asymmetric EdgeInsetsDirectional padding ─────────────────
@@ -553,8 +551,7 @@ void main() {
       expect(rtl.left, 8.0, reason: 'end=8 → left in RTL');
     });
 
-    testWidgets('custom padding renders correctly in LTR',
-        (tester) async {
+    testWidgets('custom padding renders correctly in LTR', (tester) async {
       await tester.pumpWidget(ltrApp(
         CustomScrollView(
           controller: controller.scrollController,
@@ -562,8 +559,8 @@ void main() {
             GlassLargeTitle(
               text: 'نامه‌ها',
               controller: controller,
-              padding:
-                  const EdgeInsetsDirectional.only(start: 32, end: 8, bottom: 8),
+              padding: const EdgeInsetsDirectional.only(
+                  start: 32, end: 8, bottom: 8),
             ),
           ],
         ),
@@ -582,8 +579,7 @@ void main() {
       expect(resolved.right, 8.0);
     });
 
-    testWidgets('custom padding renders correctly in RTL',
-        (tester) async {
+    testWidgets('custom padding renders correctly in RTL', (tester) async {
       await tester.pumpWidget(rtlApp(
         CustomScrollView(
           controller: controller.scrollController,
@@ -591,8 +587,8 @@ void main() {
             GlassLargeTitle(
               text: 'نامه‌ها',
               controller: controller,
-              padding:
-                  const EdgeInsetsDirectional.only(start: 32, end: 8, bottom: 8),
+              padding: const EdgeInsetsDirectional.only(
+                  start: 32, end: 8, bottom: 8),
             ),
           ],
         ),
@@ -615,8 +611,7 @@ void main() {
 
     // ── 4. searchBarPadding mirrors in RTL ─────────────────────────────────
 
-    testWidgets(
-        'custom searchBarPadding mirrors correctly under RTL',
+    testWidgets('custom searchBarPadding mirrors correctly under RTL',
         (tester) async {
       await tester.pumpWidget(rtlApp(
         CustomScrollView(
@@ -644,16 +639,13 @@ void main() {
         ),
       );
       final resolved = searchPadding.padding.resolve(TextDirection.rtl);
-      expect(resolved.right, 20.0,
-          reason: 'start=20 → physical right in RTL');
-      expect(resolved.left, 4.0,
-          reason: 'end=4 → physical left in RTL');
+      expect(resolved.right, 20.0, reason: 'start=20 → physical right in RTL');
+      expect(resolved.left, 4.0, reason: 'end=4 → physical left in RTL');
     });
 
     // ── 5. Transform.scale alignment ──────────────────────────────────────
 
-    testWidgets(
-        'rubber-band scale uses AlignmentDirectional.bottomStart',
+    testWidgets('rubber-band scale uses AlignmentDirectional.bottomStart',
         (tester) async {
       await tester.pumpWidget(rtlApp(
         CustomScrollView(
@@ -663,14 +655,14 @@ void main() {
           ],
         ),
       ));
-      final transforms =
-          tester.widgetList<Transform>(find.byType(Transform));
+      final transforms = tester.widgetList<Transform>(find.byType(Transform));
       final hasBottomStart = transforms
           .any((t) => t.alignment == AlignmentDirectional.bottomStart);
       expect(
         hasBottomStart,
         isTrue,
-        reason: 'GlassLargeTitle must scale from AlignmentDirectional.bottomStart '
+        reason:
+            'GlassLargeTitle must scale from AlignmentDirectional.bottomStart '
             'so the anchor is on the logical leading edge in both LTR and RTL.',
       );
     });
