@@ -77,6 +77,8 @@ class _RtlLayoutDemoState extends State<RtlLayoutDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+
     return Directionality(
       textDirection: _dir,
       child: GlassScaffold(
@@ -138,6 +140,9 @@ class _RtlLayoutDemoState extends State<RtlLayoutDemo> {
             // Hero: GlassLargeTitle — scale anchor is AlignmentDirectional.bottomStart
             // In RTL the rubber-band overscroll stretches from the physical right.
             // ------------------------------------------------------------------
+            SliverToBoxAdapter(
+              child: SizedBox(height: topPad + 44),
+            ),
             GlassLargeTitle(
               text: _isRtl ? 'تخطيط ي.م.' : 'RTL Widgets',
               controller: _titleController,
