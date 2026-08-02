@@ -195,11 +195,12 @@ class DraggableIndicatorPhysics {
     final mainExtent =
         direction == Axis.horizontal ? box.size.width : box.size.height;
     var rawRelativeX = (mainPosition / mainExtent).clamp(0.0, 1.0);
-    
-    if (direction == Axis.horizontal && Directionality.of(context) == TextDirection.rtl) {
+
+    if (direction == Axis.horizontal &&
+        Directionality.of(context) == TextDirection.rtl) {
       rawRelativeX = 1.0 - rawRelativeX;
     }
-    
+
     final normalizedX = (rawRelativeX - padding) / draggableRange;
 
     // Apply rubber band resistance for overdrag
@@ -244,9 +245,12 @@ class DraggableIndicatorPhysics {
   }) {
     final box = context.findRenderObject()! as RenderBox;
     final localPosition = box.globalToLocal(globalPosition);
-    final width = direction == Axis.horizontal ? box.size.width : box.size.height;
-    double fraction = (direction == Axis.horizontal ? localPosition.dx : localPosition.dy) / width;
-    
+    final width =
+        direction == Axis.horizontal ? box.size.width : box.size.height;
+    double fraction =
+        (direction == Axis.horizontal ? localPosition.dx : localPosition.dy) /
+            width;
+
     return (fraction * itemCount).floor().clamp(0, itemCount - 1);
   }
 

@@ -52,16 +52,19 @@ void main() {
   // =========================================================================
 
   group('GlassDivider — RTL indent mapping', () {
-    testWidgets('padding is EdgeInsetsDirectional, not EdgeInsets', (tester) async {
+    testWidgets('padding is EdgeInsetsDirectional, not EdgeInsets',
+        (tester) async {
       await tester.pumpWidget(
         _ltrBare(const Center(child: GlassDivider(indent: 24, endIndent: 8))),
       );
       // ExcludeSemantics → Padding → SizedBox → Center → Container
       final padding = tester.widget<Padding>(
-        find.descendant(
-          of: find.byType(GlassDivider),
-          matching: find.byType(Padding),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(GlassDivider),
+              matching: find.byType(Padding),
+            )
+            .first,
       );
       expect(
         padding.padding,
@@ -75,14 +78,16 @@ void main() {
         _ltrBare(const Center(child: GlassDivider(indent: 24, endIndent: 8))),
       );
       final padding = tester.widget<Padding>(
-        find.descendant(
-          of: find.byType(GlassDivider),
-          matching: find.byType(Padding),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(GlassDivider),
+              matching: find.byType(Padding),
+            )
+            .first,
       );
       final insets = _resolve(padding.padding, TextDirection.ltr);
       expect(insets.left, 24, reason: 'start(24) → left in LTR');
-      expect(insets.right, 8,  reason: 'end(8) → right in LTR');
+      expect(insets.right, 8, reason: 'end(8) → right in LTR');
     });
 
     testWidgets('indent maps to physical right in RTL', (tester) async {
@@ -90,31 +95,40 @@ void main() {
         _rtlBare(const Center(child: GlassDivider(indent: 24, endIndent: 8))),
       );
       final padding = tester.widget<Padding>(
-        find.descendant(
-          of: find.byType(GlassDivider),
-          matching: find.byType(Padding),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(GlassDivider),
+              matching: find.byType(Padding),
+            )
+            .first,
       );
       final insets = _resolve(padding.padding, TextDirection.rtl);
-      expect(insets.right, 24, reason: 'start(24) → right in RTL (leading side)');
-      expect(insets.left,  8,  reason: 'end(8) → left in RTL (trailing side)');
+      expect(insets.right, 24,
+          reason: 'start(24) → right in RTL (leading side)');
+      expect(insets.left, 8, reason: 'end(8) → left in RTL (trailing side)');
     });
 
-    testWidgets('vertical divider top/bottom are unaffected by text direction', (tester) async {
+    testWidgets('vertical divider top/bottom are unaffected by text direction',
+        (tester) async {
       await tester.pumpWidget(
         _rtlBare(
-          const SizedBox(height: 100, child: GlassDivider.vertical(indent: 10, endIndent: 5)),
+          const SizedBox(
+              height: 100,
+              child: GlassDivider.vertical(indent: 10, endIndent: 5)),
         ),
       );
       final padding = tester.widget<Padding>(
-        find.descendant(
-          of: find.byType(GlassDivider),
-          matching: find.byType(Padding),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(GlassDivider),
+              matching: find.byType(Padding),
+            )
+            .first,
       );
       final insets = _resolve(padding.padding, TextDirection.rtl);
-      expect(insets.top, 10,  reason: 'indent → top for vertical divider');
-      expect(insets.bottom, 5, reason: 'endIndent → bottom for vertical divider');
+      expect(insets.top, 10, reason: 'indent → top for vertical divider');
+      expect(insets.bottom, 5,
+          reason: 'endIndent → bottom for vertical divider');
     });
   });
 
@@ -123,7 +137,6 @@ void main() {
   // =========================================================================
 
   group('GlassGroupedSection — RTL header padding', () {
-
     testWidgets('header start=16 → left=16 in LTR', (tester) async {
       await tester.pumpWidget(
         _ltrBare(
@@ -133,16 +146,15 @@ void main() {
           ),
         ),
       );
-      final headerPadding = tester
-          .widgetList<Padding>(find.byType(Padding))
-          .firstWhere(
-            (p) => tester
-                .widgetList(find.descendant(
-                  of: find.byWidget(p),
-                  matching: find.byType(DefaultTextStyle),
-                ))
-                .isNotEmpty,
-          );
+      final headerPadding =
+          tester.widgetList<Padding>(find.byType(Padding)).firstWhere(
+                (p) => tester
+                    .widgetList(find.descendant(
+                      of: find.byWidget(p),
+                      matching: find.byType(DefaultTextStyle),
+                    ))
+                    .isNotEmpty,
+              );
       final insets = _resolve(headerPadding.padding, TextDirection.ltr);
       expect(insets.left, 16);
       expect(insets.right, 16);
@@ -157,16 +169,15 @@ void main() {
           ),
         ),
       );
-      final headerPadding = tester
-          .widgetList<Padding>(find.byType(Padding))
-          .firstWhere(
-            (p) => tester
-                .widgetList(find.descendant(
-                  of: find.byWidget(p),
-                  matching: find.byType(DefaultTextStyle),
-                ))
-                .isNotEmpty,
-          );
+      final headerPadding =
+          tester.widgetList<Padding>(find.byType(Padding)).firstWhere(
+                (p) => tester
+                    .widgetList(find.descendant(
+                      of: find.byWidget(p),
+                      matching: find.byType(DefaultTextStyle),
+                    ))
+                    .isNotEmpty,
+              );
       final insets = _resolve(headerPadding.padding, TextDirection.rtl);
       // start=16 (logical leading) → physical right in RTL
       expect(insets.right, 16);
@@ -179,7 +190,8 @@ void main() {
   // =========================================================================
 
   group('GlassAppBar — RTL title alignment', () {
-    testWidgets('non-centered title uses AlignmentDirectional.centerStart', (tester) async {
+    testWidgets('non-centered title uses AlignmentDirectional.centerStart',
+        (tester) async {
       await tester.pumpWidget(
         _ltrBare(
           const GlassAppBar(
@@ -199,7 +211,8 @@ void main() {
       );
     });
 
-    testWidgets('centered title uses Center (directional-safe)', (tester) async {
+    testWidgets('centered title uses Center (directional-safe)',
+        (tester) async {
       await tester.pumpWidget(
         _ltrBare(
           const GlassAppBar(title: Text('Title')),

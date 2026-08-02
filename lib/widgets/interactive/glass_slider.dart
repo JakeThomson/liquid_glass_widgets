@@ -454,8 +454,8 @@ class _GlassSliderState extends State<GlassSlider>
       builder: (context, constraints) {
         final isRtl = Directionality.of(context) == TextDirection.rtl;
         final trackWidth = constraints.maxWidth - (widget.thumbRadius * 2);
-        final thumbPosition =
-            widget.thumbRadius + (trackWidth * (isRtl ? 1.0 - normalizedValue : normalizedValue));
+        final thumbPosition = widget.thumbRadius +
+            (trackWidth * (isRtl ? 1.0 - normalizedValue : normalizedValue));
 
         final step = (widget.max - widget.min) / (widget.divisions ?? 10);
         final increasedValue =
@@ -534,8 +534,14 @@ class _GlassSliderState extends State<GlassSlider>
                               // Active track
                               if (normalizedValue > 0)
                                 Positioned(
-                                  left: isRtl ? constraints.maxWidth * (1 - normalizedValue) : 0,
-                                  right: isRtl ? 0 : constraints.maxWidth * (1 - normalizedValue),
+                                  left: isRtl
+                                      ? constraints.maxWidth *
+                                          (1 - normalizedValue)
+                                      : 0,
+                                  right: isRtl
+                                      ? 0
+                                      : constraints.maxWidth *
+                                          (1 - normalizedValue),
                                   top: 0,
                                   bottom: 0,
                                   child: Container(
@@ -543,11 +549,19 @@ class _GlassSliderState extends State<GlassSlider>
                                       color: activeColor,
                                       borderRadius: BorderRadius.horizontal(
                                         left: isRtl
-                                            ? (normalizedValue >= 1.0 ? Radius.circular(widget.trackHeight / 2) : Radius.zero)
-                                            : Radius.circular(widget.trackHeight / 2),
+                                            ? (normalizedValue >= 1.0
+                                                ? Radius.circular(
+                                                    widget.trackHeight / 2)
+                                                : Radius.zero)
+                                            : Radius.circular(
+                                                widget.trackHeight / 2),
                                         right: isRtl
-                                            ? Radius.circular(widget.trackHeight / 2)
-                                            : (normalizedValue >= 1.0 ? Radius.circular(widget.trackHeight / 2) : Radius.zero),
+                                            ? Radius.circular(
+                                                widget.trackHeight / 2)
+                                            : (normalizedValue >= 1.0
+                                                ? Radius.circular(
+                                                    widget.trackHeight / 2)
+                                                : Radius.zero),
                                       ),
                                     ),
                                   ),
