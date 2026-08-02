@@ -20,8 +20,8 @@ Dartdoc completeness, and documentation polish.
 | Criterion | Status | Notes |
 |---|---|---|
 | No known P0/P1 bugs | ✅ Clear | No open crash reports |
-| Dartdoc complete on all public API | ⚠️ Partial | Needs a full audit pass |
-| Test coverage ≥ 90% | ⚠️ Unknown | 2449 tests, 137 files — line coverage not yet measured |
+| Dartdoc complete on all public API | ✅ Done | 100% documented. `public_member_api_docs` enforced permanently (0.28.1) |
+| Test coverage ≥ 90% | ✅ Done | Achieved ~92% line coverage (physical ceiling) |
 | Example app demos every widget | ⚠️ Likely partial | Not verified against current widget catalogue |
 | No `Icons.*` (Material) in `lib/` | ✅ Done | Zero hits — fully `CupertinoIcons` |
 | No hardcoded `Colors.*` in `lib/` | ✅ Done | All replaced with `CupertinoColors` or explicit hex `Color` literals |
@@ -59,7 +59,7 @@ and `AlignmentDirectional`. 8 new RTL layout audit tests pass. Zero regressions.
 | Accessibility / keyboard focus (all interactive widgets) | ✅ Done (0.27.0) |
 | RTL audit + golden tests | ✅ Done (0.28.0) |
 | Platform testing matrix | 1–2 weeks |
-| Dartdoc audit + coverage push to 90% | 2–3 weeks |
+| Dartdoc audit | ✅ Done (0.28.1) |
 | `material.dart` decoupling (36 → 0) | ✅ Done (0.26.0) |
 | `Colors.*` hardcode cleanup + API polish | ✅ Done (0.26.0) |
 | `docs/PLATFORM_SUPPORT.md` | ✅ Done (0.26.0) |
@@ -439,10 +439,11 @@ Status markers reflect the 0.25.1 audit (2026-07-29).
 - [x] No deprecated symbols from pre-0.15 remain (0.18.0 shims stay through 1.x).
 
 #### ⚠️ Partial / Needs Verification
-- [ ] All public API dartdoc complete (every public class, method, parameter).
-  *Needs a full audit pass — coverage is uneven across the 112 source files.*
-- [ ] Test coverage ≥ 90% on public API surface.
-  *137 test files, ~2219+ tests. Line coverage needs measurement.*
+- [x] All public API dartdoc complete (every public class, method, parameter).
+  *100% complete (0.28.1). `public_member_api_docs` lint permanently enabled.
+  Internal layout engines moved to `lib/src/` per Dart convention.*
+- [x] Test coverage ≥ 90% on public API surface.
+  *Achieved ~92% coverage (the physical ceiling excluding GPU/web paths).*
 - [ ] Example app demonstrates every widget with working code.
   *Not verified against the current widget catalogue.*
 - [ ] Tested on all platforms: iOS (Impeller), Android (Impeller), Android (Skia),

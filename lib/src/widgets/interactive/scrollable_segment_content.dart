@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs
 // Shared internal widget for GlassSegmentedControl — scrollable mode.
 //
 // NOT part of the public API — do not export from liquid_glass_widgets.dart.
@@ -6,13 +7,14 @@ library;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/cupertino.dart';
 import '../../../constants/glass_defaults.dart';
-import '../../../src/renderer/liquid_glass_renderer.dart';
+import '../../renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
 import '../../../utils/glass_spring.dart';
-import '../../shared/animated_glass_indicator.dart';
-import '../../surfaces/glass_bottom_bar.dart' show MaskingQuality;
-import '../../surfaces/glass_tab_bar.dart' show GlassSegment, DividerSettings;
+import '../../../widgets/shared/animated_glass_indicator.dart';
+import '../../../widgets/surfaces/glass_bottom_bar.dart' show MaskingQuality;
+import '../../../widgets/surfaces/glass_tab_bar.dart'
+    show GlassSegment, DividerSettings;
 
 // =============================================================================
 // ScrollableSegmentContent — draggable indicator + segment layout

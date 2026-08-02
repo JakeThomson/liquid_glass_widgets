@@ -134,6 +134,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
   /// ([paintBackground] == true); reads through a translucent [indicatorColor].
   final double innerBlur;
 
+  /// Creates a new [AnimatedGlassIndicator].
   const AnimatedGlassIndicator({
     super.key,
     required this.velocity,

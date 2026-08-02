@@ -8,7 +8,7 @@ import '../../theme/glass_theme_helpers.dart';
 import '../../theme/glass_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/cupertino.dart';
-import 'shared/glass_sheet_defaults.dart';
+import '../../src/widgets/overlays/glass_sheet_defaults.dart';
 import '../../constants/glass_defaults.dart';
 
 /// A glass morphism bottom sheet following Apple's iOS 26 design patterns.
@@ -255,7 +255,7 @@ class GlassSheet extends StatefulWidget {
   /// - [showDragIndicator]: Whether to show the drag indicator (default: true)
   /// - [dragIndicatorColor]: Color of the drag indicator
   /// - [padding]: Padding around the content
-  /// - [borderRadius]: Corner radius of the sheet (default: 54)
+  /// - [topBorderRadius]: Corner radius of the sheet (default: 54)
   /// - [margin]: External margin for the "floating" look (default: 8x8)
   /// - [isScrollable]: Whether the content should be scrollable (default: true)
   /// - [interactionScale]: Visual scale feedback on touch (default: 1.01)

@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs
 // Internal sub-widgets for GlassSearchableBottomBar.
 //
 // Extracted from glass_searchable_bottom_bar.dart to keep that file focused on
@@ -10,17 +11,18 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../../constants/glass_defaults.dart';
-import '../../../src/renderer/liquid_glass_renderer.dart';
+import '../../renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
 import '../../../utils/glass_spring.dart';
 import '../../../theme/glass_theme.dart';
-import '../../interactive/glass_button.dart';
-import '../../shared/adaptive_glass.dart';
-import '../../shared/animated_glass_indicator.dart';
-import '../../shared/inherited_liquid_glass.dart';
-import '../glass_bottom_bar.dart' show MaskingQuality, JellyClipper;
-import 'glass_search_bar_config.dart';
+import '../../../widgets/interactive/glass_button.dart';
+import '../../../widgets/shared/adaptive_glass.dart';
+import '../../../widgets/shared/animated_glass_indicator.dart';
+import '../../../widgets/shared/inherited_liquid_glass.dart';
+import '../../../widgets/surfaces/glass_bottom_bar.dart'
+    show MaskingQuality, JellyClipper;
+import '../../../widgets/surfaces/shared/glass_search_bar_config.dart';
 import 'tab_bar_drag_gesture_mixin.dart';
 
 // =============================================================================

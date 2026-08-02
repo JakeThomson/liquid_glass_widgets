@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs
 // ignore_for_file: deprecated_member_use
 // Shared internal widgets for GlassBottomBar and GlassSearchableBottomBar.
 //
@@ -9,21 +10,21 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../../shared/glass_focus_region.dart';
+import '../../../widgets/shared/glass_focus_region.dart';
 import '../../../constants/glass_defaults.dart';
-import '../../../src/renderer/liquid_glass_renderer.dart';
+import '../../renderer/liquid_glass_renderer.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
 import 'tab_bar_drag_gesture_mixin.dart';
 import '../../../utils/glass_spring.dart';
-import '../../interactive/glass_button.dart';
-import '../../shared/adaptive_glass.dart';
-import '../../shared/animated_glass_indicator.dart';
-import '../../shared/inherited_liquid_glass.dart';
-import '../glass_bottom_bar.dart'
+import '../../../widgets/interactive/glass_button.dart';
+import '../../../widgets/shared/adaptive_glass.dart';
+import '../../../widgets/shared/animated_glass_indicator.dart';
+import '../../../widgets/shared/inherited_liquid_glass.dart';
+import '../../../widgets/surfaces/glass_bottom_bar.dart'
     show GlassTabBarExtraButton, MaskingQuality, JellyClipper;
-import '../glass_tab_bar.dart' show GlassTab;
+import '../../../widgets/surfaces/glass_tab_bar.dart' show GlassTab;
 
 // =============================================================================
 // kBottomBarGlassDefaults — shared glass preset

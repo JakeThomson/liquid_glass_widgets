@@ -424,8 +424,8 @@ class GlassButton extends StatefulWidget {
   /// If null, uses the primary glow color from [GlassTheme].
   ///
   /// Common values:
-  /// - [Colors.white24]: Subtle white glow
-  /// - [Colors.blue.withOpacity(0.3)]: Blue glow
+  /// - `Colors.white24`: Subtle white glow
+  /// - `Colors.blue.withOpacity(0.3)`: Blue glow
   /// - [Colors.transparent]: Disables glow effect
   ///
   /// Defaults to null (uses theme).
