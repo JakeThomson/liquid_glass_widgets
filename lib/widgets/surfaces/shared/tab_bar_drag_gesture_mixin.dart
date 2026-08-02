@@ -329,7 +329,9 @@ mixin TabDragGestureMixin<T extends StatefulWidget> on State<T> {
     final renderObject = context.findRenderObject();
     if (renderObject is! RenderBox) return;
     final box = renderObject;
-    final rawVelX = d.velocity.pixelsPerSecond.dx / box.size.width;
+    // Raw horizontal velocity as a fraction of bar width.
+    var rawVelX = d.velocity.pixelsPerSecond.dx / box.size.width;
+
     const velocityThreshold = 0.5;
     int target = positionIndex;
     if (rawVelX > velocityThreshold && positionIndex < tabCount - 1) {

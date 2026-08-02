@@ -36,16 +36,6 @@ Widget _rtlBare(Widget child) {
 EdgeInsets _resolve(EdgeInsetsGeometry geo, TextDirection dir) =>
     geo.resolve(dir);
 
-/// Find the Padding widget that is a direct descendant of a given type.
-Padding _paddingIn(WidgetTester tester, Type ancestorType) {
-  final ancestor = find.byType(ancestorType);
-  final paddingFinder = find.descendant(
-    of: ancestor,
-    matching: find.byType(Padding),
-  );
-  return tester.widget<Padding>(paddingFinder.first);
-}
-
 void main() {
   // =========================================================================
   // GlassDivider — indent / endIndent directional mapping
