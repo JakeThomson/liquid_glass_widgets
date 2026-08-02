@@ -1,4 +1,19 @@
+# 0.29.0
+
+## 🎵 iOS 26 `tabViewBottomAccessory` Support
+
+Added `bottomAccessory` / `bottomAccessoryHeight` / `bottomAccessoryEnabled` to both `GlassTabBar.bottom` and `GlassTabBar.searchable` — mirroring Apple's `tabViewBottomAccessory` modifier.
+
+- **Expanded mode** — accessory floats directly above the nav bar pill with a configurable spacing gap.
+- **Inline mode** (`searchable` only) — accessory slides horizontally into the gap between the collapsed tab indicator and search capsule, with a simultaneous width squish, matching the iOS 26 `.inline` placement.
+- A single `TweenAnimationBuilder` drives all geometry (height, left, right, bottom) from one unified timeline — no animation drift on mid-transition reversal.
+- `preferredSize` correctly accounts for the accessory height so `GlassScaffold` edge-fades are pixel-accurate in both states.
+- Apple Music and Apple Podcasts demos migrated to use the new API.
+
+---
+
 # 0.28.1
+
 
 ## 📚 Internal Refactor — API Documentation
 
