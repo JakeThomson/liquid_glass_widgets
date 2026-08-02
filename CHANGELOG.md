@@ -1,6 +1,6 @@
 # 0.28.0
 
-## 🌐 RTL Layout Audit — 1.0.0 Blocker Resolved
+## 🌐 Full RTL (Right-to-Left) Support
 
 Completed the Right-to-Left (RTL) layout audit. All directional padding and
 alignment primitives now use `EdgeInsetsDirectional` / `AlignmentDirectional`
@@ -44,36 +44,19 @@ without any API changes for existing callers.
 
 ### Bug Fixes & Accessibility
 
+- **`GlassTabBar.bottom`** — Resolved an edge-case visual bug in RTL mode where the animated glass pill would jump to the mirror-image tab when selecting an end tab. Fixed by enforcing `Alignment(x, y)` physical coordinates instead of `AlignmentDirectional` within the physics engine bounds.
 - **`GlassSegmentedControl` & `GlassTabBar`** — Unselected segments now correctly emit a "not selected" accessibility state (resolves [#184](https://github.com/sdegenaar/liquid_glass_widgets/issues/184)). Thanks to @Xodus-CO for the detailed report!
 
-### Tests
 
-- **8 new RTL layout audit tests** in
-  `test/widgets/rtl_layout_audit_test.dart` covering:
-  - `GlassDivider` indent/endIndent physical mapping in LTR and RTL
-  - `GlassDivider` uses `EdgeInsetsDirectional` (type-safe assertion)
-  - `GlassGroupedSection` header padding resolves to correct physical edges
-  - `GlassAppBar` title uses `AlignmentDirectional.centerStart`
-- Updated existing `GlassDivider` indent test in
-  `test/widgets/containers/glass_new_components_test.dart` to resolve the
-  directional padding before comparing physical values.
-- All 2,503+ tests pass.
-
-### Roadmap Impact
-
-This completes the RTL layout audit item from the 1.0.0 entry criteria.
-The ROADMAP has been updated accordingly.
 
 ---
 
 # 0.27.0
 
 
-## ♿ Accessibility & Keyboard Navigation — Roadmap Milestone Complete
+## ♿ Accessibility & Keyboard Navigation
 
-The #1 blocker for 1.0.0 is resolved. Every interactive widget now supports full
-keyboard traversal, Space/Enter activation, and VoiceOver/TalkBack semantics.
-
+Every interactive widget now supports full keyboard traversal, Space/Enter activation, and VoiceOver/TalkBack semantics.
 ### Focus & Keyboard
 
 - **`GlassFocusRegion`** — new shared widget that is the single source of truth for all focus behaviour. Two modes:
