@@ -120,6 +120,7 @@ Both parameters are optional — omit them and the library uses sensible default
 - **Gyroscope lighting** — `GlassMotionScope` drives specular highlights from any `Stream<double>`
 - **WCAG-compliant by default** — Reduce Motion and Reduce Transparency are respected automatically; no setup required
 - **Full keyboard & screen reader support** — every interactive widget supports Tab navigation, Space/Enter activation, and VoiceOver/TalkBack semantics out of the box; focus is visualised with an iOS 26-style outset ring
+- **Full RTL (Right-to-Left) support** — layouts, drag directions, tab ordering, and physics auto-reverse for Arabic, Hebrew, and Persian
 
 
 
