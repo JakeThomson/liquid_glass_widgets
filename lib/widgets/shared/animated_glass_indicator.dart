@@ -30,7 +30,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
   final int itemCount;
 
   /// Current alignment of the indicator.
-  final Alignment alignment;
+  final AlignmentGeometry alignment;
 
   /// Axis along which fixed-size indicators travel.
   ///
