@@ -34,6 +34,7 @@ import 'tab_bar_bottom_internal.dart'
         TabIndicator,
         kBottomBarGlassDefaults,
         resolveBarLabelColor;
+import '../../../widgets/surfaces/shared/tab_bar_accessory_placement.dart';
 import 'tab_bar_layout_utils.dart';
 
 /// Internal [StatefulWidget] that owns the bottom-placement rendering engine.
@@ -48,6 +49,9 @@ class TabBarBottomLayout extends StatefulWidget {
     super.key,
     this.extraButton,
     this.collapseConfig,
+    this.bottomAccessory,
+    this.bottomAccessoryEnabled = true,
+    this.bottomAccessorySpacing = 8.0,
     this.spacing = 8,
     this.horizontalPadding = 20,
     this.verticalPadding = 20,
@@ -103,6 +107,9 @@ class TabBarBottomLayout extends StatefulWidget {
   final ValueChanged<int> onTabSelected;
   final GlassTabBarExtraButton? extraButton;
   final GlassBottomBarCollapseConfig? collapseConfig;
+  final Widget? bottomAccessory;
+  final bool bottomAccessoryEnabled;
+  final double bottomAccessorySpacing;
   final double spacing;
   final double horizontalPadding;
   final double verticalPadding;
@@ -450,7 +457,7 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
         ? (int i) => widget.onTabSelected(widget.tabs.length - 1 - i)
         : widget.onTabSelected;
 
-    return AdaptiveLiquidGlassLayer(
+    final pillLayer = AdaptiveLiquidGlassLayer(
       clipExpansion:
           const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
       settings: effectiveSettings,
@@ -680,6 +687,34 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
           },
         ),
       ),
+    );
+
+    if (widget.bottomAccessory == null) return pillLayer;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GlassTabBarAccessoryPlacementScope(
+          placement: _isCollapsed
+              ? GlassTabBarAccessoryPlacement.inline
+              : GlassTabBarAccessoryPlacement.expanded,
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.bottomCenter,
+            child: widget.bottomAccessoryEnabled
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      widget.bottomAccessory!,
+                      SizedBox(height: widget.bottomAccessorySpacing),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+        pillLayer,
+      ],
     );
   }
 
