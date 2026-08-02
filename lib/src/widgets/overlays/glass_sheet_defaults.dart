@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import '../../../src/renderer/liquid_glass_renderer.dart';
+import '../../renderer/liquid_glass_renderer.dart';
 
 // =============================================================================
 // kDefaultSheetSettings — shared glass preset for sheets

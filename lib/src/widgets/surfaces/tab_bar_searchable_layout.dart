@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs
 // ignore_for_file: deprecated_member_use
 // Internal layout engine for [GlassTabBar] searchable placement.
 //
@@ -12,29 +13,29 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
-import '../../../src/renderer/liquid_glass_renderer.dart';
-import '../../../src/types/glass_interaction_behavior.dart';
+import '../../renderer/liquid_glass_renderer.dart';
+import '../../types/glass_interaction_behavior.dart';
 import '../../../types/glass_quality.dart';
-import '../../shared/adaptive_liquid_glass_layer.dart';
-import '../../shared/glass_content_aware_scope.dart';
+import '../../../widgets/shared/adaptive_liquid_glass_layer.dart';
+import '../../../widgets/shared/glass_content_aware_scope.dart';
 import '../../../theme/glass_theme_data.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../theme/glass_theme_helpers.dart';
-import '../glass_bottom_bar.dart'
+import '../../../widgets/surfaces/glass_bottom_bar.dart'
     show
         GlassExtraButtonPosition,
         GlassTabBarExtraButton,
         GlassTabPillAnchor,
         MaskingQuality;
-import '../glass_tab_bar.dart' show GlassTab;
+import '../../../widgets/surfaces/glass_tab_bar.dart' show GlassTab;
 import 'tab_bar_bottom_internal.dart'
     show
         BottomBarExtraBtn,
         BottomBarTabItem,
         kBottomBarGlassDefaults,
         resolveBarLabelColor;
-import 'glass_search_bar_config.dart';
-import 'tab_bar_searchable_controller.dart';
+import '../../../widgets/surfaces/shared/glass_search_bar_config.dart';
+import '../../../widgets/surfaces/shared/tab_bar_searchable_controller.dart';
 import 'tab_bar_searchable_internal.dart'
     show DismissPill, SearchPill, SearchableTabIndicator;
 

@@ -452,10 +452,22 @@ class _ClampingTopScrollPhysics extends BouncingScrollPhysics {
 // State Providers
 // ===========================================================================
 
+/// [InheritedWidget] that propagates a [ScrollController] and [ScrollPhysics]
+/// to descendant widgets inside a [GlassModalSheet].
+///
+/// The sheet's internal scrollable content uses this to coordinate scroll
+/// physics with the sheet's own drag-to-dismiss gesture. When the sheet is
+/// not fully expanded, [NeverScrollableScrollPhysics] is injected so drags
+/// move the sheet rather than the list inside it.
 class ScrollControllerProvider extends InheritedWidget {
+  /// The [ScrollController] shared with descendant scrollable widgets.
   final ScrollController controller;
+
+  /// The [ScrollPhysics] that the sheet applies at the current expansion level.
   final ScrollPhysics physics;
 
+  /// Creates a [ScrollControllerProvider] that exposes [controller] and
+  /// [physics] to its subtree.
   const ScrollControllerProvider({
     super.key,
     required this.controller,
@@ -463,6 +475,7 @@ class ScrollControllerProvider extends InheritedWidget {
     required super.child,
   });
 
+  /// Returns the nearest [ScrollControllerProvider] in [context], or null.
   static ScrollControllerProvider? of(BuildContext context) {
     return context
         .dependOnInheritedWidgetOfExactType<ScrollControllerProvider>();
@@ -484,6 +497,7 @@ class SheetStateInfo {
   /// Whether the sheet is currently in its expanded (full) state.
   final bool isExpanded;
 
+  /// Creates a [SheetStateInfo] snapshot.
   const SheetStateInfo({
     required this.state,
     required this.progress,
@@ -493,14 +507,17 @@ class SheetStateInfo {
 
 /// Inherited widget that provides [SheetStateInfo] to its descendants.
 class GlassModalSheetStateProvider extends InheritedWidget {
+  /// The current sheet state information.
   final SheetStateInfo info;
 
+  /// Creates a provider that exposes [info] to the widget subtree.
   const GlassModalSheetStateProvider({
     super.key,
     required this.info,
     required super.child,
   });
 
+  /// Returns the nearest [SheetStateInfo] in [context], or null.
   static SheetStateInfo? of(BuildContext context) {
     return context
         .dependOnInheritedWidgetOfExactType<GlassModalSheetStateProvider>()
@@ -508,6 +525,8 @@ class GlassModalSheetStateProvider extends InheritedWidget {
   }
 
   @override
+
+  /// Returns true when any field of [info] has changed.
   bool updateShouldNotify(GlassModalSheetStateProvider oldWidget) {
     return info.state != oldWidget.info.state ||
         info.progress != oldWidget.info.progress ||
@@ -519,6 +538,15 @@ class GlassModalSheetStateProvider extends InheritedWidget {
 // Scaffold implementation
 // ===========================================================================
 
+/// A convenience scaffold that layers a [GlassModalSheet] over a [body] widget.
+///
+/// Composes the sheet and its underlying content (e.g. a map, a photo grid)
+/// into a single widget. Use [GlassModalSheetScaffold] when you want a
+/// self-contained sheet + content stack without managing the [Stack] yourself.
+///
+/// If you need finer control \u2014 e.g. the sheet sits inside an existing
+/// [Stack] or its overlay is managed externally \u2014 use [GlassModalSheet]
+/// directly.
 class GlassModalSheetScaffold extends StatelessWidget {
   /// Body widget (e.g., a map or a list) that stays under the sheet.
   final Widget body;
@@ -586,7 +614,11 @@ class GlassModalSheetScaffold extends StatelessWidget {
 
   /// Optional state-specific settings that override the base [settings].
   final LiquidGlassSettings? peekSettings;
+
+  /// The settings applied when the sheet is at its half-height detent.
   final LiquidGlassSettings? halfSettings;
+
+  /// The settings applied when the sheet is fully expanded.
   final LiquidGlassSettings? fullSettings;
 
   /// Liquid stretch multiplier for over-scroll/drag effects. Default: 0.5.
@@ -673,6 +705,7 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Corner radius for 'peek' state.
   final double? peekBottomRadius;
 
+  /// Creates a [GlassModalSheetScaffold].
   const GlassModalSheetScaffold({
     super.key,
     required this.body,

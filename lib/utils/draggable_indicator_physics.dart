@@ -227,7 +227,7 @@ class DraggableIndicatorPhysics {
   /// - [itemCount]: Total number of items (tabs)
   /// - [direction]: Axis along which the bar is laid out (default: horizontal)
   ///
-  /// Returns: The item index (0-based, clamped to [0, itemCount-1]).
+  /// Returns: The item index (0-based, clamped to `0 – itemCount-1`).
   ///
   /// Example:
   /// ```dart

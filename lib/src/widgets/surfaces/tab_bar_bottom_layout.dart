@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs
 // ignore_for_file: deprecated_member_use
 // Internal layout engine for [GlassTabBar] bottom placement.
 //
@@ -11,21 +12,21 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
-import '../../../src/renderer/liquid_glass_renderer.dart';
-import '../../../src/types/glass_interaction_behavior.dart';
+import '../../renderer/liquid_glass_renderer.dart';
+import '../../types/glass_interaction_behavior.dart';
 import '../../../types/glass_quality.dart';
-import '../../shared/adaptive_liquid_glass_layer.dart';
-import '../../shared/glass_content_aware_scope.dart';
+import '../../../widgets/shared/adaptive_liquid_glass_layer.dart';
+import '../../../widgets/shared/glass_content_aware_scope.dart';
 import '../../../theme/glass_theme_data.dart';
 import '../../../theme/glass_theme_helpers.dart';
-import '../glass_bottom_bar.dart'
+import '../../../widgets/surfaces/glass_bottom_bar.dart'
     show
         GlassBottomBarCollapseConfig,
         GlassBottomBarCollapseDirection,
         GlassExtraButtonPlacement,
         GlassTabBarExtraButton,
         MaskingQuality;
-import '../glass_tab_bar.dart' show GlassTab;
+import '../../../widgets/surfaces/glass_tab_bar.dart' show GlassTab;
 import 'tab_bar_bottom_internal.dart'
     show
         BottomBarExtraBtn,

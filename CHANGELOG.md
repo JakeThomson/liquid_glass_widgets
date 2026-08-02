@@ -1,3 +1,12 @@
+# 0.28.1
+
+## 📚 Internal Refactor — API Documentation
+
+- **100% Dartdoc coverage** — every public member is documented. `public_member_api_docs` is now permanently enabled in `analysis_options.yaml`; future undocumented public API additions will fail `dart analyze`.
+- **Internal layout engines moved to `lib/src/`** — 9 internal implementation files relocated per Dart convention so `dart doc` and pub.dev omit them from the generated API reference. No public API changes. 2517 tests passing.
+
+---
+
 # 0.28.0
 
 ## 🌐 Full RTL (Right-to-Left) Support

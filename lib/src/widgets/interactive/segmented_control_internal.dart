@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs
 // Internal state widget for [GlassSegmentedControl].
 //
 // Mirrors the [tab_bar_internal.dart] pattern:
@@ -19,15 +20,15 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../../constants/glass_defaults.dart';
-import '../../../src/renderer/liquid_glass_renderer.dart';
-import '../../../src/types/glass_interaction_behavior.dart';
+import '../../renderer/liquid_glass_renderer.dart';
+import '../../types/glass_interaction_behavior.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
 import '../../../utils/glass_spring.dart';
-import '../../shared/animated_glass_indicator.dart';
-import '../../surfaces/glass_tab_bar.dart' show GlassSegment;
-import '../../shared/glass_focus_region.dart';
+import '../../../widgets/shared/animated_glass_indicator.dart';
+import '../../../widgets/surfaces/glass_tab_bar.dart' show GlassSegment;
+import '../../../widgets/shared/glass_focus_region.dart';
 
 // =============================================================================
 // Widget

@@ -19,8 +19,8 @@ import 'glass_bottom_bar.dart'
 import 'glass_searchable_bottom_bar.dart' show GlassSearchableBottomBar;
 import 'shared/glass_search_bar_config.dart';
 import 'shared/tab_bar_searchable_controller.dart';
-import 'shared/tab_bar_bottom_layout.dart';
-import 'shared/tab_bar_searchable_layout.dart';
+import '../../src/widgets/surfaces/tab_bar_bottom_layout.dart';
+import '../../src/widgets/surfaces/tab_bar_searchable_layout.dart';
 
 export 'shared/glass_search_bar_config.dart';
 
@@ -645,7 +645,7 @@ class GlassTabBar extends StatefulWidget {
   ///
   /// - [MaskingQuality.high] (default): Full jelly-bloom physics — the
   ///   indicator expands 8 px beyond its pill bounds for the iOS 26 spring
-  ///   effect. Uses a dual-layer [GlassBottomBarClipper] path.
+  ///   effect. Uses a dual-layer clipping path.
   /// - [MaskingQuality.off]: Simple clipping with no jelly expansion.
   ///   Cheaper on GPU; useful for low-end devices or accessibility modes.
   ///
@@ -1253,6 +1253,7 @@ class DividerSettings {
   /// When true, dividers adjacent to the selected tab are hidden automatically.
   final bool isHideAutomatically;
 
+  /// Creates a new [DividerSettings].
   const DividerSettings({
     this.indent = 0,
     this.endIndent = 0,
