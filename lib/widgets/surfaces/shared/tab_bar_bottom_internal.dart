@@ -599,7 +599,11 @@ class TabIndicatorState extends State<TabIndicator>
                       ),
                   active: tabIsDragging,
                   builder: (context, value, velocity, child) {
-                    final alignment = AlignmentDirectional(value, 0);
+                    // tabXAlign is a PHYSICAL coordinate (−1 = physical left,
+                    // +1 = physical right) — always. Use Alignment (not
+                    // AlignmentDirectional) so that Flutter does not re-apply
+                    // the RTL flip and land the pill on the mirror-image tab.
+                    final alignment = Alignment(value, 0);
 
                     return SpringBuilder(
                       spring: GlassSpring.snappy(
@@ -653,8 +657,9 @@ class TabIndicatorState extends State<TabIndicator>
                           case MaskingQuality.off:
                             return _buildSimpleMode(
                               alignment: alignment,
-                              targetAlignment:
-                                  AlignmentDirectional(targetAlignment, 0),
+                              // Same physical-coordinate reasoning as above:
+                              // targetAlignment is a physical x-value.
+                              targetAlignment: Alignment(targetAlignment, 0),
                               thickness: thickness,
                               velocity: velocity,
                               indicatorRadius: indicatorRadius,
