@@ -222,6 +222,7 @@ class BottomBarTabItem extends StatelessWidget {
     return GlassFocusRegion(
       enabled: true,
       isButton: true,
+      tracksSelection: true,
       isSelected: semanticsSelected ?? selected,
       semanticLabel: tab.semanticLabel ?? tab.label ?? 'Tab',
       onKeyboardActivate: onTap,
@@ -598,7 +599,7 @@ class TabIndicatorState extends State<TabIndicator>
                       ),
                   active: tabIsDragging,
                   builder: (context, value, velocity, child) {
-                    final alignment = Alignment(value, 0);
+                    final alignment = AlignmentDirectional(value, 0);
 
                     return SpringBuilder(
                       spring: GlassSpring.snappy(
@@ -613,7 +614,7 @@ class TabIndicatorState extends State<TabIndicator>
                       value: widget.visible &&
                               (tabIsDown ||
                                   tabIsDragging ||
-                                  (alignment.x - targetAlignment).abs() > 0.05)
+                                  (value - targetAlignment).abs() > 0.05)
                           ? 1.0
                           : 0.0,
                       builder: (context, thickness, child) {
@@ -652,7 +653,7 @@ class TabIndicatorState extends State<TabIndicator>
                           case MaskingQuality.off:
                             return _buildSimpleMode(
                               alignment: alignment,
-                              targetAlignment: Alignment(targetAlignment, 0),
+                              targetAlignment: AlignmentDirectional(targetAlignment, 0),
                               thickness: thickness,
                               velocity: velocity,
                               indicatorRadius: indicatorRadius,
@@ -733,8 +734,8 @@ class TabIndicatorState extends State<TabIndicator>
   ///
   /// Only renders tabs once without dual-layer masking. Maximum performance.
   Widget _buildSimpleMode({
-    required Alignment alignment,
-    required Alignment targetAlignment,
+    required AlignmentGeometry alignment,
+    required AlignmentGeometry targetAlignment,
     required double thickness,
     required double velocity,
     required double indicatorRadius,
@@ -810,7 +811,7 @@ class TabIndicatorState extends State<TabIndicator>
                     padding: widget.tabPadding,
                     height: widget.barHeight,
                     child: widget.selectedTabBuilder(
-                        context, 1.0, targetAlignment),
+                        context, 1.0, targetAlignment.resolve(Directionality.of(context))),
                   ),
                 ),
               ),
@@ -824,7 +825,7 @@ class TabIndicatorState extends State<TabIndicator>
   ///
   /// Dual-layer rendering with ClipPath for "magic lens" effect.
   Widget _buildHighQualityMode({
-    required Alignment alignment,
+    required AlignmentGeometry alignment,
     required double thickness,
     required double velocity,
     required Matrix4 jellyTransform,
@@ -892,7 +893,7 @@ class TabIndicatorState extends State<TabIndicator>
                                   clipBehavior: Clip.antiAliasWithSaveLayer,
                                   clipper: JellyClipper(
                                     itemCount: widget.tabCount,
-                                    alignment: alignment,
+                                    alignment: alignment.resolve(Directionality.of(context)),
                                     thickness: thickness,
                                     expansion: widget.indicatorExpansion
                                         .resolve(Directionality.of(context)),
@@ -911,7 +912,7 @@ class TabIndicatorState extends State<TabIndicator>
                                   clipBehavior: Clip.antiAliasWithSaveLayer,
                                   clipper: JellyClipper(
                                     itemCount: widget.tabCount,
-                                    alignment: alignment,
+                                    alignment: alignment.resolve(Directionality.of(context)),
                                     thickness: thickness,
                                     expansion: widget.indicatorExpansion
                                         .resolve(Directionality.of(context)),
@@ -922,7 +923,7 @@ class TabIndicatorState extends State<TabIndicator>
                                     padding: widget.tabPadding,
                                     height: widget.barHeight,
                                     child: widget.selectedTabBuilder(
-                                        context, thickness, alignment),
+                                        context, thickness, alignment.resolve(Directionality.of(context))),
                                   ),
                                 ),
                               ],
@@ -935,7 +936,7 @@ class TabIndicatorState extends State<TabIndicator>
                                 clipBehavior: Clip.antiAliasWithSaveLayer,
                                 clipper: JellyClipper(
                                   itemCount: widget.tabCount,
-                                  alignment: alignment,
+                                  alignment: alignment.resolve(Directionality.of(context)),
                                   thickness: thickness,
                                   expansion: widget.indicatorExpansion
                                       .resolve(Directionality.of(context)),
@@ -954,7 +955,7 @@ class TabIndicatorState extends State<TabIndicator>
                                 clipBehavior: Clip.antiAliasWithSaveLayer,
                                 clipper: JellyClipper(
                                   itemCount: widget.tabCount,
-                                  alignment: alignment,
+                                  alignment: alignment.resolve(Directionality.of(context)),
                                   thickness: thickness,
                                   expansion: widget.indicatorExpansion
                                       .resolve(Directionality.of(context)),
@@ -965,7 +966,7 @@ class TabIndicatorState extends State<TabIndicator>
                                   padding: widget.tabPadding,
                                   height: widget.barHeight,
                                   child: widget.selectedTabBuilder(
-                                      context, thickness, alignment),
+                                      context, thickness, alignment.resolve(Directionality.of(context))),
                                 ),
                               ),
                             ],
