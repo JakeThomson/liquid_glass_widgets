@@ -38,6 +38,7 @@ import '../../../widgets/surfaces/shared/glass_search_bar_config.dart';
 import '../../../widgets/surfaces/shared/tab_bar_searchable_controller.dart';
 import 'tab_bar_searchable_internal.dart'
     show DismissPill, SearchPill, SearchableTabIndicator;
+import '../../../widgets/surfaces/shared/tab_bar_accessory_placement.dart';
 
 /// Internal [StatefulWidget] that owns the searchable-placement rendering engine.
 ///
@@ -53,6 +54,11 @@ class TabBarSearchableLayout extends StatefulWidget {
     this.controller,
     this.isSearchActive = false,
     this.extraButton,
+    this.bottomAccessoryPlacement,
+    this.bottomAccessory,
+    this.bottomAccessoryEnabled = true,
+    this.bottomAccessorySpacing = 6.0,
+    this.bottomAccessoryHeight,
     this.spacing = 8,
     this.horizontalPadding = 20,
     this.verticalPadding = 20,
@@ -120,6 +126,11 @@ class TabBarSearchableLayout extends StatefulWidget {
   final SearchableBottomBarController? controller;
   final bool isSearchActive;
   final GlassTabBarExtraButton? extraButton;
+  final GlassTabBarAccessoryPlacement? bottomAccessoryPlacement;
+  final Widget? bottomAccessory;
+  final bool bottomAccessoryEnabled;
+  final double bottomAccessorySpacing;
+  final double? bottomAccessoryHeight;
   final double spacing;
   final double horizontalPadding;
   final double verticalPadding;
@@ -361,7 +372,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
         _applyWhiten(widget.settings ?? _defaultGlassSettings, isLight);
     final searching = widget.isSearchActive;
 
-    final barContent = TweenAnimationBuilder<double>(
+    Widget barContent = TweenAnimationBuilder<double>(
       tween: Tween<double>(
           end: searching ? widget.searchBarHeight : widget.barHeight),
       duration: const Duration(milliseconds: 200),
@@ -748,6 +759,147 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
         );
       },
     );
+
+    if (widget.bottomAccessory != null) {
+      // Phase 2 — iOS 26 tabViewBottomAccessory inline/expanded layout.
+      //
+      // Expanded state (searching == false):
+      //   Column: [accessory widget above] → [glass pill below]
+      //   The accessory is positioned above the pill with bottomAccessorySpacing gap.
+      //
+      // Inline state (searching == true / mini-mode):
+      //   Stack: the glass pill animates to searchBarHeight (handled by
+      //   TweenAnimationBuilder inside barContent). The accessory slides from
+      //   above-the-pill to beside-the-pill at the same vertical level, filling
+      //   the horizontal space to the right of the collapsed search capsule.
+      //   This exactly mirrors Apple's "tabViewBottomAccessory(.inline)" behaviour.
+      //
+      // Inline positions are derived from widget constants (horizontalPadding,
+      // collapsedTabWidth, searchBarHeight) — no GlobalKey measurement needed.
+      final accessoryH = widget.bottomAccessoryHeight ?? 0.0;
+
+      // The collapsed (search-active) bar height as it appears visually — the
+      // glass pill shrinks from barHeight → searchBarHeight.
+      // We add verticalPadding *2 to match the Padding inside AdaptiveLiquidGlassLayer.
+      final pillH = widget.barHeight + widget.verticalPadding * 2;
+      final collapsedPillH =
+          widget.searchBarHeight + widget.verticalPadding * 2;
+
+      // When inline, the accessory sits exactly between the collapsed tab pill (left)
+      // and the collapsed search capsule (right).
+      final collapsedTabW =
+          widget.searchConfig.collapsedTabWidth ?? widget.searchBarHeight;
+      final inlineAccessoryLeft = widget.horizontalPadding +
+          collapsedTabW +
+          widget.bottomAccessorySpacing;
+      final inlineAccessoryRight = widget.horizontalPadding +
+          widget.searchBarHeight +
+          widget.bottomAccessorySpacing;
+
+      // Total height of the combined widget.
+      // Jumps instantly with `searching` to match `preferredSize` changes.
+      // When tabs (148), when search (134).
+      final expandedH = (searching
+              ? collapsedPillH - (pillH - collapsedPillH)
+              : collapsedPillH) +
+          widget.bottomAccessorySpacing +
+          accessoryH;
+
+      final innerBarContent = barContent;
+
+      final accessoryInline = widget.bottomAccessoryPlacement ==
+          GlassTabBarAccessoryPlacement.inline;
+
+      barContent = GlassTabBarAccessoryPlacementScope(
+        placement: accessoryInline
+            ? GlassTabBarAccessoryPlacement.inline
+            : GlassTabBarAccessoryPlacement.expanded,
+        // Two independent TweenAnimationBuilders drive two independent axes:
+        //
+        //   accessoryT (outer): drives the CONTAINER height, accessory
+        //     left/right width, and coarse vertical position. Controlled by
+        //     `accessoryInline` — 0.0 means expanded above the pill, 1.0 means
+        //     inline beside the pill.
+        //
+        //   searchT (inner): tracks the search bar morphing. Used to compute
+        //     the live `expandedBottom` so the play pill moves down as the bar
+        //     shrinks, maintaining a perfect 6px overlap with the top of the glass.
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(end: accessoryInline ? 1.0 : 0.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          builder: (context, accessoryT, _) {
+            // Outer container height follows the ACCESSORY state.
+            final height =
+                ui.lerpDouble(expandedH, collapsedPillH, accessoryT)!;
+
+            // Accessory left/right: constant when expanded, narrows when inline.
+            final accessoryLeft = ui.lerpDouble(
+              widget.horizontalPadding,
+              inlineAccessoryLeft,
+              accessoryT,
+            )!;
+            final accessoryRight = ui.lerpDouble(
+              widget.horizontalPadding,
+              inlineAccessoryRight,
+              accessoryT,
+            )!;
+
+            return SizedBox(
+              height: height,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // ── Glass pill: anchored to bottom. Its height is managed
+                  //    internally by the animH TweenAnimationBuilder inside
+                  //    barContent (searching → searchBarHeight morph). ────────
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: innerBarContent,
+                  ),
+
+                  // ── Accessory: position/width driven by accessoryT AND searchT.
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(end: searching ? 1.0 : 0.0),
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    builder: (context, searchT, _) {
+                      // Move down by 14px (= pillH - collapsedPillH) when searching
+                      final expandedBottom = ui.lerpDouble(
+                        collapsedPillH + widget.bottomAccessorySpacing,
+                        collapsedPillH +
+                            widget.bottomAccessorySpacing -
+                            (pillH - collapsedPillH),
+                        searchT,
+                      )!;
+
+                      return Positioned(
+                        left: accessoryLeft,
+                        right: accessoryRight,
+                        bottom: ui.lerpDouble(
+                          expandedBottom,
+                          (collapsedPillH - accessoryH) / 2,
+                          accessoryT,
+                        )!,
+                        height: accessoryH,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          opacity: widget.bottomAccessoryEnabled ? 1.0 : 0.0,
+                          child: widget.bottomAccessory,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
 
     if (widget.onBarTap == null) return barContent;
     return GestureDetector(
