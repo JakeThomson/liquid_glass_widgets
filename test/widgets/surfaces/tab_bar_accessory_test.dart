@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -96,6 +97,77 @@ void main() {
       // PLUS accessory height (50) + spacing (6)
       // Total = 76 - 28 + 6 + 50 = 104.0
       expect(tabBar.preferredSize.height, 104.0);
+    });
+  });
+
+  group('GlassTabBar.bottom accessory & scaffolding', () {
+    testWidgets('provides correct placement and sizes scaffolding',
+        (tester) async {
+      final scrollController = ScrollController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              controller: scrollController,
+              children: List.generate(
+                  100, (i) => SizedBox(height: 50, child: Text('Item $i'))),
+            ),
+            bottomNavigationBar: GlassTabBar.bottom(
+              tabs: const [GlassTab(label: '1')],
+              selectedIndex: 0,
+              scrollController: scrollController,
+              onTabSelected: (_) {},
+              extraButton: GlassTabBarExtraButton(
+                icon: const Icon(Icons.add),
+                onTap: () {},
+                label: 'Add',
+              ),
+              collapseConfig: const GlassBottomBarCollapseConfig(),
+              bottomAccessory: Builder(builder: (context) {
+                final placement =
+                    GlassTabBarAccessoryPlacementScope.of(context);
+                return Text(
+                  placement.name,
+                  textDirection: TextDirection.ltr,
+                );
+              }),
+              bottomAccessoryHeight: 50,
+            ),
+          ),
+        ),
+      );
+
+      // Verify the scope resolves to expanded
+      expect(find.text('expanded'), findsOneWidget);
+
+      // Trigger collapse via scroll
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pumpAndSettle();
+
+      // Verify the scope resolves to inline when collapsed
+      expect(find.text('inline'), findsOneWidget);
+    });
+
+    testWidgets('GlassScaffold safely resolves PreferredSizeWidget bottomBar',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GlassScaffold(
+            body: const SizedBox(),
+            bottomBar: GlassTabBar.bottom(
+              tabs: const [GlassTab(label: '1')],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              bottomAccessory: const SizedBox(height: 50),
+              bottomAccessoryHeight: 50,
+            ),
+          ),
+        ),
+      );
+
+      // If GlassScaffold doesn't crash on layout, the PreferredSizeWidget
+      // resolution path was covered successfully.
+      expect(find.byType(GlassScaffold), findsOneWidget);
     });
   });
 }
