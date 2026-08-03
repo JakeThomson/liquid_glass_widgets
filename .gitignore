@@ -162,4 +162,4 @@ tools/build_hero_webp.sh
 # Generated API documentation
 doc/
 MANUAL_TEST_CHECKLIST.md
-ROADMAP.md
+/ROADMAP.md
