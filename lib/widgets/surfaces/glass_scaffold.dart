@@ -372,8 +372,9 @@ class GlassScaffold extends StatelessWidget {
     final effectiveAppBarHeight = appBar is PreferredSizeWidget
         ? (appBar! as PreferredSizeWidget).preferredSize.height
         : appBarHeight;
-    final effectiveBottomBarHeight =
-        bottomBar != null ? (bottomBarHeight ?? 60.0) : 0.0;
+    final effectiveBottomBarHeight = bottomBar is PreferredSizeWidget
+        ? (bottomBar as PreferredSizeWidget).preferredSize.height
+        : (bottomBar != null ? (bottomBarHeight ?? 60.0) : 0.0);
 
     // Resolve edge fade toggles.
     final doFadeTop = topEdgeFade ?? (edgeFade && appBar != null);
