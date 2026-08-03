@@ -24,6 +24,7 @@ import '../../src/widgets/surfaces/tab_bar_searchable_layout.dart';
 
 export 'shared/glass_search_bar_config.dart';
 export 'shared/tab_bar_accessory_placement.dart';
+import 'shared/tab_bar_accessory_placement.dart';
 
 /// The iOS 26 structural navigation bar widget.
 ///
@@ -160,7 +161,7 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
     ScrollController? scrollController,
     Widget? bottomAccessory,
     bool bottomAccessoryEnabled = true,
-    double bottomAccessorySpacing = 8.0,
+    double bottomAccessorySpacing = 6.0,
     double? bottomAccessoryHeight,
     double spacing = 8,
     double horizontalPadding = 20,
@@ -417,9 +418,10 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
     SearchableBottomBarController? controller,
     bool isSearchActive = false,
     GlassTabBarExtraButton? extraButton,
+    GlassTabBarAccessoryPlacement? bottomAccessoryPlacement,
     Widget? bottomAccessory,
     bool bottomAccessoryEnabled = true,
-    double bottomAccessorySpacing = 8.0,
+    double bottomAccessorySpacing = 6.0,
     double? bottomAccessoryHeight,
     double spacing = 8,
     double horizontalPadding = 20,
@@ -484,6 +486,7 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
           controller: controller,
           isSearchActive: isSearchActive,
           extraButton: extraButton,
+          bottomAccessoryPlacement: bottomAccessoryPlacement,
           bottomAccessory: bottomAccessory,
           bottomAccessoryEnabled: bottomAccessoryEnabled,
           bottomAccessorySpacing: bottomAccessorySpacing,
@@ -597,9 +600,10 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
       this.adaptiveBrightness = false,
       this.onBrightnessChanged,
       this.brightnessOverride,
+      this.bottomAccessoryPlacement,
       this.bottomAccessory,
       this.bottomAccessoryEnabled = true,
-      this.bottomAccessorySpacing = 8.0,
+      this.bottomAccessorySpacing = 6.0,
       this.bottomAccessoryHeight,
       // Searchable-only
       this.searchConfig,
@@ -832,6 +836,14 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
   /// The widget to display above the tab bar pill (e.g. a mini-player).
   ///
   /// This mirrors the iOS 26 `tabViewBottomAccessory` API.
+  final GlassTabBarAccessoryPlacement? bottomAccessoryPlacement;
+
+  /// The accessory widget rendered above (expanded) or beside (inline) the tab
+  /// bar pill. Typically a mini-player or contextual action row.
+  ///
+  /// The accessory widget can read its current placement via
+  /// [GlassTabBarAccessoryPlacementScope.of] to adapt its layout between the
+  /// full expanded row and the compact inline strip.
   final Widget? bottomAccessory;
 
   /// Controls whether the [bottomAccessory] is shown.
@@ -905,15 +917,27 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
 
     double total = effectivePillH;
 
-    // In searchable inline mode the accessory sits BESIDE the pill (no extra
-    // height). Only add accessory height in the expanded state.
+    // In inline mode the accessory sits BESIDE the pill (no extra height).
+    // Only explicit .inline placement counts — never auto-infer from search state,
+    // because the layout engine (TabBarSearchableLayout) does NOT auto-collapse either.
     final isInline =
-        _placement == _GlassTabBarPlacement.searchable && isSearchActive;
-    if (!isInline &&
-        bottomAccessory != null &&
+        bottomAccessoryPlacement == GlassTabBarAccessoryPlacement.inline;
+
+    if (bottomAccessory != null &&
+        !isInline &&
         bottomAccessoryEnabled &&
         bottomAccessoryHeight != null) {
-      total += bottomAccessoryHeight! + bottomAccessorySpacing;
+      // Guard: gapAdjustment only makes sense in the searchable placement when
+      // both heights differ. For .bottom placement isSearchActive is always false
+      // so effectivePillH == barHeight + vertPad*2 and gapAdjustment == 0.
+      final gapAdjustment =
+          (_placement == _GlassTabBarPlacement.searchable && isSearchActive)
+              ? barHeight - searchBarHeight
+              : 0.0;
+      total = effectivePillH -
+          gapAdjustment +
+          bottomAccessorySpacing +
+          bottomAccessoryHeight!;
     }
     return Size.fromHeight(total);
   }
@@ -1068,6 +1092,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
       controller: widget.controller,
       isSearchActive: widget.isSearchActive,
       extraButton: widget.extraButton,
+      bottomAccessoryPlacement: widget.bottomAccessoryPlacement,
       bottomAccessory: widget.bottomAccessory,
       bottomAccessoryEnabled: widget.bottomAccessoryEnabled,
       bottomAccessorySpacing: widget.bottomAccessorySpacing,

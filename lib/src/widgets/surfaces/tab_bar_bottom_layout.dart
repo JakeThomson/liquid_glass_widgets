@@ -51,7 +51,7 @@ class TabBarBottomLayout extends StatefulWidget {
     this.collapseConfig,
     this.bottomAccessory,
     this.bottomAccessoryEnabled = true,
-    this.bottomAccessorySpacing = 8.0,
+    this.bottomAccessorySpacing = 6.0,
     this.spacing = 8,
     this.horizontalPadding = 20,
     this.verticalPadding = 20,
