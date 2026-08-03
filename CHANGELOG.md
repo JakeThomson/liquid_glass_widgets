@@ -1,4 +1,84 @@
+# 0.29.1
+
+## Fixes
+
+**`GlassSegmentedControl` — duplicate unlabeled semantics node (#188)**
+Each segment emitted two tappable nodes (one unlabeled), breaking VoiceOver/TalkBack. Fixed by adding `excludeFromSemantics: true` to the internal `GestureDetector`; semantics are fully handled by `GlassFocusRegion`.
+
+**`GlassTabBar` shadow lost in Dark OS + Light app (#124)**
+Shadow disappeared when the device was in Dark Mode but `ThemeMode.light` was set. Introduced a zero-material IoC bridge: pass `brightnessResolver: Theme.maybeBrightnessOf` to `LiquidGlassWidgets.wrap()` so the package correctly honours `ThemeMode` without importing `flutter/material.dart`.
+
+> **Migration** — MaterialApp users must add this one line to fix #124:
+> ```dart
+> runApp(LiquidGlassWidgets.wrap(
+>   child: const MyApp(),
+>   brightnessResolver: Theme.maybeBrightnessOf,
+> ));
+> ```
+> `CupertinoApp` users: no change required.
+
+**Dead `flutter/material.dart` import removed from `tab_bar_bottom_internal.dart`**
+Leftover from pre-0.26.0, never cleaned up. `lib/` is now 100% zero-material for `cupertino_ui` compatibility.
+
+---
+
+
+Eliminates production ANRs on Android devices running Impeller GLES (devices without
+Vulkan support, including many MediaTek and budget Qualcomm Snapdragon SoCs).
+
+### Root cause
+
+On Android GLES, `glCompileShader` + `glLinkProgram` executes synchronously on the
+Flutter raster thread at first use (100–800 ms on mid-range hardware). When this
+coincides with `FlutterJNI.nativeSurfaceChanged` during surface setup, Android's
+watchdog declares an ANR. The previous warm-up implementation instantiated a
+`LiquidGlassLayer` widget outside the widget tree — an unmounted widget is never
+rasterized, so no GPU work occurred. The warm-up was a no-op.
+
+### Fix
+
+- **True GPU warm-up (`liquid_glass_setup.dart`):** `_warmUpImpellerPipeline()` now
+  draws both premium glass shaders to a 1×1 off-screen surface using
+  `Picture.toImage()` and awaits rasterization. This forces GLES pipeline compilation
+  on the raster thread while `initialize()` is still running — before `runApp` — so
+  compilation completes behind the native splash screen and cannot race with surface
+  setup.
+
+- **Android-only execution:** The warm-up is guarded by
+  `defaultTargetPlatform == TargetPlatform.android`. iOS and macOS use precompiled
+  Metal shaders and skip this step entirely, preserving their zero startup overhead.
+
+- **Reuses cached programs:** The warm-up now calls `MultiShaderBuilder.cachedProgram()`
+  to retrieve the `FragmentProgram` objects already loaded by `precacheShaders()` in
+  step 1 of `initialize()`. No duplicate GPU objects are created.
+
+- **`warmUpImpellerPipeline` parameter:** `LiquidGlassWidgets.initialize()` accepts a
+  new `warmUpImpellerPipeline: bool` parameter (default `true`). On non-Android
+  platforms the parameter is a no-op. Pass `false` only if you are managing Android
+  shader warm-up yourself.
+
+- **Conservative Android quality seeding (`glass_adaptive_scope.dart`):** Fixed a
+  code-comment mismatch in `_GlassAdaptiveScopeState.initState`. The file header
+  documented seeding at `GlassQuality.standard`; the code seeded at `maxQuality`
+  (premium). On Android, `initState` now correctly seeds at `GlassQuality.standard`
+  so Phase 2 benchmarks the device from a stable baseline. iOS and macOS continue to
+  seed at `maxQuality` for an immediate premium experience.
+
+### No action required
+
+Existing call sites (`await LiquidGlassWidgets.initialize()`) are unchanged and
+benefit from the fix automatically. The `adaptiveQuality: true` path also benefits
+from the corrected `initState` seeding on Android.
+
+### Documentation
+
+- README Platform Support table now distinguishes Android Vulkan from Android GLES
+  and links to a new Android GLES mitigation section.
+
+---
+
 # 0.29.0
+
 
 ## 🎵 iOS 26 `tabViewBottomAccessory` Support
 
