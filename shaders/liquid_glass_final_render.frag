@@ -26,26 +26,21 @@ precision highp float; // mediump causes colour banding (10-bit mantissa on mobi
 // Slots 10-12: uOpticalProps (refractiveIndex, chromaticAberration, thickness)
 // Slots 13-15: uLightConfig  (lightIntensity, ambientStrength, saturation)
 // Slots 16-17: uLightDirection
-// Slot 18: uWhiten
-// Slot 19: uWhitenGated
-// Slot 20: uPinchStrength
-uniform vec2 uSize;          // physical-pixel size of the backdrop capture
+// Slots 10:  uOpticalProps   — refractiveIndex, chromaticAberration, thickness, refractScale
+// Slots 11:  uLightConfig    — lightIntensity, ambientStrength, saturation
+// Slots 12:  uLightDirection — lightDirection.x, lightDirection.y
+// Slots 13:  uWhiten, uWhitenGated, uPinchStrength
+// Slots 14-15: uBackgroundFallback
+// Slots 16:  uCaptureOffset  — x, y
+// Slots 17:  uEdgeConfig     — ambientRim, fresnelStrength
+uniform vec2 uSize;
 uniform vec2 uGeometryOffset;
 uniform vec2 uGeometrySize;
-
 uniform vec4 uGlassColor;
-uniform vec3 uOpticalProps;
+uniform vec4 uOpticalProps; // x: refractiveIndex, y: chromaticAberration, z: thickness, w: refractScale
 uniform vec3 uLightConfig;
 uniform vec2 uLightDirection;
-
-// Slot 18: uWhiten — whitening ("legibility veil") amount [0..1]. Lifts the
-// glass toward white (result = mix(glass, white, uWhiten)). A single
-// control-wide value (not spatially varying), so there is no spatial seam and
-// therefore no halo/outline artifacts. Models iOS 26 light-mode glass, which
-// places an even whitening veil over the refracted content for legibility on
-// light backgrounds. 0 = pure glass (no-op); higher = whiter.
 uniform float uWhiten;
-
 // Slot 19: uWhitenGated. 1 = the whiten is luminance-gated (protects dark
 // pixels — the light-mode behaviour, keeps text/icons beneath the glass dark);
 // 0 = ungated, uniform whiten across the whole control (the dark-mode
@@ -81,16 +76,11 @@ uniform vec4 uBackgroundFallback;
 //   to the correct texel in the pre-captured bar texture.
 uniform vec2 uCaptureOffset;
 
-// Slot 27: uAmbientRim — full-perimeter Fresnel rim boost. Added to the base
-// 0.12 edge-luminosity strength; 0 = unchanged default rendering.
-uniform float uAmbientRim;
+// Slot 28-31: uEdgeConfig — x: ambientRim, y: fresnelStrength, z: pad, w: pad
+uniform vec4 uEdgeConfig;
 
-// Slot 28: uFresnelStrength — scales the natural Fresnel edge luminosity.
-// 1.0 (default) = full 0.12 coefficient, matching iOS 26 lit glass.
-// 0.0 = pure blur-overlay appearance with no physics-based rim highlight,
-//       matching iOS 26 system UI glass (Messages, Notification banners, etc).
-// Intermediate values fade smoothly between the two appearances.
-uniform float uFresnelStrength;
+// uThickness directly and is already DPR-independent).
+// uniform float uRefractScale; // Removed in favor of scaling uThickness
 
 uniform sampler2D uBackgroundTexture;
 uniform sampler2D uGeometryTexture;
@@ -223,6 +213,9 @@ void main() {
     vec3  baseRefract = refract(incident, normal, invN);
     float refractLen  = (height + baseHeight) / max(0.001, abs(baseRefract.z));
     vec2  displacement = baseRefract.xy * refractLen;
+    // Scale displacement by uRefractScale (uOpticalProps.w) to ensure logical-pixel
+    // identical refraction magnitude across all device pixel ratios.
+    displacement *= uOpticalProps.w;
     // On OpenGL ES, screenUV.y is already flipped to (1.0 - y) to compensate
     // for the bottom-left texture-origin convention.  The displacement is
     // computed in Flutter's native Y-down space (outward normal at the bottom
@@ -316,8 +309,7 @@ void main() {
     // zero-displacement sample at any display resolution.
     vec4 refractColor;
     if (dot(normalXY, normalXY) < 1e-4) {
-        // Flat interior — surface is pointing straight at the camera.
-        // Displacement is mathematically zero; sample the background directly.
+        // Flat interior — zero displacement, sample directly.
         refractColor = textureBilinear(screenUV, physTexSize, invTexSize);
     } else if (uChromaticAberration < 0.01) {
         vec2 refractedUV = screenUV + displacement * invTexSize;
@@ -475,23 +467,20 @@ void main() {
     // experiment temporarily reduced — keeping the glass edge visually present
     // against dark bar backgrounds without making it glowing or harsh.
     float rimBase = (1.0 - normalZ) * edgeFactor;
-    // uAmbientRim > 0 draws an ADDITIONAL rim band of that width (in the
-    // SDF's pixel units). The stock Fresnel profile cannot be widened by
-    // intensity scaling: within the circular bevel normalizedHeight == normalZ
-    // == sqrt(1-((T-d)/T)^2), which rises so steeply that the edgeFactor gate
-    // confines (1-normalZ)*edgeFactor to the outer ~10% of the bevel — a
-    // hairline. Inverting that profile recovers the true distance from the
-    // shape edge, d = T*(1-sqrt(1-h^2)), so the band below has an exact,
-    // thickness-independent geometric width with a ±0.75px AA edge.
-    // At uAmbientRim = 0 rendering is exactly stock.
+    // uEdgeConfig.x (uAmbientRim) > 0 draws an ADDITIONAL rim band of that width (in the
+    // normalized space of rimDist). This gives indicator pills a crisp, physical
+    // illuminated edge that is thicker than a standard Fresnel gradient.
+    // 
+    // At uEdgeConfig.x = 0 rendering is exactly stock.
+    // At uEdgeConfig.x = 2 the rim is noticeably thicker.
+    // At uEdgeConfig.x = 3 the rim is very prominent.
     float cosTerm = sqrt(max(0.0, 1.0 - normalizedHeight * normalizedHeight));
     float rimDist = uThickness * (1.0 - cosTerm);
-    float ring    = (1.0 - smoothstep(uAmbientRim - 0.75, uAmbientRim + 0.75, rimDist))
-                  * step(0.001, uAmbientRim);
-    float fresnel = rimBase * 0.12 * uFresnelStrength + ring * 0.45;
+    float ring    = (1.0 - smoothstep(uEdgeConfig.x - 0.75, uEdgeConfig.x + 0.75, rimDist))
+                  * step(0.001, uEdgeConfig.x);
+    float fresnel = rimBase * 0.12 * uEdgeConfig.y + ring * 0.45;
     finalColor.rgb = clamp(finalColor.rgb + vec3(fresnel), 0.0, 1.0);
 
     float alpha  = geometryData.a;
     fragColor    = vec4(finalColor.rgb * alpha, alpha);
 }
-

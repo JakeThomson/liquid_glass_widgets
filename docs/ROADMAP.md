@@ -516,7 +516,7 @@ Ideas for consideration after stable. None of these are committed.
 - [ ] **Scroll-to-minimize** (`GlassBarMinimizeBehavior.onScrollDown`) — tab bar
   shrinks on scroll-down, re-expands on scroll-up. Matches iOS 26
   `tabBarMinimizeBehavior`. High priority post-1.0.
-- [ ] **Tab bar bottom accessory** — persistent widget (mini player) above
+- [x] **Tab bar bottom accessory** — persistent widget (mini player) above
   the tab bar that animates with minimize. Matches iOS 26 `tabViewBottomAccessory`.
   Currently achieved via `GlassScaffold.bodyOverlays` manually.
 - [ ] Scroll-driven glass materialisation — app bar surface that transitions

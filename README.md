@@ -282,14 +282,22 @@ GlassThemeVariant(
 | Platform | Renderer | Notes |
 |---|---|---|
 | iOS | Impeller (Metal) | Full shader pipeline, chromatic aberration |
-| Android | Impeller (Vulkan) | Full shader pipeline, chromatic aberration |
+| Android (Vulkan) | Impeller (Vulkan) | Full shader pipeline, chromatic aberration |
+| Android (GLES fallback) | Impeller (GLES) | Full shader pipeline; runtime shader compilation — `initialize()` handles this automatically. See [Android GLES note](#android-gles-note) |
 | macOS | Impeller (Metal) | Full shader pipeline, chromatic aberration |
 | Web | CanvasKit | Lightweight fragment shader |
 | Windows | Skia | Lightweight fragment shader |
 | Linux | Skia | Lightweight fragment shader |
 
-Platform detection is automatic — no configuration required.
+Platform detection is automatic — no configuration required. `LiquidGlassWidgets.initialize()` performs an Android-specific GPU warm-up before `runApp` to prevent startup ANRs on GLES devices.
 
+### Android GLES note
+
+A portion of the Android fleet does not support Vulkan and runs Impeller GLES instead. Unlike Vulkan (which uses precompiled SPIR-V), GLES compiles GLSL shader source at runtime on the raster thread. On mid-range SoCs this can take 100–800 ms. If this coincides with Android’s surface setup (`FlutterJNI.nativeSurfaceChanged`), Android may declare an ANR ("Input dispatching timed out").
+
+`LiquidGlassWidgets.initialize()` mitigates this automatically: it draws a 1×1 off-screen frame using the premium glass shaders before `runApp`, forcing GLES compilation behind the native splash screen where it cannot race with surface setup.
+
+Affected hardware includes many budget and older mid-range devices (MediaTek Helio G-series, Qualcomm Snapdragon 4xx/6xx, pre-Android 9 devices). Flagship and recent mid-range devices with full Vulkan support are unaffected — the warm-up completes in ~1–2 ms on Vulkan.
 
 ## Glass Quality Modes
 

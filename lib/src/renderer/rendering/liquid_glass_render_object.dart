@@ -1,10 +1,11 @@
 import 'dart:collection';
 import 'dart:math';
 import 'dart:ui' as ui;
-
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_shaders/flutter_shaders.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../liquid_glass_renderer.dart';
 import '../internal/render_liquid_glass_geometry.dart';
 import '../internal/snap_rect_to_pixels.dart';
@@ -302,55 +303,44 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               ..setSize(activeBounds.size * devicePixelRatio);
           })
           ..setFloatUniforms(initialIndex: 6, (value) {
+            final needsCorrection = !kIsWeb &&
+                (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
+            final scale = needsCorrection ? 2.0 / 3.0 : 1.0;
             value
               ..setColor(settings.effectiveGlassColor)
               ..setFloats([
                 settings.effectiveRefractiveIndex,
                 settings.effectiveChromaticAberration,
-                settings.effectiveThickness,
+                settings.effectiveThickness, // Reverted to raw (logical) thickness
+                scale, // uRefractScale (slot 13)
                 settings.effectiveLightIntensity,
                 settings.effectiveAmbientStrength,
                 settings.effectiveSaturation,
               ])
-              ..setOffset(_cachedLightDir);
+              ..setOffset(_cachedLightDir); // slots 17, 18
           })
-          // Slot 18: uWhiten (whitening amount); slot 19: uWhitenGated
-          // (1 = luminance-gated, the light-mode behaviour; 0 = uniform lift).
-          // Slot 20: uPinchStrength (concave horizontal-pinch for indicator pills).
-          ..setFloatUniforms(initialIndex: 18, (value) {
+          // Slot 19: uWhiten (whitening amount); slot 20: uWhitenGated
+          // Slot 21: uPinchStrength
+          ..setFloatUniforms(initialIndex: 19, (value) {
             value
               ..setFloat(settings.whitenStrength)
               ..setFloat(settings.whitenGated ? 1.0 : 0.0)
               ..setFloat(settings.pinchStrength);
           })
-          // Slots 21-24: uBackgroundFallback (straight RGBA). An opaque stand-in
-          // for backdrop regions the engine can't capture (e.g. a PlatformView
-          // past the glass, which the lens would otherwise render black); a == 0
-          // (the default) disables it. See the over-composite in textureBilinear
-          // (liquid_glass_final_render.frag).
-          //
-          // Sourced from platformViewFallbackColor, falling back to backerColor
-          // when unset — so backerColor keeps doubling as the fill for existing
-          // recipes, while platformViewFallbackColor lets callers decouple the
-          // PlatformView fill from the aesthetic backer.
-          ..setFloatUniforms(initialIndex: 21, (value) {
+          // Slots 22-25: uBackgroundFallback (straight RGBA).
+          ..setFloatUniforms(initialIndex: 22, (value) {
             final b = settings.platformViewFallbackColor ??
                 settings.backerColor ??
                 const Color(0x00000000);
             value.setFloats(<double>[b.r, b.g, b.b, b.a]);
           })
-          // Slots 25-26: uCaptureOffset — zero in BackdropFilter mode (no-op).
-          // The capture path sets this non-zero via paintLiquidGlassWithCapture.
-          ..setFloatUniforms(initialIndex: 25, (value) {
+          // Slots 26-27: uCaptureOffset
+          ..setFloatUniforms(initialIndex: 26, (value) {
             value.setOffset(Offset.zero);
           })
-          // Slot 27: uAmbientRim — full-perimeter Fresnel rim boost.
-          ..setFloatUniforms(initialIndex: 27, (value) {
-            value.setFloat(settings.ambientRim);
-          })
-          // Slot 28: uFresnelStrength — scales the natural Fresnel rim (0=off, 1=full).
+          // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, pad, pad)
           ..setFloatUniforms(initialIndex: 28, (value) {
-            value.setFloat(settings.fresnelStrength);
+            value.setFloats([settings.ambientRim, settings.fresnelStrength, 0.0, 0.0]);
           })
           ..setImageSampler(
             1,
@@ -452,41 +442,41 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setSize(geometrySizePhysical);
       })
       ..setFloatUniforms(initialIndex: 6, (value) {
+        final needsCorrection = !kIsWeb &&
+            (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
+        final scale = needsCorrection ? 2.0 / 3.0 : 1.0;
         value
           ..setColor(settings.effectiveGlassColor)
           ..setFloats([
             settings.effectiveRefractiveIndex,
             settings.effectiveChromaticAberration,
-            settings.effectiveThickness,
+            settings.effectiveThickness, // Reverted to raw (logical) thickness
+            scale, // uRefractScale (slot 13)
             settings.effectiveLightIntensity,
             settings.effectiveAmbientStrength,
             settings.effectiveSaturation,
           ])
-          ..setOffset(_cachedLightDir);
+          ..setOffset(_cachedLightDir); // slots 17, 18
       })
-      ..setFloatUniforms(initialIndex: 18, (value) {
+      ..setFloatUniforms(initialIndex: 19, (value) {
         value
           ..setFloat(settings.whitenStrength)
           ..setFloat(settings.whitenGated ? 1.0 : 0.0)
           ..setFloat(settings.pinchStrength);
       })
-      ..setFloatUniforms(initialIndex: 21, (value) {
+      ..setFloatUniforms(initialIndex: 22, (value) {
         final b = settings.platformViewFallbackColor ??
             settings.backerColor ??
             const Color(0x00000000);
         value.setFloats(<double>[b.r, b.g, b.b, b.a]);
       })
-      // Slot 25-26: uCaptureOffset — shift fragCoord into capture-image space.
-      ..setFloatUniforms(initialIndex: 25, (value) {
+      // Slot 26-27: uCaptureOffset
+      ..setFloatUniforms(initialIndex: 26, (value) {
         value.setOffset(captureOffset);
       })
-      // Slot 27: uAmbientRim — full-perimeter Fresnel rim boost.
-      ..setFloatUniforms(initialIndex: 27, (value) {
-        value.setFloat(settings.ambientRim);
-      })
-      // Slot 28: uFresnelStrength — scales the natural Fresnel rim (0=off, 1=full).
+      // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, pad, pad)
       ..setFloatUniforms(initialIndex: 28, (value) {
-        value.setFloat(settings.fresnelStrength);
+        value.setFloats([settings.ambientRim, settings.fresnelStrength, 0.0, 0.0]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).
       ..setImageSampler(0, capture)

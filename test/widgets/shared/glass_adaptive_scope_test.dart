@@ -38,6 +38,23 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets(
+        'seeds at maxQuality when initialQuality is null',
+        (tester) async {
+      GlassAdaptiveScopeData? captured;
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          maxQuality: GlassQuality.premium,
+          child: Builder(builder: (context) {
+            captured = GlassAdaptiveScopeData.of(context);
+            return const SizedBox.shrink();
+          }),
+        ),
+      ));
+      await tester.pump();
+      expect(captured?.effectiveQuality, GlassQuality.premium);
+    });
+
     testWidgets('initialQuality is exposed via GlassAdaptiveScopeData.of',
         (tester) async {
       GlassAdaptiveScopeData? captured;
@@ -54,13 +71,17 @@ void main() {
       expect(captured?.effectiveQuality, GlassQuality.standard);
     });
 
-    testWidgets('defaults to maxQuality when initialQuality is null',
+    testWidgets(
+        'seeds at minimal on Android when maxQuality is minimal and initialQuality is null',
         (tester) async {
+      // _conservativeInitialQuality must never return a quality above maxQuality.
+      // When the caller sets maxQuality to minimal, Android should also start
+      // at minimal (not standard).
       GlassAdaptiveScopeData? captured;
       GlassQualityAdapter.clearSessionCache();
       await tester.pumpWidget(_app(
         GlassAdaptiveScope(
-          maxQuality: GlassQuality.premium,
+          maxQuality: GlassQuality.minimal,
           child: Builder(builder: (context) {
             captured = GlassAdaptiveScopeData.of(context);
             return const SizedBox.shrink();
@@ -68,7 +89,7 @@ void main() {
         ),
       ));
       await tester.pump();
-      expect(captured?.effectiveQuality, GlassQuality.premium);
+      expect(captured?.effectiveQuality, GlassQuality.minimal);
     });
   });
 
