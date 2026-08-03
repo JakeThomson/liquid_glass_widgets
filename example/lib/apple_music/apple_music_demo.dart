@@ -284,6 +284,9 @@ class _AppleMusicHomeScreenState extends State<AppleMusicHomeScreen> {
       // ── Bottom navigation bar ──────────────────────────────────────────────
       bottomBar: GlassTabBar.searchable(
         isSearchActive: _isMiniMode || _isSearching,
+        bottomAccessoryPlacement: (_isMiniMode && !_isSearching)
+            ? GlassTabBarAccessoryPlacement.inline
+            : GlassTabBarAccessoryPlacement.expanded,
         selectedIndex: _selectedTab,
         onTabSelected: (index) {
           if (index == _selectedTab && _isMiniMode) {

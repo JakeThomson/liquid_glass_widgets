@@ -54,9 +54,10 @@ class TabBarSearchableLayout extends StatefulWidget {
     this.controller,
     this.isSearchActive = false,
     this.extraButton,
+    this.bottomAccessoryPlacement,
     this.bottomAccessory,
     this.bottomAccessoryEnabled = true,
-    this.bottomAccessorySpacing = 8.0,
+    this.bottomAccessorySpacing = 6.0,
     this.bottomAccessoryHeight,
     this.spacing = 8,
     this.horizontalPadding = 20,
@@ -125,6 +126,7 @@ class TabBarSearchableLayout extends StatefulWidget {
   final SearchableBottomBarController? controller;
   final bool isSearchActive;
   final GlassTabBarExtraButton? extraButton;
+  final GlassTabBarAccessoryPlacement? bottomAccessoryPlacement;
   final Widget? bottomAccessory;
   final bool bottomAccessoryEnabled;
   final double bottomAccessorySpacing;
@@ -795,53 +797,52 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
           widget.bottomAccessorySpacing;
 
       // Total height of the combined widget.
-      // Expanded: pill + spacing + accessory  |  Inline: collapsed pill (accessory beside)
-      final expandedH = pillH + widget.bottomAccessorySpacing + accessoryH;
+      // Jumps instantly with `searching` to match `preferredSize` changes.
+      // When tabs (148), when search (134).
+      final expandedH = (searching
+              ? collapsedPillH - (pillH - collapsedPillH)
+              : collapsedPillH) +
+          widget.bottomAccessorySpacing +
+          accessoryH;
 
       final innerBarContent = barContent;
+
+      final accessoryInline = widget.bottomAccessoryPlacement ==
+          GlassTabBarAccessoryPlacement.inline;
+
       barContent = GlassTabBarAccessoryPlacementScope(
-        placement: searching
+        placement: accessoryInline
             ? GlassTabBarAccessoryPlacement.inline
             : GlassTabBarAccessoryPlacement.expanded,
-        // Single TweenAnimationBuilder drives ALL geometry from one timeline:
-        //   t = 0.0 → expanded  (accessory above the pill, pill at full barHeight)
-        //   t = 1.0 → inline    (accessory beside the pill, pill at searchBarHeight)
+        // Two independent TweenAnimationBuilders drive two independent axes:
         //
-        // This replaces the previous AnimatedContainer + AnimatedPositioned pair,
-        // which had two independent ImplicitlyAnimatedWidget controllers that could
-        // fire separate layout passes per frame and drift during mid-animation reversal.
+        //   accessoryT (outer): drives the CONTAINER height, accessory
+        //     left/right width, and coarse vertical position. Controlled by
+        //     `accessoryInline` — 0.0 means expanded above the pill, 1.0 means
+        //     inline beside the pill.
         //
-        // Performance: one AnimationController, one builder callback, one layout pass
-        // per animation frame — regardless of how many geometry values change.
+        //   searchT (inner): tracks the search bar morphing. Used to compute
+        //     the live `expandedBottom` so the play pill moves down as the bar
+        //     shrinks, maintaining a perfect 6px overlap with the top of the glass.
         child: TweenAnimationBuilder<double>(
-          tween: Tween<double>(end: searching ? 1.0 : 0.0),
+          tween: Tween<double>(end: accessoryInline ? 1.0 : 0.0),
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
-          builder: (context, t, child) {
-            // Outer container height: collapses as we go inline.
-            final height = ui.lerpDouble(expandedH, collapsedPillH, t)!;
+          builder: (context, accessoryT, _) {
+            // Outer container height follows the ACCESSORY state.
+            final height =
+                ui.lerpDouble(expandedH, collapsedPillH, accessoryT)!;
 
-            // Accessory bottom: moves from above-pill to vertically centred beside pill.
-            final accessoryBottom = ui.lerpDouble(
-              collapsedPillH + widget.bottomAccessorySpacing,
-              (collapsedPillH - accessoryH) / 2,
-              t,
-            )!;
-
-            // Accessory left: slides right from pill-left-edge to just past tab capsule.
+            // Accessory left/right: constant when expanded, narrows when inline.
             final accessoryLeft = ui.lerpDouble(
               widget.horizontalPadding,
               inlineAccessoryLeft,
-              t,
+              accessoryT,
             )!;
-
-            // Accessory right: slides left from pill-right-edge to just past search capsule.
-            // This simultaneously narrows the accessory width — matching the iOS 26
-            // horizontal squish as the play pill compresses into the inline slot.
             final accessoryRight = ui.lerpDouble(
               widget.horizontalPadding,
               inlineAccessoryRight,
-              t,
+              accessoryT,
             )!;
 
             return SizedBox(
@@ -849,7 +850,9 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // ── Glass pill: always anchored to the bottom of the Stack ──
+                  // ── Glass pill: anchored to bottom. Its height is managed
+                  //    internally by the animH TweenAnimationBuilder inside
+                  //    barContent (searching → searchBarHeight morph). ────────
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -857,24 +860,43 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                     child: innerBarContent,
                   ),
 
-                  // ── Accessory: position and width driven by the same t above ──
-                  Positioned(
-                    left: accessoryLeft,
-                    right: accessoryRight,
-                    bottom: accessoryBottom,
-                    height: accessoryH,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      opacity: widget.bottomAccessoryEnabled ? 1.0 : 0.0,
-                      child: child,
-                    ),
+                  // ── Accessory: position/width driven by accessoryT AND searchT.
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(end: searching ? 1.0 : 0.0),
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    builder: (context, searchT, _) {
+                      // Move down by 14px (= pillH - collapsedPillH) when searching
+                      final expandedBottom = ui.lerpDouble(
+                        collapsedPillH + widget.bottomAccessorySpacing,
+                        collapsedPillH +
+                            widget.bottomAccessorySpacing -
+                            (pillH - collapsedPillH),
+                        searchT,
+                      )!;
+
+                      return Positioned(
+                        left: accessoryLeft,
+                        right: accessoryRight,
+                        bottom: ui.lerpDouble(
+                          expandedBottom,
+                          (collapsedPillH - accessoryH) / 2,
+                          accessoryT,
+                        )!,
+                        height: accessoryH,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          opacity: widget.bottomAccessoryEnabled ? 1.0 : 0.0,
+                          child: widget.bottomAccessory,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
             );
           },
-          child: widget.bottomAccessory,
         ),
       );
     }

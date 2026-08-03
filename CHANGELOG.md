@@ -2,18 +2,49 @@
 
 ## 🎵 iOS 26 `tabViewBottomAccessory` Support
 
-Added `bottomAccessory` / `bottomAccessoryHeight` / `bottomAccessoryEnabled` to both `GlassTabBar.bottom` and `GlassTabBar.searchable` — mirroring Apple's `tabViewBottomAccessory` modifier.
+Added `bottomAccessory` / `bottomAccessoryHeight` / `bottomAccessoryEnabled` / `bottomAccessorySpacing` / `bottomAccessoryPlacement` to both `GlassTabBar.bottom` and `GlassTabBar.searchable` — mirroring Apple's `tabViewBottomAccessory` modifier.
 
-- **Expanded mode** — accessory floats directly above the nav bar pill with a configurable spacing gap.
-- **Inline mode** (`searchable` only) — accessory slides horizontally into the gap between the collapsed tab indicator and search capsule, with a simultaneous width squish, matching the iOS 26 `.inline` placement.
-- A single `TweenAnimationBuilder` drives all geometry (height, left, right, bottom) from one unified timeline — no animation drift on mid-transition reversal.
-- `preferredSize` correctly accounts for the accessory height so `GlassScaffold` edge-fades are pixel-accurate in both states.
-- Apple Music and Apple Podcasts demos migrated to use the new API.
+- **Expanded mode** — accessory floats directly above the nav bar pill with a configurable spacing gap (default `6.0px`, calibrated to match Apple's native spacing).
+- **Inline mode** (`searchable` only) — set `bottomAccessoryPlacement: GlassTabBarAccessoryPlacement.inline` to have the accessory slide horizontally into the gap between the collapsed tab indicator and search capsule, with a simultaneous width squish, matching the iOS 26 `.inline` placement.
+- **Two independent animation timelines** — `accessoryT` drives the inline↔expanded morph (height, left, right) while `searchT` tracks the tab-pill→search-capsule height change so the accessory follows the bar downward during the search activation, maintaining a consistent visual overlap gap throughout.
+- **Safe defaults** — `bottomAccessoryPlacement` defaults to `.expanded`. The accessory never collapses inline automatically; developers must explicitly opt into `.inline` placement, mirroring the iOS 26 model where placement intent is declared at the call site.
+- **Pixel-accurate scaffold insets** — `preferredSize` is always in sync with the layout engine so `GlassScaffold`'s edge fade reserves the exact correct amount of space in both expanded and inline states.
+- **`GlassTabBarAccessoryPlacement` enum** — `expanded` and `inline` values, readable inside the accessory widget itself via `GlassTabBarAccessoryPlacementScope.of(context)` to adapt the accessory's own layout between the full row and compact strip.
+- **Apple Music and Apple Podcasts demos** fully showcase the feature — including the expanded/inline transition and the search-active behaviour.
+
+### Upgrading from `bodyOverlays`
+
+Previously, the recommended pattern for a floating mini-player was to place it in `GlassScaffold.bodyOverlays` and manually manage its position using `AnimatedPositioned` with scroll-offset math. That approach still works and `bodyOverlays` remains available for other use cases (e.g. floating action overlays, toast banners).
+
+For a bottom accessory that is architecturally part of the tab bar — which is exactly what iOS 26 `tabViewBottomAccessory` models — the `bottomAccessory` API is the correct replacement:
+
+```dart
+// Before (bodyOverlays workaround)
+GlassScaffold(
+  bodyOverlays: [
+    AnimatedPositioned(
+      bottom: _isMiniMode ? barH : barH + accessoryH + spacing,
+      left: 0, right: 0,
+      child: MiniPlayer(),
+    ),
+  ],
+)
+
+// After (iOS 26-aligned)
+GlassTabBar.searchable(
+  bottomAccessory: MiniPlayer(),
+  bottomAccessoryHeight: 50.0,
+  bottomAccessoryPlacement: _isMiniMode && !_isSearching
+      ? GlassTabBarAccessoryPlacement.inline
+      : GlassTabBarAccessoryPlacement.expanded,
+)
+```
+
+The new API removes all manual position arithmetic, keeps the `GlassScaffold` edge fade pixel-accurate, and persists the accessory automatically across tab switches.
 
 ---
 
 # 0.28.1
-
 
 ## 📚 Internal Refactor — API Documentation
 
