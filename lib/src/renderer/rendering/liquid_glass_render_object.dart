@@ -299,24 +299,19 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setFloatUniforms(initialIndex: 0, (value) {
             value.setSize(desiredMatteSize * devicePixelRatio);
           })
-          // Slots 2-5: uGeometryOffset + uGeometrySize in physical pixels.
           ..setFloatUniforms(initialIndex: 2, (value) {
             value
               ..setOffset(activeBounds.topLeft * devicePixelRatio)
               ..setSize(activeBounds.size * devicePixelRatio);
           })
           ..setFloatUniforms(initialIndex: 6, (value) {
-            // uRefractScale: normalisation is now implicitly handled by scaling the physical
-            // geometry curve (above), which mathematically equalises the UV displacement shift.
-            // No further scaling is needed here, so we pass 1.0.
-            final refractScale = 1.0;
             value
               ..setColor(settings.effectiveGlassColor)
               ..setFloats([
                 settings.effectiveRefractiveIndex,
                 settings.effectiveChromaticAberration,
                 settings.effectiveThickness * scale,
-                refractScale, // uRefractScale (slot 13)
+                1.0, // uRefractScale (slot 13) - normalization handled by physical geometry curve scaling
                 settings.effectiveLightIntensity,
                 settings.effectiveAmbientStrength,
                 settings.effectiveSaturation,
@@ -442,7 +437,6 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         (activeBounds.topLeft - _captureOriginInScreenSpace) * dpr;
     final geometrySizePhysical = activeBounds.size * dpr;
     final scale = dpr / 3.0;
-    final refractScale = 1.0;
 
     renderShader
       // Slot 0-1: uSize — physical size of the capture image.
@@ -462,7 +456,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
             settings.effectiveRefractiveIndex,
             settings.effectiveChromaticAberration,
             settings.effectiveThickness * scale,
-            refractScale, // uRefractScale (slot 13)
+            1.0, // uRefractScale (slot 13) - normalization handled by physical geometry curve scaling
             settings.effectiveLightIntensity,
             settings.effectiveAmbientStrength,
             settings.effectiveSaturation,

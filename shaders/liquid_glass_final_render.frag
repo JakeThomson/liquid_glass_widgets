@@ -32,7 +32,7 @@ precision highp float; // mediump causes colour banding (10-bit mantissa on mobi
 // Slots 13:  uWhiten, uWhitenGated, uPinchStrength
 // Slots 14-15: uBackgroundFallback
 // Slots 16:  uCaptureOffset  — x, y
-// Slots 17:  uEdgeConfig     — ambientRim, fresnelStrength
+// Slots 17:  uEdgeConfig     — ambientRim (scaled by DPR/3.0), fresnelStrength, dprScale (DPR/3.0), pad
 uniform vec2 uSize;
 uniform vec2 uGeometryOffset;
 uniform vec2 uGeometrySize;
@@ -76,7 +76,7 @@ uniform vec4 uBackgroundFallback;
 //   to the correct texel in the pre-captured bar texture.
 uniform vec2 uCaptureOffset;
 
-// Slot 28-31: uEdgeConfig — x: ambientRim, y: fresnelStrength, z: pad, w: pad
+// Slot 28-31: uEdgeConfig — x: ambientRim (scaled by DPR/3.0), y: fresnelStrength, z: dprScale (DPR/3.0), w: pad
 uniform vec4 uEdgeConfig;
 
 // uThickness directly and is already DPR-independent).
