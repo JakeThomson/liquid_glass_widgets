@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_shaders/flutter_shaders.dart';
 import 'liquid_glass_renderer.dart';
 import 'internal/render_liquid_glass_geometry.dart';
@@ -249,16 +248,11 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
     LiquidGlassSettings settings,
     double devicePixelRatio,
   ) {
-    // Normalize thickness to match the 3x DPR look the shaders were tuned for.
-    // Unconditionally apply to all native platforms so Android and Desktop
-    // behave identically to a 3x iOS device.
-    final scale = kIsWeb ? 1.0 : devicePixelRatio / 3.0;
-
     geometryShader.setFloatUniforms(initialIndex: 2, (value) {
       value.setFloats([
         settings.effectiveRefractiveIndex,
         settings.effectiveChromaticAberration,
-        settings.effectiveThickness * scale,
+        settings.effectiveThickness,
         blend * devicePixelRatio,
       ]);
     });
