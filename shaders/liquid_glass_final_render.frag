@@ -33,54 +33,20 @@ precision highp float; // mediump causes colour banding (10-bit mantissa on mobi
 // Slots 14-15: uBackgroundFallback
 // Slots 16:  uCaptureOffset  — x, y
 // Slots 17:  uEdgeConfig     — ambientRim, fresnelStrength
-uniform vec2 uSize;
-uniform vec2 uGeometryOffset;
-uniform vec2 uGeometrySize;
-uniform vec4 uGlassColor;
-uniform vec4 uOpticalProps; // x: refractiveIndex, y: chromaticAberration, z: thickness, w: refractScale
-uniform vec3 uLightConfig;
-uniform vec2 uLightDirection;
-uniform float uWhiten;
-// Slot 19: uWhitenGated. 1 = the whiten is luminance-gated (protects dark
-// pixels — the light-mode behaviour, keeps text/icons beneath the glass dark);
-// 0 = ungated, uniform whiten across the whole control (the dark-mode
-// behaviour, gives dark glass a small even lift toward white).
-uniform float uWhitenGated;
+// PERFECTLY PACKED UNIFORM BLOCK (32 floats = 8 vec4s)
+uniform vec2 uSize;                 // Slots 0-1
+uniform vec2 uGeometryOffset;       // Slots 2-3
+uniform vec2 uGeometrySize;         // Slots 4-5
+uniform vec2 uLightDirection;       // Slots 6-7
 
-// Slot 20: uPinchStrength. Concave horizontal-pinch strength [0..1].
-// When > 0, the pill's refraction is squeezed inward at the left/right edges,
-// creating the iOS 26 "pinched through a lens" look. The centre is left flat.
-uniform float uPinchStrength;
+uniform vec4 uGlassColor;           // Slots 8-11
+uniform vec4 uOpticalProps;         // Slots 12-15: .x=ri, .y=ca, .z=thickness, .w=refractScale
+uniform vec4 uLightConfig;          // Slots 16-19: .x=intensity, .y=ambient, .z=saturation, .w=PAD
+uniform vec4 uBackgroundFallback;   // Slots 20-23
 
-// Slot 21-24: uBackgroundFallback — Per-mode opaque stand-in for backdrop
-// regions the engine can't capture (e.g. a PlatformView past the glass).
-// Straight (non-premultiplied) RGBA; a == 0 disables it.
-uniform vec4 uBackgroundFallback;
-
-// Slot 25-26: uCaptureOffset — physical-pixel offset from the render surface
-// origin to the capture-boundary origin. Only non-zero on the Impeller capture
-// path (GlassEffect with backgroundKey on Impeller premium). When zero (the
-// default / BackdropFilter path), (fragCoord + uCaptureOffset) == fragCoord, so
-// this is a mathematical no-op and has zero performance impact on existing paths.
-//
-// BackdropFilter mode (default, uCaptureOffset == vec2(0)):
-//   FlutterFragCoord() is screen-space physical pixels.
-//   uSize == full-screen physical pixel size.
-//   screenUV = fragCoord / uSize → samples the backdrop at screen position.
-//
-// Capture mode (uCaptureOffset != vec2(0)):
-//   FlutterFragCoord() is RepaintBoundary-surface-space physical pixels.
-//   uSize == captured image physical pixel size.
-//   uCaptureOffset shifts fragCoord so that (fragCoord + offset) is the
-//   position within the capture image — mapping the indicator's fragment
-//   to the correct texel in the pre-captured bar texture.
-uniform vec2 uCaptureOffset;
-
-// Slot 28-31: uEdgeConfig — x: ambientRim, y: fresnelStrength, z: pad, w: pad
-uniform vec4 uEdgeConfig;
-
-// uThickness directly and is already DPR-independent).
-// uniform float uRefractScale; // Removed in favor of scaling uThickness
+uniform vec2 uCaptureOffset;        // Slots 24-25
+uniform vec2 uEdgeRimProps;         // Slots 26-27: .x=ambientRim, .y=fresnelStrength
+uniform vec4 uEffectConfig;         // Slots 28-31: .x=whiten, .y=whitenGated, .z=pinchStrength, .w=PAD
 
 uniform sampler2D uBackgroundTexture;
 uniform sampler2D uGeometryTexture;
@@ -236,7 +202,7 @@ void main() {
     // 0.015 UV on a 390pt screen ≈ 6pt logical pixels — subtle but visible.
     //
     // ── iOS 26 Concave Lens Pinch ─────────────────────────────────────────────
-    if (uPinchStrength > 0.001) {
+    if (uEffectConfig.z > 0.001) {
         // We cannot use normalXY because it is 0.0 in the flat interior of the pill,
         // which prevents the background from being pinched at all.
         // We also cannot use a circular distance field, because a circle mapped to a
@@ -267,9 +233,9 @@ void main() {
         float pinchRamp = smoothstep(0.0, 1.0, squircleDist);
 
         // Vector pointing outwards from the pill centre, scaled by the ramp.
-        // uPinchStrength interpolates the effect during spring animations.
+        // uEffectConfig.z interpolates the effect during spring animations.
         // 0.025 is the baseline UV shift magnitude (subtle but visible).
-        vec2 pinchShift = centered * pinchRamp * uPinchStrength * 0.025;
+        vec2 pinchShift = centered * pinchRamp * uEffectConfig.z * 0.025;
 
         // Feather the pinch shift to zero at the pill's SDF boundary.
         // Without this, there is a hard UV discontinuity at the pill edge:
@@ -308,16 +274,17 @@ void main() {
     if (dot(normalXY, normalXY) < 1e-4) {
         // Flat interior — zero displacement, sample directly.
         refractColor = textureBilinear(screenUV, physTexSize, invTexSize);
-    } else if (uChromaticAberration < 0.01) {
-        vec2 refractedUV = screenUV + displacement * invTexSize;
+    } else if (uOpticalProps.y < 0.01) {
+        vec2 refractedUV = screenUV + displacement * uOpticalProps.w * invTexSize;
         refractColor = textureBilinear(refractedUV, physTexSize, invTexSize);
     } else {
-        float dispersionStrength = uChromaticAberration * 0.5;
-        vec2 redOffset  = displacement * (1.0 + dispersionStrength);
-        vec2 blueOffset = displacement * (1.0 - dispersionStrength);
+        float dispersionStrength = uOpticalProps.y * 0.5;
+        vec2 d = displacement * uOpticalProps.w;
+        vec2 redOffset  = d * (1.0 + dispersionStrength);
+        vec2 blueOffset = d * (1.0 - dispersionStrength);
 
         vec2 redUV   = screenUV + redOffset   * invTexSize;
-        vec2 greenUV = screenUV + displacement * invTexSize;
+        vec2 greenUV = screenUV + d * invTexSize;
         vec2 blueUV  = screenUV + blueOffset  * invTexSize;
 
         float red         = textureBilinear(redUV, physTexSize, invTexSize).r;
@@ -405,9 +372,9 @@ void main() {
     // uWhitenGated 1 → gate by luminance (light mode, protects darks);
     // uWhitenGated 0 → gate = 1, uniform whiten (dark mode, even lift).
     float whitenGate =
-        mix(1.0, smoothstep(WHITEN_LO, WHITEN_HI, whitenLuma), uWhitenGated);
+        mix(1.0, smoothstep(WHITEN_LO, WHITEN_HI, whitenLuma), uEffectConfig.y);
     finalColor.rgb =
-        mix(finalColor.rgb, vec3(1.0), clamp(uWhiten, 0.0, 1.0) * whitenGate);
+        mix(finalColor.rgb, vec3(1.0), clamp(uEffectConfig.x, 0.0, 1.0) * whitenGate);
 
     // Edge lighting — uses the true normal.xy (V1; was normalize(displacement))
     float normalizedHeight = geometryData.b;
@@ -464,18 +431,20 @@ void main() {
     // experiment temporarily reduced — keeping the glass edge visually present
     // against dark bar backgrounds without making it glowing or harsh.
     float rimBase = (1.0 - normalZ) * edgeFactor;
-    // uEdgeConfig.x (uAmbientRim) > 0 draws an ADDITIONAL rim band of that width (in the
-    // normalized space of rimDist). This gives indicator pills a crisp, physical
-    // illuminated edge that is thicker than a standard Fresnel gradient.
-    // 
-    // At uEdgeConfig.x = 0 rendering is exactly stock.
-    // At uEdgeConfig.x = 2 the rim is noticeably thicker.
-    // At uEdgeConfig.x = 3 the rim is very prominent.
+    // uEdgeRimProps.x (ambientRim) > 0 draws an ADDITIONAL rim band of that width (in the
+    // local tangent space) along the top edges, fading into the sides, mimicking
+    // ambient light catching the glass fillet.
+    //
+    // At uEdgeRimProps.x = 0 rendering is exactly stock.
+    // At uEdgeRimProps.x = 2 the rim is noticeably thicker.
+    // At uEdgeRimProps.x = 3 the rim is very prominent.
+    //
+    // The base 0.12 scalar provides the subtle default Fresnel glow.
     float cosTerm = sqrt(max(0.0, 1.0 - normalizedHeight * normalizedHeight));
     float rimDist = uThickness * (1.0 - cosTerm);
-    float ring    = (1.0 - smoothstep(uEdgeConfig.x - 0.75, uEdgeConfig.x + 0.75, rimDist))
-                  * step(0.001, uEdgeConfig.x);
-    float fresnel = rimBase * 0.12 * uEdgeConfig.y + ring * 0.45;
+    float ring    = (1.0 - smoothstep(uEdgeRimProps.x - 0.75, uEdgeRimProps.x + 0.75, rimDist))
+                  * step(0.001, uEdgeRimProps.x);
+    float fresnel = rimBase * 0.12 * uEdgeRimProps.y + ring * 0.45;
     finalColor.rgb = clamp(finalColor.rgb + vec3(fresnel), 0.0, 1.0);
 
     float alpha  = geometryData.a;
