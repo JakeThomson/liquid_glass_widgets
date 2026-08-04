@@ -55,8 +55,9 @@ void main() {
       ));
       await tester.pump();
       expect(captured?.effectiveQuality, GlassQuality.premium);
-    }, variant: TargetPlatformVariant({TargetPlatform.iOS, TargetPlatform.macOS}));
-
+    },
+        variant:
+            TargetPlatformVariant({TargetPlatform.iOS, TargetPlatform.macOS}));
 
     testWidgets('initialQuality is exposed via GlassAdaptiveScopeData.of',
         (tester) async {

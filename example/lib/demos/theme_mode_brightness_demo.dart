@@ -166,9 +166,7 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               value,
               style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13),
+                  color: color, fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ),
         ],
@@ -200,7 +198,9 @@ class _PassFailCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text('✅ PASS',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                   color: Colors.green)),
           SizedBox(height: 8),
           Text(
@@ -210,7 +210,9 @@ class _PassFailCard extends StatelessWidget {
           ),
           SizedBox(height: 24),
           Text('❌ FAIL',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                   color: Colors.red)),
           SizedBox(height: 8),
           Text(
