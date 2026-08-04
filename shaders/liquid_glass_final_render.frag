@@ -406,10 +406,13 @@ void main() {
         mix(1.0, smoothstep(WHITEN_LO, WHITEN_HI, whitenLuma), uWhitenGated);
     finalColor.rgb =
         mix(finalColor.rgb, vec3(1.0), clamp(uWhiten, 0.0, 1.0) * whitenGate);
-
     // Edge lighting — uses the true normal.xy (V1; was normalize(displacement))
     float normalizedHeight = geometryData.b;
-    float thicknessScale   = clamp(40.0 / max(uThickness, 1.0), 1.0, 4.0);
+    // The 40.0 constant was calibrated on a 3x Retina display.
+    // We scale it by uEdgeConfig.z (which contains devicePixelRatio / 3.0) 
+    // so the edge clamp ratio behaves identically on all pixel densities.
+    float baseScale        = 40.0 * max(0.1, uEdgeConfig.z);
+    float thicknessScale   = clamp(baseScale / max(uThickness, 1.0), 1.0, 4.0);
     float edgeThreshold    = mix(0.8, 0.5, 1.0 / thicknessScale);
     float edgeFactor       = uThickness < 0.01 ? 0.0 : 1.0 - smoothstep(0.0, edgeThreshold, normalizedHeight);
 
