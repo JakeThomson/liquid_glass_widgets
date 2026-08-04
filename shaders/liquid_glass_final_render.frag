@@ -285,11 +285,6 @@ void main() {
         // zone as the pill alpha, eliminating the hard UV seam.
         pinchShift *= geometryData.a;
 
-        // Correct Y-axis for OpenGL ES.
-        #ifdef IMPELLER_TARGET_OPENGLES
-            pinchShift.y = -pinchShift.y;
-        #endif
-
         screenUV += pinchShift;
         
         // Guarantee we never sample outside the valid backdrop capture bounds,
