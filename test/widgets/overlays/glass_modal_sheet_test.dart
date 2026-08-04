@@ -683,7 +683,8 @@ void main() {
       final handle = find.bySemanticsLabel('Drag handle');
       expect(handle, findsOneWidget);
 
-      tester.binding.rootPipelineOwner.semanticsOwner!.performAction(
+      // ignore: deprecated_member_use
+      tester.binding.pipelineOwner.semanticsOwner!.performAction(
         tester.getSemantics(handle).id,
         SemanticsAction.tap,
       );
