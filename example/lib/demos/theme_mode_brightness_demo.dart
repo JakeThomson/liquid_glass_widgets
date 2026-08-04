@@ -9,7 +9,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 ///   - GlassTabBar used as Scaffold.bottomNavigationBar
 ///   - OS toggled to Dark Mode
 ///
-/// Run on physical device: flutter run -d <device-id>
+/// Run on physical device: `flutter run -d <device-id>`
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LiquidGlassWidgets.initialize();
@@ -159,9 +159,9 @@ class _InfoRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: color.withOpacity(0.4)),
+              border: Border.all(color: color.withValues(alpha: 0.4)),
             ),
             child: Text(
               value,
@@ -188,7 +188,7 @@ class _PassFailCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

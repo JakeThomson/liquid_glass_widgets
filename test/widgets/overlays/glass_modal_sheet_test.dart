@@ -683,7 +683,7 @@ void main() {
       final handle = find.bySemanticsLabel('Drag handle');
       expect(handle, findsOneWidget);
 
-      tester.binding.pipelineOwner.semanticsOwner!.performAction(
+      tester.binding.rootPipelineOwner.semanticsOwner!.performAction(
         tester.getSemantics(handle).id,
         SemanticsAction.tap,
       );
