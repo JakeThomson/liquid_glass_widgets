@@ -251,20 +251,17 @@ void main() {
         vec2 centered = geometryUV - vec2(0.5);
         vec2 absCentered = abs(centered) * 2.0; // 0.0 to 1.0
 
-        // Compute x^6 and y^6 using multiply chains instead of pow().
-        // pow(x, 6.0) compiles to exp(6*log(x)) — a pair of transcendentals.
-        // Two squares and two multiplies is significantly faster.
+        // Compute x^4 and y^4 using multiply chains instead of pow().
         float x2 = absCentered.x * absCentered.x;
-        float ax6 = x2 * x2 * x2;
+        float ax4 = x2 * x2;
         float y2 = absCentered.y * absCentered.y;
-        float ay6 = y2 * y2 * y2;
+        float ay4 = y2 * y2;
 
-        // PP3: pow(s, 1.0/6.0) = exp((1/6)·log(s)) — two transcendentals.
-        // ⁶√x = √(√(√x)) — three sqrt() calls, each a single SFU instruction.
-        // Error vs true cube-root-of-cube-root: <0.3%, imperceptible in the
-        // smoothstep ramp that follows. Only executes when uPinchStrength > 0.001.
-        float s = ax6 + ay6;
-        float squircleDist = sqrt(sqrt(sqrt(s)));
+        // L4 norm: (x^4 + y^4)^(1/4). 
+        // Flatter than a circle (L2), but much softer in the corners than L6/L8.
+        // ⁴√s = √(√(s)) — two sqrt() calls, mathematically exact.
+        float s = ax4 + ay4;
+        float squircleDist = sqrt(sqrt(s));
 
         // Map the squircle distance to a 0..1 smooth curve.
         float pinchRamp = smoothstep(0.0, 1.0, squircleDist);
