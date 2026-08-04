@@ -850,16 +850,6 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // ── Glass pill: anchored to bottom. Its height is managed
-                  //    internally by the animH TweenAnimationBuilder inside
-                  //    barContent (searching → searchBarHeight morph). ────────
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: innerBarContent,
-                  ),
-
                   // ── Accessory: position/width driven by accessoryT AND searchT.
                   TweenAnimationBuilder<double>(
                     tween: Tween<double>(end: searching ? 1.0 : 0.0),
@@ -892,6 +882,16 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                         ),
                       );
                     },
+                  ),
+
+                  // ── Glass pill: anchored to bottom. Its height is managed
+                  //    internally by the animH TweenAnimationBuilder inside
+                  //    barContent (searching → searchBarHeight morph). ────────
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: innerBarContent,
                   ),
                 ],
               ),
