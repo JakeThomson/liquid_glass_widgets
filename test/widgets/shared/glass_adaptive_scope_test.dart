@@ -38,8 +38,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets(
-        'seeds at maxQuality when initialQuality is null',
+    testWidgets('seeds at maxQuality when initialQuality is null',
         (tester) async {
       GlassAdaptiveScopeData? captured;
       await tester.pumpWidget(_app(

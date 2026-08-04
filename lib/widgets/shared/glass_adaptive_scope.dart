@@ -575,7 +575,6 @@ class _GlassAdaptiveScopeState extends State<GlassAdaptiveScope>
     _adapter.start();
   }
 
-
   @override
   void didUpdateWidget(GlassAdaptiveScope oldWidget) {
     super.didUpdateWidget(oldWidget);
