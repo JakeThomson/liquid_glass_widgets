@@ -12,6 +12,7 @@ The Liquid Glass rendering engine now achieves 1:1 mathematical parity across al
 
 - **Indicator Pill:** Removed chromatic aberration (`0.15` → `0.0`) from the default animated pill to eliminate the rainbow rim artifact, while preserving true lens distortion.
 - **Pinch Shader:** Fixed a mathematical bug (L6 norm with an 8th-root extraction) in the squircle distance field. Replaced with an exact **L4 norm**, producing naturally soft, Apple-like corners during drag animations and saving one GPU instruction per fragment.
+- **Brightness Cascade (#124):** Hardened the brightness resolution cascade by evaluating `brightnessResolver` before `CupertinoTheme.of`. This acts as a defensive backstop for older Flutter versions or edge cases where the `MaterialBasedCupertinoThemeData` bridge fails to propagate `ThemeMode` correctly.
 
 ---
 
