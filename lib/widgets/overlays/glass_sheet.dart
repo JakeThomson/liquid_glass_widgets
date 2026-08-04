@@ -547,6 +547,7 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
               _SheetHeader(
                 showIndicator: widget.showDragIndicator,
                 color: widget.dragIndicatorColor,
+                onDismiss: () => Navigator.maybePop(context),
               ),
               if (widget.isScrollable)
                 Flexible(
@@ -639,10 +640,12 @@ class _GlassSheetState extends State<GlassSheet> with TickerProviderStateMixin {
 class _SheetHeader extends StatelessWidget {
   final bool showIndicator;
   final Color? color;
+  final VoidCallback? onDismiss;
 
   const _SheetHeader({
     required this.showIndicator,
     this.color,
+    this.onDismiss,
   });
 
   @override
@@ -652,7 +655,7 @@ class _SheetHeader extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
-          Center(child: _GlassDragIndicator(color: color)),
+          Center(child: _GlassDragIndicator(color: color, onDismiss: onDismiss)),
           const SizedBox(height: 8),
         ],
       );
@@ -669,9 +672,11 @@ class _SheetHeader extends StatelessWidget {
 class _GlassDragIndicator extends StatelessWidget {
   const _GlassDragIndicator({
     this.color,
+    this.onDismiss,
   });
 
   final Color? color;
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -685,6 +690,7 @@ class _GlassDragIndicator extends StatelessWidget {
       // and hold, then drag up or down." We approximate this.
       label: 'Drag handle',
       hint: 'Swipe down to dismiss',
+      onTap: onDismiss ?? () => Navigator.maybePop(context),
       child: Container(
         width: 36,
         height: 4, // iOS 26 spec: 4dp (not 5dp)
