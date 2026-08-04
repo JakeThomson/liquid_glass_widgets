@@ -49,6 +49,7 @@ class _SheetLayout extends StatelessWidget {
   // on main before this PR; wiring it up is a separate decision. See #156.
   final VoidCallback onFocusGained;
   final bool suppressInteractionOnChildren;
+  final VoidCallback? onDismiss;
 
   const _SheetLayout({
     required this.interactionScale,
@@ -91,11 +92,15 @@ class _SheetLayout extends StatelessWidget {
     required this.enableSaturationGlow,
     required this.onFocusGained,
     required this.suppressInteractionOnChildren,
+    this.onDismiss,
   });
 
   @override
   Widget build(BuildContext context) {
-    final handleZone = _SheetHandleZone(indicatorWidth: dragIndicatorWidth);
+    final handleZone = _SheetHandleZone(
+      indicatorWidth: dragIndicatorWidth,
+      onDismiss: onDismiss,
+    );
 
     final contentZone = _SheetContent(
       scrollController: scrollController,
@@ -344,9 +349,10 @@ class _SheetLayout extends StatelessWidget {
 // ===========================================================================
 
 class _SheetHandleZone extends StatelessWidget {
-  const _SheetHandleZone({required this.indicatorWidth});
+  const _SheetHandleZone({required this.indicatorWidth, this.onDismiss});
 
   final double indicatorWidth;
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -358,7 +364,11 @@ class _SheetHandleZone extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
-          _GlassDragIndicator(isGlass: isGlass, width: indicatorWidth),
+          _GlassDragIndicator(
+            isGlass: isGlass,
+            width: indicatorWidth,
+            onDismiss: onDismiss,
+          ),
           const SizedBox(height: 8),
         ],
       ),
@@ -367,10 +377,15 @@ class _SheetHandleZone extends StatelessWidget {
 }
 
 class _GlassDragIndicator extends StatelessWidget {
-  const _GlassDragIndicator({required this.isGlass, required this.width});
+  const _GlassDragIndicator({
+    required this.isGlass,
+    required this.width,
+    this.onDismiss,
+  });
 
   final bool isGlass;
   final double width;
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -382,6 +397,7 @@ class _GlassDragIndicator extends StatelessWidget {
     return Semantics(
       label: 'Drag handle',
       hint: 'Swipe down to dismiss',
+      onTap: onDismiss ?? () => Navigator.maybePop(context),
       child: Container(
         width: width,
         height: 4,
