@@ -163,7 +163,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
   ///
   /// Used as the merge base when the caller provides [settings]. Fields the
   /// caller leaves at [LiquidGlassSettings()] defaults are filled in from
-  /// here, so `chromaticAberration: 0.15` persists unless explicitly changed.
+  /// here unless the caller explicitly overrides them.
   ///
   /// Pass this as a starting point when you need partial overrides while
   /// keeping iOS 26 parity:
@@ -178,10 +178,16 @@ class AnimatedGlassIndicator extends StatelessWidget {
       green: 1,
       blue: 1,
     ),
-    refractiveIndex: GlassDefaults.refractiveIndex,
+    // Calibrated against iOS 26 reference: a shallower curve (22) with a
+    // slightly lower refractive index (1.08) produces a subtle lens warp
+    // on the icons without the balloon-bubble edge of the default (30 / 1.15).
+    thickness: 22,
+    refractiveIndex: 1.08,
     lightIntensity: GlassDefaults.lightIntensity,
-    // Real iOS 26 glass has visible iridescent/rainbow fringing at edges.
-    chromaticAberration: 0.15,
+    // Chromatic aberration is zeroed to eliminate rainbow fringing on the pill
+    // rim. The full icon-refraction lens effect from the glass surface normals
+    // is preserved — only the colour dispersion artefact is removed.
+    chromaticAberration: 0.0,
     lightAngle: GlassDefaults.lightAngle,
     blur: 0,
   );
@@ -325,7 +331,6 @@ class AnimatedGlassIndicator extends StatelessWidget {
     //
     // Callers that need visible corner geometry (e.g. GlassSegmentedControl)
     // can pass a smaller borderRadius explicitly.
-    final effectiveRadius = borderRadius;
     final shape = LiquidRoundedRectangle(borderRadius: borderRadius);
 
     // 1. Background Indicator (Resting state)
@@ -435,7 +440,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
         ? glassWidget
         : CustomPaint(
             painter: _OuterShadowPainter(
-              borderRadius: effectiveRadius,
+              borderRadius: borderRadius,
               shadows: explicitJellyShadows,
               opacity: fade,
             ),
