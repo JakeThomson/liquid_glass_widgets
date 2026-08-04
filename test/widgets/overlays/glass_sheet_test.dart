@@ -149,5 +149,27 @@ void main() {
       expect(find.text('Sheet Content'), findsNothing);
       semantics.dispose();
     });
+
+    testWidgets('respects custom dragIndicatorColor', (tester) async {
+      const customColor = Color(0xFFFF0000);
+      await tester.pumpWidget(
+        createTestApp(
+          child: const GlassSheet(
+            dragIndicatorColor: customColor,
+            child: Text('Content'),
+          ),
+        ),
+      );
+
+      final containerFinder = find.descendant(
+        of: find.bySemanticsLabel('Drag handle'),
+        matching: find.byType(Container),
+      );
+
+      expect(containerFinder, findsOneWidget);
+      final container = tester.widget<Container>(containerFinder);
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, customColor);
+    });
   });
 }

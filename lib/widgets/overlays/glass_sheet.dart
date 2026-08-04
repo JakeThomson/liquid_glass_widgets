@@ -655,7 +655,8 @@ class _SheetHeader extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
-          Center(child: _GlassDragIndicator(color: color, onDismiss: onDismiss)),
+          Center(
+              child: _GlassDragIndicator(color: color, onDismiss: onDismiss)),
           const SizedBox(height: 8),
         ],
       );

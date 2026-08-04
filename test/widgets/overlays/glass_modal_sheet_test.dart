@@ -693,6 +693,33 @@ void main() {
       semantics.dispose();
     });
 
+    testWidgets('respects custom dragIndicatorColor', (tester) async {
+      const customColor = Color(0xFFFF0000);
+      await tester.pumpWidget(
+        createTestApp(
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                dragIndicatorColor: customColor,
+                child: const SizedBox.expand(),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final containerFinder = find.descendant(
+        of: find.bySemanticsLabel('Drag handle'),
+        matching: find.byType(Container),
+      );
+
+      expect(containerFinder, findsOneWidget);
+      final container = tester.widget<Container>(containerFinder);
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, customColor);
+    });
+
     testWidgets('handles extreme radii correctly', (tester) async {
       await tester.pumpWidget(
         createTestApp(
