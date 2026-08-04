@@ -1,12 +1,12 @@
 // Tests for the resolveGlassBrightness utility function.
 //
 // These tests verify the three-level cascade:
-//   Level 1: CupertinoTheme.of(context).brightness
-//            - Non-null only when the developer explicitly sets it via
-//              CupertinoApp(theme:) or a manual CupertinoTheme widget.
-//   Level 2: Theme.maybeBrightnessOf (Material ThemeMode).
+//   Level 1: Theme.maybeBrightnessOf (Material ThemeMode).
 //            - Non-null inside any MaterialApp. Correctly honours
 //              ThemeMode.light / .dark / .system.
+//   Level 2: CupertinoTheme.of(context).brightness
+//            - Non-null only when the developer explicitly sets it via
+//              CupertinoApp(theme:) or a manual CupertinoTheme widget.
 //   Level 3: MediaQuery.platformBrightnessOf (device/OS fallback).
 //            Only reached in a pure CupertinoApp with no explicit pin.
 //
@@ -54,10 +54,10 @@ void main() {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Level 1a: CupertinoApp with explicit brightness pin
+  // Level 2a: CupertinoApp with explicit brightness pin
   // ──────────────────────────────────────────────────────────────────────────
 
-  group('resolveGlassBrightness — Level 1: CupertinoApp explicit pin', () {
+  group('resolveGlassBrightness — Level 2: CupertinoApp explicit pin', () {
     testWidgets(
         'returns Brightness.light when CupertinoThemeData.brightness is light',
         (tester) async {
@@ -96,7 +96,7 @@ void main() {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Level 1b: MaterialApp — resolved via MaterialBasedCupertinoThemeData
+  // Level 1: MaterialApp — resolved via MaterialBasedCupertinoThemeData
   //
   // Flutter's MaterialApp automatically wraps the widget tree with a
   // CupertinoTheme using MaterialBasedCupertinoThemeData, whose .brightness
@@ -186,10 +186,10 @@ void main() {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Level 2: System / device fallback (CupertinoApp, no explicit pin)
+  // Level 3: System / device fallback (CupertinoApp, no explicit pin)
   // ──────────────────────────────────────────────────────────────────────────
 
-  group('resolveGlassBrightness — Level 2: device system fallback', () {
+  group('resolveGlassBrightness — Level 3: device system fallback', () {
     testWidgets(
         'returns device brightness when no explicit Cupertino pin or Material',
         (tester) async {

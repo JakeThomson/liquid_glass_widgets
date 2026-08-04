@@ -30,11 +30,7 @@ Brightness? Function(BuildContext)? glassExternalBrightnessResolver;
 ///
 /// Three-level cascade (highest priority first):
 ///
-/// 1. **[CupertinoThemeData.brightness]** — an explicit developer Cupertino pin
-///    (non-null only when the developer set it intentionally via [CupertinoApp]
-///    or a manual [CupertinoTheme] widget).
-///
-/// 2. **External resolver** — a `Brightness? Function(BuildContext)` callback
+/// 1. **External resolver** — a `Brightness? Function(BuildContext)` callback
 ///    registered via [LiquidGlassWidgets.wrap]'s `brightnessResolver` parameter.
 ///    MaterialApp users pass `Theme.maybeBrightnessOf` here. This correctly
 ///    honours [ThemeMode.light] / [ThemeMode.dark] / [ThemeMode.system] without
@@ -42,6 +38,10 @@ Brightness? Function(BuildContext)? glassExternalBrightnessResolver;
 ///
 ///    If no resolver is registered (pure [CupertinoApp] or [CupertinoApp]-only
 ///    users who have no Material tree), this level returns null and is skipped.
+///
+/// 2. **[CupertinoThemeData.brightness]** — an explicit developer Cupertino pin
+///    (non-null only when the developer set it intentionally via [CupertinoApp]
+///    or a manual [CupertinoTheme] widget).
 ///
 /// 3. **[MediaQuery.platformBrightnessOf]** — the device/OS system setting.
 ///    Safe fallback for pure [CupertinoApp] with no explicit brightness pin.
@@ -57,14 +57,14 @@ Brightness? Function(BuildContext)? glassExternalBrightnessResolver;
 /// See MANUAL_TEST_CHECKLIST.md for the required pre-release device check
 /// (OS Dark Mode + ThemeMode.light → shadows must remain visible).
 Brightness resolveGlassBrightness(BuildContext context) {
-  // Level 1: explicit CupertinoTheme pin.
-  final cupertinoBrightness = CupertinoTheme.of(context).brightness;
-  if (cupertinoBrightness != null) return cupertinoBrightness;
-
-  // Level 2: external resolver provided by the app (e.g. Theme.maybeBrightnessOf
+  // Level 1: external resolver provided by the app (e.g. Theme.maybeBrightnessOf
   // from a MaterialApp integration). Zero material imports required in this file.
   final externalBrightness = glassExternalBrightnessResolver?.call(context);
   if (externalBrightness != null) return externalBrightness;
+
+  // Level 2: explicit CupertinoTheme pin.
+  final cupertinoBrightness = CupertinoTheme.of(context).brightness;
+  if (cupertinoBrightness != null) return cupertinoBrightness;
 
   // Level 3: device/OS system brightness (safe fallback).
   return MediaQuery.platformBrightnessOf(context);
