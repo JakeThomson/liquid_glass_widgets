@@ -38,6 +38,26 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('seeds at maxQuality on Apple when initialQuality is null',
+        (tester) async {
+      // iOS / macOS use precompiled Metal shaders — seeding at maxQuality
+      // immediately is safe and gives the best first-impression experience.
+      // Android seeds at standard instead; see the test below.
+      GlassAdaptiveScopeData? captured;
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          maxQuality: GlassQuality.premium,
+          child: Builder(builder: (context) {
+            captured = GlassAdaptiveScopeData.of(context);
+            return const SizedBox.shrink();
+          }),
+        ),
+      ));
+      await tester.pump();
+      expect(captured?.effectiveQuality, GlassQuality.premium);
+    }, variant: TargetPlatformVariant({TargetPlatform.iOS, TargetPlatform.macOS}));
+
+
     testWidgets('initialQuality is exposed via GlassAdaptiveScopeData.of',
         (tester) async {
       GlassAdaptiveScopeData? captured;
@@ -80,6 +100,7 @@ void main() {
         (tester) async {
       // On iOS / macOS, Metal shaders are precompiled — premium from frame 1
       // is safe and provides the best first-impression experience.
+      // Unlike Android, _conservativeInitialQuality returns max directly.
       GlassAdaptiveScopeData? captured;
       GlassQualityAdapter.clearSessionCache();
       await tester.pumpWidget(_app(

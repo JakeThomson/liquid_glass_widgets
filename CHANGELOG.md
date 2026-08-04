@@ -1,3 +1,20 @@
+# 0.29.2
+
+## Universal DPR (Device Pixel Ratio) Normalization
+
+The Liquid Glass rendering engine now achieves 1:1 mathematical parity across all display densities (e.g., macOS 2.0x, iOS 3.0x, and various Android fractional densities like 2.75x or 3.5x). Previously, running shaders in physical pixels caused inconsistent refraction scaling on high-density screens.
+
+- **Geometry Curvature:** `effectiveThickness` is scaled by DPR, guaranteeing identical refraction depth across devices.
+- **Surface Normals:** SDF tap spacing is scaled by DPR, ensuring edge highlights and Fresnel rims maintain exact proportional widths.
+- **Lighting Clamps:** The physical thickness floor is scaled by DPR, preventing lighting anomalies across different hardware.
+
+## Bug Fixes
+
+- **Indicator Pill:** Removed chromatic aberration (`0.15` → `0.0`) from the default animated pill to eliminate the rainbow rim artifact, while preserving true lens distortion.
+- **Pinch Shader:** Fixed a mathematical bug (L6 norm with an 8th-root extraction) in the squircle distance field. Replaced with an exact **L4 norm**, producing naturally soft, Apple-like corners during drag animations and saving one GPU instruction per fragment.
+
+---
+
 # 0.29.1
 
 ## Fixes
@@ -21,6 +38,7 @@ Shadow disappeared when the device was in Dark Mode but `ThemeMode.light` was se
 Leftover from pre-0.26.0, never cleaned up. `lib/` is now 100% zero-material for `cupertino_ui` compatibility.
 
 ---
+
 
 
 Eliminates production ANRs on Android devices running Impeller GLES (devices without
