@@ -303,16 +303,17 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               ..setSize(activeBounds.size * devicePixelRatio);
           })
           ..setFloatUniforms(initialIndex: 6, (value) {
-            final needsCorrection = !kIsWeb &&
-                (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
-            final scale = needsCorrection ? 2.0 / 3.0 : 1.0;
+            // Normalize thickness to match the 3x DPR look the shaders were tuned for.
+            // Unconditionally apply to all native platforms so Android and Desktop
+            // behave identically to a 3x iOS device.
+            final scale = kIsWeb ? 1.0 : devicePixelRatio / 3.0;
             value
               ..setColor(settings.effectiveGlassColor)
               ..setFloats([
                 settings.effectiveRefractiveIndex,
                 settings.effectiveChromaticAberration,
-                settings.effectiveThickness, // Reverted to raw (logical) thickness
-                scale, // uRefractScale (slot 13)
+                settings.effectiveThickness * scale, // Scaled for geometry/refraction curve normalization
+                scale, // Passed for 32-float uniform block padding (prevents Metal crash)
                 settings.effectiveLightIntensity,
                 settings.effectiveAmbientStrength,
                 settings.effectiveSaturation,
@@ -442,16 +443,17 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setSize(geometrySizePhysical);
       })
       ..setFloatUniforms(initialIndex: 6, (value) {
-        final needsCorrection = !kIsWeb &&
-            (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
-        final scale = needsCorrection ? 2.0 / 3.0 : 1.0;
+        // Normalize thickness to match the 3x DPR look the shaders were tuned for.
+        // Unconditionally apply to all native platforms so Android and Desktop
+        // behave identically to a 3x iOS device.
+        final scale = kIsWeb ? 1.0 : devicePixelRatio / 3.0;
         value
           ..setColor(settings.effectiveGlassColor)
           ..setFloats([
             settings.effectiveRefractiveIndex,
             settings.effectiveChromaticAberration,
-            settings.effectiveThickness, // Reverted to raw (logical) thickness
-            scale, // uRefractScale (slot 13)
+            settings.effectiveThickness * scale, // Scaled for geometry/refraction curve normalization
+            scale, // Passed for 32-float uniform block padding (prevents Metal crash)
             settings.effectiveLightIntensity,
             settings.effectiveAmbientStrength,
             settings.effectiveSaturation,
