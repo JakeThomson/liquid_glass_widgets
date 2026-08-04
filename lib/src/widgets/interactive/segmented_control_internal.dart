@@ -399,6 +399,7 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
                     Expanded(
                       child: RepaintBoundary(
                         child: GestureDetector(
+                          excludeFromSemantics: true,
                           onTap: () => _onSegmentTap(i),
                           onTapDown: (_) {
                             if (!widget.segments[i].enabled) return;

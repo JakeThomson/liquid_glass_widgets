@@ -1,13 +1,26 @@
 // Tests for the resolveGlassBrightness utility function.
 //
-// These tests verify the two-level cascade:
+// These tests verify the three-level cascade:
 //   Level 1: CupertinoTheme.of(context).brightness
-//            - In CupertinoApp: the explicit developer brightness pin (or null).
-//            - In MaterialApp: non-null because Flutter injects
-//              MaterialBasedCupertinoThemeData, which reads from ThemeData
-//              and therefore correctly honours ThemeMode.
-//   Level 2: MediaQuery.platformBrightnessOf (device/OS fallback).
-//            Only reached in a pure CupertinoApp with no explicit brightness.
+//            - Non-null only when the developer explicitly sets it via
+//              CupertinoApp(theme:) or a manual CupertinoTheme widget.
+//   Level 2: Theme.maybeBrightnessOf (Material ThemeMode).
+//            - Non-null inside any MaterialApp. Correctly honours
+//              ThemeMode.light / .dark / .system.
+//   Level 3: MediaQuery.platformBrightnessOf (device/OS fallback).
+//            Only reached in a pure CupertinoApp with no explicit pin.
+//
+// ⚠ UNIT-TEST LIMITATION
+// The canonical regression scenario — OS Dark Mode + ThemeMode.light causing
+// glass widgets to incorrectly resolve Brightness.dark — does NOT reproduce in
+// the widget-test harness. The Flutter test environment correctly propagates
+// ThemeMode through MaterialBasedCupertinoThemeData regardless of the
+// simulated platformBrightness, so all tests here pass whether or not the
+// Level 2 (Theme.maybeBrightnessOf) cascade step is present.
+//
+// This means: restoring or removing Theme.maybeBrightnessOf cannot be
+// verified by unit tests alone. Before every release, run the manual check
+// documented in MANUAL_TEST_CHECKLIST.md.
 //
 // GlassThemeData.brightness (override) is tested in
 // glass_theme_data_brightness_test.dart and glass_theme_brightness_test.dart.
@@ -262,4 +275,11 @@ void main() {
           reason: 'Material ThemeMode.light wins over dark device OS setting');
     });
   });
+
+  // NOTE: The canonical on-device regression (OS Dark + ThemeMode.light →
+  // glass widgets incorrectly dark) cannot be reproduced here. The widget-test
+  // harness propagates ThemeMode correctly through MaterialBasedCupertinoThemeData
+  // regardless of platformBrightness, so a test covering that scenario would
+  // pass even with the Level 2 cascade step removed — giving false confidence.
+  // See MANUAL_TEST_CHECKLIST.md for the required pre-release device check.
 }
