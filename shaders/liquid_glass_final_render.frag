@@ -471,7 +471,12 @@ void main() {
     // At uEdgeConfig.x = 3 the rim is very prominent.
     float cosTerm = sqrt(max(0.0, 1.0 - normalizedHeight * normalizedHeight));
     float rimDist = uThickness * (1.0 - cosTerm);
-    float ring    = (1.0 - smoothstep(uEdgeConfig.x - 0.75, uEdgeConfig.x + 0.75, rimDist))
+    
+    // Scale the anti-aliasing window by the same DPR scale applied to the thickness,
+    // so the edge remains perfectly sharp (and exactly the same logical width) across all screens.
+    float ringWindow = 0.75 * max(0.1, uEdgeConfig.z);
+    
+    float ring    = (1.0 - smoothstep(uEdgeConfig.x - ringWindow, uEdgeConfig.x + ringWindow, rimDist))
                   * step(0.001, uEdgeConfig.x);
     float fresnel = rimBase * 0.12 * uEdgeConfig.y + ring * 0.45;
     finalColor.rgb = clamp(finalColor.rgb + vec3(fresnel), 0.0, 1.0);
