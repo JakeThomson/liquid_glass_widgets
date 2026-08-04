@@ -331,7 +331,6 @@ class AnimatedGlassIndicator extends StatelessWidget {
     //
     // Callers that need visible corner geometry (e.g. GlassSegmentedControl)
     // can pass a smaller borderRadius explicitly.
-    final effectiveRadius = borderRadius;
     final shape = LiquidRoundedRectangle(borderRadius: borderRadius);
 
     // 1. Background Indicator (Resting state)
