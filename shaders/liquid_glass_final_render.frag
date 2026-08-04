@@ -213,9 +213,6 @@ void main() {
     vec3  baseRefract = refract(incident, normal, invN);
     float refractLen  = (height + baseHeight) / max(0.001, abs(baseRefract.z));
     vec2  displacement = baseRefract.xy * refractLen;
-    // Scale displacement by uRefractScale (uOpticalProps.w) to ensure logical-pixel
-    // identical refraction magnitude across all device pixel ratios.
-    displacement *= uOpticalProps.w;
     // On OpenGL ES, screenUV.y is already flipped to (1.0 - y) to compensate
     // for the bottom-left texture-origin convention.  The displacement is
     // computed in Flutter's native Y-down space (outward normal at the bottom
