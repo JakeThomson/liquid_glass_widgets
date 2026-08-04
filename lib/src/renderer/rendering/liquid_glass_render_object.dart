@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_shaders/flutter_shaders.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../liquid_glass_renderer.dart';
 import '../internal/render_liquid_glass_geometry.dart';
@@ -302,52 +301,49 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               ..setOffset(activeBounds.topLeft * devicePixelRatio)
               ..setSize(activeBounds.size * devicePixelRatio);
           })
-          // Slot 6-7: uLightDirection
           ..setFloatUniforms(initialIndex: 6, (value) {
-            value.setOffset(_cachedLightDir);
-          })
-          // Slot 8-19: uGlassColor (4), uOpticalProps (4), uLightConfig (4)
-          ..setFloatUniforms(initialIndex: 8, (value) {
-            final needsCorrection = !kIsWeb &&
-                (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
-            final refractScale = needsCorrection ? 2.0 / 3.0 : 1.0;
-
+            // uRefractScale: normalises refraction displacement to logical pixels.
+            // The refract() call in the geometry shader produces a displacement
+            // in physical pixels (it works in fragCoord space). Dividing by DPR
+            // converts it to logical pixels so the refraction magnitude is
+            // visually identical across all DPR values (iOS@3×, macOS@2×, etc.).
+            // On web DPR management is handled by the browser; no correction needed.
+            final refractScale = kIsWeb ? 1.0 : 1.0 / devicePixelRatio;
             value
               ..setColor(settings.effectiveGlassColor)
               ..setFloats([
                 settings.effectiveRefractiveIndex,
                 settings.effectiveChromaticAberration,
-                settings.effectiveThickness, // Original logical thickness for edge lighting
-                refractScale,                // .w (displacement scalar only)
+                settings.effectiveThickness,
+                refractScale, // uRefractScale (slot 13) — DPR normalisation
                 settings.effectiveLightIntensity,
                 settings.effectiveAmbientStrength,
                 settings.effectiveSaturation,
-                0.0,                         // PAD
-              ]);
+              ])
+              ..setOffset(_cachedLightDir); // slots 17-18
           })
-          // Slots 20-23: uBackgroundFallback
-          ..setFloatUniforms(initialIndex: 20, (value) {
+          // Slot 19: uWhiten (whitening amount); slot 20: uWhitenGated
+          // Slot 21: uPinchStrength
+          ..setFloatUniforms(initialIndex: 19, (value) {
+            value
+              ..setFloat(settings.whitenStrength)
+              ..setFloat(settings.whitenGated ? 1.0 : 0.0)
+              ..setFloat(settings.pinchStrength);
+          })
+          // Slots 22-25: uBackgroundFallback (straight RGBA).
+          ..setFloatUniforms(initialIndex: 22, (value) {
             final b = settings.platformViewFallbackColor ??
                 settings.backerColor ??
                 const Color(0x00000000);
             value.setFloats(<double>[b.r, b.g, b.b, b.a]);
           })
-          // Slots 24-25: uCaptureOffset (0 for BackdropFilter)
-          ..setFloatUniforms(initialIndex: 24, (value) {
+          // Slots 26-27: uCaptureOffset
+          ..setFloatUniforms(initialIndex: 26, (value) {
             value.setOffset(Offset.zero);
           })
-          // Slots 26-27: uEdgeRimProps
-          ..setFloatUniforms(initialIndex: 26, (value) {
-            value.setFloats([settings.ambientRim, settings.fresnelStrength]);
-          })
-          // Slots 28-31: uEffectConfig (whiten, whitenGated, pinchStrength, pad)
+          // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, pad, pad)
           ..setFloatUniforms(initialIndex: 28, (value) {
-            value.setFloats([
-              settings.whitenStrength,
-              settings.whitenGated ? 1.0 : 0.0,
-              settings.pinchStrength,
-              0.0, // PAD
-            ]);
+            value.setFloats([settings.ambientRim, settings.fresnelStrength, 0.0, 0.0]);
           })
           ..setImageSampler(
             1,
@@ -448,52 +444,40 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setOffset(geometryOffsetInCapture)
           ..setSize(geometrySizePhysical);
       })
-      // Slot 6-7: uLightDirection
       ..setFloatUniforms(initialIndex: 6, (value) {
-        value.setOffset(_cachedLightDir);
-      })
-      // Slot 8-19: uGlassColor (4), uOpticalProps (4), uLightConfig (4)
-      ..setFloatUniforms(initialIndex: 8, (value) {
-        final needsCorrection = !kIsWeb &&
-            (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
-        final refractScale = needsCorrection ? 2.0 / 3.0 : 1.0;
-
+        final refractScale = kIsWeb ? 1.0 : 1.0 / dpr;
         value
           ..setColor(settings.effectiveGlassColor)
           ..setFloats([
             settings.effectiveRefractiveIndex,
             settings.effectiveChromaticAberration,
-            settings.effectiveThickness, // Original logical thickness for edge lighting
-            refractScale,                // .w (displacement scalar only)
+            settings.effectiveThickness,
+            refractScale, // uRefractScale (slot 13) — DPR normalisation
             settings.effectiveLightIntensity,
             settings.effectiveAmbientStrength,
             settings.effectiveSaturation,
-            0.0,                         // PAD
-          ]);
+          ])
+          ..setOffset(_cachedLightDir); // slots 17-18
       })
-      // Slots 20-23: uBackgroundFallback
-      ..setFloatUniforms(initialIndex: 20, (value) {
+      ..setFloatUniforms(initialIndex: 19, (value) {
+        value
+          ..setFloat(settings.whitenStrength)
+          ..setFloat(settings.whitenGated ? 1.0 : 0.0)
+          ..setFloat(settings.pinchStrength);
+      })
+      ..setFloatUniforms(initialIndex: 22, (value) {
         final b = settings.platformViewFallbackColor ??
             settings.backerColor ??
             const Color(0x00000000);
         value.setFloats(<double>[b.r, b.g, b.b, b.a]);
       })
-      // Slots 24-25: uCaptureOffset
-      ..setFloatUniforms(initialIndex: 24, (value) {
+      // Slot 26-27: uCaptureOffset
+      ..setFloatUniforms(initialIndex: 26, (value) {
         value.setOffset(captureOffset);
       })
-      // Slots 26-27: uEdgeRimProps
-      ..setFloatUniforms(initialIndex: 26, (value) {
-        value.setFloats([settings.ambientRim, settings.fresnelStrength]);
-      })
-      // Slots 28-31: uEffectConfig (whiten, whitenGated, pinchStrength, pad)
+      // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, pad, pad)
       ..setFloatUniforms(initialIndex: 28, (value) {
-        value.setFloats([
-          settings.whitenStrength,
-          settings.whitenGated ? 1.0 : 0.0,
-          settings.pinchStrength,
-          0.0, // PAD
-        ]);
+        value.setFloats([settings.ambientRim, settings.fresnelStrength, 0.0, 0.0]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).
       ..setImageSampler(0, capture)
