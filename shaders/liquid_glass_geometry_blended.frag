@@ -70,8 +70,12 @@ void main() {
     // Apply logical-pixel anti-aliasing using the NORMALIZED distance (sdN).
     // Using raw `sd` for pseudo-SDFs causes pixelated edges because the field
     // crosses zero too quickly. `sdN` guarantees exact 1-pixel wide gradients.
-    // 1.5 logical pixels of smoothing guarantees a pristine edge that survives
-    // the 4% bilinear scaling of press animations without stair-stepping.
+    // 
+    // Note: The physical radius here scales directly by raw `uDpr`, not by `uDpr / 3.0`.
+    // This is correct because we want a 1.5 logical-pixel wide smoothing radius on all
+    // screens. A 1.5 logical-pixel radius naturally maps to `1.5 * uDpr` physical pixels.
+    // This guarantees a pristine edge that survives the 4% bilinear scaling of press 
+    // animations without stair-stepping, on every device density.
     float smoothing = 1.5 * max(1.0, uDpr);
     float foregroundAlpha = smoothstep(smoothing * 0.5, -smoothing * 0.5, sdN);
     if (foregroundAlpha < 0.01) {
