@@ -40,9 +40,7 @@ void main() {
 
     testWidgets('seeds at maxQuality on Apple when initialQuality is null',
         (tester) async {
-      // iOS / macOS use precompiled Metal shaders — seeding at maxQuality
-      // immediately is safe and gives the best first-impression experience.
-      // Android seeds at standard instead; see the test below.
+      // Android also seeds at maxQuality now (Best Foot Forward).
       GlassAdaptiveScopeData? captured;
       await tester.pumpWidget(_app(
         GlassAdaptiveScope(
@@ -75,18 +73,14 @@ void main() {
       expect(captured?.effectiveQuality, GlassQuality.standard);
     });
 
-    testWidgets(
-        'seeds at GlassQuality.standard on Android when initialQuality is null',
+    testWidgets('seeds at maxQuality on Android when initialQuality is null',
         (tester) async {
       // The Flutter test framework defaults to TargetPlatform.android.
-      // On Android, _conservativeInitialQuality returns GlassQuality.standard
-      // to give Phase 2 a stable baseline and provide defence-in-depth against
-      // residual GLES first-frame compilation costs (GitHub issue #187).
+      // We now seed at maxQuality (Best Foot Forward).
       GlassAdaptiveScopeData? captured;
       GlassQualityAdapter.clearSessionCache();
       await tester.pumpWidget(_app(
         GlassAdaptiveScope(
-          maxQuality: GlassQuality.premium,
           child: Builder(builder: (context) {
             captured = GlassAdaptiveScopeData.of(context);
             return const SizedBox.shrink();
@@ -94,7 +88,7 @@ void main() {
         ),
       ));
       await tester.pump();
-      expect(captured?.effectiveQuality, GlassQuality.standard);
+      expect(captured?.effectiveQuality, GlassQuality.premium);
     });
 
     testWidgets('seeds at maxQuality on iOS when initialQuality is null',
@@ -122,9 +116,7 @@ void main() {
     testWidgets(
         'seeds at minimal on Android when maxQuality is minimal and initialQuality is null',
         (tester) async {
-      // _conservativeInitialQuality must never return a quality above maxQuality.
-      // When the caller sets maxQuality to minimal, Android should also start
-      // at minimal (not standard).
+      // maxQuality is minimal, so we seed at minimal on all platforms.
       GlassAdaptiveScopeData? captured;
       GlassQualityAdapter.clearSessionCache();
       await tester.pumpWidget(_app(
