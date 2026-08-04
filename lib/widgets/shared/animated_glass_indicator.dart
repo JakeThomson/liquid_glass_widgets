@@ -181,8 +181,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
     // Calibrated against iOS 26 reference: a shallower curve (22) with a
     // slightly lower refractive index (1.08) produces a subtle lens warp
     // on the icons without the balloon-bubble edge of the default (30 / 1.15).
-    thickness: 22,
-    refractiveIndex: 1.08,
+    thickness: 20,
+    refractiveIndex: 1.10,
     lightIntensity: GlassDefaults.lightIntensity,
     // Chromatic aberration is zeroed to eliminate rainbow fringing on the pill
     // rim. The full icon-refraction lens effect from the glass surface normals
