@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../shared/test_helpers.dart';
@@ -651,6 +652,45 @@ void main() {
       expect(find.text('Minimal Content'), findsOneWidget);
       // Verify drag indicator is NOT there
       expect(find.bySemanticsLabel('Drag handle'), findsNothing);
+    });
+
+    testWidgets('drag indicator Semantics.onTap dismisses the sheet',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  GlassModalSheet.show(
+                    context: context,
+                    builder: (context) => const Text('Sheet Content'),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sheet Content'), findsOneWidget);
+
+      final handle = find.bySemanticsLabel('Drag handle');
+      expect(handle, findsOneWidget);
+
+      tester.binding.pipelineOwner.semanticsOwner!.performAction(
+        tester.getSemantics(handle).id,
+        SemanticsAction.tap,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sheet Content'), findsNothing);
+      semantics.dispose();
     });
 
     testWidgets('handles extreme radii correctly', (tester) async {

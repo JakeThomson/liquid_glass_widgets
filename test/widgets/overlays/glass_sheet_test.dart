@@ -1,5 +1,6 @@
 import 'package:liquid_glass_widgets/widgets/overlays/glass_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../shared/test_helpers.dart';
@@ -106,6 +107,47 @@ void main() {
 
       expect(sheet.showDragIndicator, isTrue);
       expect(sheet.quality, isNull);
+    });
+
+    testWidgets('drag indicator Semantics.onTap dismisses the route',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (context) => const GlassSheet(
+                      child: Text('Sheet Content'),
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sheet Content'), findsOneWidget);
+
+      final handle = find.bySemanticsLabel('Drag handle');
+      expect(handle, findsOneWidget);
+
+      tester.binding.pipelineOwner.semanticsOwner!.performAction(
+        tester.getSemantics(handle).id,
+        SemanticsAction.tap,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sheet Content'), findsNothing);
+      semantics.dispose();
     });
   });
 }
