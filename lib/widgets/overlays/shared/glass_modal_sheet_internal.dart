@@ -99,6 +99,7 @@ class _SheetLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final handleZone = _SheetHandleZone(
       indicatorWidth: dragIndicatorWidth,
+      color: dragIndicatorColor,
       onDismiss: onDismiss,
     );
 
@@ -349,9 +350,14 @@ class _SheetLayout extends StatelessWidget {
 // ===========================================================================
 
 class _SheetHandleZone extends StatelessWidget {
-  const _SheetHandleZone({required this.indicatorWidth, this.onDismiss});
+  const _SheetHandleZone({
+    required this.indicatorWidth,
+    this.color,
+    this.onDismiss,
+  });
 
   final double indicatorWidth;
+  final Color? color;
   final VoidCallback? onDismiss;
 
   @override
@@ -367,6 +373,7 @@ class _SheetHandleZone extends StatelessWidget {
           _GlassDragIndicator(
             isGlass: isGlass,
             width: indicatorWidth,
+            color: color,
             onDismiss: onDismiss,
           ),
           const SizedBox(height: 8),
@@ -380,11 +387,13 @@ class _GlassDragIndicator extends StatelessWidget {
   const _GlassDragIndicator({
     required this.isGlass,
     required this.width,
+    this.color,
     this.onDismiss,
   });
 
   final bool isGlass;
   final double width;
+  final Color? color;
   final VoidCallback? onDismiss;
 
   @override
@@ -402,7 +411,7 @@ class _GlassDragIndicator extends StatelessWidget {
         width: width,
         height: 4,
         decoration: BoxDecoration(
-          color: defaultColor,
+          color: color ?? defaultColor,
           borderRadius: BorderRadius.circular(2),
         ),
       ),
