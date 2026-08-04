@@ -15,6 +15,7 @@ The Liquid Glass rendering engine now achieves 1:1 mathematical parity across al
 - **Brightness Cascade (#124):** Hardened the brightness resolution cascade by evaluating `brightnessResolver` before `CupertinoTheme.of`. This acts as a defensive backstop for older Flutter versions or edge cases where the `MaterialBasedCupertinoThemeData` bridge fails to propagate `ThemeMode` correctly.
 - **Accessibility / Semantics (#189):** Restored VoiceOver/TalkBack tap-to-dismiss behavior. The `GlassModalSheet` drag indicator now exposes a `Semantics.onTap` action that correctly triggers sheet dismissal, matching Material's handle behavior.
 - **Customization (#190):** `GlassModalSheet`'s `dragIndicatorColor` is now honored. It was previously accepted by the API but dropped internally in favor of hard-coded defaults.
+- **Android Quality (Best Foot Forward):** `GlassAdaptiveScope` now seeds at `maxQuality` (premium) on Android from the very first frame. Previously, Android cold-started at `standard` and promoted to premium only after the 3-second Phase 2 benchmark. The ANR safety net (shader pre-compilation in `LiquidGlassWidgets.initialize()`) makes this safe; Phase 2 continues to demote genuinely slow/budget devices.
 
 ---
 
