@@ -71,6 +71,49 @@ void main() {
     });
 
     testWidgets(
+        'seeds at GlassQuality.standard on Android when initialQuality is null',
+        (tester) async {
+      // The Flutter test framework defaults to TargetPlatform.android.
+      // On Android, _conservativeInitialQuality returns GlassQuality.standard
+      // to give Phase 2 a stable baseline and provide defence-in-depth against
+      // residual GLES first-frame compilation costs (GitHub issue #187).
+      GlassAdaptiveScopeData? captured;
+      GlassQualityAdapter.clearSessionCache();
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          maxQuality: GlassQuality.premium,
+          child: Builder(builder: (context) {
+            captured = GlassAdaptiveScopeData.of(context);
+            return const SizedBox.shrink();
+          }),
+        ),
+      ));
+      await tester.pump();
+      expect(captured?.effectiveQuality, GlassQuality.standard);
+    });
+
+    testWidgets('seeds at maxQuality on iOS when initialQuality is null',
+        (tester) async {
+      // On iOS / macOS, Metal shaders are precompiled — premium from frame 1
+      // is safe and provides the best first-impression experience.
+      GlassAdaptiveScopeData? captured;
+      GlassQualityAdapter.clearSessionCache();
+      await tester.pumpWidget(_app(
+        GlassAdaptiveScope(
+          maxQuality: GlassQuality.minimal,
+          child: Builder(builder: (context) {
+            captured = GlassAdaptiveScopeData.of(context);
+            return const SizedBox.shrink();
+          }),
+        ),
+      ));
+      await tester.pump();
+      expect(captured?.effectiveQuality, GlassQuality.premium);
+    },
+        variant:
+            TargetPlatformVariant({TargetPlatform.iOS, TargetPlatform.macOS}));
+
+    testWidgets(
         'seeds at minimal on Android when maxQuality is minimal and initialQuality is null',
         (tester) async {
       // _conservativeInitialQuality must never return a quality above maxQuality.

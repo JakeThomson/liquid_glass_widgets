@@ -564,15 +564,42 @@ class _GlassAdaptiveScopeState extends State<GlassAdaptiveScope>
     // Seed _effectiveQuality using the same source priority the adapter will
     // use in start(): developer-provided initialQuality beats session cache
     // beats a conservative platform default.
-    // beats maxQuality. Doing this before creating and starting the adapter
-    // ensures the very first rendered frame shows the correct quality and
-    // there is no one-frame flash from maxQuality to a cached lower value.
+    //
+    // On Android we start at GlassQuality.standard rather than maxQuality so
+    // that Phase 2 benchmarks the device from a stable baseline without the
+    // first-frame premium glass compilation cost inflating raster timings.
+    // iOS and macOS use precompiled Metal shaders — seeding at maxQuality
+    // immediately gives the best first-impression experience on Apple devices.
+    //
+    // See _conservativeInitialQuality for the platform logic.
     _effectiveQuality = widget.initialQuality ??
         GlassQualityAdapter.sessionSettledQuality ??
-        widget.maxQuality;
+        _conservativeInitialQuality(widget.maxQuality);
     _createAdapter();
     WidgetsBinding.instance.addObserver(this);
     _adapter.start();
+  }
+
+  /// Returns the safe cold-start quality when no [GlassAdaptiveScope.initialQuality]
+  /// is provided and no session cache exists.
+  ///
+  /// **Android:** returns [GlassQuality.standard] (never higher than [max]).
+  /// Phase 2 will promote Vulkan devices toward [max] based on measured raster
+  /// performance. This is defence-in-depth alongside the `toImage()` GPU
+  /// warm-up in `LiquidGlassWidgets.initialize()` — residual first-frame costs
+  /// from pipeline variants not covered by the warm-up cannot trigger an ANR
+  /// when the first frame renders at standard quality (no premium shaders).
+  ///
+  /// **iOS / macOS:** returns [max] immediately. Metal shaders are precompiled
+  /// at build time — there is no runtime compilation cost and premium quality
+  /// from the very first frame is always safe.
+  static GlassQuality _conservativeInitialQuality(GlassQuality max) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // Never return a quality higher than the caller's configured maximum.
+      if (max == GlassQuality.minimal) return GlassQuality.minimal;
+      return GlassQuality.standard;
+    }
+    return max;
   }
 
   @override
