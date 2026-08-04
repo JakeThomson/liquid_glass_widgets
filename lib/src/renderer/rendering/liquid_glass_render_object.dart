@@ -289,6 +289,10 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           _geometryLocalBounds,
         ).snapToPixels(devicePixelRatio);
 
+        // Scale physical thickness to maintain identical logical rim width across DPRs.
+        // The baseline visual thickness was tuned on a 3x Retina display.
+        final scale = devicePixelRatio / 3.0;
+
         renderShader
           // Slot 0-1: uSize — physical-pixel size of the backdrop layer.
           // Must be set before painting so the shader can derive correct screen UVs.
@@ -302,20 +306,17 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               ..setSize(activeBounds.size * devicePixelRatio);
           })
           ..setFloatUniforms(initialIndex: 6, (value) {
-            // uRefractScale: normalises refraction displacement to logical pixels.
-            // The baseline visual thickness was tuned on a 3x Retina display
-            // with a scale of 1.0. To maintain this exact logical thickness
-            // on all screens, we multiply by (DPR / 3.0).
-            // This yields 1.0 on iOS, 0.666 on macOS 2x, and ~0.91 on Android 2.75x.
-            // On web DPR management is handled by the browser; no correction needed.
-            final refractScale = kIsWeb ? 1.0 : devicePixelRatio / 3.0;
+            // uRefractScale: normalisation is now implicitly handled by scaling the physical
+            // geometry curve (above), which mathematically equalises the UV displacement shift.
+            // No further scaling is needed here, so we pass 1.0.
+            final refractScale = 1.0;
             value
               ..setColor(settings.effectiveGlassColor)
               ..setFloats([
                 settings.effectiveRefractiveIndex,
                 settings.effectiveChromaticAberration,
-                settings.effectiveThickness,
-                refractScale, // uRefractScale (slot 13) — DPR normalisation
+                settings.effectiveThickness * scale,
+                refractScale, // uRefractScale (slot 13)
                 settings.effectiveLightIntensity,
                 settings.effectiveAmbientStrength,
                 settings.effectiveSaturation,
@@ -341,9 +342,17 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setFloatUniforms(initialIndex: 26, (value) {
             value.setOffset(Offset.zero);
           })
-          // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, pad, pad)
+          // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, pad)
+          // We scale ambientRim by the same factor as thickness so it remains at the
+          // same proportional depth on the curve across all DPRs. We pass the scale
+          // down to the shader so it can also scale the smoothstep anti-aliasing window.
           ..setFloatUniforms(initialIndex: 28, (value) {
-            value.setFloats([settings.ambientRim, settings.fresnelStrength, 0.0, 0.0]);
+            value.setFloats([
+              settings.ambientRim * scale,
+              settings.fresnelStrength,
+              scale,
+              0.0
+            ]);
           })
           ..setImageSampler(
             1,
@@ -432,6 +441,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     final geometryOffsetInCapture =
         (activeBounds.topLeft - _captureOriginInScreenSpace) * dpr;
     final geometrySizePhysical = activeBounds.size * dpr;
+    final scale = dpr / 3.0;
+    final refractScale = 1.0;
 
     renderShader
       // Slot 0-1: uSize — physical size of the capture image.
@@ -445,14 +456,13 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setSize(geometrySizePhysical);
       })
       ..setFloatUniforms(initialIndex: 6, (value) {
-        final refractScale = kIsWeb ? 1.0 : dpr / 3.0;
         value
           ..setColor(settings.effectiveGlassColor)
           ..setFloats([
             settings.effectiveRefractiveIndex,
             settings.effectiveChromaticAberration,
-            settings.effectiveThickness,
-            refractScale, // uRefractScale (slot 13) — DPR normalisation
+            settings.effectiveThickness * scale,
+            refractScale, // uRefractScale (slot 13)
             settings.effectiveLightIntensity,
             settings.effectiveAmbientStrength,
             settings.effectiveSaturation,
@@ -475,9 +485,14 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       ..setFloatUniforms(initialIndex: 26, (value) {
         value.setOffset(captureOffset);
       })
-      // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, pad, pad)
+      // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, pad)
       ..setFloatUniforms(initialIndex: 28, (value) {
-        value.setFloats([settings.ambientRim, settings.fresnelStrength, 0.0, 0.0]);
+        value.setFloats([
+          settings.ambientRim * scale,
+          settings.fresnelStrength,
+          scale,
+          0.0
+        ]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).
       ..setImageSampler(0, capture)
