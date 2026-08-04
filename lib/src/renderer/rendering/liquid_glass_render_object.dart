@@ -303,12 +303,12 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           })
           ..setFloatUniforms(initialIndex: 6, (value) {
             // uRefractScale: normalises refraction displacement to logical pixels.
-            // The refract() call in the geometry shader produces a displacement
-            // in physical pixels (it works in fragCoord space). Dividing by DPR
-            // converts it to logical pixels so the refraction magnitude is
-            // visually identical across all DPR values (iOS@3×, macOS@2×, etc.).
+            // The baseline visual thickness was tuned on a 3x Retina display
+            // with a scale of 1.0. To maintain this exact logical thickness
+            // on all screens, we multiply by (DPR / 3.0).
+            // This yields 1.0 on iOS, 0.666 on macOS 2x, and ~0.91 on Android 2.75x.
             // On web DPR management is handled by the browser; no correction needed.
-            final refractScale = kIsWeb ? 1.0 : 1.0 / devicePixelRatio;
+            final refractScale = kIsWeb ? 1.0 : devicePixelRatio / 3.0;
             value
               ..setColor(settings.effectiveGlassColor)
               ..setFloats([
@@ -445,7 +445,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setSize(geometrySizePhysical);
       })
       ..setFloatUniforms(initialIndex: 6, (value) {
-        final refractScale = kIsWeb ? 1.0 : 1.0 / dpr;
+        final refractScale = kIsWeb ? 1.0 : dpr / 3.0;
         value
           ..setColor(settings.effectiveGlassColor)
           ..setFloats([
