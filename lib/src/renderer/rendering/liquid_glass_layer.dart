@@ -207,8 +207,36 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
 
   late final logger = Logger(LgrLogNames.layer);
 
+  Animation<double>? _routeAnimation;
+  Animation<double>? _secondaryRouteAnimation;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      if (_routeAnimation != route.animation) {
+        _routeAnimation?.removeListener(_forceRepaint);
+        _routeAnimation = route.animation;
+        _routeAnimation?.addListener(_forceRepaint);
+      }
+      if (_secondaryRouteAnimation != route.secondaryAnimation) {
+        _secondaryRouteAnimation?.removeListener(_forceRepaint);
+        _secondaryRouteAnimation = route.secondaryAnimation;
+        _secondaryRouteAnimation?.addListener(_forceRepaint);
+      }
+    }
+  }
+
+  void _forceRepaint() {
+    if (!mounted) return;
+    context.findRenderObject()?.markNeedsPaint();
+  }
+
   @override
   void dispose() {
+    _routeAnimation?.removeListener(_forceRepaint);
+    _secondaryRouteAnimation?.removeListener(_forceRepaint);
     _link.dispose();
     super.dispose();
   }
