@@ -216,27 +216,33 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
     final route = ModalRoute.of(context);
     if (route != null) {
       if (_routeAnimation != route.animation) {
-        _routeAnimation?.removeListener(_forceRepaint);
+        _routeAnimation?.removeListener(_onRouteAnimation);
         _routeAnimation = route.animation;
-        _routeAnimation?.addListener(_forceRepaint);
+        _routeAnimation?.addListener(_onRouteAnimation);
       }
       if (_secondaryRouteAnimation != route.secondaryAnimation) {
-        _secondaryRouteAnimation?.removeListener(_forceRepaint);
+        _secondaryRouteAnimation?.removeListener(_onRouteAnimation);
         _secondaryRouteAnimation = route.secondaryAnimation;
-        _secondaryRouteAnimation?.addListener(_forceRepaint);
+        _secondaryRouteAnimation?.addListener(_onRouteAnimation);
       }
     }
   }
 
-  void _forceRepaint() {
+  void _onRouteAnimation() {
     if (!mounted) return;
-    context.findRenderObject()?.markNeedsPaint();
+    final isAnimating = (_routeAnimation?.isAnimating ?? false) || 
+                        (_secondaryRouteAnimation?.isAnimating ?? false);
+    final ro = context.findRenderObject() as RenderLiquidGlassLayer?;
+    if (ro != null && ro.freezeTransform != isAnimating) {
+      ro.freezeTransform = isAnimating;
+      ro.markNeedsPaint();
+    }
   }
 
   @override
   void dispose() {
-    _routeAnimation?.removeListener(_forceRepaint);
-    _secondaryRouteAnimation?.removeListener(_forceRepaint);
+    _routeAnimation?.removeListener(_onRouteAnimation);
+    _secondaryRouteAnimation?.removeListener(_onRouteAnimation);
     _link.dispose();
     super.dispose();
   }
@@ -384,8 +390,17 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         _ => Size.zero,
       };
 
+  bool freezeTransform = false;
+  Matrix4? _cachedMatteTransform;
+
   @override
-  Matrix4 get matteTransform => getTransformTo(null);
+  Matrix4 get matteTransform {
+    if (freezeTransform && _cachedMatteTransform != null) {
+      return _cachedMatteTransform!;
+    }
+    _cachedMatteTransform = getTransformTo(null);
+    return _cachedMatteTransform!;
+  }
 
   @override
   void onTransformChanged() {
