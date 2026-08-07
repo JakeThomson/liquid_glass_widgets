@@ -1,20 +1,23 @@
-
-// Minimal repro — liquid_glass_widgets #<new>
-// "Premium / useOwnLayer glass lens lags & detaches from its content under a
-//  continuous ancestor transform (CupertinoSheet drag)".
+// Demo — liquid_glass_widgets #192
+// Regression-verification for: \"Premium / useOwnLayer glass lens detaches
+//  from its content under a continuous ancestor transform (CupertinoSheet drag)\".
 //
-// Env: Flutter 3.44.8 stable · Impeller · iOS 26 · liquid_glass_widgets 0.29.0
+// The bug is FIXED in 0.29.3. This demo verifies the fix stays intact:
+// the glass lens should remain perfectly locked to its pill at all times,
+// including during slow, deliberate CupertinoSheet drags.
+//
+// Env: Flutter 3.44.8 stable · Impeller · iOS 26 · liquid_glass_widgets 0.29.3
 //
 // Run on an iOS 26 device/simulator:
-//   flutter run -t repro/issue1_glass_transform_desync.dart
+//   flutter run -t example/lib/demos/sheet_drag_glass_demo.dart
 //
 // Steps:
 //   1. Tap "Open sheet".
 //   2. Drag the sheet up/down SLOWLY.
 //   3. Watch the premium glass pill in the app bar. A HIGH-CONTRAST checkerboard
-//      sits directly behind it, so the glass refraction is clearly visible — and
-//      while the background scales you can see the refracted lens drift AWAY from
-//      the pill's frame/text, snapping back when you release.
+//      sits directly behind it, so any lens drift would be immediately visible.
+//      EXPECTED: the refracted lens stays perfectly aligned with the pill at all
+//      times — no drift, no snap-back on release.
 //
 // Compare: switch the GlassContainer below to
 //   `useOwnLayer: false, quality: GlassQuality.standard`
@@ -40,10 +43,9 @@ class _BackgroundScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // GlassPage wires up LiquidGlassScope + backdrop isolation so the premium
-    // GlassContainer below has a correctly-sourced backdrop to refract against.
-    // Without this, the glass has no isolation scope and the tracking layer
-    // drifts under a continuous ancestor transform (the CupertinoSheet drag).
+    // GlassPage is best practice: provides correct backdrop isolation for the
+    // premium glass. Not strictly required for useOwnLayer:true (that path is
+    // self-contained), but recommended for accurate refraction sourcing.
     return GlassPage(
       background: const _Checkerboard(),
       statusBarStyle: GlassStatusBarStyle.light,
@@ -72,7 +74,9 @@ class _BackgroundScreen extends StatelessWidget {
                 height: 44,
                 shape: LiquidRoundedRectangle(borderRadius: 22.0),
                 child: Center(
-                  child: Text('premium glass', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  child: Text('premium glass',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w600)),
                 ),
               ),
             ),
@@ -103,11 +107,13 @@ class _Checkerboard extends StatelessWidget {
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: cols),
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: cols),
       itemCount: cols * 24,
       itemBuilder: (_, i) {
         final bool on = ((i ~/ cols) + (i % cols)).isEven;
-        return ColoredBox(color: on ? const Color(0xFF3F51B5) : const Color(0xFFFFC107));
+        return ColoredBox(
+            color: on ? const Color(0xFF3F51B5) : const Color(0xFFFFC107));
       },
     );
   }
@@ -118,7 +124,7 @@ class _Sheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const ColoredBox(
-    color: CupertinoColors.systemBackground,
-    child: Center(child: Text('Drag me up/down slowly')),
-  );
+        color: CupertinoColors.systemBackground,
+        child: Center(child: Text('Drag me up/down slowly')),
+      );
 }
