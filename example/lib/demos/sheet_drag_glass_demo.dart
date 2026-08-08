@@ -87,7 +87,8 @@ class _BackgroundScreen extends StatelessWidget {
           builder: (context) => FloatingActionButton.extended(
             onPressed: () => showCupertinoSheet<void>(
               context: context,
-              scrollableBuilder: (context, controller) => const _Sheet(),
+              // ignore: deprecated_member_use
+              builder: (context) => const _Sheet(),
             ),
             label: const Text('Open sheet'),
           ),
