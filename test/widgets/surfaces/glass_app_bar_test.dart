@@ -35,8 +35,34 @@ void main() {
           ),
         ),
       );
-
       expect(find.text('App Title'), findsOneWidget);
+
+      // Verify it wraps the title in a DefaultTextStyle for Cupertino styling
+      final defaultTextStyle = tester.widget<DefaultTextStyle>(
+        find
+            .ancestor(
+              of: find.text('App Title'),
+              matching: find.byType(DefaultTextStyle),
+            )
+            .first,
+      );
+
+      final BuildContext context = tester.element(find.byType(GlassAppBar));
+      expect(
+        defaultTextStyle.style,
+        equals(CupertinoTheme.of(context).textTheme.navTitleTextStyle),
+      );
+
+      // Verify it adds header semantics
+      final semantics = tester.widget<Semantics>(
+        find
+            .ancestor(
+              of: find.text('App Title'),
+              matching: find.byType(Semantics),
+            )
+            .first,
+      );
+      expect(semantics.properties.header, isTrue);
     });
 
     testWidgets('displays leading widget', (tester) async {
