@@ -3,6 +3,7 @@
 ## Bug Fixes
 
 - **Premium glass lens detaches during `CupertinoSheet` drag (#192):** The refracted lens drifted away from its pill while an interactive `CupertinoSheet` drag scaled the background. Fixed by snapshotting the layer's unscaled screen-space coordinates on every paint frame and freezing them the moment a uniform ancestor scale-down is detected, keeping UV mapping locked to the captured texture for the duration of the drag.
+- **`GlassAppBar` title typography (#194):** The title widget is now wrapped in `DefaultTextStyle` using `CupertinoTheme`'s `navTitleTextStyle`, matching native `CupertinoNavigationBar` behaviour. A plain `Text` widget now automatically picks up correct Cupertino typography (weight, size, ellipsis) without manual styling. Also adds `Semantics(header: true)` for VoiceOver/TalkBack navigation.
 
 ---
 

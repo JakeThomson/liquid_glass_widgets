@@ -205,7 +205,7 @@ class GlassAppBar extends StatelessWidget
 
               // Flexible title — optionally driven by collapse controller
               Expanded(
-                child: _buildTitle(),
+                child: _buildTitle(context),
               ),
 
               // Trailing actions
@@ -254,17 +254,29 @@ class GlassAppBar extends StatelessWidget
 
   /// Builds the title widget, optionally driven by [largeTitleController].
   ///
-  /// Without a controller, returns the title as-is (same as before).
-  /// With a controller, wraps in [ListenableBuilder] so only the title
-  /// Opacity rebuilds on scroll — not the entire bar.
-  Widget _buildTitle() {
+  /// When [title] is non-null it is wrapped in a [DefaultTextStyle] using
+  /// [CupertinoThemeData.navTitleTextStyle] and a [Semantics] header node —
+  /// matching [CupertinoNavigationBar]'s internal behaviour so a plain
+  /// [Text] widget automatically picks up correct Cupertino typography.
+  ///
+  /// With a controller the result is further wrapped in a [ListenableBuilder]
+  /// so only the title opacity rebuilds on scroll, not the entire bar.
+  Widget _buildTitle(BuildContext context) {
+    Widget styledTitle = title ?? const SizedBox.shrink();
+    if (title != null) {
+      styledTitle = DefaultTextStyle(
+        style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+        child: Semantics(header: true, child: title),
+      );
+    }
+
     final titleWidget = centerTitle
-        ? Center(child: title ?? const SizedBox.shrink())
+        ? Center(child: styledTitle)
         : Align(
             alignment: AlignmentDirectional.centerStart,
             child: Padding(
               padding: const EdgeInsetsDirectional.only(start: 8),
-              child: title ?? const SizedBox.shrink(),
+              child: styledTitle,
             ),
           );
 
