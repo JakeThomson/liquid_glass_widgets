@@ -1,6 +1,15 @@
-// Vendored from liquid_glass_renderer MIT © whynotmake.it
+// Copyright 2025, Tim Lehmann for whynotmake.it
+// Copyright 2026, Sebastian Degenaar for pixel-innovations.com (liquid_glass_widgets)
+//
+// SPDX-License-Identifier: MIT
+//
+// Vendored from liquid_glass_renderer at version 0.2.0-dev.4 (2026-03-28).
 // Source: https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer
-// Vendored at version 0.2.0-dev.4 on 2026-03-28.
+//
+// Modifications (2026):
+//   - Removed internal package dependencies; adapted for direct vendoring.
+//   - Extended public API surface with additional shape types and blend options.
+//   - Added Windows/SkSL shader compatibility layer.
 import 'package:flutter/foundation.dart' show kDebugMode;
 
 export 'glass_glow.dart' show GlassGlow, GlassGlowLayer;
