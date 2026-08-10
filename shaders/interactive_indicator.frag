@@ -1,3 +1,10 @@
+// Copyright 2026, Sebastian Degenaar for pixel-innovations.com (liquid_glass_widgets)
+//
+// SPDX-License-Identifier: MIT
+//
+// Original work — iOS 26-style liquid glass refraction shader for interactive
+// indicators (segmented controls, pills). Fully original implementation.
+
 #include <flutter/runtime_effect.glsl>
 
 precision highp float;
