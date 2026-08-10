@@ -1,3 +1,15 @@
+# 0.29.4
+
+## Bug Fixes
+
+- **`GlassModalSheet` stale `_currentState` (#197):** A drag ending at its origin state left `_currentState` holding the predicted mid-drag target. `_currentState` is now reconciled on every snap unconditionally, preventing the sheet from appearing stuck after a short drag.
+- **`GlassModalSheet` overscroll axis guard (#197):** `_onScrollNotification` now ignores notifications whose `metrics.axis` is not `Axis.vertical`, preventing horizontal descendant lists (carousels, date strips) from hijacking the sheet gesture.
+- **`GlassModalSheet` one-shot axis lock (#197):** Gesture axis is decided once on the first movement past the threshold and held until the touch lifts, preventing a sideways swipe from later grabbing the sheet mid-gesture.
+
+Thanks to [@jfhair](https://github.com/jfhair) for the contribution (#197).
+
+---
+
 # 0.29.3
 
 ## Bug Fixes

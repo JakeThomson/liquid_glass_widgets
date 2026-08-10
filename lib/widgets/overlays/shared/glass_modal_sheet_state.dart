@@ -219,6 +219,15 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     // target mid-gesture. `_settledState` only updates inside this
     // branch, ensuring side effects fire on every consumer-visible
     // state transition.
+    // Reconcile `_currentState` on EVERY snap, not just on consumer-visible
+    // transitions. `_applyDrag` and `_jumpTo` mutate it silently to the
+    // in-flight *predicted* target, so a drag that ends back at the state it
+    // started from leaves that prediction behind: the sheet rests at `half`
+    // while `_currentState` still reads `full`. `evaluateMove` then takes its
+    // `currentState == maxState` branch and refuses every upward drag, so the
+    // sheet appears stuck until a downward drag re-predicts and resyncs it.
+    _currentState = state;
+
     if (state != _settledState) {
       if (state == GlassSheetState.peek || state == GlassSheetState.hidden) {
         HapticFeedback.lightImpact();
@@ -226,7 +235,6 @@ class _GlassModalSheetState extends State<GlassModalSheet>
         HapticFeedback.mediumImpact();
       }
 
-      _currentState = state;
       _settledState = state;
       widget.onStateChanged?.call(state);
 
@@ -262,6 +270,14 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   // ════════════════════════════════════════════════════════════════════════
 
   bool _onScrollNotification(ScrollNotification notification) {
+    // Vertical only. Scroll notifications bubble from ANY descendant, so a
+    // horizontal list inside the sheet — a date strip, a carousel — emits
+    // exactly this shape when it is pulled past its leading edge. Without the
+    // axis guard the sheet claimed the gesture and re-anchored its vertical
+    // drag origin to the finger's current y, so scrolling sideways dragged
+    // the sheet, and the re-anchoring could hold `dy` under the threshold
+    // indefinitely, leaving the sheet unable to expand.
+    if (notification.metrics.axis != Axis.vertical) return false;
     if (notification is OverscrollNotification && notification.overscroll < 0) {
       if (_gestureArena.phase == GesturePhase.scrolling ||
           _gestureArena.phase == GesturePhase.idle) {
