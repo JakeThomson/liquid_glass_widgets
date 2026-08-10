@@ -1,4 +1,17 @@
 // Copyright 2025, Tim Lehmann for whynotmake.it
+// Copyright 2026, Sebastian Degenaar for pixel-innovations.com (liquid_glass_widgets)
+//
+// SPDX-License-Identifier: MIT
+//
+// Originally: Final render pass reading displacement texture; basic refraction
+// Modifications (2026):
+//   - Migrated to V1 surface normal encoding (displacement_encoding.glsl V1).
+//   - Added chromatic aberration pass (RGB channel split on refraction vector).
+//   - Added Rec. 709 saturation control (applySaturation).
+//   - Added iOS 26-style luminosity-preserving tint (applyGlassColor).
+//   - Switched from mediump to highp to eliminate colour banding on mobile.
+//   - Expanded from ~62 lines to full multi-pass pipeline (~487 lines).
+//   - Uniform layout migrated to explicit layout(location) slots for Impeller.
 //
 // Final rendering pass for liquid glass with pre-computed geometry.
 // Reads surface normal data from the geometry texture (V1 encoding) and applies

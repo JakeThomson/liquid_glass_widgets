@@ -1,5 +1,17 @@
 // Copyright 2025, Tim Lehmann for whynotmake.it
-// Modified 2026 by Sebastian Degenaar (liquid_glass_widgets)
+// Copyright 2026, Sebastian Degenaar for pixel-innovations.com (liquid_glass_widgets)
+//
+// SPDX-License-Identifier: MIT
+//
+// Originally: SDF primitives (sdfRRect, sdfRect, sdfSquircle) and smoothUnion;
+//             MAX_SHAPES=64, dynamic array indexing, for-loop scene composition.
+// Modifications (2026):
+//   - Added sdfEllipse(), sdfPolygon(), and sdfStar() primitives.
+//   - Rewrote scene composition to fully unrolled sdf0()…sdf15() helpers with
+//     literal-only indexing for Windows/SkSL SPIR-V compatibility.
+//   - Replaced for-loop sceneSDF with symmetric bidirectional blend (fwd+bwd).
+//   - Reduced MAX_SHAPES from 64 to 16 to fit Impeller's uniform buffer limit.
+//   - Extended shape slot from 6 to 7 floats (added shape-type discriminant).
 //
 // SDF primitives and scene composition for liquid glass geometry shaders.
 //

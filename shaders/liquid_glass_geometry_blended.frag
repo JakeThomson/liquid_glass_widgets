@@ -1,4 +1,15 @@
 // Copyright 2025, Tim Lehmann for whynotmake.it
+// Copyright 2026, Sebastian Degenaar for pixel-innovations.com (liquid_glass_widgets)
+//
+// SPDX-License-Identifier: MIT
+//
+// Originally: Geometry precomputation shader using displacement-based encoding
+// Modifications (2026):
+//   - Migrated from displacement encoding to true surface normal encoding (V1).
+//   - Switched precision from mediump to highp to fix ~1.5px banding on mobile.
+//   - Added Windows/SkSL SPIR-V compatibility (literal-only indexing).
+//   - Normal computed via dFdx/dFdy on the SDF field for accurate blend zones.
+//   - MAX_SHAPES reduced from 64 to 16 to fit Impeller uniform buffer limits.
 //
 // Geometry precomputation shader for blended liquid glass shapes
 // This shader pre-computes the surface normal and encodes it into a texture.
