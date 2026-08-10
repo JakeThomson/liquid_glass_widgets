@@ -1,3 +1,11 @@
+// Copyright 2026, Sebastian Degenaar for pixel-innovations.com (liquid_glass_widgets)
+//
+// SPDX-License-Identifier: MIT
+//
+// Original work — Cross-platform lightweight glass shader (Skia, Web, Impeller).
+// Supports standard and premium quality modes with automatic fallback.
+// Fully original implementation.
+
 #include <flutter/runtime_effect.glsl>
 
 precision highp float;
