@@ -141,6 +141,14 @@ class NavBarPatternsDemo extends StatelessWidget {
                   icon: CupertinoIcons.search,
                   onTap: () => _push(context, const _LargeTitleSearchDemo()),
                 ),
+                SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Title Centering',
+                  subtitle:
+                      'Verifies title is centred on full bar width with asymmetric leading/trailing (fix #198)',
+                  icon: CupertinoIcons.text_aligncenter,
+                  onTap: () => _push(context, const _TitleCenteringDemo()),
+                ),
                 SizedBox(height: 100),
               ],
             ),
@@ -827,6 +835,255 @@ class _LargeTitleSearchDemoState extends State<_LargeTitleSearchDemo> {
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
+    );
+  }
+}
+
+// =============================================================================
+// Title Centering Demo — visual verification for bug #198
+// =============================================================================
+
+/// Renders three GlassAppBar variants with a centre-guideline overlay.
+///
+/// A segmented control at the top toggles [centerTitle] across all three bars
+/// simultaneously so the difference between centred and left-aligned is
+/// immediately obvious.
+class _TitleCenteringDemo extends StatefulWidget {
+  const _TitleCenteringDemo();
+
+  @override
+  State<_TitleCenteringDemo> createState() => _TitleCenteringDemoState();
+}
+
+class _TitleCenteringDemoState extends State<_TitleCenteringDemo> {
+  bool _centered = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassScaffold(
+      background: const ShowcaseBackground(),
+      settings: RecommendedGlassSettings.standard,
+      statusBarStyle: GlassStatusBarStyle.auto,
+      appBar: GlassAppBar(
+        centerTitle: _centered,
+        title: const Text('Title Centering'),
+        leading: GlassButton(
+          icon: const Icon(CupertinoIcons.back),
+          width: 40,
+          height: 40,
+          iconSize: 20,
+          onTap: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: MediaQuery.paddingOf(context).top + 44 + 24,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverList.list(
+              children: [
+                const Text(
+                  'Title Centering',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Toggle between centred and left-aligned to see the '
+                  'difference live. The red line marks the bar\'s midpoint.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Toggle — drives centerTitle on all three bars at once.
+                GlassSegmentedControl(
+                  segments: const [
+                    GlassSegment(label: 'Centred'),
+                    GlassSegment(label: 'Left-aligned'),
+                  ],
+                  selectedIndex: _centered ? 0 : 1,
+                  onSegmentSelected: (i) => setState(() => _centered = i == 0),
+                  useOwnLayer: true,
+                ),
+                const SizedBox(height: 32),
+
+                // Case 1 — back button only (the exact reporter setup)
+                _CenteringCase(
+                  label: '1 · Back button only',
+                  description: _centered
+                      ? 'Title should bisect the guideline even with no trailing action.'
+                      : 'Title left-aligns after the leading widget.',
+                  centerTitle: _centered,
+                  leading: GlassButton(
+                    icon: const Icon(CupertinoIcons.back),
+                    width: 40,
+                    height: 40,
+                    iconSize: 20,
+                    onTap: () {},
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Case 2 — asymmetric: narrow back + wide trailing
+                _CenteringCase(
+                  label: '2 · Asymmetric leading + trailing',
+                  description: _centered
+                      ? 'Leading ≈ 40 px, trailing ≈ 96 px — title still on the guideline.'
+                      : 'Left-aligned, well clear of the guideline.',
+                  centerTitle: _centered,
+                  leading: GlassButton(
+                    icon: const Icon(CupertinoIcons.back),
+                    width: 40,
+                    height: 40,
+                    iconSize: 20,
+                    onTap: () {},
+                  ),
+                  actions: [
+                    GlassButton(
+                      icon: const Icon(CupertinoIcons.share),
+                      width: 40,
+                      height: 40,
+                      iconSize: 20,
+                      onTap: () {},
+                    ),
+                    GlassButton(
+                      icon: const Icon(CupertinoIcons.ellipsis_circle),
+                      width: 40,
+                      height: 40,
+                      iconSize: 20,
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+
+                // Case 3 — no leading, no trailing (baseline)
+                _CenteringCase(
+                  label: '3 · No leading, no trailing',
+                  description: _centered
+                      ? 'Trivial case — title always lands on the guideline.'
+                      : 'Left-aligns to the bar\'s padding edge.',
+                  centerTitle: _centered,
+                ),
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Renders a labelled bar preview with a translucent red centre guideline.
+///
+/// Builds the [GlassAppBar] internally so [centerTitle] can be toggled live
+/// from the parent without rebuilding the entire widget tree.
+class _CenteringCase extends StatelessWidget {
+  const _CenteringCase({
+    required this.label,
+    required this.description,
+    required this.centerTitle,
+    this.leading,
+    this.actions,
+  });
+
+  final String label;
+  final String description;
+  final bool centerTitle;
+  final Widget? leading;
+  final List<Widget>? actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: Align(
+            key: ValueKey(description),
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              description,
+              style: TextStyle(
+                fontSize: 13,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Inline bar preview clipped inside a glass card.
+        GlassCard(
+          settings: RecommendedGlassSettings.overlay,
+          padding: EdgeInsets.zero,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SizedBox(
+              height: 52,
+              child: Stack(
+                children: [
+                  // Bar — built here so centerTitle can be toggled live.
+                  // MediaQuery zeros the padding so that GlassAppBar's
+                  // internal SafeArea doesn't add the status-bar inset and
+                  // push all content out of this 52 px inline preview.
+                  Positioned.fill(
+                    child: MediaQuery(
+                      data: MediaQuery.of(context)
+                          .copyWith(padding: EdgeInsets.zero),
+                      child: GlassIsolationScope(
+                        isolated: true,
+                        defaultQuality: GlassQuality.premium,
+                        child: GlassAppBar(
+                          centerTitle: centerTitle,
+                          title: const Text('Page Title'),
+                          leading: leading,
+                          actions: actions,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Red centre guideline — 1 px wide, semi-transparent.
+                  // Align(center) positions relative to the full Stack width,
+                  // so no LayoutBuilder/Positioned is needed.
+                  Align(
+                    alignment: Alignment.center,
+                    child: SizedBox(
+                      width: 1,
+                      child: ColoredBox(
+                        color: CupertinoColors.systemRed
+                            .resolveFrom(context)
+                            .withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

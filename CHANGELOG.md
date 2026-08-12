@@ -1,3 +1,11 @@
+# 0.29.5
+
+## Bug Fixes
+
+- **`GlassAppBar` title not centred when `leading` is set (#198):** Toolbar layout rewritten using a `CustomMultiChildLayout` delegate, matching the approach used by Flutter's own `CupertinoNavigationBar`. The title is now centred on the full bar width regardless of leading/trailing widget sizes, and is constrained to never overlap either button group. `centerTitle: false` correctly left-aligns the title after the leading widget in both LTR and RTL locales.
+
+---
+
 # 0.29.4
 
 ## Bug Fixes
