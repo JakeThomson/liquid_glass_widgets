@@ -26,7 +26,7 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.29.4
+  liquid_glass_widgets: ^0.29.5
 ```
 
 ```bash
@@ -57,6 +57,15 @@ void main() async {
   runApp(LiquidGlassWidgets.wrap(child: const MyApp()));
 }
 ```
+
+> **Using `MaterialApp`?** Add one line so glass widgets honour your `ThemeMode` instead of the raw OS brightness:
+> ```dart
+> runApp(LiquidGlassWidgets.wrap(
+>   child: const MyApp(),
+>   brightnessResolver: Theme.maybeBrightnessOf, // ← required for MaterialApp
+> ));
+> ```
+> Without this, shadows and borders can disappear when the device is in Dark Mode even if your app is set to Light Mode (and vice-versa). `CupertinoApp` users can omit it.
 
 That's it. Then use `GlassScaffold` on each screen — it handles background, status bar, z-ordering, and edge fading automatically:
 
@@ -95,6 +104,7 @@ For production apps, pass `adaptiveQuality` and/or `theme` to `wrap()` at the sa
 ```dart
 runApp(LiquidGlassWidgets.wrap(
   child: const MyApp(),
+  brightnessResolver: Theme.maybeBrightnessOf, // MaterialApp users: required
   adaptiveQuality: true,          // auto-benchmarks device, degrades gracefully
   theme: GlassThemeData.simple(   // optional app-wide glass defaults
     blur: 10,

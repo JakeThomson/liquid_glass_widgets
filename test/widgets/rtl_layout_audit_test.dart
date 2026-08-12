@@ -180,35 +180,96 @@ void main() {
   // =========================================================================
 
   group('GlassAppBar — RTL title alignment', () {
-    testWidgets('non-centered title uses AlignmentDirectional.centerStart',
+    // The _ToolbarLayout MultiChildLayoutDelegate positions children at the
+    // RenderObject level — there are no Align or Center widgets in the toolbar
+    // tree. The correct invariant is the geometric position of the title.
+
+    testWidgets('centerTitle:false — title starts after leading widget (LTR)',
         (tester) async {
       await tester.pumpWidget(
         _ltrBare(
           const GlassAppBar(
             title: Text('Title'),
             centerTitle: false,
+            leading: SizedBox(width: 44, height: 44),
           ),
         ),
       );
-      final aligns = tester.widgetList<Align>(find.byType(Align));
-      final hasDirectionalAlign = aligns.any(
-        (a) => a.alignment == AlignmentDirectional.centerStart,
-      );
+
+      final appBarBox =
+          tester.renderObject<RenderBox>(find.byType(GlassAppBar));
+      final barCenter =
+          appBarBox.localToGlobal(Offset.zero).dx + appBarBox.size.width / 2;
+
+      final titleBox = tester.renderObject<RenderBox>(find.text('Title'));
+      final titleCenter =
+          titleBox.localToGlobal(Offset.zero).dx + titleBox.size.width / 2;
+
       expect(
-        hasDirectionalAlign,
-        isTrue,
-        reason: 'GlassAppBar title should use AlignmentDirectional.centerStart',
+        titleCenter,
+        lessThan(barCenter),
+        reason:
+            'LTR centerTitle:false — title centre must be left of bar centre',
       );
     });
 
-    testWidgets('centered title uses Center (directional-safe)',
+    testWidgets('centered title is geometrically centred on bar (LTR)',
         (tester) async {
       await tester.pumpWidget(
         _ltrBare(
-          const GlassAppBar(title: Text('Title')),
+          const GlassAppBar(
+            title: Text('Title'),
+            leading: SizedBox(width: 44, height: 44),
+          ),
         ),
       );
-      expect(find.byType(Center), findsWidgets);
+
+      final appBarBox =
+          tester.renderObject<RenderBox>(find.byType(GlassAppBar));
+      final barCenter =
+          appBarBox.localToGlobal(Offset.zero).dx + appBarBox.size.width / 2;
+
+      final titleBox = tester.renderObject<RenderBox>(find.text('Title'));
+      final titleCenter =
+          titleBox.localToGlobal(Offset.zero).dx + titleBox.size.width / 2;
+
+      expect(
+        titleCenter,
+        closeTo(barCenter, 2.0),
+        reason:
+            'centerTitle:true — title midpoint must coincide with bar midpoint',
+      );
+    });
+
+    testWidgets('centerTitle:false — title starts after leading widget (RTL)',
+        (tester) async {
+      await tester.pumpWidget(
+        _rtlBare(
+          const GlassAppBar(
+            title: Text('Title'),
+            centerTitle: false,
+            leading: SizedBox(width: 44, height: 44),
+          ),
+        ),
+      );
+
+      final appBarBox =
+          tester.renderObject<RenderBox>(find.byType(GlassAppBar));
+      final barCenter =
+          appBarBox.localToGlobal(Offset.zero).dx + appBarBox.size.width / 2;
+
+      final titleBox = tester.renderObject<RenderBox>(find.text('Title'));
+      final titleCenter =
+          titleBox.localToGlobal(Offset.zero).dx + titleBox.size.width / 2;
+
+      // In RTL the leading is on the right, so the title starts from the
+      // right — its centre should be to the RIGHT of the bar centre.
+      expect(
+        titleCenter,
+        greaterThan(barCenter),
+        reason:
+            'RTL centerTitle:false — title centre must be right of bar centre',
+      );
     });
   });
 
