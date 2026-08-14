@@ -6,6 +6,7 @@
 // indicators (segmented controls, pills). Fully original implementation.
 
 #include <flutter/runtime_effect.glsl>
+#include "gles_compat.glsl"
 
 precision highp float;
 
@@ -215,10 +216,12 @@ void main() {
   vec2 edgeOffsetUV = edgeOffsetLogical / uBackgroundSize;
   
   // Apply refraction offset along the surface normal.
-  // On OpenGL ES the background texture is stored with a bottom-left Y origin,
-  // so edgeOffsetLogical.y (computed in Flutter's Y-down space) must be
+  // On pre-3.46 OpenGL ES the background texture is stored with a bottom-left Y
+  // origin, so edgeOffsetLogical.y (computed in Flutter's Y-down space) must be
   // negated to sample in the correct outward direction in the Y-up UV space.
-  #ifdef IMPELLER_TARGET_OPENGLES
+  // Flutter 3.46+ stores it top-down on every backend (see gles_compat.glsl),
+  // where negating would invert the refraction instead of correcting it.
+  #ifdef LGR_GLES_FLIP_SAMPLE_Y
     vec2 localRefracted = posInBg + vec2(edgeOffsetLogical.x, -edgeOffsetLogical.y);
   #else
     vec2 localRefracted = posInBg - edgeOffsetLogical;
