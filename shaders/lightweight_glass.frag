@@ -7,6 +7,7 @@
 // Fully original implementation.
 
 #include <flutter/runtime_effect.glsl>
+#include "gles_compat.glsl"
 
 precision highp float;
 
@@ -391,9 +392,10 @@ void main() {
       vec2 edgeOffset = surfaceNormal * edgeInfluence * uThickness * 0.5;
       vec2 refractedUV = uv + edgeOffset / uBackgroundSize;
 
-      // On OpenGL ES the background texture uses bottom-left Y origin;
+      // On pre-3.46 OpenGL ES the background texture uses bottom-left Y origin;
       // edgeOffset.y (computed in Flutter's Y-down space) must be negated.
-      #ifdef IMPELLER_TARGET_OPENGLES
+      // Flutter 3.46+ unified the convention — see gles_compat.glsl.
+      #ifdef LGR_GLES_FLIP_SAMPLE_Y
           refractedUV = uv + vec2(edgeOffset.x, -edgeOffset.y) / uBackgroundSize;
       #endif
 

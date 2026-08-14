@@ -30,6 +30,7 @@ precision highp float; // mediump causes colour banding (10-bit mantissa on mobi
 
 #include <flutter/runtime_effect.glsl>
 #include "displacement_encoding.glsl"
+#include "gles_compat.glsl"
 #include "render.glsl"
 
 // Slot 0-1:  uSize           — physical-pixel size of the backdrop capture
@@ -171,12 +172,16 @@ void main() {
     // In BackdropFilter mode uCaptureOffset == vec2(0) so this is a no-op.
     vec2 screenUV = (fragCoord + uCaptureOffset) * invTexSize;
 
-    #ifdef IMPELLER_TARGET_OPENGLES
+    // Pre-3.46 GLES stored render-to-texture content bottom-up; see
+    // gles_compat.glsl. On 3.46+ the backend absorbs the difference and this
+    // flip must NOT be applied, or the glass samples the backdrop mirrored
+    // about the screen's horizontal centre line.
+    #ifdef LGR_GLES_FLIP_SAMPLE_Y
         screenUV.y = 1.0 - screenUV.y;
     #endif
 
     vec2 geometryUV = (fragCoord - uGeometryOffset) / uGeometrySize;
-    #ifdef IMPELLER_TARGET_OPENGLES
+    #ifdef LGR_GLES_FLIP_SAMPLE_Y
         geometryUV.y = 1.0 - geometryUV.y;
     #endif
 
@@ -229,13 +234,15 @@ void main() {
     // Scale displacement by uRefractScale (uOpticalProps.w) to ensure logical-pixel
     // identical refraction magnitude across all device pixel ratios.
     displacement *= uOpticalProps.w;
-    // On OpenGL ES, screenUV.y is already flipped to (1.0 - y) to compensate
-    // for the bottom-left texture-origin convention.  The displacement is
-    // computed in Flutter's native Y-down space (outward normal at the bottom
-    // edge has +Y), but adding a positive Y delta to the flipped UV moves the
-    // sample TOWARD the centre rather than away — inverting the refraction.
-    // Negating displacement.y re-aligns it with the Y-up UV sampling space.
-    #ifdef IMPELLER_TARGET_OPENGLES
+    // On pre-3.46 OpenGL ES, screenUV.y is flipped to (1.0 - y) above to
+    // compensate for the bottom-left texture-origin convention.  The
+    // displacement is computed in Flutter's native Y-down space (outward normal
+    // at the bottom edge has +Y), but adding a positive Y delta to the flipped
+    // UV moves the sample TOWARD the centre rather than away — inverting the
+    // refraction.  Negating displacement.y re-aligns it with the Y-up UV
+    // sampling space.  Gated on the same condition as the UV flip itself: on
+    // 3.46+ the UV is not flipped, so negating here would invert refraction.
+    #ifdef LGR_GLES_FLIP_SAMPLE_Y
         displacement.y = -displacement.y;
     #endif
 
