@@ -1,3 +1,13 @@
+# 0.29.6
+
+## Bug Fixes
+
+- **Impeller GLES sampling UV double-flip on Flutter 3.46+ (#202):** Flutter 3.46 absorbed the OpenGL ES render-to-texture Y-axis inversion inside the engine backend, but six shader sites still compensated for the old convention — actively mirroring every backdrop sample on 3.46+. A new `shaders/gles_compat.glsl` header gates the flip on `IMPELLER_OPENGLES_UNFLIPPED_DEPRECATED`, the migration macro introduced by the Flutter engine team for exactly this transition. The fix is correct across all Flutter versions from the existing `>=3.41.0` minimum; the `pubspec.yaml` constraint does not move. A new source-level regression guard in `test/shaders/gles_flip_guard_test.dart` prevents the pattern from re-appearing.
+
+Thanks to [@TIANLI0](https://github.com/TIANLI0) for the contribution (#202).
+
+---
+
 # 0.29.5
 
 ## Bug Fixes
