@@ -1,4 +1,5 @@
 #include <flutter/runtime_effect.glsl>
+#include "gles_compat.glsl"
 // Copyright 2026, Rebar Ahmad. Licensed under the package's MIT License.
 //
 // One axis of a SEPARABLE gaussian, used twice (horizontal then vertical) via
@@ -37,9 +38,11 @@ void main() {
   else                       g = 1.0 - rn.x;  // strong RIGHT
   float sigma = uMaxSigma * pow(1.0 - g, uFalloff);
 
-  // Screen-normalised sampling UV (GLES captures the backdrop y-flipped).
+  // Screen-normalised sampling UV. Pre-3.46 GLES captured the backdrop
+  // y-flipped; 3.46+ stores it top-down like every other backend. See
+  // gles_compat.glsl.
   vec2 uv = FlutterFragCoord().xy / uSize;
-#ifdef IMPELLER_TARGET_OPENGLES
+#ifdef LGR_GLES_FLIP_SAMPLE_Y
   uv.y = 1.0 - uv.y;
 #endif
 
