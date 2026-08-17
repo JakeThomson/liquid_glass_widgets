@@ -37,6 +37,7 @@ class LiquidGlassSettings extends Equatable {
     this.shadow,
     this.whitenStrength = 0.0,
     this.whitenGated = true,
+    this.edgeAbsorption = 0.0,
     this.backerColor,
     this.platformViewFallbackColor,
   }) : pinchStrength = 0.0;
@@ -66,6 +67,7 @@ class LiquidGlassSettings extends Equatable {
     required this.shadow,
     required this.whitenStrength,
     required this.whitenGated,
+    required this.edgeAbsorption,
     this.backerColor,
     this.platformViewFallbackColor,
     required this.pinchStrength,
@@ -319,6 +321,19 @@ class LiquidGlassSettings extends Equatable {
   /// approximations are always uniform.
   final bool whitenGated;
 
+  /// Meniscus darkening strength at the glass rim, from 0 to 1.
+  ///
+  /// Physical glass is thicker at the curved rim (the meniscus). Light
+  /// traversing more material loses energy, making the refracted scene subtly
+  /// darker at the edge zone. The bright Fresnel and specular rim highlights
+  /// then sit on top of this dark band, creating the visual depth that
+  /// distinguishes real glass from a simple blur overlay.
+  ///
+  /// - `0.0` — no darkening (default; matches iOS 26 visual baseline)
+  /// - `0.12` — subtle physical darkening (dark-mode depth effect)
+  /// - `0.3` — pronounced rim darkening (thick or frosted glass look)
+  final double edgeAbsorption;
+
   /// Internal shader transport — the animated pinch strength for the concave
   /// lens effect on indicator pills.
   ///
@@ -355,6 +370,7 @@ class LiquidGlassSettings extends Equatable {
         shadow: shadow,
         whitenStrength: whitenStrength,
         whitenGated: whitenGated,
+        edgeAbsorption: edgeAbsorption,
         backerColor: backerColor,
         platformViewFallbackColor: platformViewFallbackColor,
         pinchStrength: value,
@@ -439,6 +455,7 @@ class LiquidGlassSettings extends Equatable {
         shadow: t < 0.5 ? a.shadow : b.shadow,
         whitenStrength: lerpDouble(a.whitenStrength, b.whitenStrength, t)!,
         whitenGated: t < 0.5 ? a.whitenGated : b.whitenGated,
+        edgeAbsorption: lerpDouble(a.edgeAbsorption, b.edgeAbsorption, t)!,
         // Lerp the color so the backer fades smoothly (from/to transparent when
         // one side is null), rather than popping at the midpoint.
         backerColor: Color.lerp(a.backerColor, b.backerColor, t),
@@ -479,6 +496,7 @@ class LiquidGlassSettings extends Equatable {
     List<BoxShadow>? shadow,
     double? whitenStrength,
     bool? whitenGated,
+    double? edgeAbsorption,
     Color? backerColor,
     Color? platformViewFallbackColor,
   }) =>
@@ -503,6 +521,7 @@ class LiquidGlassSettings extends Equatable {
         shadow: shadow ?? this.shadow,
         whitenStrength: whitenStrength ?? this.whitenStrength,
         whitenGated: whitenGated ?? this.whitenGated,
+        edgeAbsorption: edgeAbsorption ?? this.edgeAbsorption,
         backerColor: backerColor ?? this.backerColor,
         platformViewFallbackColor:
             platformViewFallbackColor ?? this.platformViewFallbackColor,
@@ -530,6 +549,7 @@ class LiquidGlassSettings extends Equatable {
         shadow,
         whitenStrength,
         whitenGated,
+        edgeAbsorption,
         backerColor,
         platformViewFallbackColor,
         pinchStrength,
