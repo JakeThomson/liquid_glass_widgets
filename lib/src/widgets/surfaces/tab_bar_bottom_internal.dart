@@ -391,6 +391,12 @@ class BottomBarExtraBtn extends StatelessWidget {
       shape: effectiveShape,
       platformViewBackdrop: platformViewBackdrop,
       stretch: platformViewBackdrop ? 0.0 : 0.5,
+      // The extra button is anchored inside the compound bar and does not
+      // animate its layout bounds at rest. Marking it stationary lets
+      // AdaptiveGlass retain the BackdropFilter blur in GlassQuality.minimal,
+      // so it matches the frosted appearance of the main tab bar surface.
+      // See: https://github.com/sdegenaar/liquid_glass_widgets/issues/203
+      isStationary: true,
     );
 
     return button;
