@@ -337,9 +337,6 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
             value.setOffset(Offset.zero);
           })
           // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
-          // We scale ambientRim by the same factor as thickness so it remains at the
-          // same proportional depth on the curve across all DPRs. We pass the scale
-          // down to the shader so it can also scale the smoothstep anti-aliasing window.
           ..setFloatUniforms(initialIndex: 28, (value) {
             value.setFloats([
               settings.ambientRim * scale,

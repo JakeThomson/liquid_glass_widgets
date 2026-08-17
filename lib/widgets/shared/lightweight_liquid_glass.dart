@@ -1056,6 +1056,7 @@ class _RenderLightweightGlass extends RenderProxyBox
     shader.setFloat(index++, bgSize.height);
 
     // 32: uEdgeAbsorption — Beer-Lambert meniscus rim darkening [0..1].
+    // Passed directly — what the caller sets is what the shader gets.
     shader.setFloat(index++, _settings.edgeAbsorption.clamp(0.0, 1.0));
 
     // 33: uFresnelStrength — grazing-angle Fresnel rim scale [0..∞].
