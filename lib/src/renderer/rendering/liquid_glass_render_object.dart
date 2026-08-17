@@ -336,16 +336,13 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setFloatUniforms(initialIndex: 26, (value) {
             value.setOffset(Offset.zero);
           })
-          // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, pad)
-          // We scale ambientRim by the same factor as thickness so it remains at the
-          // same proportional depth on the curve across all DPRs. We pass the scale
-          // down to the shader so it can also scale the smoothstep anti-aliasing window.
+          // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
           ..setFloatUniforms(initialIndex: 28, (value) {
             value.setFloats([
               settings.ambientRim * scale,
               settings.fresnelStrength,
               scale,
-              0.0
+              settings.edgeAbsorption,
             ]);
           })
           ..setImageSampler(
@@ -478,13 +475,13 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       ..setFloatUniforms(initialIndex: 26, (value) {
         value.setOffset(captureOffset);
       })
-      // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, pad)
+      // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
       ..setFloatUniforms(initialIndex: 28, (value) {
         value.setFloats([
           settings.ambientRim * scale,
           settings.fresnelStrength,
           scale,
-          0.0
+          settings.edgeAbsorption,
         ]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).

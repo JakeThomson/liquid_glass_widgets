@@ -569,6 +569,7 @@ class _GlassEffectState extends State<GlassEffect>
         edgeAlphaMultiplier: effectiveEdgeAlpha,
         rimThickness: effectiveRimThickness,
         rimSmoothing: widget.rimSmoothing,
+        edgeAbsorption: effectiveSettings.edgeAbsorption,
         clipExpansion: widget.clipExpansion,
         child: widget.child,
       );
@@ -595,6 +596,7 @@ class _GlassEffectState extends State<GlassEffect>
         edgeAlphaMultiplier: effectiveEdgeAlpha,
         rimThickness: effectiveRimThickness,
         rimSmoothing: widget.rimSmoothing,
+        edgeAbsorption: effectiveSettings.edgeAbsorption,
         clipExpansion: widget.clipExpansion,
         child: widget.child,
       );
@@ -621,6 +623,7 @@ class _InteractiveIndicatorEffect extends SingleChildRenderObjectWidget {
     required this.edgeAlphaMultiplier,
     required this.rimThickness,
     required this.rimSmoothing,
+    required this.edgeAbsorption,
     this.clipExpansion = EdgeInsets.zero,
     required super.child,
   });
@@ -639,6 +642,7 @@ class _InteractiveIndicatorEffect extends SingleChildRenderObjectWidget {
   final double edgeAlphaMultiplier;
   final double rimThickness;
   final double rimSmoothing;
+  final double edgeAbsorption;
 
   /// Inflation budget matching the parent [AnimatedGlassIndicator._jellyClipExpansion].
   /// The shader drawRect is inflated by this amount so that pixels pushed
@@ -663,6 +667,7 @@ class _InteractiveIndicatorEffect extends SingleChildRenderObjectWidget {
       edgeAlphaMultiplier: edgeAlphaMultiplier,
       rimThickness: rimThickness,
       rimSmoothing: rimSmoothing,
+      edgeAbsorption: edgeAbsorption,
       clipExpansion: clipExpansion,
     );
   }
@@ -687,6 +692,7 @@ class _InteractiveIndicatorEffect extends SingleChildRenderObjectWidget {
       ..edgeAlphaMultiplier = edgeAlphaMultiplier
       ..rimThickness = rimThickness
       ..rimSmoothing = rimSmoothing
+      ..edgeAbsorption = edgeAbsorption
       ..clipExpansion = clipExpansion;
   }
 }
@@ -707,6 +713,7 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     required double edgeAlphaMultiplier,
     required double rimThickness,
     required double rimSmoothing,
+    required double edgeAbsorption,
     EdgeInsets clipExpansion = EdgeInsets.zero,
   })  : _shader = shader,
         _settings = settings,
@@ -722,6 +729,7 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
         _edgeAlphaMultiplier = edgeAlphaMultiplier,
         _rimThickness = rimThickness,
         _rimSmoothing = rimSmoothing,
+        _edgeAbsorption = edgeAbsorption,
         _clipExpansion = clipExpansion,
         _cachedLightCos = math.cos(settings.lightAngle),
         _cachedLightSin = -math.sin(settings.lightAngle);
@@ -837,6 +845,13 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
   set rimSmoothing(double value) {
     if (_rimSmoothing == value) return;
     _rimSmoothing = value;
+    markNeedsPaint();
+  }
+
+  double _edgeAbsorption;
+  set edgeAbsorption(double value) {
+    if (_edgeAbsorption == value) return;
+    _edgeAbsorption = value;
     markNeedsPaint();
   }
 
@@ -1100,5 +1115,9 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     // convert logical uBackgroundSize to physical texel dimensions.
     // index 32 (after the 32 floats mapped to uData0..uData7).
     _shader.setFloat(index++, _devicePixelRatio);
+
+    // Slot 33: edgeAbsorption — Beer-Lambert meniscus rim darkening [0..1].
+    // Passed directly — what the caller sets is what the shader gets.
+    _shader.setFloat(index++, _edgeAbsorption.clamp(0.0, 1.0));
   }
 }

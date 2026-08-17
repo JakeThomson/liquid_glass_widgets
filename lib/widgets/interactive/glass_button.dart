@@ -161,6 +161,7 @@ class GlassButton extends StatefulWidget {
     this.platformViewBackdrop = false,
     this.canRequestFocus = true,
     this.excludeFromSemantics = false,
+    this.isStationary = false,
   }) : child = null;
 
   /// Creates a glass button with custom content.
@@ -219,6 +220,7 @@ class GlassButton extends StatefulWidget {
     this.platformViewBackdrop = false,
     this.canRequestFocus = true,
     this.excludeFromSemantics = false,
+    this.isStationary = false,
   })  : icon = null,
         iconSize = 24.0,
         iconColor = null;
@@ -528,6 +530,19 @@ class GlassButton extends StatefulWidget {
   /// the underlying [AdaptiveGlass].
   final bool platformViewBackdrop;
 
+  /// When true, signals that this button does not animate its layout bounds
+  /// during normal display (i.e. it is stationary at rest, like an extra
+  /// button anchored inside a compound tab bar).
+  ///
+  /// Stationary buttons retain their [BackdropFilter] blur even under
+  /// [GlassQuality.minimal], matching the visual appearance of the surrounding
+  /// bar surface. Generic interactive buttons default to `false`, which omits
+  /// the blur in minimal mode to avoid compositor flicker caused by
+  /// continuously changing spring-animated bounds.
+  ///
+  /// Defaults to `false` — existing behaviour is preserved.
+  final bool isStationary;
+
   // ===========================================================================
   // Focus / Keyboard Properties
   // ===========================================================================
@@ -806,7 +821,10 @@ class _GlassButtonState extends State<GlassButton>
           quality: effectiveQuality,
           useOwnLayer: widget.useOwnLayer,
           glowIntensity: _saturationAnimation.value, // 0.0-1.0 animation
-          isInteractive: true, // Buttons manage their own RepaintBoundary
+          // isStationary: true → pass isInteractive:false so _FrostedFallback
+          // keeps its BackdropFilter blur in GlassQuality.minimal (the guard
+          // only bites on the minimal path; standard/premium are unaffected).
+          isInteractive: !widget.isStationary,
           platformViewBackdrop: widget.platformViewBackdrop,
           // Give the RepaintBoundary texture extra headroom for the press scale
           // animation. When useOwnLayer: true, the glass layer creates its own
