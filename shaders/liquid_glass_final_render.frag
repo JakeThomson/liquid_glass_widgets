@@ -9,6 +9,7 @@
 //   - Added chromatic aberration pass (RGB channel split on refraction vector).
 //   - Added Rec. 709 saturation control (applySaturation).
 //   - Added iOS 26-style luminosity-preserving tint (applyGlassColor).
+//   - Added meniscus darkening (VQ5) for physical glass depth.
 //   - Switched from mediump to highp to eliminate colour banding on mobile.
 //   - Expanded from ~62 lines to full multi-pass pipeline (~487 lines).
 //   - Uniform layout migrated to explicit layout(location) slots for Impeller.
@@ -148,8 +149,15 @@ vec4 textureBilinear(vec2 uv, vec2 size, vec2 invSize) {
     // → transparent black, bg.a ≈ 0) this yields the fallback; where the
     // backdrop is real (bg.a ≈ 1) it is left untouched. uBackgroundFallback is
     // straight RGBA, so premultiply it by its own alpha before the over.
-    bg.rgb += uBackgroundFallback.rgb * uBackgroundFallback.a * (1.0 - bg.a);
-    bg.a += uBackgroundFallback.a * (1.0 - bg.a);
+    //
+    // Phase 3B (perf): The alpha check is a uniform — coherent across the entire
+    // draw call — so the GPU branch predictor takes it for free. In the common
+    // case (no PlatformView / platformViewFallbackColor not set) this skips 4
+    // MADs and a 2× MAD per sample point.
+    if (uBackgroundFallback.a > 0.0) {
+        bg.rgb += uBackgroundFallback.rgb * uBackgroundFallback.a * (1.0 - bg.a);
+        bg.a += uBackgroundFallback.a * (1.0 - bg.a);
+    }
     return bg;
 }
 
@@ -433,6 +441,48 @@ void main() {
     float edgeThreshold    = mix(0.8, 0.5, 1.0 / thicknessScale);
     float edgeFactor       = uThickness < 0.01 ? 0.0 : 1.0 - smoothstep(0.0, edgeThreshold, normalizedHeight);
 
+    // VQ5: Meniscus darkening — three physics improvements.
+    //
+    // [1] HEMISPHERE LENS PROFILE
+    //     A glass pill cross-section follows a circular arc. The physically correct
+    //     thickness profile is hemisphere-shaped: thickest at the rim boundary,
+    //     thinning toward the interior following sqrt(1 - r²) where r = normalizedHeight.
+    //     This gives a sharp onset at the rim and a gentler fade inward, matching
+    //     real curved glass rather than the previous polynomial approximation.
+    //
+    // [2] LIGHT-MODULATED ABSORPTION STRENGTH
+    //     On the lit side, the specular highlight compensates for absorption —
+    //     the rim appears bright regardless. On the shadow side, no compensation
+    //     occurs and the dark meniscus band is fully exposed. We reduce absorption
+    //     strength on the lit side (0.6×) and increase it on the shadow side (1.4×)
+    //     so the contrast between lit and shadow rim matches iOS 26's reference.
+    //       normalXY is the 2D surface normal at this pixel (rim = non-zero, interior = 0).
+    //       dot(n, L) = +1 → full lit → scale 0.6 (absorption hidden by specular)
+    //       dot(n, L) = -1 → shadow  → scale 1.4 (absorption fully exposed)
+    //
+    // [3] CHROMATIC ABERRATION AT THE RIM
+    //     Already correct here: displacement magnitude is proportional to normalXY
+    //     which is zero at the interior and maximum at the rim — so the RGB split
+    //     in the refraction sampling above (lines ~338-350) is already edge-weighted.
+    //     No change needed.
+
+    // [1] Hemisphere profile: use normalizedHeight as the radial parameter.
+    //     normalizedHeight ≈ 0 at the interior flat face, ≈ 1 at the rim boundary.
+    //     Invert: r_rim = 1 - normalizedHeight → 1 at rim, 0 interior.
+    float r_rim = clamp(1.0 - normalizedHeight, 0.0, 1.0);
+    float lensThickness = uThickness < 0.01 ? 0.0 : sqrt(max(0.0, 1.0 - r_rim * r_rim));
+    // lensThickness: 1.0 at interior (r_rim=0), 0.0 at rim (r_rim=1) — correct:
+    // interior glass is thinnest, rim is thickest → invert for absorption weight.
+    float rimThickness = 1.0 - lensThickness; // 0 interior → 1 rim
+
+    // [2] Light-modulated strength
+    float len2D = max(length(normalXY), 1e-4);
+    vec2  rimN  = normalXY / len2D; // safe normalized 2D rim normal
+    float litness   = dot(rimN, uLightDirection); // [-1, +1]
+    float dirScale  = mix(1.4, 0.6, litness * 0.5 + 0.5);
+
+    float absorption = 1.0 - sqrt(rimThickness) * uEdgeConfig.w * dirScale;
+    finalColor.rgb *= max(0.0, absorption);
 
     if (edgeFactor > 0.01) {
         // Re-normalize the bilinearly interpolated normal.
