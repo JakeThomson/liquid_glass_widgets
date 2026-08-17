@@ -1116,7 +1116,8 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     // index 32 (after the 32 floats mapped to uData0..uData7).
     _shader.setFloat(index++, _devicePixelRatio);
 
-    // Meniscus rim darkening strength — index 33.
+    // Slot 33: edgeAbsorption — Beer-Lambert meniscus rim darkening [0..1].
+    // Passed directly — what the caller sets is what the shader gets.
     _shader.setFloat(index++, _edgeAbsorption.clamp(0.0, 1.0));
   }
 }

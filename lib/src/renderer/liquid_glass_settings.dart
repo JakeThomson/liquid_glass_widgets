@@ -37,7 +37,7 @@ class LiquidGlassSettings extends Equatable {
     this.shadow,
     this.whitenStrength = 0.0,
     this.whitenGated = true,
-    this.edgeAbsorption = 0.15,
+    this.edgeAbsorption = 0.0,
     this.backerColor,
     this.platformViewFallbackColor,
   }) : pinchStrength = 0.0;
@@ -67,7 +67,7 @@ class LiquidGlassSettings extends Equatable {
     required this.shadow,
     required this.whitenStrength,
     required this.whitenGated,
-    this.edgeAbsorption = 0.15,
+    required this.edgeAbsorption,
     this.backerColor,
     this.platformViewFallbackColor,
     required this.pinchStrength,
@@ -321,7 +321,7 @@ class LiquidGlassSettings extends Equatable {
   /// approximations are always uniform.
   final bool whitenGated;
 
-  /// Meniscus darkening strength for the Premium (Impeller) path, from 0 to 1.
+  /// Meniscus darkening strength at the glass rim, from 0 to 1.
   ///
   /// Physical glass is thicker at the curved rim (the meniscus). Light
   /// traversing more material loses energy, making the refracted scene subtly
@@ -329,11 +329,9 @@ class LiquidGlassSettings extends Equatable {
   /// then sit on top of this dark band, creating the visual depth that
   /// distinguishes real glass from a simple blur overlay.
   ///
-  /// - `0.0` — no darkening (flat, previous behaviour)
-  /// - `0.15` — subtle iOS 26-reference darkening (default)
+  /// - `0.0` — no darkening (default; matches iOS 26 visual baseline)
+  /// - `0.12` — subtle physical darkening (dark-mode depth effect)
   /// - `0.3` — pronounced rim darkening (thick or frosted glass look)
-  ///
-  /// Only affects the Premium (Impeller) path.
   final double edgeAbsorption;
 
   /// Internal shader transport — the animated pinch strength for the concave

@@ -55,7 +55,7 @@ class MeniscusAndBlurDemoPage extends StatefulWidget {
 
 class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
   // ── Tunable shader parameters ──────────────────────────────────────────────
-  double _edgeAbsorption = 0.15;
+  double _edgeAbsorption = 0.0;
   double _fresnelStrength = 1.0;
   double _thickness = 25.0;
   double _blur = 12.0;
@@ -109,7 +109,7 @@ class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
     ),
   ];
 
-  // Shared settings built from the sliders — every component uses this.
+  // Shared settings built from the sliders — surface glass components use this.
   LiquidGlassSettings get _liveSettings => LiquidGlassSettings(
         thickness: _thickness,
         blur: _blur,
@@ -119,6 +119,16 @@ class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
         glassColor: _isDarkMode
             ? const Color.fromARGB(25, 255, 255, 255)
             : const Color.fromARGB(40, 255, 255, 255),
+      );
+
+  // Indicator-specific settings — sliding pill indicators are transparent optical
+  // lenses (blur: 0) over text/icons. We copy baseIndicatorSettings and inject the
+  // live edgeAbsorption and fresnelStrength sliders so rim tuning works without
+  // smearing the text underneath.
+  LiquidGlassSettings get _indicatorLiveSettings =>
+      AnimatedGlassIndicator.baseIndicatorSettings.copyWith(
+        edgeAbsorption: _edgeAbsorption,
+        fresnelStrength: _fresnelStrength,
       );
 
   @override
@@ -320,7 +330,7 @@ class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
               GlassSegmentedControl(
                 selectedIndex: _segmentIndex,
                 onSegmentSelected: (i) => setState(() => _segmentIndex = i),
-                indicatorSettings: _liveSettings,
+                indicatorSettings: _indicatorLiveSettings,
                 segments: const [
                   GlassSegment(label: 'Flat'),
                   GlassSegment(label: 'iOS 26'),
@@ -341,7 +351,7 @@ class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
               GlassSlider(
                 value: _sliderValue,
                 onChanged: (v) => setState(() => _sliderValue = v),
-                settings: _liveSettings,
+                settings: _indicatorLiveSettings,
               ),
               const SizedBox(height: 28),
 
@@ -400,7 +410,7 @@ class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
                 selectedIndex: _tabBarPillIndex,
                 onTabSelected: (i) => setState(() => _tabBarPillIndex = i),
                 settings: _liveSettings,
-                indicatorSettings: _liveSettings,
+                indicatorSettings: _indicatorLiveSettings,
                 tabs: const [
                   GlassTab(label: 'Overview'),
                   GlassTab(label: 'Refraction'),
@@ -423,7 +433,6 @@ class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
               GlassTabBar.inline(
                 quality: GlassQuality.premium,
                 barHeight: 56,
-                barBorderRadius: 28,
                 iconSize: 20,
                 labelFontSize: 11,
                 iconLabelSpacing: 3,
@@ -431,7 +440,7 @@ class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
                 selectedIndex: _tabBarNavIndex,
                 onTabSelected: (i) => setState(() => _tabBarNavIndex = i),
                 settings: _liveSettings,
-                indicatorSettings: _liveSettings,
+                indicatorSettings: _indicatorLiveSettings,
                 tabs: const [
                   GlassTab(
                     icon: Icon(CupertinoIcons.sparkles),
@@ -606,6 +615,7 @@ class _MeniscusAndBlurDemoPageState extends State<MeniscusAndBlurDemoPage> {
           ),
         ),
         GlassSwitch(
+          quality: GlassQuality.premium,
           value: value,
           onChanged: onChanged,
           settings: _liveSettings,

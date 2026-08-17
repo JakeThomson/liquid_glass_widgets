@@ -8,11 +8,12 @@
 
 ## Visual
 
-- **Meniscus darkening (`edgeAbsorption`):** Physical glass absorbs more light at the rim where the lens is thickest. Added the `edgeAbsorption` parameter to `LiquidGlassSettings` and `GlassThemeSettings` (default `0.15`), fully wired across all rendering paths (`liquid_glass_final_render.frag`, `interactive_indicator.frag`, and `lightweight_glass.frag`).
-- **Hemisphere lens profile:** Replaced polynomial falloff with physical circular arc `sqrt(1 - r²)` across all shaders. Flat interiors remain crystal clear while absorption steepens sharply at the boundary bevel.
+- **`edgeAbsorption` parameter added** (`LiquidGlassSettings`, `GlassThemeSettings`, default `0.0`): Physical Beer-Lambert meniscus rim darkening — the glass absorbs more light at the rim where the lens is thickest. Default `0.0` matches iOS 26's crisp, luminous glass exactly (no visible dark rim on any native Apple glass element). Increase for physical-glass-depth recipes or anticipated iOS 27-style material thickness (`0.10–0.20`). Fully wired across all rendering paths (`liquid_glass_final_render.frag`, `interactive_indicator.frag`, `lightweight_glass.frag`) with no shader slot changes.
+- **Hemisphere lens profile:** Replaced polynomial falloff with physical circular arc `sqrt(1 - r²)` across all shaders. Flat interiors remain crystal clear while absorption (when non-zero) steepens sharply at the boundary bevel.
 - **Light-modulated absorption:** Scaled absorption dynamically by light direction (`0.6×` lit edge, `1.4×` shadow edge) to preserve crisp specular peaks while deepening the opposing shadow rim for realistic 3D separation.
 - **Cross-platform `fresnelStrength` parity:** Wired `uFresnelStrength` (slot 33) into `lightweight_glass.frag` and `lightweight_liquid_glass.dart`. The `fresnelStrength` parameter now controls grazing-angle rim highlights identically across all rendering engines (Skia, Web, Windows, Android, and Impeller).
 - **Edge-concentrated chromatic aberration:** `lightweight_glass.frag` PATH A now samples R/G/B at offset UV positions weighted by `edgeInfluence × surfaceNormal`, adding prismatic rim dispersion that is strictly zero in the flat interior. Premium and indicator paths were already correct.
+
 
 ## Example App & Tooling
 
@@ -22,6 +23,7 @@
 ## Bug Fixes
 
 - **`GlassTabBarExtraButton` loses backdrop blur in minimal quality (#203):** Added `isStationary` to `GlassButton` (default `false`), and set `isStationary: true` on `GlassTabBarExtraButton`. Stationary buttons now retain their `BackdropFilter` blur in `GlassQuality.minimal`, ensuring visual consistency with the frosted main tab bar surface.
+
 
 ---
 
