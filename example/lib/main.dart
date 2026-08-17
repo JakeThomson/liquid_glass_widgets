@@ -19,6 +19,7 @@ import 'package:liquid_glass_widgets_example/demos/buttons_and_shadows_demo.dart
 import 'package:liquid_glass_widgets_example/demos/content_aware_brightness_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/indicator_parity_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/rtl_layout_demo.dart';
+import 'package:liquid_glass_widgets_example/demos/meniscus_and_blur_demo.dart';
 
 import 'package:liquid_glass_widgets_example/demos/google_maps_demo.dart'
     show PlatformViewDemo;
@@ -866,6 +867,19 @@ class _ExamplesTab extends StatelessWidget {
                   ),
                   SizedBox(height: 14),
 
+                  _LargeDemoCard(
+                    title: 'Meniscus & Blur Lab',
+                    subtitle:
+                        'Optical rim darkening tuner (edgeAbsorption) & 24-tap blur test',
+                    icon: CupertinoIcons.circle_righthalf_fill,
+                    gradient: const [
+                      Color(0xFF00C6FF),
+                      Color(0xFF0072FF),
+                    ],
+                    destination: const MeniscusAndBlurDemoPage(),
+                  ),
+                  SizedBox(height: 14),
+
                   SizedBox(height: 120),
                 ],
               ),
@@ -905,37 +919,54 @@ class _StaggeredCatalogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
     Widget button = GlassButton.custom(
       onTap: () => _openDemo(context, destination),
       width: double.infinity,
       height: height ?? 254, // tall card default
-      shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-      interactionScale: 0.97,
-      stretch: 0.15,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+      interactionScale: 0.98,
+      stretch: 0.06,
       alignment: Alignment.topLeft,
+      settings: LiquidGlassSettings(
+        thickness: 18,
+        blur: 16,
+        fresnelStrength: 0.40,
+        edgeAbsorption: 0.10,
+        lightIntensity: 0.45,
+        ambientStrength: 0.07,
+        glassColor: isDark
+            ? const Color.fromARGB(28, 255, 255, 255)
+            : const Color.fromARGB(40, 255, 255, 255),
+      ),
       child: Padding(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon,
-                color: CupertinoColors.secondaryLabel.resolveFrom(context),
-                size: 24),
+            Icon(
+              icon,
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              size: 24,
+            ),
             const Spacer(),
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
                 color: CupertinoColors.label.resolveFrom(context),
+                letterSpacing: -0.2,
               ),
             ),
-            SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               subtitle,
               style: TextStyle(
                 fontSize: 12,
                 color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                letterSpacing: -0.1,
               ),
             ),
           ],
