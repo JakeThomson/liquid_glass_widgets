@@ -689,5 +689,39 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(GlassTabBar), findsOneWidget);
     });
+
+    // Regression test for https://github.com/sdegenaar/liquid_glass_widgets/issues/203
+    // GlassTabBarExtraButton must retain its BackdropFilter blur in minimal
+    // quality so it visually matches the frosted main tab bar surface.
+    testWidgets(
+        'GlassTabBarExtraButton has BackdropFilter in GlassQuality.minimal (#203)',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassTabBar.bottom(
+              tabs: const [
+                GlassTab(icon: Icon(Icons.home)),
+                GlassTab(icon: Icon(Icons.settings)),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (i) {},
+              quality: GlassQuality.minimal,
+              extraButton: GlassTabBarExtraButton(
+                icon: const Icon(Icons.add),
+                onTap: () {},
+                label: 'Add',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The extra button is stationary, so its _FrostedFallback must use a
+      // BackdropFilter even in minimal mode (isStationary: true bypasses the
+      // isInteractive blur-omission guard).
+      expect(find.byType(BackdropFilter), findsWidgets);
+    });
   });
 }
