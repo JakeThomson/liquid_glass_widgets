@@ -379,13 +379,15 @@ void main() {
 
   group('GlassEffect — render object setter updates', () {
     testWidgets(
-        'ambientRim / baseAlphaMultiplier / edgeAlphaMultiplier / rimThickness / rimSmoothing setters fire via updateRenderObject',
+        'ambientRim / baseAlphaMultiplier / edgeAlphaMultiplier / rimThickness / rimSmoothing / edgeAbsorption setters fire via updateRenderObject',
         (tester) async {
       double ambient = 0.1;
       double baseAlpha = 0.2;
       double edgeAlpha = 0.4;
       double rimThick = 0.5;
       double rimSmooth = 1.5;
+      LiquidGlassSettings currentSettings =
+          _settings.copyWith(edgeAbsorption: 0.1);
       late StateSetter outerSetState;
 
       await tester.pumpWidget(
@@ -395,7 +397,7 @@ void main() {
               outerSetState = setState;
               return GlassEffect(
                 shape: const LiquidRoundedSuperellipse(borderRadius: 16),
-                settings: _settings,
+                settings: currentSettings,
                 interactionIntensity: 0.0,
                 quality: GlassQuality.standard,
                 ambientRim: ambient,
@@ -418,6 +420,7 @@ void main() {
         edgeAlpha = 0.7;
         rimThick = 1.0;
         rimSmooth = 2.0;
+        currentSettings = _settings.copyWith(edgeAbsorption: 0.3);
       });
       await tester.pump();
       expect(tester.takeException(), isNull);

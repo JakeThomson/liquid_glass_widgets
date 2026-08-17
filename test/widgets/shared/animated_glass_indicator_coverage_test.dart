@@ -149,6 +149,43 @@ void main() {
       expect(glass.settings.backerColor, backer);
     });
 
+    testWidgets('non-default edgeAbsorption survives onto the built glass',
+        (tester) async {
+      await tester.pumpWidget(_wrap(_make(
+        thickness: 0.5,
+        settings: const LiquidGlassSettings(edgeAbsorption: 0.25),
+      )));
+      await tester.pump();
+      final glass = tester.widget<GlassEffect>(find.byType(GlassEffect).first);
+      expect(glass.settings.edgeAbsorption, 0.25);
+    });
+
+    testWidgets('non-default fresnelStrength survives onto the built glass',
+        (tester) async {
+      await tester.pumpWidget(_wrap(_make(
+        thickness: 0.5,
+        settings: const LiquidGlassSettings(fresnelStrength: 0.6),
+      )));
+      await tester.pump();
+      final glass = tester.widget<GlassEffect>(find.byType(GlassEffect).first);
+      expect(glass.settings.fresnelStrength, 0.6);
+    });
+
+    testWidgets(
+        'non-default platformViewFallbackColor survives onto the built glass',
+        (tester) async {
+      const fallback = Color(0x80333333);
+      await tester.pumpWidget(_wrap(_make(
+        thickness: 0.5,
+        settings: const LiquidGlassSettings(
+          platformViewFallbackColor: fallback,
+        ),
+      )));
+      await tester.pump();
+      final glass = tester.widget<GlassEffect>(find.byType(GlassEffect).first);
+      expect(glass.settings.platformViewFallbackColor, fallback);
+    });
+
     testWidgets('non-default thickness exercises thickness branch',
         (tester) async {
       await tester.pumpWidget(_wrap(_make(
