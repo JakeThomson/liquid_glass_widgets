@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_setters_without_getters
+// ignore_for_file: avoid_setters_without_getters, public_member_api_docs
 
 import 'dart:ui';
 import 'dart:ui' as ui;
@@ -8,7 +8,6 @@ import 'package:flutter/rendering.dart';
 import 'liquid_glass_renderer.dart';
 import 'internal/transform_tracking_repaint_boundary_mixin.dart';
 import 'liquid_glass_blend_group.dart';
-import 'package:meta/meta.dart';
 
 /// A liquid glass shape.
 ///
@@ -240,7 +239,6 @@ class _RawLiquidGlass extends SingleChildRenderObjectWidget {
   }
 }
 
-@internal
 class RenderLiquidGlass extends RenderProxyBox
     with TransformTrackingRenderObjectMixin {
   RenderLiquidGlass({

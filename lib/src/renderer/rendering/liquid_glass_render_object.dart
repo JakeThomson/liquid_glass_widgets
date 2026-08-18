@@ -1,18 +1,19 @@
+// ignore_for_file: public_member_api_docs
+
 import 'dart:collection';
 import 'dart:math';
+import 'dart:ui';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_shaders/flutter_shaders.dart';
+import '../internal/fragment_shader_extensions.dart';
 import '../liquid_glass_renderer.dart';
 import '../internal/render_liquid_glass_geometry.dart';
 import '../internal/snap_rect_to_pixels.dart';
-import '../logging.dart';
-import 'package:meta/meta.dart';
 
 /// A render object that can assemble [RenderLiquidGlassGeometry] shapes and
 /// render them to the screen with the liquid glass effect.
-@internal
 abstract class LiquidGlassRenderObject extends RenderProxyBox {
   LiquidGlassRenderObject({
     required GeometryRenderLink link,
@@ -32,8 +33,6 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           cos(settings.lightAngle),
           -sin(settings.lightAngle),
         );
-
-  static final logger = Logger(LgrLogNames.render);
 
   final FragmentShader renderShader;
 
@@ -181,13 +180,6 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     // widget removal during isolate shutdown), skip all GPU operations to
     // prevent use-after-free on Mali GPU Vulkan resources.
     if (!attached) return;
-
-    if (LgrLogs.isLogActive(logger)) {
-      logger.finest(
-        '$hashCode Painting liquid glass with '
-        '${link._shapeGeometries.length} shapes.',
-      );
-    }
 
     _shapesWithGeometry.clear();
 
@@ -632,15 +624,6 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     final localBounds = bounds.snapToPixels(devicePixelRatio).inflate(2.0);
     final size = localBounds.size * devicePixelRatio;
 
-    final logging = LgrLogs.isLogActive(logger);
-    final buffer = logging
-        ? StringBuffer(
-            '$hashCode Recording geometry picture (local space) with '
-            '${geometries.length} shapes at size '
-            '${size.width}x${size.height}:\n',
-          )
-        : null;
-
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
@@ -660,22 +643,18 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
 
       switch (geometry) {
         case UnrenderedGeometryCache(matte: final picture):
-          buffer?.writeln('\t- Unrendered @ ${geometry.bounds}');
           canvas.drawPicture(picture);
         case RenderedGeometryCache(matte: final image):
-          buffer?.writeln('\t- Rendered @ ${geometry.bounds}');
           canvas.drawImage(image, Offset.zero, Paint());
       }
 
       canvas.restore();
     }
 
-    if (buffer != null) logger.fine(buffer.toString());
     return (recorder.endRecording(), localBounds, size);
   }
 }
 
-@internal
 class GeometryRenderLink {
   final List<RenderLiquidGlassGeometry> _shapeGeometries = [];
 
@@ -712,7 +691,6 @@ class GeometryRenderLink {
   }
 }
 
-@internal
 class InheritedGeometryRenderLink extends InheritedWidget {
   const InheritedGeometryRenderLink({
     required this.link,
