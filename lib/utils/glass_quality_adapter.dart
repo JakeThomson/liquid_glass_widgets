@@ -472,8 +472,13 @@ class GlassQualityAdapter {
       return GlassQuality.minimal;
     }
 
-    // On web, the Impeller/premium path is unavailable. Cap at standard.
-    if (kIsWeb) {
+    // On web, Windows, and Linux: Impeller uses WebGL / ANGLE (OpenGLESSDF)
+    // where runtime GLSL compilation of complex multi-pass SDFs can block the
+    // raster thread. Cap at standard so apps open instantly at 60/120fps with
+    // crisp 2D liquid glass.
+    if (kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux) {
       final capped = _capQuality(maxQuality, GlassQuality.standard);
       return capped == maxQuality ? null : capped;
     }

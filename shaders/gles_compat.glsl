@@ -57,4 +57,10 @@
 #define LGR_GLES_FLIP_SAMPLE_Y 1
 #endif
 
+#if defined(IMPELLER_TARGET_OPENGLES)
+// Cap shape evaluation at 8 on OpenGL ES / ANGLE to avoid AST node explosion
+// in runtime driver JIT compilers (e.g. Intel Arc ANGLE / PowerVR GE8320).
+#define LGR_OPENGLES_CAP_SHAPES 1
+#endif
+
 #endif  // LGR_GLES_COMPAT_GLSL_
