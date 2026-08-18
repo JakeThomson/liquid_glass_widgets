@@ -126,8 +126,22 @@ class LightweightLiquidGlass extends StatefulWidget {
   // On web: Each widget needs its own instance (CanvasKit requirement)
   static ui.FragmentShader? _sharedShader; // Native only
 
-  // Dummy 1x1 transparent image for when no background is captured
+  // Dummy 1x1 transparent image for when no background is captured.
+  // Lazily allocated on first paint to guarantee zero GPU raster work
+  // during preWarm() or initialize() before runApp().
   static ui.Image? _dummyImage;
+
+  /// Returns the cached 1×1 transparent dummy image, creating it lazily on demand.
+  static ui.Image get dummyImage => _dummyImage ??= _createDummyImage();
+
+  static ui.Image _createDummyImage() {
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder);
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(1, 1);
+    picture.dispose();
+    return image;
+  }
 
   /// Resets static shader state for testing. Call between tests to ensure
   /// each test gets the fallback rendering (no cached shader).
@@ -155,11 +169,6 @@ class LightweightLiquidGlass extends StatefulWidget {
         // Fallback for unit tests where package prefix may not be resolved
         program = await ui.FragmentProgram.fromAsset(testPath);
       }
-      // Allocate the dummy image only after program load succeeds — avoids
-      // leaking a GPU allocation when the shader fails to compile.
-      final recorder = ui.PictureRecorder();
-      ui.Canvas(recorder);
-      _dummyImage = recorder.endRecording().toImageSync(1, 1);
       _cachedProgram = program;
 
       // On native platforms, create the shared shader instance
@@ -873,10 +882,10 @@ class _RenderLightweightGlass extends RenderProxyBox
         _backgroundImage!,
         filterQuality: FilterQuality.medium, // coverage:ignore-line
       );
-    } else if (LightweightLiquidGlass._dummyImage != null) {
+    } else {
       _shader!.setImageSampler(
         0,
-        LightweightLiquidGlass._dummyImage!,
+        LightweightLiquidGlass.dummyImage,
         filterQuality: FilterQuality.medium, // coverage:ignore-line
       );
     }
