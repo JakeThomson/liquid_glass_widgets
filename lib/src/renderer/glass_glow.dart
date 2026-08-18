@@ -1,8 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
-import 'package:meta/meta.dart';
 import '../../utils/glass_spring.dart';
 
 /// {@template glass_glow}
@@ -230,15 +231,12 @@ class GlassGlowLayer extends StatefulWidget {
   @override
   State<GlassGlowLayer> createState() => GlassGlowLayerState();
 
-  @internal
-  // ignore: public_member_api_docs
   static GlassGlowLayerState? maybeOf(BuildContext context) {
     if (!context.mounted) return null;
     return context.findAncestorStateOfType<GlassGlowLayerState>();
   }
 }
 
-@internal
 class GlassGlowLayerState extends State<GlassGlowLayer>
     with TickerProviderStateMixin {
   late final _offsetController = OffsetSpringController(

@@ -1,9 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'internal/glass_drag_builder.dart';
-import 'package:meta/meta.dart';
 import '../../utils/glass_spring.dart';
 
 /// Configuration for the anchor stretch effect on interactive glass widgets.
@@ -333,7 +334,6 @@ class RawLiquidStretch extends SingleChildRenderObjectWidget {
   }
 }
 
-@internal
 class RenderRawLiquidStretch extends RenderProxyBox {
   RenderRawLiquidStretch({
     required Offset stretchPixels,
@@ -609,7 +609,6 @@ class RenderRawLiquidStretch extends RenderProxyBox {
     return matrix;
   }
 
-  @internal
   Offset getScale({
     required Offset stretchPixels,
     required Size size,
