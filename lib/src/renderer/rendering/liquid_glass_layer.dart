@@ -1,19 +1,17 @@
-// ignore_for_file: avoid_setters_without_getters
+// ignore_for_file: avoid_setters_without_getters, public_member_api_docs
 
 import 'dart:ui';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_shaders/flutter_shaders.dart';
+import '../internal/multi_shader_builder.dart';
 import '../liquid_glass_renderer.dart';
 import '../internal/render_liquid_glass_geometry.dart';
 import '../internal/transform_tracking_repaint_boundary_mixin.dart';
 import '../liquid_glass_render_scope.dart';
-import '../logging.dart';
 import 'liquid_glass_render_object.dart';
 import '../shaders.dart';
-import 'package:meta/meta.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scale-safe repaint boundary
@@ -205,8 +203,6 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
     with SingleTickerProviderStateMixin {
   late final GeometryRenderLink _link = GeometryRenderLink();
 
-  late final logger = Logger(LgrLogNames.layer);
-
   @override
   void dispose() {
     _link.dispose();
@@ -216,9 +212,6 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
   @override
   Widget build(BuildContext context) {
     if (!ImageFilter.isShaderFilterSupported) {
-      logger.warning(
-          'LiquidGlassLayer requires Impeller. No glass effect will be '
-          'rendered on this platform.');
       return LiquidGlassRenderScope(
         settings: widget.settings,
         child: InheritedGeometryRenderLink(
@@ -314,7 +307,6 @@ class _RawShapes extends SingleChildRenderObjectWidget {
   }
 }
 
-@internal
 class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     with TransformTrackingRenderObjectMixin {
   RenderLiquidGlassLayer({

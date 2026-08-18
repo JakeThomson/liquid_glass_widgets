@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 // [LOCAL PATCH]: GlassSpecularSharpness is our own type (not vendored).
 // It lives in lib/types/ not lib/src/renderer/.
@@ -9,7 +9,7 @@ import 'liquid_glass_renderer.dart';
 import 'liquid_glass_render_scope.dart';
 
 /// Represents the settings for a liquid glass effect.
-class LiquidGlassSettings extends Equatable {
+class LiquidGlassSettings {
   /// Creates a new [LiquidGlassSettings] with the given settings.
   /// Public constructor — all material glass properties.
   ///
@@ -529,7 +529,37 @@ class LiquidGlassSettings extends Equatable {
       );
 
   @override
-  List<Object?> get props => [
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other.runtimeType != runtimeType) return false;
+    return other is LiquidGlassSettings &&
+        other.visibility == visibility &&
+        other.glassColor == glassColor &&
+        other.thickness == thickness &&
+        other.blur == blur &&
+        other.chromaticAberration == chromaticAberration &&
+        other.lightAngle == lightAngle &&
+        other.lightIntensity == lightIntensity &&
+        other.ambientStrength == ambientStrength &&
+        other.ambientRim == ambientRim &&
+        other.fresnelStrength == fresnelStrength &&
+        other.refractiveIndex == refractiveIndex &&
+        other.saturation == saturation &&
+        other.glowIntensity == glowIntensity &&
+        other.specularSharpness == specularSharpness &&
+        other.standardOpacityMultiplier == standardOpacityMultiplier &&
+        other.shadowElevation == shadowElevation &&
+        listEquals(other.shadow, shadow) &&
+        other.whitenStrength == whitenStrength &&
+        other.whitenGated == whitenGated &&
+        other.edgeAbsorption == edgeAbsorption &&
+        other.backerColor == backerColor &&
+        other.platformViewFallbackColor == platformViewFallbackColor &&
+        other.pinchStrength == pinchStrength;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
         visibility,
         glassColor,
         thickness,
@@ -546,12 +576,12 @@ class LiquidGlassSettings extends Equatable {
         specularSharpness,
         standardOpacityMultiplier,
         shadowElevation,
-        shadow,
+        shadow == null ? null : Object.hashAll(shadow!),
         whitenStrength,
         whitenGated,
         edgeAbsorption,
         backerColor,
         platformViewFallbackColor,
         pinchStrength,
-      ];
+      ]);
 }

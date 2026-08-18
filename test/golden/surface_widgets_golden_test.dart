@@ -1,4 +1,3 @@
-import 'package:alchemist/alchemist.dart';
 import 'package:liquid_glass_widgets/widgets/interactive/glass_button.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/glass_app_bar.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/glass_bottom_bar.dart';

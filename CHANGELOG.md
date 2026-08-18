@@ -1,31 +1,39 @@
+# 0.29.8
+
+## Maintenance & Upstream Compatibility
+
+- **Pure Flutter SDK dependencies:** Removed all third-party and external dependencies across runtime and dev environments (`equatable`, `flutter_shaders`, `logging`, `meta`, `alchemist`, and `mocktail`). Golden tests now use Flutter's native `matchesGoldenFile`. Package depends purely on `flutter: sdk: flutter`.
+- **Optimized value equality:** Replaced `Equatable` with native `operator ==` and `Object.hashAll` across shapes and settings, eliminating heap allocations during hot animation loops.
+- **Internalized shader loading & uniform binding:** Shaders load directly via `dart:ui.FragmentProgram` with cached isolate pipelines and zero-overhead uniform setters.
+
+---
+
 # 0.29.7
 
 ## Performance
 
-- **Progressive blur: 50% fewer texture reads.** `kHalf` reduced from 48 → 24 taps per side. The stride formula keeps ±3σ Gaussian coverage identical; hardware bilinear fills the wider interval. At max sigma (~54 physical px on a 3× Retina display) the reconstruction error is ~0.0014% — below the quantisation floor of a 10-bit panel. GPU memory bandwidth for the blur pass is halved with no perceptible quality change.
-- **Gaussian weight loop: `exp()` eliminated.** The per-tap `exp(-d²/2σ²)` call is replaced with a two-scalar IIR multiply recurrence (`w *= g1; g1 *= g2`). Mathematically exact; saves 24 transcendental GPU instructions per blur pass.
-- **PlatformView fallback: skip when unused.** The over-composite in `textureBilinear()` is now gated on `uBackgroundFallback.a > 0.0`. The check is a draw-call-wide uniform, so there is zero branch divergence; in the common case (no PlatformView beneath the glass) the MADs are eliminated entirely.
+- **Progressive blur: 50% fewer texture reads.** Gaussian tap count halved with identical ±3σ coverage; GPU memory bandwidth for the blur pass is halved with no perceptible quality change.
+- **Gaussian weight loop: `exp()` eliminated.** Per-tap exponential replaced with a two-scalar IIR recurrence — saves 24 GPU instructions per blur pass with mathematically identical output.
+- **PlatformView fallback: skipped when unused.** The background composite is now gated on a uniform flag; no GPU cost when there is no PlatformView beneath the glass.
 
 ## Visual
 
-- **`edgeAbsorption` parameter added** (`LiquidGlassSettings`, `GlassThemeSettings`, default `0.0`): Physical Beer-Lambert meniscus rim darkening — the glass absorbs more light at the rim where the lens is thickest. Default `0.0` matches iOS 26's crisp, luminous glass exactly (no visible dark rim on any native Apple glass element). Increase for physical-glass-depth recipes or anticipated iOS 27-style material thickness (`0.10–0.20`). Fully wired across all rendering paths (`liquid_glass_final_render.frag`, `interactive_indicator.frag`, `lightweight_glass.frag`) with no shader slot changes.
-- **Hemisphere lens profile:** Replaced polynomial falloff with physical circular arc `sqrt(1 - r²)` across all shaders. Flat interiors remain crystal clear while absorption (when non-zero) steepens sharply at the boundary bevel.
-- **Light-modulated absorption:** Scaled absorption dynamically by light direction (`0.6×` lit edge, `1.4×` shadow edge) to preserve crisp specular peaks while deepening the opposing shadow rim for realistic 3D separation.
-- **Cross-platform `fresnelStrength` parity:** Wired `uFresnelStrength` (slot 33) into `lightweight_glass.frag` and `lightweight_liquid_glass.dart`. The `fresnelStrength` parameter now controls grazing-angle rim highlights identically across all rendering engines (Skia, Web, Windows, Android, and Impeller).
-- **Edge-concentrated chromatic aberration:** `lightweight_glass.frag` PATH A now samples R/G/B at offset UV positions weighted by `edgeInfluence × surfaceNormal`, adding prismatic rim dispersion that is strictly zero in the flat interior. Premium and indicator paths were already correct.
-
+- **`edgeAbsorption` parameter added** (`LiquidGlassSettings`, `GlassThemeSettings`, default `0.0`): Physical rim darkening — the glass absorbs more light at the thickest edge. Default `0.0` matches iOS 26's crisp luminous glass. Increase (`0.10–0.20`) for physical-depth or iOS 27-style recipes.
+- **Hemisphere lens profile:** Replaced polynomial falloff with a physical circular arc across all shaders — interiors stay crystal clear while absorption steepens at the bevel.
+- **Light-modulated absorption:** Absorption is scaled by light direction for realistic 3D rim separation without washing out specular highlights.
+- **Cross-platform `fresnelStrength` parity:** `fresnelStrength` now controls grazing-angle rim highlights identically across all rendering engines (Skia, Web, Windows, Android, and Impeller).
+- **Edge-concentrated chromatic aberration:** Prismatic dispersion is now strictly zero in flat glass interiors, concentrated only at the rim — consistent across all rendering paths.
 
 ## Example App & Tooling
 
-- **Meniscus & Blur Lab (`MeniscusAndBlurDemoPage`):** Added an interactive calibration workbench to the example app for live testing of `edgeAbsorption`, `fresnelStrength`, thickness, blur, and 24-tap progressive blur performance across multi-color backgrounds.
-- **Grouped card aesthetics:** Tuned catalog cards in `main.dart` with $20\text{px}$ Apple squircles, $11\%$ frosted body opacity, and softened Fresnel rims to match native iOS 26 grouped card visual hierarchy.
+- **Meniscus & Blur Lab (`MeniscusAndBlurDemoPage`):** Interactive calibration workbench for live testing of `edgeAbsorption`, `fresnelStrength`, thickness, blur, and progressive blur performance.
 
 ## Bug Fixes
 
-- **`GlassTabBarExtraButton` loses backdrop blur in minimal quality (#203):** Added `isStationary` to `GlassButton` (default `false`), and set `isStationary: true` on `GlassTabBarExtraButton`. Stationary buttons now retain their `BackdropFilter` blur in `GlassQuality.minimal`, ensuring visual consistency with the frosted main tab bar surface.
-
+- **`GlassTabBarExtraButton` loses backdrop blur in minimal quality (#203):** Added `isStationary` flag to `GlassButton` (default `false`). Setting `isStationary: true` on `GlassTabBarExtraButton` retains its `BackdropFilter` blur in `GlassQuality.minimal`.
 
 ---
+
 
 # 0.29.6
 

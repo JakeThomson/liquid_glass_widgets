@@ -80,7 +80,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
-import 'package:meta/meta.dart';
 
 import '../../types/glass_quality.dart';
 import '../../types/glass_quality_change_reason.dart';
@@ -173,7 +172,6 @@ class GlassAdaptiveScopeData {
 ///   [p95Ms] will be set.
 /// - [GlassQualityChangeReason.restoredFromCache] — skip in analytics; this
 ///   fires on every remount and carries no new timing data.
-@experimental
 @immutable
 class GlassAdaptiveDiagnostic {
   /// Creates a [GlassAdaptiveDiagnostic].
@@ -262,7 +260,6 @@ class GlassAdaptiveDiagnostic {
 /// ```
 ///
 /// All fields mirror the corresponding parameters on [GlassAdaptiveScope].
-@experimental
 @immutable
 class GlassAdaptiveScopeConfig {
   /// Creates a [GlassAdaptiveScopeConfig] with sensible defaults.
@@ -403,7 +400,6 @@ class GlassAdaptiveScopeConfig {
 ///   child: MaterialApp(home: MyHome()),
 /// )
 /// ```
-@experimental
 class GlassAdaptiveScope extends StatefulWidget {
   /// Creates a [GlassAdaptiveScope].
   ///

@@ -1,9 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
-import 'package:meta/meta.dart';
 
-@internal
 mixin TransformTrackingRepaintBoundaryMixin on RenderProxyBox {
   @override
   GeometryTransformTrackingLayer? get layer =>
@@ -40,7 +41,6 @@ mixin TransformTrackingRepaintBoundaryMixin on RenderProxyBox {
   void onTransformChanged();
 }
 
-@internal
 mixin TransformTrackingRenderObjectMixin on RenderProxyBox {
   @override
   GeometryTransformTrackingLayer? get layer =>
@@ -75,7 +75,6 @@ mixin TransformTrackingRenderObjectMixin on RenderProxyBox {
   void onTransformChanged();
 }
 
-@internal
 class GeometryTransformTrackingLayer extends OffsetLayer {
   GeometryTransformTrackingLayer();
 

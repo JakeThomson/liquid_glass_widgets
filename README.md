@@ -26,7 +26,7 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.29.7
+  liquid_glass_widgets: ^0.29.8
 ```
 
 ```bash
