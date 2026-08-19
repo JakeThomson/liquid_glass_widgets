@@ -299,6 +299,47 @@ void main() {
       });
     });
 
+    testWidgets('initialize() supports GlassWarmUpMode auto, always, never',
+        (tester) async {
+      await tester.runAsync(() async {
+        await expectLater(
+          LiquidGlassWidgets.initialize(
+            enablePerformanceMonitor: false,
+            warmUpMode: GlassWarmUpMode.auto,
+          ),
+          completes,
+        );
+        await expectLater(
+          LiquidGlassWidgets.initialize(
+            enablePerformanceMonitor: false,
+            warmUpMode: GlassWarmUpMode.always,
+          ),
+          completes,
+        );
+        await expectLater(
+          LiquidGlassWidgets.initialize(
+            enablePerformanceMonitor: false,
+            warmUpMode: GlassWarmUpMode.never,
+          ),
+          completes,
+        );
+      });
+    });
+
+    testWidgets('initialize() with deprecated warmUpImpellerPipeline completes',
+        (tester) async {
+      await tester.runAsync(() async {
+        // ignore: deprecated_member_use_from_same_package
+        await expectLater(
+          LiquidGlassWidgets.initialize(
+            enablePerformanceMonitor: false,
+            warmUpImpellerPipeline: false,
+          ),
+          completes,
+        );
+      });
+    });
+
     testWidgets(
         'initialize() with enablePerformanceMonitor:true starts monitor',
         (tester) async {
