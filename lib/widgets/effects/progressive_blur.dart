@@ -184,6 +184,9 @@ class _ProgressiveBlurState extends State<ProgressiveBlur> {
     // backdrop, not this widget — so the shader needs this widget's own
     // device-pixel rectangle to normalise the gradient over. Both halves of
     // that rectangle are resolved at PAINT time; see [_RenderProgressiveBlur].
+    // coverage:ignore-start
+    // Requires a compiled FragmentProgram; the headless test VM never provides
+    // one. The fallback path above is tested.
     return _ProgressiveBlurLayer(
       hShader: h,
       vShader: v,
@@ -193,6 +196,7 @@ class _ProgressiveBlurState extends State<ProgressiveBlur> {
       devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
       child: const SizedBox.expand(),
     );
+    // coverage:ignore-end
   }
 }
 
@@ -223,6 +227,12 @@ List<double> progressiveBlurUniforms({
       size.width * devicePixelRatio,
       size.height * devicePixelRatio,
     ];
+
+// Everything below is reachable only with a compiled FragmentProgram, which a
+// headless VM never provides — so it cannot be exercised by `flutter test`, and
+// the region maths is factored into [progressiveBlurUniforms] above so that the
+// part which CAN be tested, is.
+// coverage:ignore-start
 
 /// Applies the two-pass shader as a backdrop filter.
 ///
@@ -272,15 +282,15 @@ class _ProgressiveBlurLayer extends SingleChildRenderObjectWidget {
   void updateRenderObject(
     BuildContext context,
     _RenderProgressiveBlur renderObject,
-  ) {
-    renderObject
-      ..hShader = hShader
-      ..vShader = vShader
-      ..maxSigma = maxSigma
-      ..falloff = falloff
-      ..direction = direction
-      ..devicePixelRatio = devicePixelRatio;
-  }
+  ) =>
+      renderObject.update(
+        hShader: hShader,
+        vShader: vShader,
+        maxSigma: maxSigma,
+        falloff: falloff,
+        direction: direction,
+        devicePixelRatio: devicePixelRatio,
+      );
 }
 
 class _RenderProgressiveBlur extends RenderProxyBox {
@@ -299,44 +309,38 @@ class _RenderProgressiveBlur extends RenderProxyBox {
         _devicePixelRatio = devicePixelRatio;
 
   ui.FragmentShader _hShader;
-  set hShader(ui.FragmentShader v) {
-    if (identical(_hShader, v)) return;
-    _hShader = v;
-    markNeedsPaint();
-  }
-
   ui.FragmentShader _vShader;
-  set vShader(ui.FragmentShader v) {
-    if (identical(_vShader, v)) return;
-    _vShader = v;
-    markNeedsPaint();
-  }
-
   double _maxSigma;
-  set maxSigma(double v) {
-    if (_maxSigma == v) return;
-    _maxSigma = v;
-    markNeedsPaint();
-  }
-
   double _falloff;
-  set falloff(double v) {
-    if (_falloff == v) return;
-    _falloff = v;
-    markNeedsPaint();
-  }
-
   ProgressiveBlurDirection _direction;
-  set direction(ProgressiveBlurDirection v) {
-    if (_direction == v) return;
-    _direction = v;
-    markNeedsPaint();
-  }
-
   double _devicePixelRatio;
-  set devicePixelRatio(double v) {
-    if (_devicePixelRatio == v) return;
-    _devicePixelRatio = v;
+
+  /// One setter for the lot: every field arrives from the same widget on the
+  /// same rebuild, so a single comparison is all the change detection this
+  /// needs. The shaders are compared by identity — they are long-lived
+  /// [ui.FragmentShader] instances owned by the [State], not values.
+  void update({
+    required ui.FragmentShader hShader,
+    required ui.FragmentShader vShader,
+    required double maxSigma,
+    required double falloff,
+    required ProgressiveBlurDirection direction,
+    required double devicePixelRatio,
+  }) {
+    if (identical(_hShader, hShader) &&
+        identical(_vShader, vShader) &&
+        _maxSigma == maxSigma &&
+        _falloff == falloff &&
+        _direction == direction &&
+        _devicePixelRatio == devicePixelRatio) {
+      return;
+    }
+    _hShader = hShader;
+    _vShader = vShader;
+    _maxSigma = maxSigma;
+    _falloff = falloff;
+    _direction = direction;
+    _devicePixelRatio = devicePixelRatio;
     markNeedsPaint();
   }
 
@@ -346,9 +350,6 @@ class _RenderProgressiveBlur extends RenderProxyBox {
   @override
   BackdropFilterLayer? get layer => super.layer as BackdropFilterLayer?;
 
-  // coverage:ignore-start
-  // Reached only with a compiled FragmentProgram, which the headless test VM
-  // never provides; [progressiveBlurUniforms] carries the testable arithmetic.
   @override
   void paint(PaintingContext context, Offset offset) {
     if (child == null) {
@@ -384,5 +385,5 @@ class _RenderProgressiveBlur extends RenderProxyBox {
       shader.setFloat(2 + i, uniforms[i]);
     }
   }
-  // coverage:ignore-end
 }
+// coverage:ignore-end
