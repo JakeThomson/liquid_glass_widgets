@@ -1,3 +1,20 @@
+# 0.30.0
+
+## Bug Fixes
+
+- **Windows Impeller startup hang (#204):** `LiquidGlassWidgets.initialize()` no longer submits blocking GPU draw calls to the raster thread prior to `runApp()`. On Flutter 3.47+ Windows Impeller (ANGLE / `OpenGLESSDF`), runtime GLSL driver compilation previously locked the raster thread during OS surface initialization, preventing the native window from presenting. The app window now displays immediately on Frame 1 on all Windows and desktop configurations.
+- **Android GLES ANR (#187 follow-up):** Removed the synchronous pre-`runApp` offscreen warm-up draw. All Android devices launch with zero splash-screen delay, and GLES devices are safely protected from runtime driver compile lockups.
+
+## Architecture & Performance
+
+- **Non-blocking shader preloading with full Vulkan/Metal parity:** `LiquidGlassWidgets.initialize()` now preloads shader bytecode asynchronously into memory via fast I/O on Android (Vulkan and GLES), iOS, and macOS, eliminating first-frame placeholder flashes while ensuring zero GPU raster stalls before `runApp()`.
+- **Zero GPU work before `runApp()`:** Removed all `toImageSync` calls from `preWarm()`. Internal 1×1 sampler dummy textures are now allocated lazily on first paint in the widget tree.
+- **`GlassWarmUpMode` configuration:** Added `warmUpMode` (`GlassWarmUpMode.auto`, `.always`, `.never`) to `LiquidGlassWidgets.initialize()`. Default `.auto` preloads all shaders for Android, iOS, and macOS, while skipping unused premium shaders on statically-capped desktop/web backends. Deprecated `warmUpImpellerPipeline`.
+- **Windows & Linux adaptive defaults:** `GlassAdaptiveScope` static probe defaults Windows and Linux to `GlassQuality.standard` (`lightweight_glass.frag` with real iOS 26 squircle geometry, dual specular highlights, meniscus absorption, and blur) for guaranteed 60/120fps performance without driver compile delays.
+- **GLES shape compile optimization:** `shaders/sdf.glsl` now caps shape evaluation at 8 shapes on OpenGL ES / ANGLE backends via `#ifdef LGR_OPENGLES_CAP_SHAPES` (`shaders/gles_compat.glsl`), reducing the inlined AST size for runtime JIT drivers while leaving Metal (iOS/macOS) and Vulkan (Android) on the full 16-shape unrolled AOT path with zero changes.
+
+---
+
 # 0.29.8
 
 ## Maintenance & Upstream Compatibility

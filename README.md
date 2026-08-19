@@ -26,7 +26,7 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^0.29.8
+  liquid_glass_widgets: ^0.30.0
 ```
 
 ```bash
@@ -56,6 +56,22 @@ void main() async {
 
   runApp(LiquidGlassWidgets.wrap(child: const MyApp()));
 }
+```
+
+`initialize()` performs **100% non-blocking async disk-to-RAM I/O** — zero GPU draw calls, zero rasterization — so the OS window always presents immediately. On Android, iOS, and macOS, all premium shaders are preloaded at startup for instant Frame 1 rendering. Advanced control:
+
+```dart
+// Default: automatically preloads all shaders on Android, iOS, macOS;
+// skips unused premium shaders on Windows, Linux, and Web.
+await LiquidGlassWidgets.initialize();
+
+// Advanced: override the preloading strategy.
+await LiquidGlassWidgets.initialize(
+  warmUpMode: GlassWarmUpMode.auto,   // default — smart per-platform preload
+  // warmUpMode: GlassWarmUpMode.always, // force all shaders on all platforms
+  // warmUpMode: GlassWarmUpMode.never,  // skip heavy shader preload entirely
+  enablePerformanceMonitor: false,    // suppress debug raster monitor (default: true)
+);
 ```
 
 > **Using `MaterialApp`?** Add one line so glass widgets honour your `ThemeMode` instead of the raw OS brightness:
@@ -291,23 +307,25 @@ GlassThemeVariant(
 
 | Platform | Renderer | Notes |
 |---|---|---|
-| iOS | Impeller (Metal) | Full shader pipeline, chromatic aberration |
-| Android (Vulkan) | Impeller (Vulkan) | Full shader pipeline, chromatic aberration |
-| Android (GLES fallback) | Impeller (GLES) | Full shader pipeline; runtime shader compilation — `initialize()` handles this automatically. See [Android GLES note](#android-gles-note) |
-| macOS | Impeller (Metal) | Full shader pipeline, chromatic aberration |
-| Web | CanvasKit | Lightweight fragment shader |
-| Windows | Skia | Lightweight fragment shader |
-| Linux | Skia | Lightweight fragment shader |
+| iOS | Impeller (Metal) | Full 16-shape shader pipeline, chromatic aberration, precompiled AOT (`.metallib`) |
+| Android (Vulkan) | Impeller (Vulkan) | Full 16-shape shader pipeline, chromatic aberration, async preloaded bytecode — matches iOS Metal |
+| Android (GLES fallback) | Impeller (GLES) | GLES-optimized 8-shape AST to prevent runtime driver compile stalls; zero ANR |
+| macOS | Impeller (Metal) | Full 16-shape shader pipeline, chromatic aberration, precompiled AOT (`.metallib`) |
+| Web | CanvasKit | Lightweight 2D fragment shader |
+| Windows | Impeller (ANGLE) / Skia | Lightweight 2D shader default; instant Frame 1 launch; GLES-optimized AST |
+| Linux | Impeller / Skia | Lightweight 2D shader default |
 
-Platform detection is automatic — no configuration required. `LiquidGlassWidgets.initialize()` performs an Android-specific GPU warm-up before `runApp` to prevent startup ANRs on GLES devices.
+Platform detection is automatic — no configuration required. `LiquidGlassWidgets.initialize()` loads shader bytecode asynchronously via non-blocking I/O, ensuring apps open instantly on Frame 1 across all platforms without splash-screen stalls or raster thread lockups.
 
-### Android GLES note
+### Windows Impeller & Android Hardware Notes
 
-A portion of the Android fleet does not support Vulkan and runs Impeller GLES instead. Unlike Vulkan (which uses precompiled SPIR-V), GLES compiles GLSL shader source at runtime on the raster thread. On mid-range SoCs this can take 100–800 ms. If this coincides with Android’s surface setup (`FlutterJNI.nativeSurfaceChanged`), Android may declare an ANR ("Input dispatching timed out").
+On Windows (Flutter 3.47+ Impeller using ANGLE) and budget Android devices running the OpenGL ES fallback, GLSL shaders are compiled at runtime by the GPU driver.
 
-`LiquidGlassWidgets.initialize()` mitigates this automatically: it draws a 1×1 off-screen frame using the premium glass shaders before `runApp`, forcing GLES compilation behind the native splash screen where it cannot race with surface setup.
-
-Affected hardware includes many budget and older mid-range devices (MediaTek Helio G-series, Qualcomm Snapdragon 4xx/6xx, pre-Android 9 devices). Flagship and recent mid-range devices with full Vulkan support are unaffected — the warm-up completes in ~1–2 ms on Vulkan.
+`liquid_glass_widgets` handles this automatically:
+1. **Zero GPU Work Before `runApp()`:** `initialize()` executes only async disk-to-RAM I/O — no rasterization, no `toImageSync` calls — so the OS window always appears immediately on Frame 1.
+2. **First-Class Android Vulkan Support:** Flagship Android devices (Galaxy S23/S24/S25, Pixel 7/8/9, OnePlus 12) running Impeller Vulkan receive the full 16-shape unrolled geometry pipeline and async preloaded shaders, matching iOS Metal frame-for-frame.
+3. **Safe Desktop Defaults:** `GlassAdaptiveScope` statically caps Windows, Linux, and Web at `GlassQuality.standard` (crisp 2D liquid glass with real iOS 26 squircle curves, dual specular highlights, and blur) for silky-smooth 60/120fps out-of-the-box.
+4. **Optimized GLES AST:** Shaders automatically evaluate an optimized 8-shape geometry layout under GLES/ANGLE to prevent JIT compiler stalls, while Metal (iOS/macOS) and Vulkan (Android) remain on the full 16-shape path.
 
 ## Glass Quality Modes
 
