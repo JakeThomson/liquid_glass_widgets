@@ -140,8 +140,7 @@ void main() {
       double devicePixelRatio = 1,
       double maxSigma = 12,
       double falloff = 1,
-      ProgressiveBlurDirection direction =
-          ProgressiveBlurDirection.topToBottom,
+      ProgressiveBlurDirection direction = ProgressiveBlurDirection.topToBottom,
       double axis = 0,
     }) =>
         progressiveBlurUniforms(

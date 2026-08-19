@@ -154,15 +154,25 @@ class _GlassScrollEdgeEffectState extends State<GlassScrollEdgeEffect> {
   bool _hasAttemptedCapture = false;
   bool _capturePending = false;
 
+  /// Set to true when a capture is requested while one is already in-flight.
+  /// [_finishCapture] checks this and issues the deferred capture.
+  bool _recaptureRequested = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _backgroundKey = LiquidGlassScope.of(context);
 
-    // Defer capture to after paint. On first mount, toImage() requires a
-    // composited OffsetLayer which isn't assigned until paint completes.
-    // On subsequent calls (theme toggle, route change), the new background
-    // won't paint until end-of-frame either. Both cases need deferral.
+    // Calling isCurrentOf registers a dependency on the ModalRoute, so Flutter
+    // will call didChangeDependencies again whenever isCurrent changes — i.e.
+    // when a route is pushed on top of us, or when we resume after a pop.
+    // All three cases (first mount / route resume / dep changed while visible)
+    // are handled identically: schedule a capture on the next frame.
+    if (!(ModalRoute.isCurrentOf(context) ?? true)) return;
+    _scheduleCapture();
+  }
+
+  void _scheduleCapture() {
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (mounted) _captureBackground();
     });
@@ -205,27 +215,47 @@ class _GlassScrollEdgeEffectState extends State<GlassScrollEdgeEffect> {
       return;
     }
 
-    if (_capturePending) return; // Already in-flight — don't stack captures.
+    // Already in-flight: record the request and let _finishCapture re-issue
+    // it once the current capture completes. Previously this was a hard
+    // early-return, which could leave a stale image indefinitely if a theme
+    // change arrived while a capture was already running (issue #212).
+    if (_capturePending) {
+      _recaptureRequested = true;
+      return;
+    }
     _capturePending = true;
     try {
-      boundary.toImage(pixelRatio: 1.0).then((image) {
-        _capturePending = false;
-        if (!mounted) {
-          image.dispose();
-          return;
-        }
-        _backgroundImage?.dispose();
-        _backgroundImage = image;
-        setState(() {});
-      }).catchError((_) {
-        _capturePending = false;
-      });
+      boundary
+          .toImage(pixelRatio: 1.0)
+          .then<void>((image) {
+            if (!mounted) {
+              image.dispose();
+              return;
+            }
+            _backgroundImage?.dispose();
+            _backgroundImage = image;
+            setState(() {});
+          })
+          .catchError((Object _) {})
+          .whenComplete(_finishCapture);
     } on Object {
       // toImage() can throw synchronously if `layer` is still null
       // (paint has not completed). Reset the flag and fall back to
       // the solid-colour gradient overlay.
       _capturePending = false;
     }
+  }
+
+  /// Called via [Future.whenComplete] after every capture attempt (success or
+  /// error). If a recapture was requested while the previous one was in-flight,
+  /// issues a new capture on the next frame.
+  void _finishCapture() {
+    _capturePending = false;
+    if (!_recaptureRequested) return;
+    _recaptureRequested = false;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _captureBackground();
+    });
   }
 
   @override
