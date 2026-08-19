@@ -692,23 +692,23 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                               enableBackgroundAnimation:
                                   widget.interactionBehavior.hasScale,
                               backgroundPressScale: widget.pressScale,
-                              collapsedLogoBuilder:
-                                  widget.searchConfig.collapsedLogoBuilder ??
-                                      (context) {
-                                        final currentTab =
-                                            widget.tabs[widget.selectedIndex];
-                                        return Center(
-                                          child: IconTheme(
-                                            data: IconThemeData(
-                                              color: widget.unselectedIconColor,
-                                              size: widget.iconSize,
-                                            ),
-                                            child: currentTab.activeIcon ??
-                                                currentTab.icon ??
-                                                const SizedBox.shrink(),
-                                          ),
-                                        );
-                                      },
+                              collapsedLogoBuilder: widget
+                                      .searchConfig.collapsedLogoBuilder ??
+                                  (context) {
+                                    final currentTab =
+                                        widget.tabs[widget.selectedIndex];
+                                    return Center(
+                                      child: IconTheme(
+                                        data: IconThemeData(
+                                          color: resolvedUnselectedIconColor,
+                                          size: widget.iconSize,
+                                        ),
+                                        child: currentTab.activeIcon ??
+                                            currentTab.icon ??
+                                            const SizedBox.shrink(),
+                                      ),
+                                    );
+                                  },
                               onDismissSearch: () =>
                                   widget.searchConfig.onSearchToggle(false),
                               childUnselected: child!,

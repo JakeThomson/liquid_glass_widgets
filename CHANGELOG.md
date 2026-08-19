@@ -1,3 +1,13 @@
+# 0.30.1
+
+## Bug Fixes
+
+- **Dark mode collapsed tab pill icon (#208):** Fixed an issue where the collapsed tab pill icon in `GlassTabBar.searchable` rendered opaque black in dark mode instead of white when `unselectedIconColor` was unset.
+- **ProgressiveBlur region origin (#210, credit: @jfhair):** Fixed `ProgressiveBlur` rendering black or losing its gradient when not positioned at the top-left of the backdrop layer (modal sheets, inset containers, scroll edges). The shader region origin is now resolved at paint time, keeping the gradient correct through drags and animated transitions.
+- **GlassScrollEdgeEffect stale background on route resume (#212):** Fixed stale background texture and ghosting shadows when returning from routes where the theme or background changed. Background capture is now deferred until the route resumes, and in-flight capture requests are coalesced.
+
+---
+
 # 0.30.0
 
 ## Bug Fixes
