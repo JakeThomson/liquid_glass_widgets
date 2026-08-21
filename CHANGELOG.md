@@ -1,3 +1,11 @@
+# 0.30.2
+
+## Bug Fixes
+
+- **GlassPullDownButton / GlassMenu crash in minimal quality (#214):** Fixed a crash when quality falls back to `GlassQuality.minimal`. `LiquidGlassBlendGroup` is now skipped when no `LiquidGlassLayer` is present in the tree. Same fix applied to `GlassPopover`.
+
+---
+
 # 0.30.1
 
 ## Bug Fixes
