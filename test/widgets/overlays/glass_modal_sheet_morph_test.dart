@@ -1,0 +1,1421 @@
+// Coverage for the Liquid Morph presentation of GlassModalSheet:
+// SheetMorphGeometry (pure) and GlassSheetMorphPresenter (widget), plus the
+// capability fallback GlassModalSheet.show() applies before pushing the route.
+//
+// Both types live in the glass_modal_sheet library rather than the package's
+// public surface, so — like the mechanics tests — this imports the library file
+// directly.
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
+    show GlassQuality, MorphSpeed;
+import 'package:liquid_glass_widgets/src/renderer/liquid_glass_renderer.dart';
+import 'package:liquid_glass_widgets/widgets/shared/adaptive_glass.dart';
+import 'package:liquid_glass_widgets/widgets/shared/adaptive_liquid_glass_layer.dart';
+import 'package:liquid_glass_widgets/widgets/overlays/glass_modal_sheet.dart';
+
+/// A 400 × 800 screen keeps every expected number below exact and readable.
+const _screen = Size(400, 800);
+
+/// Two detents, no peek floor — the default sheet configuration.
+const _defaultGeometry = SheetGeometry(
+  mode: GlassSheetMode.dismissible,
+  halfSize: 0.5,
+  peekSize: 100.0,
+  enablePeek: false,
+);
+
+const _peekGeometry = SheetGeometry(
+  mode: GlassSheetMode.persistent,
+  halfSize: 0.5,
+  peekSize: 100.0,
+  enablePeek: true,
+);
+
+/// Glass (blurred) and solid (blur-free) surfaces, for the fill branches.
+const _glassSettings = LiquidGlassSettings(blur: 10.0);
+const _solidSettings = LiquidGlassSettings(blur: 0.0);
+
+Widget _app(Widget child, {bool disableAnimations = false}) => MaterialApp(
+      home: MediaQuery(
+        data: MediaQueryData(
+          size: _screen,
+          disableAnimations: disableAnimations,
+        ),
+        child: Scaffold(backgroundColor: Colors.transparent, body: child),
+      ),
+    );
+
+void main() {
+  group('SheetMorphGeometry.restingRect', () {
+    test('half detent rests inset by the sheet margins', () {
+      final rect = SheetMorphGeometry.restingRect(
+        state: GlassSheetState.half,
+        geometry: _defaultGeometry,
+        screenSize: _screen,
+        horizontalMargin: 8.0,
+        bottomMargin: 6.0,
+        bottomInset: 34.0,
+        bottomRadius: 56.0,
+      );
+
+      // pos = 0.5 → the top edge sits halfway down the screen.
+      expect(rect.top, 400.0);
+      expect(rect.left, 8.0);
+      expect(rect.right, 392.0);
+      expect(rect.bottom, 794.0); // 800 - bottomMargin
+      expect(rect.height, 394.0);
+    });
+
+    test('full detent runs edge to edge and sinks past the bottom', () {
+      final rect = SheetMorphGeometry.restingRect(
+        state: GlassSheetState.full,
+        geometry: _defaultGeometry,
+        screenSize: _screen,
+        horizontalMargin: 8.0,
+        bottomMargin: 6.0,
+        bottomInset: 34.0,
+        bottomRadius: 46.0,
+      );
+
+      // Default full size is screenHeight - 90.
+      expect(rect.top, closeTo(90.0, 1e-9));
+      expect(rect.left, 0.0);
+      expect(rect.right, 400.0);
+      // Sunk by bottomInset + bottomRadius so the lower corners leave screen.
+      expect(rect.bottom, 880.0);
+    });
+
+    test('peek detent honours the peek-specific margins', () {
+      final rect = SheetMorphGeometry.restingRect(
+        state: GlassSheetState.peek,
+        geometry: _peekGeometry,
+        screenSize: _screen,
+        horizontalMargin: 8.0,
+        bottomMargin: 6.0,
+        bottomInset: 0.0,
+        bottomRadius: 56.0,
+        peekHorizontalMargin: 20.0,
+        peekBottomMargin: 12.0,
+      );
+
+      // peekSize 100 of an 800pt screen → pos 0.125 → top 700.
+      expect(rect.top, 700.0);
+      expect(rect.left, 20.0);
+      expect(rect.right, 380.0);
+      expect(rect.bottom, 788.0);
+    });
+
+    test('peekWidth centres a fixed-width floor instead of insetting it', () {
+      final rect = SheetMorphGeometry.restingRect(
+        state: GlassSheetState.peek,
+        geometry: _peekGeometry,
+        screenSize: _screen,
+        horizontalMargin: 8.0,
+        bottomMargin: 6.0,
+        bottomInset: 0.0,
+        bottomRadius: 56.0,
+        peekWidth: 200.0,
+      );
+
+      expect(rect.left, 100.0);
+      expect(rect.width, 200.0);
+    });
+
+    test('hidden collapses to the bottom edge without inverting', () {
+      final rect = SheetMorphGeometry.restingRect(
+        state: GlassSheetState.hidden,
+        geometry: _defaultGeometry,
+        screenSize: _screen,
+        horizontalMargin: 8.0,
+        bottomMargin: 6.0,
+        bottomInset: 0.0,
+        bottomRadius: 56.0,
+      );
+
+      expect(rect.top, 800.0);
+      expect(rect.height, 0.0);
+      expect(rect.isEmpty, isTrue);
+    });
+
+    test('margins wider than the screen clamp instead of inverting', () {
+      final rect = SheetMorphGeometry.restingRect(
+        state: GlassSheetState.half,
+        geometry: _defaultGeometry,
+        screenSize: _screen,
+        horizontalMargin: 900.0,
+        bottomMargin: 6.0,
+        bottomInset: 0.0,
+        bottomRadius: 56.0,
+      );
+
+      expect(rect.left, 200.0);
+      expect(rect.width, 0.0);
+    });
+  });
+
+  group('SheetMorphGeometry.blobRect', () {
+    const trigger = Rect.fromLTWH(100, 700, 56, 56);
+    const destination = Rect.fromLTWH(8, 400, 384, 394);
+
+    test('starts exactly on the trigger', () {
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: 0.0,
+        sizeT: 0.0,
+      );
+      expect(rect.center, trigger.center);
+      expect(rect.size, trigger.size);
+    });
+
+    test('lands exactly on the destination', () {
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: 1.0,
+        sizeT: 1.0,
+      );
+      // The handoff to the real sheet depends on this being exact.
+      expect(rect.center.dx, closeTo(destination.center.dx, 1e-9));
+      expect(rect.center.dy, closeTo(destination.center.dy, 1e-9));
+      expect(rect.width, closeTo(destination.width, 1e-9));
+      expect(rect.height, closeTo(destination.height, 1e-9));
+    });
+
+    test('position and size advance independently', () {
+      // The J-curve runs ahead of the size curve — that separation is what the
+      // metaball neck stretches across, so the blob must not couple them.
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: 0.9,
+        sizeT: 0.3,
+      );
+      expect(rect.center.dy, lessThan(trigger.center.dy));
+      expect(rect.width, lessThan(destination.width));
+      expect(rect.width, greaterThan(trigger.width));
+    });
+
+    test('closing undershoot cannot produce a negative size', () {
+      // The underdamped close drives sizeT below zero; a negative width would
+      // trip a BoxConstraints assert.
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: -0.2,
+        sizeT: -0.2,
+      );
+      expect(rect.width, greaterThanOrEqualTo(0.0));
+      expect(rect.height, greaterThanOrEqualTo(0.0));
+    });
+  });
+
+  group('SheetMorphGeometry.blobRadius', () {
+    test('starts fully rounded at the trigger', () {
+      final radius = SheetMorphGeometry.blobRadius(
+        blobSize: const Size(56, 56),
+        target: 56.0,
+        sizeT: 0.0,
+      );
+      expect(radius, 28.0);
+    });
+
+    test('resolves to the sheet radius on arrival', () {
+      final radius = SheetMorphGeometry.blobRadius(
+        blobSize: const Size(384, 394),
+        target: 56.0,
+        sizeT: 1.0,
+      );
+      expect(radius, 56.0);
+    });
+
+    test('never exceeds the half-extent of the blob', () {
+      // A 56pt target on a 40pt-tall droplet would render as a lozenge with
+      // overlapping corners.
+      final radius = SheetMorphGeometry.blobRadius(
+        blobSize: const Size(384, 40),
+        target: 56.0,
+        sizeT: 1.0,
+      );
+      expect(radius, 20.0);
+    });
+
+    test('stays round through the travel', () {
+      // easeInExpo holds the droplet round until it is nearly landed.
+      final radius = SheetMorphGeometry.blobRadius(
+        blobSize: const Size(200, 200),
+        target: 20.0,
+        sizeT: 0.5,
+      );
+      expect(radius, greaterThan(90.0));
+    });
+  });
+
+  group('SheetMorphGeometry.fillReveal', () {
+    test('holds at zero through the travel', () {
+      expect(SheetMorphGeometry.fillReveal(0.0), 0.0);
+      expect(SheetMorphGeometry.fillReveal(0.7), 0.0);
+    });
+
+    test('ramps to full over the last 30%', () {
+      expect(SheetMorphGeometry.fillReveal(0.85), closeTo(0.5, 1e-9));
+      expect(SheetMorphGeometry.fillReveal(1.0), 1.0);
+    });
+
+    test('clamps past the ends', () {
+      expect(SheetMorphGeometry.fillReveal(-0.2), 0.0);
+      expect(SheetMorphGeometry.fillReveal(1.4), 1.0);
+    });
+  });
+
+  group('SheetMorphGeometry.restingFillOpacity', () {
+    test('default sheet: glass at half, opaque at full', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.half,
+          baseSettings: _glassSettings,
+          enablePeek: false,
+        ),
+        0.0,
+      );
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.full,
+          baseSettings: _glassSettings,
+          enablePeek: false,
+        ),
+        1.0,
+      );
+    });
+
+    test('a blur-free base surface is solid at every detent', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.half,
+          baseSettings: _solidSettings,
+          enablePeek: false,
+        ),
+        1.0,
+      );
+    });
+
+    test('explicit full settings keep the full detent glassy', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.full,
+          baseSettings: _glassSettings,
+          halfSettings: _glassSettings,
+          fullSettings: _glassSettings,
+          enablePeek: false,
+        ),
+        0.0,
+      );
+    });
+
+    test('explicit solid full settings fill on arrival', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.full,
+          baseSettings: _glassSettings,
+          halfSettings: _glassSettings,
+          fullSettings: _solidSettings,
+          enablePeek: false,
+        ),
+        1.0,
+      );
+      // ...and the half detent it crossfades from stays glass.
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.half,
+          baseSettings: _glassSettings,
+          halfSettings: _glassSettings,
+          fullSettings: _solidSettings,
+          enablePeek: false,
+        ),
+        0.0,
+      );
+    });
+
+    test('a solid half crossfading to glass is solid at half', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.half,
+          baseSettings: _glassSettings,
+          halfSettings: _solidSettings,
+          fullSettings: _glassSettings,
+          enablePeek: false,
+        ),
+        1.0,
+      );
+    });
+
+    test('two solid surfaces stay solid throughout', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.full,
+          baseSettings: _glassSettings,
+          halfSettings: _solidSettings,
+          fullSettings: _solidSettings,
+          enablePeek: false,
+        ),
+        1.0,
+      );
+    });
+
+    test('peek follows the peek surface when the floor is enabled', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.peek,
+          baseSettings: _glassSettings,
+          enablePeek: true,
+        ),
+        0.0,
+      );
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.peek,
+          baseSettings: _glassSettings,
+          peekSettings: _solidSettings,
+          enablePeek: true,
+        ),
+        1.0,
+      );
+    });
+
+    test('peek without a floor falls back to the half surface', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.peek,
+          baseSettings: _glassSettings,
+          halfSettings: _solidSettings,
+          enablePeek: false,
+        ),
+        1.0,
+      );
+    });
+
+    test('hidden never fills', () {
+      expect(
+        SheetMorphGeometry.restingFillOpacity(
+          state: GlassSheetState.hidden,
+          baseSettings: _glassSettings,
+          enablePeek: false,
+        ),
+        0.0,
+      );
+    });
+  });
+
+  group('SheetMorphGeometry.restingSettings', () {
+    test('picks the surface the detent rests on', () {
+      expect(
+        SheetMorphGeometry.restingSettings(
+          state: GlassSheetState.full,
+          baseSettings: _glassSettings,
+          fullSettings: _solidSettings,
+          enablePeek: false,
+        ),
+        _solidSettings,
+      );
+      expect(
+        SheetMorphGeometry.restingSettings(
+          state: GlassSheetState.half,
+          baseSettings: _glassSettings,
+          halfSettings: _solidSettings,
+          enablePeek: false,
+        ),
+        _solidSettings,
+      );
+      expect(
+        SheetMorphGeometry.restingSettings(
+          state: GlassSheetState.peek,
+          baseSettings: _glassSettings,
+          peekSettings: _solidSettings,
+          enablePeek: true,
+        ),
+        _solidSettings,
+      );
+      expect(
+        SheetMorphGeometry.restingSettings(
+          state: GlassSheetState.hidden,
+          baseSettings: _glassSettings,
+          enablePeek: false,
+        ),
+        _glassSettings,
+      );
+    });
+
+    test('peek without a floor uses the half surface', () {
+      expect(
+        SheetMorphGeometry.restingSettings(
+          state: GlassSheetState.peek,
+          baseSettings: _glassSettings,
+          halfSettings: _solidSettings,
+          enablePeek: false,
+        ),
+        _solidSettings,
+      );
+    });
+
+    test('falls back to the base surface when nothing is overridden', () {
+      expect(
+        SheetMorphGeometry.restingSettings(
+          state: GlassSheetState.full,
+          baseSettings: _glassSettings,
+          enablePeek: false,
+        ),
+        _glassSettings,
+      );
+    });
+  });
+
+  group('GlassSheetMorphPresenter', () {
+    /// Builds a presenter with a caller-owned route animation, so the test can
+    /// drive the reverse that a real pop would.
+    Widget buildPresenter({
+      required AnimationController routeAnimation,
+      MorphSpeed speed = MorphSpeed.normal,
+      GlassSheetState restingState = GlassSheetState.half,
+      bool disableAnimations = false,
+      GlassMorphAnchor? anchor,
+    }) {
+      return _app(
+        disableAnimations: disableAnimations,
+        GlassSheetMorphPresenter(
+          routeAnimation: routeAnimation,
+          triggerRect: const Rect.fromLTWH(172, 700, 56, 56),
+          anchor: anchor,
+          speed: speed,
+          restingState: restingState,
+          geometry: _defaultGeometry,
+          horizontalMargin: 8.0,
+          bottomMargin: 6.0,
+          topBorderRadius: 56.0,
+          fullTopBorderRadius: 46.0,
+          bottomBorderRadius: null,
+          fullBottomBorderRadius: null,
+          settings: null,
+          peekSettings: null,
+          halfSettings: null,
+          fullSettings: null,
+          expandedColor: null,
+          quality: null,
+          peekHorizontalMargin: null,
+          peekBottomMargin: null,
+          peekWidth: null,
+          peekTopBorderRadius: null,
+          platformViewBackdrop: false,
+          child: GlassModalSheetScaffold(
+            body: SizedBox.shrink(),
+            sheet: Text('Sheet body'),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('renders the droplet before it lands, then the real sheet',
+        (tester) async {
+      final route = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 500),
+      )..forward();
+      addTearDown(route.dispose);
+
+      await tester.pumpWidget(buildPresenter(routeAnimation: route));
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // Mid-morph: the droplet's glass layer is in the tree and the sheet is
+      // mounted but not painted.
+      expect(find.byType(AdaptiveLiquidGlassLayer), findsWidgets);
+      expect(
+        tester.widget<Visibility>(find.byType(Visibility).first).visible,
+        isFalse,
+      );
+
+      await tester.pumpAndSettle();
+
+      // Settled: the sheet has taken over and the droplet is gone.
+      expect(find.text('Sheet body'), findsOneWidget);
+      expect(
+        tester.widget<Visibility>(find.byType(Visibility).first).visible,
+        isTrue,
+      );
+    });
+
+    testWidgets('the sheet is mounted for the whole morph, never remounted',
+        (tester) async {
+      // Remounting a glass widget mid-animation re-seeds its layers and springs
+      // and shows as a glitch frame, so the sheet element must survive the
+      // handoff rather than being inserted at the end.
+      final route = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 500),
+      )..forward();
+      addTearDown(route.dispose);
+
+      await tester.pumpWidget(buildPresenter(routeAnimation: route));
+      await tester.pump(const Duration(milliseconds: 16));
+
+      final elementDuringMorph =
+          tester.element(find.byType(GlassModalSheetScaffold));
+
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.element(find.byType(GlassModalSheetScaffold)),
+        same(elementDuringMorph),
+      );
+    });
+
+    testWidgets('a route reverse starts the closing morph', (tester) async {
+      final route = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 500),
+      )..forward();
+      addTearDown(route.dispose);
+
+      await tester.pumpWidget(buildPresenter(routeAnimation: route));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Visibility>(find.byType(Visibility).first).visible,
+        isTrue,
+      );
+
+      route.reverse();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // The sheet hands back to the droplet for the return trip.
+      expect(
+        tester.widget<Visibility>(find.byType(Visibility).first).visible,
+        isFalse,
+      );
+
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a dragged dismissal keeps the sheet, skipping the morph',
+        (tester) async {
+      // A swipe-down releases the sheet between detents; morphing back from the
+      // resting frame would visibly jump, so the sheet slides itself away.
+      final route = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 500),
+      )..forward();
+      addTearDown(route.dispose);
+
+      await tester.pumpWidget(buildPresenter(routeAnimation: route));
+      await tester.pumpAndSettle();
+
+      final gesture = await tester.startGesture(const Offset(200, 500));
+      await gesture.moveBy(const Offset(0, 120));
+      await tester.pump();
+
+      route.reverse();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(
+        tester.widget<Visibility>(find.byType(Visibility).first).visible,
+        isTrue,
+      );
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a tap that wobbles within slop still morphs', (tester) async {
+      // Barrier taps routinely move a pixel or two; treating that as a drag
+      // would cost the morph on the most common way of closing the sheet.
+      final route = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 500),
+      )..forward();
+      addTearDown(route.dispose);
+
+      await tester.pumpWidget(buildPresenter(routeAnimation: route));
+      await tester.pumpAndSettle();
+
+      final gesture = await tester.startGesture(const Offset(200, 500));
+      await gesture.moveBy(const Offset(1, 2));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+
+      route.reverse();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(
+        tester.widget<Visibility>(find.byType(Visibility).first).visible,
+        isFalse,
+      );
+
+      await tester.pumpAndSettle();
+    });
+
+    /// Runs an opening morph frame by frame and reports whether it had landed
+    /// within 200 ms — long enough for the engine's instant spring, well short
+    /// of the ~375 ms native-parity profile.
+    Future<bool> landedWithin200ms(
+      WidgetTester tester, {
+      required bool disableAnimations,
+    }) async {
+      final route = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 500),
+      )..forward();
+      addTearDown(route.dispose);
+
+      await tester.pumpWidget(
+        buildPresenter(
+          routeAnimation: route,
+          disableAnimations: disableAnimations,
+        ),
+      );
+
+      var landed = false;
+      for (var elapsed = 0; elapsed < 200 && !landed; elapsed += 16) {
+        await tester.pump(const Duration(milliseconds: 16));
+        landed =
+            tester.widget<Visibility>(find.byType(Visibility).first).visible;
+      }
+      await tester.pumpAndSettle();
+      return landed;
+    }
+
+    testWidgets('reduce motion resolves the morph immediately', (tester) async {
+      // The engine's own accessibility path — the same one GlassMenu takes.
+      // The flag has to reach the controller before the spring starts, which is
+      // why the presenter opens from didChangeDependencies and not initState;
+      // opening in initState left the very first presentation animating at full
+      // length with Reduce Motion on.
+      expect(await landedWithin200ms(tester, disableAnimations: true), isTrue);
+    });
+
+    testWidgets('a normal morph is still travelling at 200 ms', (tester) async {
+      // Guards the test above from passing for the wrong reason.
+      expect(
+          await landedWithin200ms(tester, disableAnimations: false), isFalse);
+    });
+
+    testWidgets('morphs into the full detent as well as the half detent',
+        (tester) async {
+      final route = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 500),
+      )..forward();
+      addTearDown(route.dispose);
+
+      await tester.pumpWidget(
+        buildPresenter(
+          routeAnimation: route,
+          restingState: GlassSheetState.full,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sheet body'), findsOneWidget);
+    });
+
+    testWidgets('skips the blend group under platformViewBackdrop (#214)',
+        (tester) async {
+      // LiquidGlassBlendGroup needs a full LiquidGlassLayer, which
+      // AdaptiveLiquidGlassLayer does not create in this mode.
+      final route = AnimationController(
+        vsync: tester,
+        duration: const Duration(milliseconds: 500),
+      )..forward();
+      addTearDown(route.dispose);
+
+      await tester.pumpWidget(
+        _app(
+          GlassSheetMorphPresenter(
+            routeAnimation: route,
+            triggerRect: const Rect.fromLTWH(172, 700, 56, 56),
+            anchor: null,
+            speed: MorphSpeed.fast,
+            restingState: GlassSheetState.half,
+            geometry: _defaultGeometry,
+            horizontalMargin: 8.0,
+            bottomMargin: 6.0,
+            topBorderRadius: 56.0,
+            fullTopBorderRadius: 46.0,
+            bottomBorderRadius: null,
+            fullBottomBorderRadius: null,
+            settings: null,
+            peekSettings: null,
+            halfSettings: null,
+            fullSettings: null,
+            expandedColor: null,
+            quality: null,
+            peekHorizontalMargin: null,
+            peekBottomMargin: null,
+            peekWidth: null,
+            peekTopBorderRadius: null,
+            platformViewBackdrop: true,
+            child: GlassModalSheetScaffold(
+              body: SizedBox.shrink(),
+              sheet: Text('Sheet body'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(find.byType(LiquidGlassBlendGroup), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpAndSettle();
+    });
+  });
+
+  group('GlassMorphTrigger', () {
+    // GlassMorphAnchor is an opaque token — no public members to drive — so
+    // these exercise the trigger the way a consumer does: present a sheet and
+    // watch what the trigger renders.
+    setUp(() => GlassModalSheet.debugMorphSupportsBlending = true);
+    tearDown(() => GlassModalSheet.debugMorphSupportsBlending = null);
+
+    const triggerKey = Key('trigger-content');
+
+    Future<GlassMorphAnchor> pumpTrigger(WidgetTester tester) async {
+      late GlassMorphAnchor anchor;
+      await tester.pumpWidget(
+        _app(
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: GlassMorphTrigger(builder: (context, a) {
+              anchor = a;
+              return const SizedBox(key: triggerKey, width: 56, height: 56);
+            }),
+          ),
+        ),
+      );
+      await tester.pump();
+      return anchor;
+    }
+
+    double triggerOpacity(WidgetTester tester) => tester
+        .widget<Opacity>(
+          find
+              .ancestor(
+                of: find.byKey(triggerKey),
+                matching: find.byType(Opacity),
+              )
+              .first,
+        )
+        .opacity;
+
+    Future<void> present(WidgetTester tester, GlassMorphAnchor anchor) async {
+      GlassModalSheet.show<void>(
+        context: tester.element(find.byType(Align)),
+        builder: (_) => const Text('Sheet body'),
+        morphFrom: anchor,
+      );
+    }
+
+    testWidgets('hands the same anchor to its builder across rebuilds',
+        (tester) async {
+      final seen = <GlassMorphAnchor>[];
+      await tester.pumpWidget(
+        _app(GlassMorphTrigger(builder: (context, anchor) {
+          seen.add(anchor);
+          return const SizedBox(width: 56, height: 56);
+        })),
+      );
+      await tester.pump();
+
+      expect(seen, isNotEmpty);
+      expect(seen.every((a) => identical(a, seen.first)), isTrue);
+    });
+
+    testWidgets('paints nothing while presented, and is restored after',
+        (tester) async {
+      final anchor = await pumpTrigger(tester);
+      expect(triggerOpacity(tester), 1.0);
+
+      await present(tester, anchor);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      // Toggled outright, never animated — a partial fade would pop the glass.
+      expect(triggerOpacity(tester), 0.0);
+
+      await tester.pumpAndSettle();
+      expect(triggerOpacity(tester), 0.0, reason: 'still presented');
+
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pumpAndSettle();
+      expect(triggerOpacity(tester), 1.0);
+    });
+
+    testWidgets('keeps bouncing after the presented route is gone',
+        (tester) async {
+      // The whole point of the trigger owning a ticker: the route is torn down
+      // as soon as the droplet lands, so a bounce driven from there would be
+      // truncated mid-swing and the button would snap home.
+      final anchor = await pumpTrigger(tester);
+      final resting = tester.getTopLeft(find.byKey(triggerKey));
+
+      await present(tester, anchor);
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pump();
+
+      var routeGone = false;
+      var maxOffsetAfterRouteGone = 0.0;
+      for (var elapsed = 0; elapsed < 1200; elapsed += 16) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (find.byType(GlassSheetMorphPresenter).evaluate().isEmpty) {
+          routeGone = true;
+          final dy =
+              (tester.getTopLeft(find.byKey(triggerKey)).dy - resting.dy).abs();
+          if (dy > maxOffsetAfterRouteGone) maxOffsetAfterRouteGone = dy;
+        }
+      }
+
+      expect(routeGone, isTrue, reason: 'route never popped');
+      expect(maxOffsetAfterRouteGone, greaterThan(0.5),
+          reason: 'trigger was not still bouncing once the route had gone');
+
+      // ...and it eases back to exactly where it started.
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.byKey(triggerKey)).dy,
+        moreOrLessEquals(resting.dy, epsilon: 0.5),
+      );
+    });
+
+    testWidgets('does not rebuild the consumer subtree during the bounce',
+        (tester) async {
+      // The bounce repaints the trigger every frame; building the consumer's
+      // widget inside the AnimatedBuilder callback would rebuild their whole
+      // subtree at 60fps along with it.
+      var builds = 0;
+      late GlassMorphAnchor anchor;
+      await tester.pumpWidget(
+        _app(
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: GlassMorphTrigger(builder: (context, a) {
+              anchor = a;
+              builds++;
+              return const SizedBox(key: triggerKey, width: 56, height: 56);
+            }),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await present(tester, anchor);
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pump();
+
+      final before = builds;
+      var frames = 0;
+      for (var elapsed = 0; elapsed < 1200; elapsed += 16) {
+        await tester.pump(const Duration(milliseconds: 16));
+        frames++;
+      }
+      await tester.pumpAndSettle();
+
+      // One rebuild when the bounce is handed over is expected; per-frame is
+      // the regression.
+      expect(builds - before, lessThanOrEqualTo(3),
+          reason: 'consumer rebuilt ${builds - before} times over $frames '
+              'frames — the trigger should be repainted, not rebuilt');
+    });
+
+    testWidgets('a fresh open cancels a bounce still in flight',
+        (tester) async {
+      // Tapping the button mid-bounce must not leave it stranded off-centre.
+      final anchor = await pumpTrigger(tester);
+      final resting = tester.getTopLeft(find.byKey(triggerKey));
+
+      await present(tester, anchor);
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pump();
+      // Far enough in that the route is gone and the bounce is running.
+      for (var elapsed = 0; elapsed < 450; elapsed += 16) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
+      await present(tester, anchor);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(tester.getTopLeft(find.byKey(triggerKey)), resting);
+
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a swipe-down dismissal still hands the trigger back',
+        (tester) async {
+      // A dragged dismissal skips the closing morph, so nothing hands the
+      // trigger back mid-flight — the presenter restores it as it is disposed.
+      // Without that the button would stay invisible for good.
+      final anchor = await pumpTrigger(tester);
+      await present(tester, anchor);
+      await tester.pumpAndSettle();
+      expect(triggerOpacity(tester), 0.0);
+
+      // Throw the sheet down from its handle zone.
+      final drag = await tester.startGesture(const Offset(200, 420));
+      await drag.moveBy(const Offset(0, 260));
+      await tester.pump();
+      await drag.moveBy(const Offset(0, 160));
+      await tester.pump();
+      await drag.up();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassSheetMorphPresenter), findsNothing);
+      expect(triggerOpacity(tester), 1.0);
+    });
+
+    testWidgets('survives its trigger being unmounted while presented',
+        (tester) async {
+      // The presenter restores the anchor from dispose as a safety net; that
+      // must not touch a trigger that has already gone away.
+      final anchor = await pumpTrigger(tester);
+      await present(tester, anchor);
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(_app(const SizedBox.shrink()));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('an anchor whose trigger has gone falls back to the slide',
+        (tester) async {
+      final anchor = await pumpTrigger(tester);
+      // Trigger unmounted — its rect can no longer be resolved.
+      await tester.pumpWidget(_app(const SizedBox.shrink()));
+      await tester.pump();
+
+      expect(
+        () => GlassModalSheet.show<void>(
+          context: tester.element(find.byType(SizedBox)),
+          builder: (_) => const Text('Sheet body'),
+          morphFrom: anchor,
+        ),
+        throwsAssertionError,
+      );
+    });
+  });
+
+  group('GlassModalSheet.show morph arguments', () {
+    testWidgets('rejects both an anchor and a rect', (tester) async {
+      late GlassMorphAnchor anchor;
+      await tester.pumpWidget(
+        _app(GlassMorphTrigger(builder: (context, a) {
+          anchor = a;
+          return const SizedBox(width: 56, height: 56);
+        })),
+      );
+      await tester.pump();
+      final context = tester.element(find.byType(GlassMorphTrigger));
+
+      expect(
+        () => GlassModalSheet.show<void>(
+          context: context,
+          builder: (_) => const Text('Sheet'),
+          morphFrom: anchor,
+          morphFromRect: const Rect.fromLTWH(0, 0, 10, 10),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('without a trigger the slide transition is unchanged',
+        (tester) async {
+      await tester.pumpWidget(_app(const SizedBox.shrink()));
+      final context = tester.element(find.byType(SizedBox));
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(SlideTransition), findsWidgets);
+
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet body'), findsOneWidget);
+    });
+
+    testWidgets('falls back to the slide when blending is unavailable',
+        (tester) async {
+      // Headless test runs report ImageFilter.isShaderFilterSupported == false,
+      // which is exactly the Skia/web path: the metaball neck cannot be drawn,
+      // so the sheet must present with its ordinary slide rather than a
+      // degraded morph.
+      late GlassMorphAnchor anchor;
+      await tester.pumpWidget(
+        _app(GlassMorphTrigger(builder: (context, a) {
+          anchor = a;
+          return const SizedBox(width: 56, height: 56);
+        })),
+      );
+      final context = tester.element(find.byType(Scaffold));
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+        morphFrom: anchor,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(SlideTransition), findsWidgets);
+      expect(find.byType(GlassSheetMorphPresenter), findsNothing);
+
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet body'), findsOneWidget);
+    });
+
+    testWidgets('an explicit rect takes the same fallback path',
+        (tester) async {
+      await tester.pumpWidget(_app(const SizedBox.shrink()));
+      final context = tester.element(find.byType(SizedBox));
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+        morphFromRect: const Rect.fromLTWH(172, 700, 56, 56),
+        morphSpeed: MorphSpeed.fast,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sheet body'), findsOneWidget);
+    });
+    testWidgets('minimal quality falls back even with blending forced',
+        (tester) async {
+      GlassModalSheet.debugMorphSupportsBlending = true;
+      addTearDown(() => GlassModalSheet.debugMorphSupportsBlending = null);
+
+      await tester.pumpWidget(_app(const SizedBox.shrink()));
+      final context = tester.element(find.byType(SizedBox));
+
+      GlassModalSheet.show<void>(
+        context: context,
+        quality: GlassQuality.minimal,
+        builder: (_) => const Text('Sheet body'),
+        morphFromRect: const Rect.fromLTWH(172, 700, 56, 56),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassSheetMorphPresenter), findsNothing);
+      expect(find.byType(SlideTransition), findsWidgets);
+    });
+
+    testWidgets('platformViewBackdrop falls back even with blending forced',
+        (tester) async {
+      GlassModalSheet.debugMorphSupportsBlending = true;
+      addTearDown(() => GlassModalSheet.debugMorphSupportsBlending = null);
+
+      await tester.pumpWidget(_app(const SizedBox.shrink()));
+      final context = tester.element(find.byType(SizedBox));
+
+      GlassModalSheet.show<void>(
+        context: context,
+        platformViewBackdrop: true,
+        builder: (_) => const Text('Sheet body'),
+        morphFromRect: const Rect.fromLTWH(172, 700, 56, 56),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlassSheetMorphPresenter), findsNothing);
+    });
+  });
+
+  group('GlassModalSheet.show with the morph route', () {
+    setUp(() => GlassModalSheet.debugMorphSupportsBlending = true);
+    tearDown(() => GlassModalSheet.debugMorphSupportsBlending = null);
+
+    /// Pumps an app whose body is a 56pt trigger wrapped in a
+    /// [GlassMorphTrigger], and hands back its anchor.
+    Future<GlassMorphAnchor> pumpTrigger(WidgetTester tester) async {
+      late GlassMorphAnchor anchor;
+      await tester.pumpWidget(
+        _app(
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: GlassMorphTrigger(builder: (context, a) {
+              anchor = a;
+              return const SizedBox(
+                key: Key('trigger-content'),
+                width: 56,
+                height: 56,
+              );
+            }),
+          ),
+        ),
+      );
+      return anchor;
+    }
+
+    /// The context to present from — the trigger's own subtree is fine.
+    BuildContext contextOf(WidgetTester tester) =>
+        tester.element(find.byType(Align));
+
+    /// Whether the trigger is currently painting. The anchor is opaque, so the
+    /// rendered opacity is what a consumer would see.
+    bool triggerPainted(WidgetTester tester) =>
+        tester
+            .widget<Opacity>(
+              find
+                  .ancestor(
+                    of: find.byKey(const Key('trigger-content')),
+                    matching: find.byType(Opacity),
+                  )
+                  .first,
+            )
+            .opacity >
+        0.0;
+
+    testWidgets('presents through the morph instead of the slide',
+        (tester) async {
+      final anchor = await pumpTrigger(tester);
+      final context = contextOf(tester);
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+        morphFrom: anchor,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(find.byType(GlassSheetMorphPresenter), findsOneWidget);
+      // The slide is the thing being replaced, so the route must not have
+      // wrapped the page in one.
+      expect(
+        find.ancestor(
+          of: find.byType(GlassSheetMorphPresenter),
+          matching: find.byType(SlideTransition),
+        ),
+        findsNothing,
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet body'), findsOneWidget);
+    });
+
+    testWidgets('empties the trigger for the whole morph, then hands it back',
+        (tester) async {
+      final anchor = await pumpTrigger(tester);
+      final context = contextOf(tester);
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+        morphFrom: anchor,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // Emptied before the first morph frame paints, so the real button and
+      // the anchor blob standing in for it are never both on screen.
+      expect(triggerPainted(tester), isFalse);
+
+      await tester.pumpAndSettle();
+      expect(triggerPainted(tester), isFalse, reason: 'still presented');
+
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pumpAndSettle();
+
+      // Handed back once the droplet has been caught.
+      expect(triggerPainted(tester), isTrue);
+    });
+
+    testWidgets('an explicit rect blooms instead of duplicating the trigger',
+        (tester) async {
+      // With no anchor the trigger stays painted, so drawing the anchor blob
+      // over it would read as two buttons. It is suppressed and the droplet
+      // blooms from the rect's centre instead.
+      await tester.pumpWidget(_app(const SizedBox.shrink()));
+      final context = tester.element(find.byType(SizedBox));
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+        morphFromRect: const Rect.fromLTWH(172, 700, 56, 56),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      final presenter = tester.widget<GlassSheetMorphPresenter>(
+        find.byType(GlassSheetMorphPresenter),
+      );
+      expect(presenter.anchor, isNull);
+      // One blob, not two: the anchor blob is the one that would duplicate.
+      // Scoped to the droplet's blend group so the sheet's own glass — mounted
+      // underneath for the whole morph — isn't counted.
+      expect(
+        find.descendant(
+          of: find.byType(LiquidGlassBlendGroup),
+          matching: find.byType(AdaptiveGlass),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet body'), findsOneWidget);
+    });
+
+    testWidgets('an anchored morph draws both blobs so the neck can form',
+        (tester) async {
+      final anchor = await pumpTrigger(tester);
+      final context = contextOf(tester);
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+        morphFrom: anchor,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // Anchor blob + travelling droplet — the metaball bridges exactly these.
+      expect(
+        find.descendant(
+          of: find.byType(LiquidGlassBlendGroup),
+          matching: find.byType(AdaptiveGlass),
+        ),
+        findsNWidgets(2),
+      );
+
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('hides the droplet once the trigger has caught it',
+        (tester) async {
+      // The droplet and the restored trigger must never be on screen together
+      // — that is the duplicated-button artifact the anchor exists to avoid,
+      // and it reappears at the tail of the close if the overlay isn't hidden
+      // at the handoff latch. GlassMenu gates its overlay at the same point.
+      final anchor = await pumpTrigger(tester);
+      final context = contextOf(tester);
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+        morphFrom: anchor,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pump();
+
+      // Step through the close and assert the invariant on every frame.
+      var sawBothHidden = false;
+      for (var elapsed = 0; elapsed < 380; elapsed += 16) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (find.byType(GlassSheetMorphPresenter).evaluate().isEmpty) break;
+
+        final dropletOpacity = tester
+            .widgetList<Opacity>(
+              find.ancestor(
+                of: find.byType(AdaptiveLiquidGlassLayer),
+                matching: find.byType(Opacity),
+              ),
+            )
+            .first
+            .opacity;
+
+        if (triggerPainted(tester)) {
+          // Trigger is back — the droplet must be gone.
+          expect(dropletOpacity, 0.0,
+              reason: 'droplet still painted after the trigger returned');
+          sawBothHidden = true;
+        }
+      }
+
+      expect(sawBothHidden, isTrue, reason: 'never observed the handoff');
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a barrier tap morphs back and then pops the route',
+        (tester) async {
+      final anchor = await pumpTrigger(tester);
+      final context = contextOf(tester);
+
+      GlassModalSheet.show<void>(
+        context: context,
+        builder: (_) => const Text('Sheet body'),
+        morphFrom: anchor,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet body'), findsOneWidget);
+
+      // Tap well above the half detent — that is the dismiss barrier.
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // Still mounted: the route stays up for the whole closing morph.
+      expect(find.byType(GlassSheetMorphPresenter), findsOneWidget);
+      expect(
+        tester.widget<Visibility>(find.byType(Visibility).first).visible,
+        isFalse,
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.byType(GlassSheetMorphPresenter), findsNothing);
+      expect(find.text('Sheet body'), findsNothing);
+    });
+
+    testWidgets('every speed profile keeps the page up for its morph',
+        (tester) async {
+      // Each must outlast its spring's full settle (968 / 696 / 544 / 352 ms),
+      // not just the moment the droplet is caught — the trigger's closing
+      // bounce is driven by this route and snaps if it unmounts mid-swing.
+      // Sized to the droplet's trip home (408 / 304 / 240 / 160 ms), not the
+      // spring's full settle — the barrier must not outlive the morph and
+      // leave the restored trigger dead to the touch. The bounce's tail runs
+      // on GlassMorphTrigger's own ticker afterwards.
+      const expected = <MorphSpeed, int>{
+        MorphSpeed.slow: 480,
+        MorphSpeed.normal: 380,
+        MorphSpeed.fast: 300,
+        MorphSpeed.instant: 210,
+      };
+
+      for (final entry in expected.entries) {
+        final anchor = await pumpTrigger(tester);
+        final context = contextOf(tester);
+
+        GlassModalSheet.show<void>(
+          context: context,
+          builder: (_) => const Text('Sheet body'),
+          morphFrom: anchor,
+          morphSpeed: entry.key,
+        );
+        await tester.pump();
+
+        final route = ModalRoute.of(
+          tester.element(find.byType(GlassSheetMorphPresenter)),
+        )!;
+        expect(
+          route.transitionDuration,
+          Duration(milliseconds: entry.value),
+          reason: 'for ${entry.key}',
+        );
+
+        await tester.pumpAndSettle();
+        Navigator.of(
+          tester.element(find.byType(GlassSheetMorphPresenter)),
+        ).pop();
+        await tester.pumpAndSettle();
+      }
+    });
+  });
+}
