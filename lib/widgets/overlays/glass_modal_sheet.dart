@@ -1,22 +1,28 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../../theme/glass_theme.dart';
 import '../../types/glass_quality.dart';
+import '../../utils/glass_morph_controller.dart';
+import '../../utils/liquid_morph_physics.dart';
 import '../shared/adaptive_glass.dart';
+import '../shared/adaptive_liquid_glass_layer.dart';
 import '../../src/renderer/internal/interaction_notification.dart';
 import '../../src/widgets/overlays/glass_sheet_defaults.dart';
 import '../../constants/glass_defaults.dart';
 
 part 'shared/glass_modal_sheet_mechanics.dart';
 part 'shared/glass_modal_sheet_internal.dart';
+part 'shared/glass_modal_sheet_morph.dart';
 part 'shared/glass_modal_sheet_state.dart';
 
 /// A high-fidelity, liquid glass modal sheet inspired by iOS 18+ design patterns.
@@ -288,6 +294,54 @@ class GlassModalSheet extends StatefulWidget {
             '(small alone is a floor, not a resting height).');
 
   /// Shows a high-fidelity glass modal sheet.
+  ///
+  /// ## Morphing from a trigger
+  ///
+  /// Wrap the trigger in a [GlassMorphTrigger] and hand its [GlassMorphAnchor]
+  /// to [morphFrom] to present the sheet with the iOS 26 liquid morph instead
+  /// of the default slide-up: the trigger empties, a glass droplet detaches and
+  /// inflates as it travels, and lands as the sheet. Dismissing reverses it
+  /// back into the trigger. This is the same [GlassMorphController] engine
+  /// `GlassMenu` uses — see `docs/LIQUID_MORPH_ENGINE.md`.
+  ///
+  /// ```dart
+  /// GlassMorphTrigger(
+  ///   builder: (context, anchor) => GlassButton(
+  ///     onTap: () => GlassModalSheet.show(
+  ///       context: context,
+  ///       morphFrom: anchor,
+  ///       builder: (context) => const MySheetBody(),
+  ///     ),
+  ///     child: const Icon(CupertinoIcons.add),
+  ///   ),
+  /// )
+  /// ```
+  ///
+  /// The wrapper is what makes the trigger *empty*: nothing in Flutter lets one
+  /// widget hide another it doesn't own, and a trigger still painting under the
+  /// droplet reads as a duplicated button rather than a morph.
+  ///
+  /// [morphFromRect] is the escape hatch for a trigger that can't be wrapped —
+  /// an explicit global [Rect]. The morph still runs, but since the trigger
+  /// stays painted the anchor blob is suppressed and the droplet blooms from
+  /// the rect's centre instead of stretching a teardrop out of it. Pass at most
+  /// one of [morphFrom] / [morphFromRect].
+  ///
+  /// Leave both null and the sheet presents exactly as it always has — the
+  /// slide transition is untouched. [morphSpeed] tunes the spring profile; the
+  /// default [MorphSpeed.normal] is the 375 ms native-parity profile.
+  ///
+  /// The morph needs the metaball blend that draws the teardrop neck, so it
+  /// falls back to the slide transition when that is unavailable: on Skia/web
+  /// (`ImageFilter.isShaderFilterSupported == false`), in
+  /// [GlassQuality.minimal], and under [platformViewBackdrop]. Reduce Motion is
+  /// honoured by the engine, which swaps in its instant spring so the sheet
+  /// resolves straight away instead of travelling.
+  ///
+  /// A dismissal that leaves the sheet at rest — barrier tap, back gesture,
+  /// [GlassModalSheetController] close — morphs back into the trigger. A
+  /// swipe-down dismissal keeps the sheet's own slide-away instead, so the
+  /// sheet follows the finger it was thrown with.
   static Future<T?> show<T>({
     required BuildContext context,
     required WidgetBuilder builder,
@@ -345,7 +399,14 @@ class GlassModalSheet extends StatefulWidget {
     double? peekWidth,
     double? peekTopBorderRadius,
     double? peekBottomRadius,
+    GlassMorphAnchor? morphFrom,
+    Rect? morphFromRect,
+    MorphSpeed morphSpeed = MorphSpeed.normal,
   }) {
+    assert(
+        morphFrom == null || morphFromRect == null,
+        'Pass either morphFrom (the GlassMorphAnchor from a GlassMorphTrigger) '
+        'or morphFromRect (an explicit global rect) — not both.');
     assert(
         detents.isNotEmpty,
         'GlassModalSheet.show() needs at least one detent — add medium '
@@ -376,14 +437,37 @@ class GlassModalSheet extends StatefulWidget {
     final effectiveController = controller ?? GlassModalSheetController();
     bool isClosing = false;
 
+    // Resolved once, before the route is pushed: the trigger's rect has to be
+    // read while the trigger is still laid out, and the render capabilities
+    // decide which transition the route is built with in the first place.
+    final morphTriggerRect = _resolveMorphTriggerRect(morphFrom, morphFromRect);
+    final morphing = morphTriggerRect != null &&
+        _supportsMorph(
+          context,
+          quality: quality,
+          platformViewBackdrop: platformViewBackdrop,
+        );
+
+    // The morph owns its own spring clock; the route duration only has to be
+    // long enough to keep the page mounted (and the barrier fading) for as long
+    // as the morph runs — most visibly on the way out, where the route reverse
+    // is the window the closing morph plays in.
+    final transitionDuration = morphing
+        ? _morphRouteDuration(morphSpeed)
+        : const Duration(milliseconds: 500);
+
     return showGeneralDialog<T>(
       context: context,
       barrierDismissible: isDismissible,
       barrierLabel: 'Dismiss',
       barrierColor: barrierColor,
       useRootNavigator: useRootNavigator,
-      transitionDuration: const Duration(milliseconds: 500),
+      transitionDuration: transitionDuration,
       transitionBuilder: (context, animation, secondaryAnimation, child) {
+        // Morphing: the droplet IS the transition. Mapping the engine onto this
+        // linear route animation would flatten the J-curve and the underdamped
+        // catch, so the page passes straight through.
+        if (morphing) return child;
         return SlideTransition(
           position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
               .animate(
@@ -393,7 +477,7 @@ class GlassModalSheet extends StatefulWidget {
         );
       },
       pageBuilder: (context, animation, secondaryAnimation) {
-        return GlassModalSheetScaffold(
+        final scaffold = GlassModalSheetScaffold(
           controller: effectiveController,
           halfSize: halfSize,
           fullSize: fullSize,
@@ -451,8 +535,144 @@ class GlassModalSheet extends StatefulWidget {
           body: const SizedBox.shrink(),
           sheet: builder(context),
         );
+
+        if (!morphing) return scaffold;
+
+        return GlassSheetMorphPresenter(
+          routeAnimation: animation,
+          triggerRect: morphTriggerRect,
+          anchor: morphFrom,
+          speed: morphSpeed,
+          restingState: resolvedInitialState,
+          // Built from the same inputs as the sheet's own _buildGeometry, so
+          // the droplet aims at the detent the sheet will actually rest at.
+          geometry: SheetGeometry(
+            mode: mode,
+            halfSize: halfSize,
+            fullSize: fullSize,
+            peekSize: peekSize,
+            enablePeek: SheetGeometry.resolvePeek(
+              enablePeek: enablePeek,
+              detents: detents,
+              mode: mode,
+            ),
+            enableHalf: detents.contains(GlassSheetDetent.medium),
+            enableFull: detents.contains(GlassSheetDetent.large),
+            dismissible: dismissible,
+          ),
+          horizontalMargin: horizontalMargin,
+          bottomMargin: bottomMargin,
+          topBorderRadius: topBorderRadius,
+          fullTopBorderRadius: fullTopBorderRadius,
+          bottomBorderRadius: bottomBorderRadius,
+          fullBottomBorderRadius: fullBottomBorderRadius,
+          settings: settings,
+          peekSettings: peekSettings,
+          halfSettings: halfSettings,
+          fullSettings: fullSettings,
+          expandedColor: expandedColor,
+          quality: quality,
+          peekHorizontalMargin: peekHorizontalMargin,
+          peekBottomMargin: peekBottomMargin,
+          peekWidth: peekWidth,
+          peekTopBorderRadius: peekTopBorderRadius,
+          platformViewBackdrop: platformViewBackdrop,
+          child: scaffold,
+        );
       },
     );
+  }
+
+  /// Resolves the trigger's global rect from whichever of [morphFrom] /
+  /// [morphFromRect] the caller supplied, or null when neither was given.
+  ///
+  /// An anchor whose trigger isn't laid out is a caller mistake, so it asserts
+  /// in debug; in release it degrades to the slide transition rather than
+  /// morphing out of a rect that doesn't exist.
+  static Rect? _resolveMorphTriggerRect(
+    GlassMorphAnchor? morphFrom,
+    Rect? morphFromRect,
+  ) {
+    if (morphFromRect != null) return morphFromRect;
+    if (morphFrom == null) return null;
+
+    final rect = morphFrom._rect;
+    assert(
+        rect != null,
+        'GlassModalSheet.show(morphFrom:) needs a GlassMorphAnchor whose '
+        'GlassMorphTrigger is mounted and laid out. It was not on screen when '
+        'show() was called — pass morphFromRect if the trigger has no render '
+        'box of its own.');
+    return rect;
+  }
+
+  /// Whether the current render path can draw the morph.
+  ///
+  /// The teardrop neck is an Impeller-only SDF metaball blend, and a degraded
+  /// morph — two glass shapes with no bridge between them — reads worse than
+  /// the slide it replaces. So anything that suppresses blending falls back
+  /// wholesale: Skia/web, [GlassQuality.minimal], and the BackdropFilter path
+  /// forced by [platformViewBackdrop] (both of which skip the
+  /// [LiquidGlassBlendGroup] entirely — see #214).
+  static bool _supportsMorph(
+    BuildContext context, {
+    required GlassQuality? quality,
+    required bool platformViewBackdrop,
+  }) {
+    if (platformViewBackdrop) return false;
+    final resolved = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: quality,
+      fallback: GlassQuality.premium,
+    );
+    if (resolved == GlassQuality.minimal) return false;
+    return debugMorphSupportsBlending ?? ImageFilter.isShaderFilterSupported;
+  }
+
+  /// Test-only override for the Impeller probe in [_supportsMorph].
+  ///
+  /// A headless test run reports `ImageFilter.isShaderFilterSupported == false`
+  /// — correctly, since there is no Impeller — which makes the morph path
+  /// unreachable from a widget test and would leave the route wiring untested.
+  /// Set this to `true` to exercise it, and back to `null` in a `tearDown`.
+  ///
+  /// It stands in for the render-capability probe only; [platformViewBackdrop]
+  /// and [GlassQuality.minimal] still disable the morph, so those fallbacks
+  /// stay honest under the override.
+  @visibleForTesting
+  static bool? debugMorphSupportsBlending;
+
+  /// Route transition duration that covers a morph at [speed].
+  ///
+  /// Sized to the droplet's journey — the moment it is caught by the trigger —
+  /// and no longer. The route's modal barrier swallows every touch while it is
+  /// mounted, so holding it open for the spring's full settle would leave the
+  /// trigger visibly back but dead to the touch for a few hundred milliseconds.
+  /// `GlassMenu` drops its own barrier 30 % into the close for the same reason.
+  ///
+  /// The tail of the bounce is not lost: [GlassMorphTrigger] continues the
+  /// spring on its own ticker once the droplet is handed back, so it keeps
+  /// easing home after this route is gone.
+  ///
+  /// Measured against the profiles in [GlassMorphController], with headroom:
+  ///
+  /// | speed   | droplet caught | route |
+  /// |---------|----------------|-------|
+  /// | slow    | 408 ms         | 480   |
+  /// | normal  | 304 ms         | 380   |
+  /// | fast    | 240 ms         | 300   |
+  /// | instant | 160 ms         | 210   |
+  static Duration _morphRouteDuration(MorphSpeed speed) {
+    switch (speed) {
+      case MorphSpeed.slow:
+        return const Duration(milliseconds: 480);
+      case MorphSpeed.normal:
+        return const Duration(milliseconds: 380);
+      case MorphSpeed.fast:
+        return const Duration(milliseconds: 300);
+      case MorphSpeed.instant:
+        return const Duration(milliseconds: 210);
+    }
   }
 
   @override

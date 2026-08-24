@@ -1,3 +1,13 @@
+# Unreleased
+
+## Features
+
+- **`GlassModalSheet` morphs from a trigger button (#216):** `show()` gains `morphFrom` — the `GlassMorphAnchor` from a new `GlassMorphTrigger` wrapper — presenting the sheet with the iOS 26 liquid morph instead of the slide-up: the trigger empties, a glass droplet detaches and inflates as it travels, and lands as the sheet. Makes the sheet the second consumer of the Liquid Morph Engine after `GlassMenu`. `morphSpeed` tunes the spring.
+- **`GlassMorphTrigger` / `GlassMorphAnchor` added:** the wrapper owns the trigger's key *and* its opacity, so the trigger can empty itself for the morph and take the closing bounce on its own ticker. A `GlobalKey` cannot hide a widget it doesn't own, and a trigger still painting under the droplet reads as a duplicated button. `morphFromRect` remains for triggers that can't be wrapped, blooming from a point.
+- **Slide presentation untouched:** leave `morphFrom` / `morphFromRect` null and nothing changes. The morph falls back to the slide wherever the metaball blend is unavailable — Skia/web, `GlassQuality.minimal`, `platformViewBackdrop` — and Reduce Motion resolves it through the engine's instant spring.
+
+---
+
 # 0.30.2
 
 ## Bug Fixes

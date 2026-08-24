@@ -106,6 +106,8 @@ export 'widgets/overlays/glass_modal_sheet.dart'
         GlassSheetDetent, // the `detents` set on GlassModalSheet / .show()
         GlassFillTransition,
         GlassModalSheetController,
+        GlassMorphTrigger, // wraps a trigger a sheet morphs out of
+        GlassMorphAnchor, // the token GlassMorphTrigger hands its builder
         GlassModalSheetScaffold, // used directly for maps-style hit-through layouts
         GlassModalSheetStateProvider, // read sheet state from descendants
         SheetStateInfo, // value type from GlassModalSheetStateProvider.of()
