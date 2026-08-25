@@ -537,7 +537,6 @@ class GlassModalSheet extends StatefulWidget {
             fullSize: fullSize,
             peekSize: peekSize,
             enablePeek: SheetGeometry.resolvePeek(
-              enablePeek: enablePeek,
               detents: detents,
               mode: mode,
             ),
