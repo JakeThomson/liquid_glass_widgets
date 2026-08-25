@@ -730,7 +730,9 @@ class _PinnedActionsCapsule extends StatelessWidget {
       final fromItem = slot.fromItem;
       final toItem = slot.toItem;
 
-      if (fromItem != null && (crossFades || toItem == null)) {
+      // A cross-fade side at exactly zero opacity is not built at all, so a
+      // settled bar holds no invisible leftovers from the previous route.
+      if (fromItem != null && ((crossFades && q < 1.0) || toItem == null)) {
         children.add(_ClusterChild(
           slot: i,
           isFrom: true,
@@ -738,7 +740,7 @@ class _PinnedActionsCapsule extends StatelessWidget {
           child: _ClusterItem(item: fromItem, enabled: false),
         ));
       }
-      if (toItem != null) {
+      if (toItem != null && (!crossFades || q > 0.0)) {
         children.add(_ClusterChild(
           slot: i,
           isFrom: false,
