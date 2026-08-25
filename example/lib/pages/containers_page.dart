@@ -16,11 +16,7 @@ class ContainersPage extends StatelessWidget {
           ? GlassStatusBarStyle.light
           : GlassStatusBarStyle.dark,
       child: GlassScaffold(
-        appBar: GlassAppBar(
-          // Back button pins above the Navigator via GlassNavigationShell,
-          // and renders in-route when no shell is installed.
-          pinnedActions: const [],
-        ),
+        appBar: const GlassAppBar.pinned(),
         body: Material(
           type: MaterialType.transparency,
           child: GlassScrollEdgeEffect(

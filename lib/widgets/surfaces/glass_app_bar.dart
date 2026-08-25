@@ -86,11 +86,16 @@ import 'shared/glass_nav_pinned_host.dart' show GlassNavPinnedMetrics;
 /// [Scaffold.appBar] and [CupertinoPageScaffold.navigationBar].
 class GlassAppBar extends StatelessWidget
     implements ObstructingPreferredSizeWidget {
-  /// Creates a glass app bar.
+  /// Creates a glass app bar with widget-based [leading] and [actions].
   ///
   /// The bar itself is a simple layout container with a [backgroundColor].
   /// Glass effects are rendered by individual child widgets (e.g. [GlassButton])
   /// inside the bar — not by the bar surface.
+  ///
+  /// A bar built this way never participates in navigation pinning: its
+  /// widgets live in the route and slide with the page. Use
+  /// [GlassAppBar.pinned] for the iOS 26 behaviour where the back button and
+  /// actions stay put across route transitions.
   const GlassAppBar({
     super.key,
     this.title,
@@ -104,15 +109,46 @@ class GlassAppBar extends StatelessWidget
     this.buttonSettings,
     this.largeTitleController,
     this.bottom,
-    this.pinnedActions,
-    this.pinnedBackButton = true,
+  })  : pinnedActions = null,
+        pinnedBackButton = true,
+        onBack = null;
+
+  /// Creates a glass app bar whose chrome pins above the [Navigator].
+  ///
+  /// Inside a [GlassNavigationShell], the automatic back button and the
+  /// [actions] capsule stay put while the page slides during push and pop,
+  /// morphing in place into the next route's items — the iOS 26 navigation
+  /// bar behaviour. Without a shell (or where the effect cannot render) the
+  /// same items render inside this bar, so screens work either way.
+  ///
+  /// [actions] are declared as data ([GlassBarItem]), mirroring
+  /// `UIBarButtonItem` — there is no widget-based `leading`/`actions` in this
+  /// mode, because arbitrary widgets cannot be hoisted to the shell. Items
+  /// sharing an id across routes morph as the same item; see
+  /// [GlassBarItem.icon].
+  ///
+  /// The back button appears whenever the route can be popped and never on a
+  /// root route. Set [backButton] to false to suppress it, and [onBack] to
+  /// replace the default `Navigator.maybePop()` — for example with
+  /// go_router's `context.pop()`.
+  const GlassAppBar.pinned({
+    super.key,
+    this.title,
+    List<GlassBarItem> actions = const [],
+    bool backButton = true,
     this.onBack,
-  }) : assert(
-          pinnedActions == null || actions == null,
-          'Use either pinnedActions (declared as data, hoisted to the '
-          'GlassNavigationShell) or actions (plain widgets rendered in this '
-          'bar) — not both.',
-        );
+    this.centerTitle = true,
+    // Whitelisted: Structural transparent default, not a Material colour.
+    this.backgroundColor = const Color(0x00000000),
+    this.toolbarHeight = 44.0,
+    this.padding = const EdgeInsets.symmetric(horizontal: 8),
+    this.buttonSettings,
+    this.largeTitleController,
+    this.bottom,
+  })  : pinnedActions = actions,
+        pinnedBackButton = backButton,
+        leading = null,
+        actions = null;
 
   // ===========================================================================
   // Properties
@@ -150,30 +186,27 @@ class GlassAppBar extends StatelessWidget
   /// When non-null, [preferredSize] is `toolbarHeight + bottom.preferredSize.height`.
   final PreferredSizeWidget? bottom;
 
-  /// Trailing bar items declared as data, so they can be pinned above the
-  /// [Navigator] by an enclosing [GlassNavigationShell].
+  /// Trailing bar items declared as data, pinned above the [Navigator] by an
+  /// enclosing [GlassNavigationShell].
   ///
-  /// When a shell is present these items stay put during push and pop while
-  /// the page slides beneath them, and morph in place into the next route's
-  /// items — the iOS 26 navigation bar behaviour. Without a shell they render
-  /// inside this bar as a normal glass capsule, so screens work either way.
-  ///
-  /// An **empty list** and **null** mean different things. `const []` opts the
-  /// screen into pinning with no trailing items — the pinned back button still
-  /// applies, and a route pushed on top morphs its items in against this one.
-  /// `null` opts the screen out entirely, and the pinned chrome retreats while
-  /// this screen covers it, as it does for any non-participating route.
-  ///
-  /// Mutually exclusive with [actions].
+  /// Set by [GlassAppBar.pinned] (its `actions` parameter, defaulting to
+  /// empty) and always null for the widget-based constructor — the
+  /// constructor choice is what decides whether the bar participates in
+  /// pinning. When a shell is present these items stay put during push and
+  /// pop while the page slides beneath them, morphing in place into the next
+  /// route's items; without a shell they render inside this bar as a normal
+  /// glass capsule.
   final List<GlassBarItem>? pinnedActions;
 
-  /// Whether to show the pinned back button when the route can be popped.
+  /// Whether a [GlassAppBar.pinned] bar shows the automatic back button when
+  /// the route can be popped.
   ///
-  /// Only applies alongside [pinnedActions]. The button is never shown on a
-  /// root route, matching [ModalRoute.impliesAppBarDismissal].
+  /// The button is never shown on a root route, matching
+  /// [ModalRoute.impliesAppBarDismissal].
   final bool pinnedBackButton;
 
-  /// Overrides the back button's action.
+  /// Overrides the automatic back button's action on a [GlassAppBar.pinned]
+  /// bar.
   ///
   /// Defaults to `Navigator.maybePop`, which routers built on the Pages API
   /// (go_router, auto_route, beamer) handle correctly. Supply this to use a

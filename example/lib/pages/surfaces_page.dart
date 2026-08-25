@@ -15,11 +15,7 @@ class SurfacesPage extends StatelessWidget {
           ? GlassStatusBarStyle.light
           : GlassStatusBarStyle.dark,
       child: GlassScaffold(
-        appBar: GlassAppBar(
-          // Back button pins above the Navigator via GlassNavigationShell,
-          // and renders in-route when no shell is installed.
-          pinnedActions: const [],
-        ),
+        appBar: const GlassAppBar.pinned(),
         body: GlassScrollEdgeEffect(
           topFadeHeight: MediaQuery.paddingOf(context).top + 44 + 40,
           fadeBottom: false,

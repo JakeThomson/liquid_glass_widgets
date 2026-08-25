@@ -50,9 +50,7 @@ class NavBarPatternsDemo extends StatelessWidget {
       background: const ShowcaseBackground(),
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
-      appBar: GlassAppBar(
-        pinnedActions: const [],
-      ),
+      appBar: const GlassAppBar.pinned(),
       body: CustomScrollView(
         slivers: [
           // Top spacer for app bar area
@@ -345,7 +343,7 @@ class _InlineTitleDemo extends StatelessWidget {
       background: const ShowcaseBackground(),
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.pinned(
         title: Text(
           'Inline Title',
           style: TextStyle(
@@ -354,7 +352,7 @@ class _InlineTitleDemo extends StatelessWidget {
             color: CupertinoColors.label.resolveFrom(context),
           ),
         ),
-        pinnedActions: [
+        actions: [
           GlassBarItem.icon(
             icon: const Icon(CupertinoIcons.ellipsis),
             label: 'More',
@@ -404,7 +402,7 @@ class _LargeTitleCollapseDemoState extends State<_LargeTitleCollapseDemo> {
       background: const ShowcaseBackground(),
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.pinned(
         // Bar title fades in automatically as the large title scrolls away.
         title: Text(
           'Chats',
@@ -415,7 +413,7 @@ class _LargeTitleCollapseDemoState extends State<_LargeTitleCollapseDemo> {
           ),
         ),
         largeTitleController: _titleController,
-        pinnedActions: [
+        actions: [
           GlassBarItem.icon(
             icon: const Icon(CupertinoIcons.camera),
             label: 'Camera',
@@ -465,7 +463,7 @@ class _SolidBackgroundDemo extends StatelessWidget {
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
       edgeFade: false,
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.pinned(
         backgroundColor:
             isDark ? const Color(0xFF1F2C34) : const Color(0xFFE8EDF0),
         title: Text(
@@ -477,7 +475,7 @@ class _SolidBackgroundDemo extends StatelessWidget {
           ),
         ),
         centerTitle: false,
-        pinnedActions: [
+        actions: [
           GlassBarItem.icon(
             icon: const Icon(CupertinoIcons.videocam),
             label: 'Video call',
@@ -518,9 +516,7 @@ class _FadeOnlyDemo extends StatelessWidget {
       background: const ShowcaseBackground(),
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
-      appBar: GlassAppBar(
-        pinnedActions: const [],
-      ),
+      appBar: const GlassAppBar.pinned(),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -595,7 +591,7 @@ class _TabBarBottomFadeDemoState extends State<_TabBarBottomFadeDemo> {
           ),
         ],
       ),
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.pinned(
         title: Text(
           'Settings',
           style: TextStyle(
@@ -604,7 +600,6 @@ class _TabBarBottomFadeDemoState extends State<_TabBarBottomFadeDemo> {
             color: CupertinoColors.label.resolveFrom(context),
           ),
         ),
-        pinnedActions: const [],
       ),
       body: CustomScrollView(
         slivers: [
@@ -763,7 +758,7 @@ class _LargeTitleSearchDemoState extends State<_LargeTitleSearchDemo> {
       background: const ShowcaseBackground(),
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.pinned(
         // Bar title fades in automatically in Phase 1.
         title: Text(
           'Messages',
@@ -774,7 +769,7 @@ class _LargeTitleSearchDemoState extends State<_LargeTitleSearchDemo> {
           ),
         ),
         largeTitleController: _titleController,
-        pinnedActions: [
+        actions: [
           GlassBarItem.icon(
             icon: const Icon(CupertinoIcons.pencil),
             label: 'Compose',
@@ -833,6 +828,8 @@ class _TitleCenteringDemoState extends State<_TitleCenteringDemo> {
       background: const ShowcaseBackground(),
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
+      // Deliberately the widget-based constructor: this demo verifies
+      // asymmetric leading/trailing layout (#198), which needs real widgets.
       appBar: GlassAppBar(
         centerTitle: _centered,
         title: const Text('Title Centering'),
@@ -1120,7 +1117,7 @@ class _NestedNavDemo extends StatelessWidget {
       background: const ShowcaseBackground(),
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.pinned(
         title: Text(
           _titles[depth],
           style: TextStyle(
@@ -1129,7 +1126,7 @@ class _NestedNavDemo extends StatelessWidget {
             color: CupertinoColors.label.resolveFrom(context),
           ),
         ),
-        pinnedActions: _actionsFor(depth),
+        actions: _actionsFor(depth),
       ),
       body: CustomScrollView(
         slivers: [
