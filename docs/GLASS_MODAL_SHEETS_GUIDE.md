@@ -20,6 +20,9 @@ Settings for the primary content and the sheet's basic behavior.
 | `isDismissible` | `bool` | `true` | (In `show`) Controls `barrierDismissible`. If `true`, the `Scaffold` background triggers `snapToState(SheetState.hidden)`. |
 | `useRootNavigator` | `bool` | `false` | (In `show`) If true, pushes the modal onto the top-level `Navigator`, bypassing local navigation stacks. |
 | `barrierLabel` | `String` | `'Dismiss'` | Accessibility label for the modal barrier. |
+| `morphFrom` | `GlassMorphAnchor?` | `null` | (In `show`) Presents by morphing out of a `GlassMorphTrigger` instead of sliding up. The anchor both locates the trigger and empties it for the duration. |
+| `morphFromRect` | `Rect?` | `null` | (In `show`) For triggers that can't be wrapped — an explicit global rect. The trigger stays painted, so the anchor blob is suppressed and the droplet blooms from the rect's centre. Mutually exclusive with `morphFrom`. |
+| `morphSpeed` | `MorphSpeed` | `normal` | (In `show`) Spring profile for the morph. `normal` is the 375 ms iOS 26 native-parity profile. Also sizes the route transition so the page stays mounted for the whole morph. |
 
 ---
 
@@ -92,6 +95,37 @@ This is where you configure the physical shape-shifting "Apple Maps" effect.
 | `peekBottomRadius` | `double?` | `null` | Specific bottom radius for Peek. Morphs to `bottomBorderRadius`. |
 | `fullTopBorderRadius` | `double?` | `46.0` | Target radius for `full` state. Usually smaller than `adaptive` for a tighter look. |
 | `fullBottomBorderRadius`| `double?` | `null` | Target bottom radius for `full`. Defaults to `bottomBorderRadius` if null. |
+
+### Morphing from a Trigger (Liquid Morph Engine)
+
+`GlassModalSheet.show(morphFrom:)` swaps the slide-up entrance for the iOS 26 `glassEffectID` morph: the trigger empties, a glass droplet detaches and inflates along a J-curve, and lands exactly on the sheet's resting frame. Dismissing reverses it.
+
+Wrap the trigger in a `GlassMorphTrigger` and hand its anchor to `show()`:
+
+```dart
+GlassMorphTrigger(
+  builder: (context, anchor) => GlassButton(
+    onTap: () => GlassModalSheet.show(
+      context: context,
+      morphFrom: anchor,
+      builder: (context) => const MySheetBody(),
+    ),
+    child: const Icon(CupertinoIcons.add),
+  ),
+)
+```
+
+Everything after the morph is unchanged — detents, drag, snap, and the controller all behave exactly as they do for a slide-presented sheet. Only the presentation differs.
+
+**Why the wrapper.** A `GlobalKey` can locate the trigger but not hide it, and nothing in Flutter lets one widget hide another it doesn't own. A trigger that keeps painting while the droplet inflates on top of it reads as a duplicated button rather than a morph — so `GlassMorphTrigger` owns the key *and* the opacity. The child paints nothing while the sheet is presented, and is restored the instant the droplet is caught, displaced by the spring's closing momentum so it visibly takes the hit. Use `morphFromRect` when the trigger can't be wrapped: the morph still runs, but the anchor blob is suppressed and the droplet blooms from the rect's centre instead of stretching a teardrop out of it.
+
+**What it lands on.** The droplet aims at the *initial detent's* resting frame, resolved through `SheetGeometry.positionForState` — the same call the sheet's own render metrics use — and takes on that detent's surface, so a glass `medium` sheet hands off to glass and an opaque `large` sheet hands off to colour. At the settled instant the droplet and the sheet occupy the identical frame, and the real sheet (mounted underneath the whole time, never inserted late) takes over.
+
+**Which dismissals morph back.** A dismissal that leaves the sheet at rest — barrier tap, back gesture, `controller.snapToState(hidden)` — morphs back into the trigger. A swipe-down keeps the sheet's own slide-away instead, so it follows the finger it was thrown with rather than snapping back to its resting frame first.
+
+**When it falls back.** The teardrop neck is an Impeller-only SDF metaball blend, and a morph without it — two glass shapes and no bridge — reads worse than the slide it replaces. So the sheet presents with its ordinary `SlideTransition` on Skia/web (`ImageFilter.isShaderFilterSupported == false`), in `GlassQuality.minimal`, and under `platformViewBackdrop`. Reduce Motion is handled by the engine itself, which swaps in its instant spring.
+
+Leave `morphFrom` / `morphFromRect` null and nothing about the presentation changes.
 
 ---
 
