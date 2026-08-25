@@ -216,6 +216,15 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
   late AnimationController _whitenBoostCtrl;
   double _whitenTarget = 0.0;
 
+  // Appear/disappear scale for the search pill — 1 present, 0 gone. Only
+  // moves when [GlassSearchBarConfig.showPill] changes: the pill grows and
+  // shrinks IN PLACE at its slot, on the same spring as the pill morphs,
+  // rather than width-morphing in from the trailing edge.
+  late AnimationController _pillScaleCtrl;
+
+  /// Whether the search pill exists — see [GlassSearchBarConfig.showPill].
+  bool get _pillShown => widget.searchConfig.showPill;
+
   // D1: hoisted — avoids allocating a new _MergedListenable on every LayoutBuilder call.
   late Listenable _searchPillListenable;
 
@@ -256,8 +265,17 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
     );
     _whitenBoostCtrl = AnimationController(vsync: this)
       ..addListener(_onWhitenTick);
+    // Starts settled — a pill that should be absent right now was never on
+    // screen to animate away.
+    _pillScaleCtrl = AnimationController(
+      vsync: this,
+      lowerBound: double.negativeInfinity,
+      upperBound: double.infinity,
+      value: _pillShown ? 1.0 : 0.0,
+    );
     // D1: create once — the controllers never change after initState.
-    _searchPillListenable = Listenable.merge([_searchLeftCtrl, _searchWCtrl]);
+    _searchPillListenable =
+        Listenable.merge([_searchLeftCtrl, _searchWCtrl, _pillScaleCtrl]);
     widget.scrollController?.addListener(_onScrollMaybeWhiten);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _onScrollMaybeWhiten();
@@ -291,6 +309,16 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
       wasActive: old.isSearchActive,
       isActive: widget.isSearchActive,
     );
+    // Spring the pill's appear/disappear scale when its presence changes.
+    if (old.searchConfig.showPill != _pillShown) {
+      _pillScaleCtrl.animateWith(
+        SearchableBottomBarController.makeSpring(
+          spring: widget.springDescription ?? TabBarSearchableLayout._kSpring,
+          from: _pillScaleCtrl.value,
+          to: _pillShown ? 1.0 : 0.0,
+        ),
+      );
+    }
   }
 
   @override
@@ -298,6 +326,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
     _tabWCtrl.dispose();
     _searchLeftCtrl.dispose();
     _searchWCtrl.dispose();
+    _pillScaleCtrl.dispose();
     widget.scrollController?.removeListener(_onScrollMaybeWhiten);
     _whitenBoostCtrl.dispose();
     _controller.removeListener(_onControllerChanged);
@@ -426,6 +455,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                   keyboardH: keyboardH,
                   tabCount: widget.tabs.length,
                   perTabWidth: widget.tabWidth,
+                  showPill: widget.searchConfig.showPill,
                 );
 
                 final targetTabW = layout.targetTabW;
@@ -443,9 +473,11 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                 final targetDismissReserve = layout.dismissReserve;
                 final centeredTab =
                     widget.tabPillAnchor == GlassTabPillAnchor.center;
+                // Mirrors computeLayout — an absent pill reserves nothing.
                 final maxTabW = totalW -
-                    targetH -
-                    widget.spacing -
+                    (widget.searchConfig.showPill
+                        ? targetH + widget.spacing
+                        : 0.0) -
                     (extraFullW > 0 &&
                             extraPos == GlassExtraButtonPosition.beforeSearch
                         ? extraFullW + widget.spacing
@@ -521,10 +553,26 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // 1. Search pill — D1: rebuilt only when position/width tick.
+                      // 1. Search pill — D1: rebuilt only when position/width
+                      //    (or the appear/disappear scale) tick.
+                      //
+                      // A pill with `showPill: false` that has finished
+                      // disappearing (or never appeared) is UNMOUNTED rather
+                      // than shrunk or faded: a glass shape left anywhere in
+                      // the blend layer fuses with the tab pill's trailing
+                      // edge even at zero width, and opacity cannot hide a
+                      // grouped surface (the layer paints it, not the child).
+                      // Appearing, the pill spring-scales in place at its
+                      // slot; overlapping the still-morphing tab pill on the
+                      // shared layer is what produces the liquid pinch-off.
                       ListenableBuilder(
                         listenable: _searchPillListenable,
                         builder: (context, _) {
+                          final pillScale =
+                              _pillScaleCtrl.value.clamp(0.0, 1.25).toDouble();
+                          if (pillScale < 0.02) {
+                            return const SizedBox.shrink();
+                          }
                           final curSearchLeft = (_controller.pillsInitialized
                                   ? _searchLeftCtrl.value
                                   : targetSearchLeft)
@@ -538,36 +586,43 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                             bottom: floatY,
                             width: math.max(0.01, curSearchW),
                             height: animH,
-                            child: SearchPill(
-                              config: widget.searchConfig,
-                              isActive: searching,
-                              barBorderRadius: widget.barBorderRadius,
-                              quality: effectiveQuality,
-                              platformViewBackdrop: widget.platformViewBackdrop,
-                              enableBackgroundAnimation:
-                                  widget.interactionBehavior.hasScale,
-                              backgroundPressScale: widget.pressScale,
-                              iconColor: resolvedUnselectedIconColor,
-                              interactionGlowColor:
-                                  widget.interactionBehavior.hasGlow
-                                      ? effectiveInteractionGlowColor
-                                      : const Color(0x00000000),
-                              interactionGlowRadius:
-                                  widget.interactionGlowRadius,
-                              interactionGlowBlurRadius:
-                                  effectiveGlowBlurRadius,
-                              interactionGlowSpreadRadius:
-                                  effectiveGlowSpreadRadius,
-                              interactionGlowOpacity: effectiveGlowOpacity,
-                              onFocusChanged: (focused) {
-                                if (focused) {
-                                  _controller.onFocusChanged(true);
-                                } else {
-                                  _onFocusLost();
-                                }
-                                widget.searchConfig.onSearchFocusChanged
-                                    ?.call(focused);
-                              },
+                            child: IgnorePointer(
+                              ignoring: !_pillShown,
+                              child: Transform.scale(
+                                scale: pillScale,
+                                child: SearchPill(
+                                  config: widget.searchConfig,
+                                  isActive: searching,
+                                  barBorderRadius: widget.barBorderRadius,
+                                  quality: effectiveQuality,
+                                  platformViewBackdrop:
+                                      widget.platformViewBackdrop,
+                                  enableBackgroundAnimation:
+                                      widget.interactionBehavior.hasScale,
+                                  backgroundPressScale: widget.pressScale,
+                                  iconColor: resolvedUnselectedIconColor,
+                                  interactionGlowColor:
+                                      widget.interactionBehavior.hasGlow
+                                          ? effectiveInteractionGlowColor
+                                          : const Color(0x00000000),
+                                  interactionGlowRadius:
+                                      widget.interactionGlowRadius,
+                                  interactionGlowBlurRadius:
+                                      effectiveGlowBlurRadius,
+                                  interactionGlowSpreadRadius:
+                                      effectiveGlowSpreadRadius,
+                                  interactionGlowOpacity: effectiveGlowOpacity,
+                                  onFocusChanged: (focused) {
+                                    if (focused) {
+                                      _controller.onFocusChanged(true);
+                                    } else {
+                                      _onFocusLost();
+                                    }
+                                    widget.searchConfig.onSearchFocusChanged
+                                        ?.call(focused);
+                                  },
+                                ),
+                              ),
                             ),
                           );
                         },

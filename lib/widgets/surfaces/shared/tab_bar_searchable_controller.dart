@@ -308,6 +308,12 @@ class SearchableBottomBarController extends ChangeNotifier {
   ///                           null means the tab pill fills all available space.
   /// [tabCount]             — number of tabs; used with [perTabWidth] to compute
   ///                           natural pill width.
+  /// [showPill]             — whether the search pill exists. An absent pill
+  ///                           stops reserving tab-pill width; its own
+  ///                           position/size targets stay unchanged either
+  ///                           way, because hiding is the layout's job (the
+  ///                           pill is unmounted and scaled in place), never
+  ///                           a zero-width morph.
   SearchablePillLayout computeLayout({
     required double totalW,
     required bool searching,
@@ -326,6 +332,7 @@ class SearchableBottomBarController extends ChangeNotifier {
     required double keyboardH,
     required int tabCount,
     required double? perTabWidth,
+    bool showPill = true,
   }) {
     final targetH = searching ? searchBarHeight : barHeight;
 
@@ -361,8 +368,9 @@ class SearchableBottomBarController extends ChangeNotifier {
 
     // maxTabW: maximum space the tab pill can ever occupy (when fully expanded).
     // Uses FULL (non-collapsed) extra widths for stability across states.
-    final maxTabW =
-        totalW - targetCompactW - spacing - extraFullWLeft - extraFullWRight;
+    // An absent pill reserves nothing — the tab pill takes the whole bar.
+    final pillReserve = showPill ? targetCompactW + spacing : 0.0;
+    final maxTabW = totalW - pillReserve - extraFullWLeft - extraFullWRight;
 
     // naturalTabW: intrinsic width when perTabWidth is specified.
     // Delegates to the shared resolveTabPillWidth function, which is also
