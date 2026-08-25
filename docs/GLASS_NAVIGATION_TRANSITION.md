@@ -120,7 +120,6 @@ with identifier-matched items morphing at each push:
 
 ```bash
 cd example
-flutter run                                                # full showcase
-flutter run -t lib/demos/nav_bar_patterns_demo.dart        # nav patterns
-flutter run -t lib/demos/nav_transition_gorouter_demo.dart # go_router proof
+flutter run                                         # full showcase
+flutter run -t lib/demos/nav_bar_patterns_demo.dart # nav patterns
 ```
