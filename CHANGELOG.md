@@ -6,10 +6,15 @@ This release marks the **1.0.0 General Availability** of `liquid_glass_widgets`,
 
 ### New Features
 
-- **`GlassTabBar.minimizable()` — SwiftUI `tabBarMinimizeBehavior` parity (#218):** A new named constructor that collapses the tab bar to a single selected-tab circle without requiring a search bar. `minimized` replaces `isSearchActive`, `onMinimizedTabTap` handles the restore tap, `minimizedBarHeight` shrinks both pills while minimized, and an optional `GlassTabBarTrailingButton` fills the trailing slot — exactly modelling `Tab(role: .search)` priority-visibility behaviour. Scroll-driven minimize is caller-controlled, matching the SwiftUI `.onScrollDown` pattern.
-- **`GlassSearchBarConfig.showPill` (#218):** A new boolean on `GlassSearchBarConfig` (default `true`) that removes the search pill entirely and returns its width to the tab pill. Hiding is done by unmounting the pill and spring-scaling it at its slot — `Opacity` and zero-width leave a glass remnant fused to the tab pill on the shared blend layer; only absence can hide a grouped glass surface.
-- **`GlassModalSheet` morphs from a trigger button (#216):** `show()` gains `morphFrom` — the `GlassMorphAnchor` from a new `GlassMorphTrigger` wrapper — presenting the sheet with the iOS 26 liquid morph instead of the slide-up: the trigger empties, a glass droplet detaches and inflates as it travels, and lands as the sheet. Makes the sheet the second consumer of the Liquid Morph Engine after `GlassMenu`. `morphSpeed` tunes the spring.
-- **`GlassMorphTrigger` / `GlassMorphAnchor` (#216):** The wrapper owns the trigger's key and opacity so the trigger can empty itself for the morph and take the closing bounce on its own ticker. `morphFromRect` remains for triggers that can't be wrapped, blooming from a point. The morph degrades gracefully to the slide presentation on Skia/web, `GlassQuality.minimal`, and `platformViewBackdrop`.
+- **`GlassTabBar.minimizable()` — SwiftUI `tabBarMinimizeBehavior` parity (#217):** A new named constructor that collapses the tab bar to a single selected-tab circle without requiring a search bar. `minimized` replaces `isSearchActive`, `onMinimizedTabTap` handles the restore tap, `minimizedBarHeight` shrinks both pills while minimized, and an optional `GlassTabBarTrailingButton` fills the trailing slot — exactly modelling `Tab(role: .search)` priority-visibility behaviour. Scroll-driven minimize is caller-controlled, matching the SwiftUI `.onScrollDown` pattern.
+- **`GlassSearchBarConfig.showPill` (#217):** A new boolean on `GlassSearchBarConfig` (default `true`) that removes the search pill entirely and returns its width to the tab pill. Hiding is done by unmounting the pill and spring-scaling it at its slot — `Opacity` and zero-width leave a glass remnant fused to the tab pill on the shared blend layer; only absence can hide a grouped glass surface.
+
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#217).
+
+- **`GlassModalSheet` morphs from a trigger button (#219):** `show()` gains `morphFrom` — the `GlassMorphAnchor` from a new `GlassMorphTrigger` wrapper — presenting the sheet with the iOS 26 liquid morph instead of the slide-up: the trigger empties, a glass droplet detaches and inflates as it travels, and lands as the sheet. Makes the sheet the second consumer of the Liquid Morph Engine after `GlassMenu`. `morphSpeed` tunes the spring.
+- **`GlassMorphTrigger` / `GlassMorphAnchor` (#219):** The wrapper owns the trigger's key and opacity so the trigger can empty itself for the morph and take the closing bounce on its own ticker. `morphFromRect` remains for triggers that can't be wrapped, blooming from a point. The morph degrades gracefully to the slide presentation on Skia/web, `GlassQuality.minimal`, and `platformViewBackdrop`.
+
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#219).
 
 ### Breaking Changes & API Unification
 
