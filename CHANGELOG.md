@@ -1,3 +1,11 @@
+# Unreleased
+
+## New Features
+
+- **A swipe-dismissal morphs too (`GlassModalSheet`):** dragging a morphed sheet away used to skip the morph and slide the sheet off — the morph could only start from the sheet's resting frame, which a mid-swipe release would visibly jump from. It now starts from the released frame instead: below the lowest detent the sheet detaches from the bottom edge, follows the finger on both axes and shrinks uniformly with the vertical travel (scale falling linearly at 0.64 per *card height* dragged — measured off iOS 26 by cursor-tracking through iPhone Mirroring, and normalised by the card rather than the screen so a small panel shrinks faster than a tall sheet; the horizontal axis only translates), and the release hands that frame to the morph. The shrink pivots at the grabbed point carried down with the fall, so the content under the finger stays exactly under the finger until the card parks — and because the gain is below 1.0 per card height, the fall always outruns the shrink and the card's bottom edge can never lift into view. Both the fall and the shrink read off one rubber-banded travel value: direct manipulation to 0.48 of the card's height, then easing toward a 0.33 scale floor, so a long drag parks the card near the bottom rather than sliding it off while the finger is still moving. The sideways axis stays shut until the downward drag is under way (`kTouchSlop` past the detent), leaving a wobble on a resting sheet to its own stretch; once open, the card chases the finger sideways through a stiff critically-damped tracking spring — a fast sweep visibly trails and catches up when the finger slows, a slow drag reads as 1:1, matching the native capture — toward a positional target that is free while the card has room and pins at the screen edge with a few points of give (natively the leading edge overshoots by at most ~4pt); resistance follows where the card is, not how far the finger has travelled. A swipe released short of the dismiss threshold springs back to the detent at full size and centred. The shrink is scoped to morphed presentations — a sheet shown without `morphFrom` keeps its plain slide-away, matching how iOS splits its zoom transition from its sheet detents.
+
+---
+
 # 1.0.0
 
 ## Major Milestone: General Availability

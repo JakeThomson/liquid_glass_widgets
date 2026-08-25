@@ -394,6 +394,242 @@ class SheetMorphGeometry {
     return peekHorizontalMargin ?? horizontalMargin;
   }
 
+  /// Rate the swipe-to-dismiss shrink loses scale, per unit of the *card's own
+  /// height* dragged.
+  ///
+  /// Measured off iOS 26 by tracking the macOS cursor against the card through
+  /// iPhone Mirroring — the cursor is the finger, so the gain is measured
+  /// against what the hand actually did rather than inferred from the card's
+  /// motion. Fitting gain, knee and floor together over the whole gesture
+  /// reproduces the measured scale to an RMS error of 0.006.
+  ///
+  /// Card height, not screen height, is the normaliser: the same swipe
+  /// distance shrinks a small panel faster than a tall sheet (Maps' "Map
+  /// Modes" panel at 0.35 of the screen measures ~2.5x per screen height;
+  /// a medium sheet at 0.48 measures ~1.4x — both collapse to ~0.7 per card
+  /// height). A gain below 1.0 per card height is also what lets the shrink
+  /// pivot at the grabbed point without ever lifting the card's bottom edge
+  /// into view — see [dismissedRect].
+  static const double dismissScaleGain = 0.64;
+
+  /// Size the shrink asymptotes toward, and never reaches.
+  ///
+  /// iOS does not shrink linearly to nothing — past the knee it rubber-bands
+  /// toward a floor, so a long swipe stops making the card meaningfully
+  /// smaller. Fitted together with [dismissScaleGain]: the reference gesture
+  /// ended with the card parked at ~0.55 of its resting size and still
+  /// creeping toward this limit.
+  ///
+  /// Approached asymptotically by [dismissScale], so it is a limit rather than
+  /// a clamp — the card is always still moving a little, which is what keeps a
+  /// long drag feeling live rather than stuck.
+  static const double minDismissScale = 0.33;
+
+  /// The detent a swipe-to-dismiss drag falls away from.
+  ///
+  /// Mirrors the pivot `_calculateMetrics` drags from: the peek floor when
+  /// there is one, the half detent otherwise.
+  ///
+  /// Deliberately *not* [SheetGeometry.minState], which is
+  /// [GlassSheetState.hidden] for the common dismissible peek-less sheet —
+  /// hidden is the position a swipe drags the sheet *to*, and measuring travel
+  /// from it would read every drag as zero.
+  static GlassSheetState dismissPivotState(SheetGeometry geometry) =>
+      geometry.enablePeek ? GlassSheetState.peek : GlassSheetState.half;
+
+  /// How far the sheet has been dragged below its lowest detent, as a fraction
+  /// of screen height.
+  ///
+  /// The sheet's position is already a screen-height fraction, so the drag
+  /// distance is simply the gap between the two — no gesture plumbing needed,
+  /// and a drag that never leaves the detent reads as zero.
+  static double dismissTravel({
+    required double position,
+    required double minPosition,
+  }) =>
+      (minPosition - position).clamp(0.0, 1.0);
+
+  /// The travel the sheet actually renders at, given what the finger did.
+  ///
+  /// Both values are fractions of screen height — the sheet position's own
+  /// unit — while the damping itself works in fractions of the card's height
+  /// via [cardFraction] (the card's height over the screen's), because that is
+  /// the unit the native curve is expressed in: the knee and limit scale with
+  /// the card, exactly as [dismissScaleGain] does.
+  ///
+  /// Direct manipulation up to the knee, then rubber-banded: the card keeps
+  /// giving a little but stops meaningfully descending. Drag on and the card
+  /// is nearly still, which is the weight a long swipe should have — a card
+  /// that slid 1:1 forever would leave the screen while the finger was still
+  /// moving.
+  ///
+  /// Both the shrink and the fall read off this, so the card's size and its
+  /// position ease together and settle as one object rather than drifting apart.
+  ///
+  /// The sheet's own position keeps tracking the finger 1:1 underneath, so the
+  /// dismiss threshold is unaffected: the card can be visually parked and a
+  /// release still commits.
+  static double dampedDismissTravel(
+    double travel, {
+    required double cardFraction,
+  }) {
+    if (cardFraction <= 0.0) return 0.0;
+    final raw = (travel / cardFraction).clamp(0.0, _maxDismissTravel * 4);
+    final damped = raw <= _dismissTravelKnee
+        ? raw
+        : _dismissTravelKnee +
+            rubberBand(
+              raw - _dismissTravelKnee,
+              limit: _maxDismissTravel - _dismissTravelKnee,
+            );
+    return damped * cardFraction;
+  }
+
+  /// Uniform scale the sheet wears [travel] into a swipe-to-dismiss.
+  ///
+  /// Strictly linear in [dampedDismissTravel] — all of the easing lives in the
+  /// travel, so there is exactly one curve to reason about and the shrink can
+  /// never disagree with the fall. [cardFraction] is the card's height as a
+  /// fraction of the screen's, the normaliser the whole curve works in.
+  static double dismissScale(double travel, {required double cardFraction}) {
+    if (cardFraction <= 0.0) return 1.0;
+    return 1.0 -
+        dismissScaleGain *
+            (dampedDismissTravel(travel, cardFraction: cardFraction) /
+                cardFraction);
+  }
+
+  /// Travel at which the fall stops being 1:1 and starts easing, as a fraction
+  /// of the card's height.
+  ///
+  /// Fitted together with [dismissScaleGain] and [minDismissScale] over the
+  /// cursor-tracked reference gesture. Below the knee the response is
+  /// untouched, so every ordinary swipe is pure direct manipulation.
+  static const double _dismissTravelKnee = 0.48;
+
+  /// Travel the ease asymptotes toward (in card heights), derived so the card
+  /// lands on [minDismissScale] rather than being tuned separately.
+  static const double _maxDismissTravel =
+      (1.0 - minDismissScale) / dismissScaleGain;
+
+  /// iOS's rubber-band curve: direct at first, asymptotically stiffer.
+  ///
+  /// `f(x) = (1 - 1/(x·tension/limit + 1))·limit` — the same shape the platform
+  /// uses for over-scroll, and the progressive sibling of
+  /// [SheetGeometry.applyResistance], which the sheet already applies past its
+  /// detents but as a flat multiplier, so it cannot express "free at first,
+  /// heavier the further you go".
+  ///
+  /// [tension] is the slope at the origin, so the default of 1.0 starts as
+  /// true direct manipulation and only builds resistance as the offset grows.
+  /// iOS uses 0.55 for over-scroll, where the finger has already hit a wall and
+  /// should feel that immediately; a sheet being pushed sideways has not, and
+  /// damping its first pixels reads as lag rather than weight.
+  ///
+  /// The result never passes [limit], however far the finger travels.
+  static double rubberBand(
+    double offset, {
+    required double limit,
+    double tension = 1.0,
+  }) {
+    if (limit <= 0.0) return 0.0;
+    final magnitude = offset.abs();
+    final damped = (1.0 - 1.0 / (magnitude * tension / limit + 1.0)) * limit;
+    return offset.isNegative ? -damped : damped;
+  }
+
+  /// The sideways offset a card actually renders at, given what the finger did.
+  ///
+  /// Free travel until the card reaches the screen edge, then rubber-banded —
+  /// resistance is a function of *where the card is*, not of how far the finger
+  /// has moved. Grab a card sitting against the left edge and you can push it
+  /// most of the way across before it stiffens; pull it the other way and it
+  /// resists immediately, because there is nowhere left to go.
+  ///
+  /// Damping the finger's displacement instead makes every drag feel equally
+  /// gummy regardless of the room available, which reads as lag.
+  ///
+  /// The band is a hard pin, not a long tail: tracked across a native sweep,
+  /// the card's leading edge stops essentially *at* the screen edge — the
+  /// largest overshoot measured was ~4 pt on a 440 pt screen. So the limit is
+  /// a few points of give past the edge, and pushing harder just leans on it.
+  static double horizontalOffsetFor({
+    required double rawOffset,
+    required Rect cardRect,
+    required double screenWidth,
+  }) {
+    // Room before the card's leading edge meets the screen's.
+    final slack = rawOffset.isNegative
+        ? math.max(0.0, cardRect.left)
+        : math.max(0.0, screenWidth - cardRect.right);
+    final magnitude = rawOffset.abs();
+    if (magnitude <= slack) return rawOffset;
+
+    final past = rubberBand(magnitude - slack, limit: screenWidth * 0.04);
+    final damped = slack + past;
+    return rawOffset.isNegative ? -damped : damped;
+  }
+
+  /// The frame a sheet occupies mid-swipe, in global coordinates.
+  ///
+  /// The dismissed frame is [restingRect] carried down by the damped fall and
+  /// shrunk about the grabbed point. This is the morph's destination when a
+  /// swipe is what closed the sheet: the droplet has to start life on the
+  /// frame the sheet was actually wearing at the release, not the one it
+  /// rested at before the drag began.
+  ///
+  /// [horizontalOffset] only translates — it never feeds [dismissScale].
+  /// Measured off iOS 26: a 143 pt sideways sweep mid-dismissal moved the card
+  /// that far and changed its scale by 0.029, all of which the 43 px of
+  /// incidental vertical drift accounts for. Had the shrink tracked total drag
+  /// distance, the same sweep would have cost 0.374 of scale.
+  ///
+  /// [scaleAnchor] is the grabbed point, expressed in the *resting* card's
+  /// frame (the live finger position minus the raw fall). The shrink pivots
+  /// there, carried down with the damped fall — so below the damping knee the
+  /// grabbed content is exactly under the finger, which is the whole feel of
+  /// the gesture: iOS keeps the spot you grabbed pinned under the touch until
+  /// the card parks at the bottom. Omit it and the sheet shrinks about its own
+  /// centre.
+  ///
+  /// The card's bottom edge cannot lift into view under this pivot: with
+  /// [dismissScaleGain] below 1.0 per card height, the bottom loses height to
+  /// the shrink more slowly than the fall carries it down, whatever the grab
+  /// point. The clamp at the end guards that invariant against a future
+  /// retune (a gain above 1.0 per card height would break it), pinning the
+  /// bottom at its resting line rather than revealing it.
+  static Rect dismissedRect({
+    required Rect restingRect,
+    required double travel,
+    required double screenHeight,
+    double horizontalOffset = 0.0,
+    Offset? scaleAnchor,
+  }) {
+    final cardFraction =
+        screenHeight <= 0.0 ? 0.0 : restingRect.height / screenHeight;
+    final fall = Offset(
+      0.0,
+      dampedDismissTravel(travel, cardFraction: cardFraction) * screenHeight,
+    );
+    final fallen = restingRect.shift(fall);
+    final scale = dismissScale(travel, cardFraction: cardFraction);
+    final pivot = scaleAnchor == null
+        ? fallen.center
+        : scaleAnchor.translate(0.0, fall.dy);
+
+    final scaled = Rect.fromLTRB(
+      pivot.dx + (fallen.left - pivot.dx) * scale,
+      pivot.dy + (fallen.top - pivot.dy) * scale,
+      pivot.dx + (fallen.right - pivot.dx) * scale,
+      pivot.dy + (fallen.bottom - pivot.dy) * scale,
+    );
+    // Invariant guard — see the doc comment. Never active at the shipped gain.
+    final lift = restingRect.bottom - scaled.bottom;
+    final grounded = lift > 0.0 ? scaled.shift(Offset(0.0, lift)) : scaled;
+
+    return grounded.shift(Offset(horizontalOffset, 0.0));
+  }
+
   /// The frame of the travelling droplet (Blob B) for one morph frame.
   ///
   /// Size follows [LiquidMorphState.sizeT] and position follows
@@ -555,6 +791,7 @@ class GlassSheetMorphPresenter extends StatefulWidget {
     required this.anchor,
     required this.speed,
     required this.restingState,
+    required this.controller,
     required this.geometry,
     required this.horizontalMargin,
     required this.bottomMargin,
@@ -596,6 +833,11 @@ class GlassSheetMorphPresenter extends StatefulWidget {
 
   /// The detent the sheet comes to rest at — the morph's destination.
   final GlassSheetState restingState;
+
+  /// The sheet's controller, read once at a swipe-dismissal to learn the
+  /// position the finger let go at. Shared with the sheet itself, so both
+  /// sides of the handoff agree on where it was.
+  final GlassModalSheetController controller;
 
   /// Detent configuration, shared with the sheet so both resolve the same
   /// resting position.
@@ -680,16 +922,124 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
 
   /// Whether the pointer that is dismissing the sheet dragged it first.
   ///
-  /// A drag-dismiss throws the sheet down with the finger's own momentum and
-  /// releases it anywhere between detents; morphing back from the sheet's
-  /// *resting* frame at that point would visibly jump. So a dragged dismissal
-  /// keeps the sheet's native slide-away and skips the morph, while a barrier
-  /// tap, a back gesture, or a controller close — all of which leave the sheet
-  /// sitting at rest — morph back into the trigger.
+  /// A dragged dismissal releases the sheet mid-swipe — shrunk and moved from
+  /// where it rested — so the morph has to start from the frame the sheet was
+  /// actually wearing at the release. This flag selects that frame over
+  /// [SheetMorphGeometry.restingRect], which is still the right source for a
+  /// barrier tap, a back gesture, or a controller close, all of which leave
+  /// the sheet sitting at rest.
+  ///
+  /// It used to skip the morph outright, on the grounds that morphing from the
+  /// resting frame would jump. That was true, but the jump was the symptom —
+  /// iOS 26 morphs on a swipe too, from exactly where the finger let go.
   bool _draggedSincePointerDown = false;
+
+  /// The sheet's frame at the release that started a swipe-to-dismiss.
+  ///
+  /// Frozen once, at the catch, rather than tracked per frame: the sheet is
+  /// already springing toward hidden by the time the droplet takes over, so
+  /// reading it live would chase a sheet that is no longer the thing on
+  /// screen. Null for every dismissal that leaves the sheet at rest.
+  Rect? _dismissFrom;
 
   /// Where the active pointer went down, for the slop comparison above.
   Offset? _dragOrigin;
+
+  /// Pointer x at the instant the swipe first crossed below the pivot detent.
+  ///
+  /// The sideways axis only opens once the dismissal is under way, so the
+  /// offset is measured from here rather than from [_dragOrigin] — otherwise
+  /// whatever horizontal wander the finger had already accumulated would snap
+  /// in the moment the sheet started falling.
+  double? _horizontalAnchor;
+
+  /// Where the pointer went down, in screen coordinates.
+  ///
+  /// Supplies the *column* the shrink pivots on, so the spot under the touch
+  /// stays under the touch horizontally. The pivot's y comes from
+  /// [_lastPointer] instead — see [_restingAnchor].
+  Offset? _scaleAnchor;
+
+  /// The pointer's most recent position, updated on every move.
+  ///
+  /// The shrink's y-pivot is the finger itself, and the finger may have
+  /// travelled a long way from [_scaleAnchor] before the sheet ever left its
+  /// detent — a sheet grabbed at `full` is dragged through every detent before
+  /// the dismissal starts. Deriving the pivot from where the finger *is*
+  /// rather than where it went down keeps the grabbed content anchored no
+  /// matter where the gesture began.
+  Offset? _lastPointer;
+
+  /// Raw sideways displacement of the finger during a swipe-to-dismiss,
+  /// measured from [_horizontalAnchor].
+  ///
+  /// This is the *input* to the sideways motion, not the rendered offset —
+  /// the chase in [_horizontalOffset] pursues the damped version of it.
+  double _horizontalRaw = 0.0;
+
+  /// The rendered sideways offset, in pixels, chasing the damped finger
+  /// offset through [_trackingSpring].
+  ///
+  /// The card does not copy the finger's x directly — iOS drives it through a
+  /// spring, and that spring is most of the sideways feel. Tracked against a
+  /// native capture: during a fast sweep the card trails the finger by
+  /// ~10–15 % and then catches up (briefly even overtaking) the moment the
+  /// finger slows, while a slow drag reads as 1:1. No static response curve
+  /// can overshoot like that; a tracking spring does it for free. On release
+  /// the chase is simply retargeted to zero through the sheet's own snap
+  /// spring, carrying whatever velocity it had — so a card let go mid-fling
+  /// keeps its momentum, with no separate velocity bookkeeping.
+  ///
+  /// The physics are integrated by hand on [_horizontalTicker] rather than
+  /// through `AnimationController.animateWith`: `animateWith` restarts its
+  /// clock on every call, and a chase retargeted on every pointer move would
+  /// have its clock reset before ever ticking — the card freezes while the
+  /// finger moves and lurches when it hesitates. A ticker that never restarts
+  /// advances the spring every frame no matter how often the target changes.
+  double _horizontalOffset = 0.0;
+
+  /// The chase's current velocity, in pixels per second.
+  double _horizontalVelocity = 0.0;
+
+  /// Where the chase is currently headed: the damped finger offset while
+  /// dragging, zero after a release or when the axis closes.
+  double _horizontalTarget = 0.0;
+
+  /// The spring the chase is currently using — [_trackingSpring] while the
+  /// finger drives it, [_returnSpring] on the way home.
+  SpringDescription _horizontalSpringDesc = _trackingSpring;
+
+  /// Drives the chase: one persistent ticker, started when the chase has
+  /// somewhere to go and stopped when it has settled.
+  late final Ticker _horizontalTicker;
+
+  /// Elapsed time at the previous horizontal tick, for frame deltas.
+  Duration _horizontalLastTick = Duration.zero;
+
+  /// The chase spring: stiff and critically damped, so the lag is visible in
+  /// a fast sweep and gone in a slow one.
+  ///
+  /// Sized from the native capture — ~12–24 pt of trail at a ~535 pt/s sweep.
+  /// A critically damped spring tracking a ramp lags by 2·v/ω, so ω ≈ 45
+  /// (stiffness ≈ 2000) lands in that window.
+  static const SpringDescription _trackingSpring =
+      SpringDescription(mass: 1.0, stiffness: 2000.0, damping: 89.0);
+
+  /// The go-home spring: the sheet's own snap spring, used when the offset is
+  /// released (or the axis closes) and the card returns to centre.
+  static const SpringDescription _returnSpring =
+      SpringDescription(mass: 1.0, stiffness: 220.0, damping: 30.0);
+
+  /// The sheet's position notifier, once it has mounted and attached.
+  ///
+  /// The morph's own ticker is idle while a finger is dragging the sheet, so
+  /// without this the swipe-away transform would never repaint mid-gesture.
+  Listenable? _sheetProgress;
+
+  /// Whether the last [_onSheetProgress] frame was the identity transform, so
+  /// at-rest notifications — every ordinary detent drag and snap — can skip
+  /// their rebuild instead of re-rendering a transform that has not changed.
+  bool _wasAtRest = true;
 
   /// Whether the opening morph has been started. See [didChangeDependencies].
   bool _opened = false;
@@ -707,6 +1057,7 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     super.initState();
     _morph = GlassMorphController(vsync: this, speed: widget.speed);
     _morph.addListener(_onMorphTick);
+    _horizontalTicker = createTicker(_onHorizontalTick);
     widget.routeAnimation.addStatusListener(_onRouteStatus);
   }
 
@@ -719,6 +1070,10 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     // starts — otherwise the first presentation of every session animates at
     // full length with Reduce Motion on.
     _morph.setDisableAnimations(MediaQuery.of(context).disableAnimations);
+    // The sheet mounts as this presenter's child, so it has not attached to
+    // the controller yet on the first pass — bind once the frame is up, and
+    // re-check on morph ticks in case the sheet's state is ever rebuilt.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bindSheetProgress());
     if (!_opened) {
       _opened = true;
       // Empty the trigger before the first morph frame paints, so the button
@@ -733,6 +1088,8 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     widget.routeAnimation.removeStatusListener(_onRouteStatus);
     _morph.removeListener(_onMorphTick);
     _morph.dispose();
+    _horizontalTicker.dispose();
+    _sheetProgress?.removeListener(_onSheetProgress);
     // The route can be torn down without the closing morph ever running (a
     // Navigator reset, a hot restart). Leaving the trigger emptied would erase
     // a live button, so restoring here is the safety net.
@@ -740,8 +1097,32 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     super.dispose();
   }
 
+  void _bindSheetProgress() {
+    if (!mounted) return;
+    final progress = widget.controller.progressListenable;
+    if (identical(progress, _sheetProgress)) return;
+    _sheetProgress?.removeListener(_onSheetProgress);
+    _sheetProgress = progress;
+    _sheetProgress?.addListener(_onSheetProgress);
+  }
+
+  void _onSheetProgress() {
+    if (!mounted) return;
+    // The notifier fires for every sheet movement — ordinary detent drags and
+    // snaps included, where the swipe transform is identity and a rebuild
+    // renders nothing new. Skip those, but always paint the first at-rest
+    // frame after a swipe so the transform actually returns to identity.
+    final atRest = _dismissTravel() == 0.0 &&
+        !_horizontalTicker.isActive &&
+        _horizontalOffset.abs() < 0.05;
+    if (atRest && _wasAtRest) return;
+    _wasAtRest = atRest;
+    setState(() {});
+  }
+
   void _onMorphTick() {
     if (!mounted) return;
+    _bindSheetProgress();
     // Hand off to the real sheet only at the settled instant, when the droplet
     // and the sheet occupy the identical frame and nothing is moving — the one
     // moment a glass surface can be swapped without a glitch frame.
@@ -777,33 +1158,268 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
 
   void _onRouteStatus(AnimationStatus status) {
     if (status != AnimationStatus.reverse || _isClosing) return;
-    if (_draggedSincePointerDown) return; // the sheet slides itself away
     setState(() {
       _isClosing = true;
       _handedOffToSheet = false;
       _handedBackToTrigger = false;
+      // Safe to read the sheet's position here: the dismissal pops the route
+      // synchronously from `_snapToState`, before the spring toward hidden has
+      // ticked, so the controller still reports the release position.
+      _dismissFrom = _draggedSincePointerDown ? _releaseRect() : null;
     });
     _morph.close();
   }
 
+  /// The sheet's frame at the moment a swipe let go of it.
+  ///
+  /// Built from the same resting rect the droplet already aims at, shifted and
+  /// shrunk by the drag — so the sheet and the droplet cannot disagree about
+  /// where the sheet was, the same discipline [SheetMorphGeometry.restingRect]
+  /// keeps for the resting case.
+  Rect? _releaseRect() {
+    if (!mounted) return null;
+    final travel = _dismissTravel();
+    if (travel <= 0.0) return null;
+    final screenSize = MediaQuery.sizeOf(context);
+    return SheetMorphGeometry.dismissedRect(
+      restingRect: _pivotRect(screenSize),
+      travel: travel,
+      screenHeight: screenSize.height,
+      horizontalOffset: _horizontalOffset,
+      scaleAnchor: _restingAnchor(screenSize, travel),
+    );
+  }
+
+  /// How far the sheet has been dragged below the detent a swipe falls from.
+  ///
+  /// Zero until the sheet has mounted and attached itself to the controller —
+  /// an unattached controller has no position, and reading a missing one as
+  /// 0.0 would be indistinguishable from a sheet dragged all the way to
+  /// `hidden`, shrinking the sheet to the floor before it was ever touched.
+  double _dismissTravel() {
+    if (!mounted) return 0.0;
+    final position = widget.controller._livePosition;
+    if (position == null) return 0.0;
+    final height = MediaQuery.sizeOf(context).height;
+    return SheetMorphGeometry.dismissTravel(
+      position: position,
+      minPosition: widget.geometry.positionForState(
+        SheetMorphGeometry.dismissPivotState(widget.geometry),
+        height,
+      ),
+    );
+  }
+
+  /// The sheet's frame at the detent a swipe falls from.
+  ///
+  /// Below that detent the sheet renders at the pivot's size regardless of
+  /// which detent it was opened at, so a sheet swiped away from `full` is
+  /// already a half-sized (or peek-sized) card by the time it is falling.
+  Rect _pivotRect(Size screenSize) => _restingRect(
+        screenSize,
+        state: SheetMorphGeometry.dismissPivotState(widget.geometry),
+      );
+
+  /// Layers the swipe-away scale and sideways offset over the real sheet.
+  ///
+  /// The transform is *derived from* [SheetMorphGeometry.dismissedRect] rather
+  /// than re-stating its maths: the sheet inside [child] sits at the raw 1:1
+  /// fall, the geometry says which frame it should be wearing, and the matrix
+  /// is whatever uniform scale-and-translate maps one onto the other. The
+  /// rendered frame and the frame a release hands to the morph therefore
+  /// cannot disagree — they are the same computation.
+  Widget _dragTransform(Size screenSize, Widget child) {
+    final travel = _dismissTravel();
+    final pivotRect = _pivotRect(screenSize);
+    final cardFraction =
+        screenSize.height <= 0.0 ? 0.0 : pivotRect.height / screenSize.height;
+    final scale =
+        SheetMorphGeometry.dismissScale(travel, cardFraction: cardFraction);
+
+    // Where the sheet actually is: its own position tracks the finger 1:1.
+    final rawFallen = pivotRect.shift(Offset(0.0, travel * screenSize.height));
+    // Where it should be drawn. The sideways offset is the chase spring's live
+    // value — the damping curve was applied when the spring was targeted.
+    final target = SheetMorphGeometry.dismissedRect(
+      restingRect: pivotRect,
+      travel: travel,
+      screenHeight: screenSize.height,
+      horizontalOffset: _horizontalOffset,
+      scaleAnchor: _restingAnchor(screenSize, travel),
+    );
+
+    // Always this same single wrapper, identity when the sheet is at rest.
+    // Dropping it while idle would change the sheet's depth in the element
+    // tree, and Flutter answers a depth change by tearing the subtree down and
+    // rebuilding it — remounting every glass layer and re-seeding every spring
+    // inside the sheet, mid-gesture. (The Stack below keeps its slot count
+    // fixed for the same reason.)
+    return Transform(
+      transform: Matrix4.translationValues(
+        target.left - rawFallen.left * scale,
+        target.top - rawFallen.top * scale,
+        0.0,
+      )..scaleByDouble(scale, scale, 1.0, 1.0),
+      child: child,
+    );
+  }
+
   void _onPointerDown(PointerDownEvent event) {
     _dragOrigin = event.position;
+    _scaleAnchor = event.position;
+    _lastPointer = event.position;
     _draggedSincePointerDown = false;
+    _horizontalAnchor = null;
+    _horizontalRaw = 0.0;
+    // Deliberately NOT stopping the spring: a card grabbed mid-spring-back is
+    // still off centre, and zeroing the rendered offset here would snap it
+    // home in one frame. Left alone, the running return spring finishes the
+    // journey, and the next axis unlock re-anchors at zero anyway.
   }
+
+  /// Points the chase at [target], keeping whatever position and velocity it
+  /// currently has — the spring never jumps, it only changes its mind about
+  /// where it is going. The ticker keeps running through retargets, so the
+  /// chase advances every frame however often the finger moves.
+  void _retargetHorizontal(double target, SpringDescription spring) {
+    _horizontalTarget = target;
+    _horizontalSpringDesc = spring;
+    if (_horizontalTicker.isActive) return;
+    if ((_horizontalOffset - target).abs() < 0.01 &&
+        _horizontalVelocity.abs() < 0.01) {
+      return; // already there and parked — don't wake the ticker.
+    }
+    _horizontalLastTick = Duration.zero;
+    _horizontalTicker.start();
+  }
+
+  /// The card's frame at [travel], before any sideways offset — what the shrink
+  /// leaves on screen, and the thing the edge resistance measures against.
+  Rect _fallenCardRect(Size screenSize, double travel, Rect pivotRect) =>
+      SheetMorphGeometry.dismissedRect(
+        restingRect: pivotRect,
+        travel: travel,
+        screenHeight: screenSize.height,
+        scaleAnchor: _restingAnchor(screenSize, travel),
+      );
 
   void _onPointerMove(PointerMoveEvent event) {
     // Slop, not any movement at all: a tap on the dismiss barrier routinely
     // wobbles a pixel or two, and mistaking that for a drag would cost the
     // morph on the most common way of closing the sheet.
     final origin = _dragOrigin;
-    if (origin == null || _draggedSincePointerDown) return;
-    if ((event.position - origin).distance > kTouchSlop) {
+    if (origin == null) return;
+    if (!_draggedSincePointerDown &&
+        (event.position - origin).distance > kTouchSlop) {
       _draggedSincePointerDown = true;
     }
+    _lastPointer = event.position;
+    _trackHorizontal(event.position.dx);
+  }
+
+  /// The grabbed point, expressed in the resting card's frame — the anchor
+  /// [SheetMorphGeometry.dismissedRect] pivots the shrink on.
+  ///
+  /// The sheet tracks the finger 1:1 all the way down, so subtracting the raw
+  /// fall from the finger's live position recovers where the finger sits on
+  /// the *resting* card, wherever the gesture started.
+  Offset? _restingAnchor(Size screenSize, double travel) {
+    final grab = _scaleAnchor;
+    final pointer = _lastPointer;
+    if (grab == null || pointer == null) return null;
+    return Offset(grab.dx, pointer.dy - travel * screenSize.height);
+  }
+
+  /// Follows the finger sideways, but only while the sheet is actually falling.
+  ///
+  /// Above the pivot detent a horizontal drag belongs to the sheet's own
+  /// gestures (and to whatever the content does with it); it is only once the
+  /// sheet has left the detent — when it is already a shrinking card on its way
+  /// out — that iOS lets it be pushed around the screen.
+  void _trackHorizontal(double pointerX) {
+    final travel = _dismissTravel();
+    if (travel <= _horizontalUnlockTravel()) {
+      if (_horizontalAnchor == null) return;
+      // Back above the threshold: close the axis again and spring the sheet
+      // home, rather than stranding it off to one side.
+      _horizontalAnchor = null;
+      _horizontalRaw = 0.0;
+      _retargetHorizontal(0.0, _returnSpring);
+      return;
+    }
+    // Anchored at the moment the axis opens, not at pointer-down, so whatever
+    // sideways wander the finger did on the way here does not snap in.
+    final anchor = _horizontalAnchor ??= pointerX;
+    _horizontalRaw = pointerX - anchor;
+
+    // Chase the *damped* finger offset — free through the room the card has,
+    // pinned at the screen edge — through the tracking spring, which is where
+    // the sideways weight comes from.
+    final screenSize = MediaQuery.sizeOf(context);
+    final pivotRect = _pivotRect(screenSize);
+    _retargetHorizontal(
+      SheetMorphGeometry.horizontalOffsetFor(
+        rawOffset: _horizontalRaw,
+        cardRect: _fallenCardRect(screenSize, travel, pivotRect),
+        screenWidth: screenSize.width,
+      ),
+      _trackingSpring,
+    );
+  }
+
+  /// Downward travel required before the sideways axis opens at all.
+  ///
+  /// Until the dismiss drag is genuinely under way, sideways movement belongs
+  /// to the sheet's own jelly-follow stretch and nothing else — a horizontal
+  /// wobble on a resting sheet, or the first moments of a diagonal grab, must
+  /// not start sliding the card around the screen.
+  ///
+  /// [kTouchSlop] worth of screen height, so the bar is exactly the distance
+  /// the gesture system itself treats as "a drag has started" — one threshold
+  /// for the whole gesture rather than a second, invented one.
+  double _horizontalUnlockTravel() {
+    if (!mounted) return double.infinity;
+    final height = MediaQuery.sizeOf(context).height;
+    return height <= 0.0 ? double.infinity : kTouchSlop / height;
+  }
+
+  void _onHorizontalTick(Duration elapsed) {
+    if (!mounted) return;
+    final dt = (elapsed - _horizontalLastTick).inMicroseconds /
+        Duration.microsecondsPerSecond;
+    _horizontalLastTick = elapsed;
+    if (dt > 0.0) {
+      // One closed-form spring step from the current state toward wherever
+      // the target is right now.
+      final sim = SpringSimulation(
+        _horizontalSpringDesc,
+        _horizontalOffset,
+        _horizontalTarget,
+        _horizontalVelocity,
+      );
+      _horizontalOffset = sim.x(dt);
+      _horizontalVelocity = sim.dx(dt);
+    }
+    if ((_horizontalOffset - _horizontalTarget).abs() < 0.01 &&
+        _horizontalVelocity.abs() < 0.5) {
+      _horizontalOffset = _horizontalTarget;
+      _horizontalVelocity = 0.0;
+      _horizontalTicker.stop();
+    }
+    setState(() {});
   }
 
   void _onPointerRelease(PointerEvent event) {
     _dragOrigin = null;
+    _horizontalAnchor = null;
+    _horizontalRaw = 0.0;
+    // A dismissal freezes the released frame in `_onRouteStatus` and the route
+    // tears down moments later, so only an abandoned swipe needs the offset
+    // animated away. The chase is simply retargeted home through the sheet's
+    // own snap spring, keeping the position and velocity it already has — so
+    // the card returns to the detent along both axes at once and a fling's
+    // momentum carries into the spring-back.
+    _retargetHorizontal(0.0, _returnSpring);
     // Cleared after the frame, not during it: a drag that ends in a dismissal
     // pops the route synchronously from this same pointer-up, and the flag has
     // to still be set when [_onRouteStatus] reads it. By the next frame the
@@ -814,32 +1430,40 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     });
   }
 
+  /// The frame the sheet comes to rest in — the morph's destination whenever
+  /// the sheet was not mid-swipe when it closed.
+  Rect _restingRect(Size screenSize, {GlassSheetState? state}) {
+    final adaptiveRadius = GlassThemeHelpers.resolveAdaptiveRadius(context);
+    return SheetMorphGeometry.restingRect(
+      state: state ?? widget.restingState,
+      geometry: widget.geometry,
+      screenSize: screenSize,
+      horizontalMargin: widget.horizontalMargin,
+      bottomMargin: widget.bottomMargin,
+      bottomInset: MediaQuery.paddingOf(context).bottom,
+      bottomRadius: widget.bottomBorderRadius ?? adaptiveRadius,
+      peekHorizontalMargin: widget.peekHorizontalMargin,
+      peekBottomMargin: widget.peekBottomMargin,
+      peekWidth: widget.peekWidth,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.sizeOf(context);
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     final adaptiveRadius = GlassThemeHelpers.resolveAdaptiveRadius(context);
     final topRadiusBase = widget.topBorderRadius ?? adaptiveRadius;
     final bottomRadiusBase = widget.bottomBorderRadius ?? adaptiveRadius;
 
-    final destination = SheetMorphGeometry.restingRect(
-      state: widget.restingState,
-      geometry: widget.geometry,
-      screenSize: screenSize,
-      horizontalMargin: widget.horizontalMargin,
-      bottomMargin: widget.bottomMargin,
-      bottomInset: bottomInset,
-      bottomRadius: bottomRadiusBase,
-      peekHorizontalMargin: widget.peekHorizontalMargin,
-      peekBottomMargin: widget.peekBottomMargin,
-      peekWidth: widget.peekWidth,
-    );
+    // A swipe left the sheet somewhere other than its detent; every other way
+    // of closing left it at rest.
+    final destination = _dismissFrom ?? _restingRect(screenSize);
 
     // The real sheet stays mounted underneath for the whole morph so its
     // post-frame snap, glass layers and springs are already settled by the time
     // it is revealed; only painting and hit-testing are gated.
-    final sheet = Visibility(
+    final Widget sheet = Visibility(
       visible: _handedOffToSheet,
       maintainState: true,
       maintainAnimation: true,
@@ -854,6 +1478,14 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
       ),
     );
 
+    // The swipe-away transform lives here rather than in the sheet: it belongs
+    // to the presentation, the way iOS hangs its interactive dismissal off the
+    // zoom transition rather than off the sheet's detents (a sheet detent
+    // "resizes from one edge while the other three remain fixed" — it cannot
+    // express this). A sheet presented without a morph keeps the plain
+    // slide-away it always had.
+    final Widget draggableSheet = _dragTransform(screenSize, sheet);
+
     // The sheet is always slot 0 of the same Stack, whether the droplet is
     // present or not. Returning `sheet` bare at the handoff would change its
     // depth in the element tree, and Flutter answers a depth change by tearing
@@ -863,7 +1495,7 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        sheet,
+        draggableSheet,
         if (!_handedOffToSheet)
           _buildDroplet(
             context: context,
