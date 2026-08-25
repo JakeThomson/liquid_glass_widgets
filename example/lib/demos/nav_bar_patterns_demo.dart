@@ -9,6 +9,7 @@
 ///   5. Tab bar with bottom fade
 ///   6. Fade header (no app bar) — Apple Music / Podcasts style
 ///   7. Large title + Search Bar — two-phase iOS 26 collapse
+///   8. Nested navigation — pinned actions morph in place across pushes
 ///
 /// Run standalone:
 ///   flutter run -t lib/demos/nav_bar_patterns_demo.dart
@@ -29,7 +30,7 @@ void main() async {
       theme: const CupertinoThemeData(brightness: Brightness.dark),
       builder: (context, child) => Theme(
         data: ThemeData.dark(useMaterial3: true),
-        child: child!,
+        child: GlassNavigationShell(child: child!),
       ),
       home: const NavBarPatternsDemo(),
     ),
@@ -50,13 +51,7 @@ class NavBarPatternsDemo extends StatelessWidget {
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
       appBar: GlassAppBar(
-        leading: GlassButton(
-          icon: Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
+        pinnedActions: const [],
       ),
       body: CustomScrollView(
         slivers: [
@@ -143,6 +138,14 @@ class NavBarPatternsDemo extends StatelessWidget {
                 ),
                 SizedBox(height: 16),
                 _PatternTile(
+                  title: 'Nested Navigation',
+                  subtitle:
+                      'Pinned back button and actions morph in place across pushes',
+                  icon: CupertinoIcons.square_stack_3d_up,
+                  onTap: () => _push(context, const _NestedNavDemo()),
+                ),
+                SizedBox(height: 16),
+                _PatternTile(
                   title: 'Title Centering',
                   subtitle:
                       'Verifies title is centred on full bar width with asymmetric leading/trailing (fix #198)',
@@ -160,7 +163,9 @@ class NavBarPatternsDemo extends StatelessWidget {
 
   void _push(BuildContext context, Widget page) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => page),
+      // CupertinoPageRoute gives the native slide and interactive back-swipe
+      // that the pinned nav-bar chrome scrubs against.
+      CupertinoPageRoute<void>(builder: (_) => page),
     );
   }
 }
@@ -349,21 +354,11 @@ class _InlineTitleDemo extends StatelessWidget {
             color: CupertinoColors.label.resolveFrom(context),
           ),
         ),
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
-        actions: [
-          GlassButton(
-            icon: Icon(CupertinoIcons.ellipsis),
+        pinnedActions: [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.ellipsis),
+            label: 'More',
             onTap: () {},
-            width: 40,
-            height: 40,
-            iconSize: 20,
           ),
         ],
       ),
@@ -420,28 +415,17 @@ class _LargeTitleCollapseDemoState extends State<_LargeTitleCollapseDemo> {
           ),
         ),
         largeTitleController: _titleController,
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
-        actions: [
-          GlassButton(
-            icon: Icon(CupertinoIcons.camera),
+        pinnedActions: [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.camera),
+            label: 'Camera',
             onTap: () {},
-            width: 40,
-            height: 40,
-            iconSize: 20,
           ),
-          GlassButton(
-            icon: Icon(CupertinoIcons.plus),
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.plus),
+            id: 'add',
+            label: 'New chat',
             onTap: () {},
-            width: 40,
-            height: 40,
-            iconSize: 20,
           ),
         ],
       ),
@@ -493,28 +477,16 @@ class _SolidBackgroundDemo extends StatelessWidget {
           ),
         ),
         centerTitle: false,
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
-        actions: [
-          GlassButton(
-            icon: Icon(CupertinoIcons.videocam),
+        pinnedActions: [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.videocam),
+            label: 'Video call',
             onTap: () {},
-            width: 40,
-            height: 40,
-            iconSize: 20,
           ),
-          GlassButton(
-            icon: Icon(CupertinoIcons.phone),
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.phone),
+            label: 'Call',
             onTap: () {},
-            width: 40,
-            height: 40,
-            iconSize: 20,
           ),
         ],
       ),
@@ -547,14 +519,7 @@ class _FadeOnlyDemo extends StatelessWidget {
       settings: RecommendedGlassSettings.standard,
       statusBarStyle: GlassStatusBarStyle.auto,
       appBar: GlassAppBar(
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
+        pinnedActions: const [],
       ),
       body: CustomScrollView(
         slivers: [
@@ -639,14 +604,7 @@ class _TabBarBottomFadeDemoState extends State<_TabBarBottomFadeDemo> {
             color: CupertinoColors.label.resolveFrom(context),
           ),
         ),
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
+        pinnedActions: const [],
       ),
       body: CustomScrollView(
         slivers: [
@@ -816,21 +774,11 @@ class _LargeTitleSearchDemoState extends State<_LargeTitleSearchDemo> {
           ),
         ),
         largeTitleController: _titleController,
-        leading: GlassButton(
-          quality: GlassQuality.premium,
-          icon: Icon(CupertinoIcons.back),
-          onTap: () => Navigator.of(context).pop(),
-          width: 40,
-          height: 40,
-          iconSize: 20,
-        ),
-        actions: [
-          GlassButton(
-            icon: Icon(CupertinoIcons.pencil),
+        pinnedActions: [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.pencil),
+            label: 'Compose',
             onTap: () {},
-            width: 40,
-            height: 40,
-            iconSize: 20,
           ),
         ],
       ),
@@ -1105,6 +1053,133 @@ class _CenteringCase extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// =============================================================================
+// 8. Nested Navigation — pinned actions across pushes
+// =============================================================================
+
+/// A three-level drill-down showing the GlassNavigationShell behaviour: the
+/// back button and actions capsule stay pinned while pages slide, and the
+/// capsule morphs in place into each level's actions.
+///
+/// The compose action carries `id: 'compose'` on the first two levels, so it
+/// is treated as the same item across the push (the
+/// `UIBarButtonItem.identifier` behaviour) and holds its position while the
+/// item beside it cross-fades. The deepest level has no actions at all, so
+/// the capsule switches off while the back button stays.
+class _NestedNavDemo extends StatelessWidget {
+  const _NestedNavDemo({this.depth = 0});
+
+  final int depth;
+
+  static const _titles = ['Inbox', 'Thread', 'Attachment'];
+
+  List<GlassBarItem> _actionsFor(int depth) {
+    switch (depth) {
+      case 0:
+        return [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.pencil),
+            id: 'compose',
+            label: 'Compose',
+            onTap: () {},
+          ),
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.search),
+            label: 'Search',
+            onTap: () {},
+          ),
+        ];
+      case 1:
+        return [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.pencil),
+            id: 'compose',
+            label: 'Compose',
+            onTap: () {},
+          ),
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.ellipsis),
+            label: 'More',
+            onTap: () {},
+          ),
+        ];
+      default:
+        return const [];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+
+    return GlassScaffold(
+      background: const ShowcaseBackground(),
+      settings: RecommendedGlassSettings.standard,
+      statusBarStyle: GlassStatusBarStyle.auto,
+      appBar: GlassAppBar(
+        title: Text(
+          _titles[depth],
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: CupertinoColors.label.resolveFrom(context),
+          ),
+        ),
+        pinnedActions: _actionsFor(depth),
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: SizedBox(height: topPad + 44 + 16),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverList.list(
+              children: [
+                Text(
+                  switch (depth) {
+                    0 => 'Watch the bar while navigating: the compose action '
+                        'is identifier-matched and holds its position, the '
+                        'search action cross-fades into more, and the whole '
+                        'cluster stays pinned while the page slides.',
+                    1 => 'Compose stayed put — same id on both levels. The '
+                        'next level has no actions, so the capsule switches '
+                        'off while the back button stays pinned.',
+                    _ => 'No actions here: the capsule is gone, the back '
+                        'button remains. Swipe from the left edge to scrub '
+                        'the morph back in.',
+                  },
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (depth < 2)
+                  _PatternTile(
+                    title: 'Open ${_titles[depth + 1]}',
+                    subtitle: depth == 0
+                        ? 'Compose holds, search becomes more'
+                        : 'All actions leave, back button stays',
+                    icon: CupertinoIcons.arrow_right_circle,
+                    onTap: () => Navigator.of(context).push(
+                      CupertinoPageRoute<void>(
+                        builder: (_) => _NestedNavDemo(depth: depth + 1),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          _buildDummyContent(),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
     );
   }
 }

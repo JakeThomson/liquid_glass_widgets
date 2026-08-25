@@ -17,14 +17,9 @@ class ContainersPage extends StatelessWidget {
           : GlassStatusBarStyle.dark,
       child: GlassScaffold(
         appBar: GlassAppBar(
-          leading: GlassButton(
-            quality: GlassQuality.premium,
-            icon: Icon(CupertinoIcons.back),
-            onTap: () => Navigator.of(context).pop(),
-            width: 40,
-            height: 40,
-            iconSize: 20,
-          ),
+          // Back button pins above the Navigator via GlassNavigationShell,
+          // and renders in-route when no shell is installed.
+          pinnedActions: const [],
         ),
         body: Material(
           type: MaterialType.transparency,

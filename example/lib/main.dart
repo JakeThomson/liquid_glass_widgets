@@ -81,7 +81,9 @@ class _AppleLiquidGlassShowcaseAppState
           data: isDark
               ? ThemeData.dark(useMaterial3: true)
               : ThemeData.light(useMaterial3: true),
-          child: child!,
+          // Hosts pinned nav-bar chrome (back button + actions) above the
+          // Navigator so it stays put while pages slide during push/pop.
+          child: GlassNavigationShell(child: child!),
         ),
         home: const ShowcaseHomePage(),
         debugShowCheckedModeBanner: false,
