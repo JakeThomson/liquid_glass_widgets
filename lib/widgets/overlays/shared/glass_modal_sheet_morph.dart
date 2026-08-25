@@ -397,32 +397,21 @@ class SheetMorphGeometry {
   /// Rate the swipe-to-dismiss shrink loses scale, per unit of the *card's own
   /// height* dragged.
   ///
-  /// Measured off iOS 26 by tracking the macOS cursor against the card through
-  /// iPhone Mirroring — the cursor is the finger, so the gain is measured
-  /// against what the hand actually did rather than inferred from the card's
-  /// motion. Fitting gain, knee and floor together over the whole gesture
-  /// reproduces the measured scale to an RMS error of 0.006.
-  ///
-  /// Card height, not screen height, is the normaliser: the same swipe
-  /// distance shrinks a small panel faster than a tall sheet (Maps' "Map
-  /// Modes" panel at 0.35 of the screen measures ~2.5x per screen height;
-  /// a medium sheet at 0.48 measures ~1.4x — both collapse to ~0.7 per card
-  /// height). A gain below 1.0 per card height is also what lets the shrink
-  /// pivot at the grabbed point without ever lifting the card's bottom edge
-  /// into view — see [dismissedRect].
+  /// Fitted (with the knee and [minDismissScale]) to an iOS 26 gesture whose
+  /// finger position was cursor-tracked through iPhone Mirroring, to an RMS
+  /// scale error of 0.006. Card height, not screen height, is the normaliser:
+  /// Maps' small "Map Modes" panel measures ~2.5x per screen height and a
+  /// medium sheet ~1.4x, but one card-relative gain explains both. A gain
+  /// below 1.0 per card height is also what lets the shrink pivot at the
+  /// grabbed point without lifting the card's bottom edge into view
+  /// ([dismissedRect]).
   static const double dismissScaleGain = 0.64;
 
   /// Size the shrink asymptotes toward, and never reaches.
   ///
-  /// iOS does not shrink linearly to nothing — past the knee it rubber-bands
-  /// toward a floor, so a long swipe stops making the card meaningfully
-  /// smaller. Fitted together with [dismissScaleGain]: the reference gesture
-  /// ended with the card parked at ~0.55 of its resting size and still
-  /// creeping toward this limit.
-  ///
-  /// Approached asymptotically by [dismissScale], so it is a limit rather than
-  /// a clamp — the card is always still moving a little, which is what keeps a
-  /// long drag feeling live rather than stuck.
+  /// Past the knee the travel rubber-bands toward this floor, so a long swipe
+  /// stops making the card meaningfully smaller but never freezes outright —
+  /// the reference gesture parked at ~0.55 and was still creeping.
   static const double minDismissScale = 0.33;
 
   /// The detent a swipe-to-dismiss drag falls away from.
@@ -451,24 +440,13 @@ class SheetMorphGeometry {
 
   /// The travel the sheet actually renders at, given what the finger did.
   ///
-  /// Both values are fractions of screen height — the sheet position's own
-  /// unit — while the damping itself works in fractions of the card's height
-  /// via [cardFraction] (the card's height over the screen's), because that is
-  /// the unit the native curve is expressed in: the knee and limit scale with
-  /// the card, exactly as [dismissScaleGain] does.
-  ///
-  /// Direct manipulation up to the knee, then rubber-banded: the card keeps
-  /// giving a little but stops meaningfully descending. Drag on and the card
-  /// is nearly still, which is the weight a long swipe should have — a card
-  /// that slid 1:1 forever would leave the screen while the finger was still
-  /// moving.
-  ///
-  /// Both the shrink and the fall read off this, so the card's size and its
-  /// position ease together and settle as one object rather than drifting apart.
-  ///
-  /// The sheet's own position keeps tracking the finger 1:1 underneath, so the
-  /// dismiss threshold is unaffected: the card can be visually parked and a
-  /// release still commits.
+  /// In and out in screen-height fractions (the sheet position's unit); the
+  /// damping itself works in card heights via [cardFraction], the unit the
+  /// native curve is expressed in. Direct manipulation up to the knee, then
+  /// rubber-banded so a long drag parks the card instead of sliding it off
+  /// screen. Both the shrink and the fall read off this, so size and position
+  /// settle as one object — while the sheet's own position keeps tracking 1:1
+  /// underneath, leaving the dismiss threshold unaffected.
   static double dampedDismissTravel(
     double travel, {
     required double cardFraction,
@@ -514,19 +492,12 @@ class SheetMorphGeometry {
 
   /// iOS's rubber-band curve: direct at first, asymptotically stiffer.
   ///
-  /// `f(x) = (1 - 1/(x·tension/limit + 1))·limit` — the same shape the platform
-  /// uses for over-scroll, and the progressive sibling of
-  /// [SheetGeometry.applyResistance], which the sheet already applies past its
-  /// detents but as a flat multiplier, so it cannot express "free at first,
-  /// heavier the further you go".
-  ///
-  /// [tension] is the slope at the origin, so the default of 1.0 starts as
-  /// true direct manipulation and only builds resistance as the offset grows.
-  /// iOS uses 0.55 for over-scroll, where the finger has already hit a wall and
-  /// should feel that immediately; a sheet being pushed sideways has not, and
-  /// damping its first pixels reads as lag rather than weight.
-  ///
-  /// The result never passes [limit], however far the finger travels.
+  /// `f(x) = (1 - 1/(x·tension/limit + 1))·limit` — the platform's over-scroll
+  /// shape, and the progressive sibling of [SheetGeometry.applyResistance],
+  /// whose flat multiplier cannot express "free at first, heavier further on".
+  /// [tension] is the slope at the origin (1.0 = direct manipulation at first;
+  /// iOS's over-scroll 0.55 would read as lag here, where the finger has not
+  /// hit a wall yet). The result never passes [limit].
   static double rubberBand(
     double offset, {
     required double limit,
@@ -538,21 +509,16 @@ class SheetMorphGeometry {
     return offset.isNegative ? -damped : damped;
   }
 
-  /// The sideways offset a card actually renders at, given what the finger did.
+  /// The sideways offset the chase spring is targeted with, given the finger's
+  /// raw offset.
   ///
-  /// Free travel until the card reaches the screen edge, then rubber-banded —
-  /// resistance is a function of *where the card is*, not of how far the finger
-  /// has moved. Grab a card sitting against the left edge and you can push it
-  /// most of the way across before it stiffens; pull it the other way and it
-  /// resists immediately, because there is nowhere left to go.
-  ///
-  /// Damping the finger's displacement instead makes every drag feel equally
-  /// gummy regardless of the room available, which reads as lag.
-  ///
-  /// The band is a hard pin, not a long tail: tracked across a native sweep,
-  /// the card's leading edge stops essentially *at* the screen edge — the
-  /// largest overshoot measured was ~4 pt on a 440 pt screen. So the limit is
-  /// a few points of give past the edge, and pushing harder just leans on it.
+  /// Free until the card's leading edge reaches the screen edge, then pinned
+  /// there with a few points of give — natively the largest overshoot measured
+  /// was ~4 pt on a 440 pt screen. Resistance is a function of *where the card
+  /// is* ([cardRect]), not of finger displacement: pushing toward open room is
+  /// free for the whole distance, pushing into an edge resists at once.
+  /// Damping the displacement instead makes every drag equally gummy
+  /// regardless of the room available, which reads as lag.
   static double horizontalOffsetFor({
     required double rawOffset,
     required Rect cardRect,
@@ -570,34 +536,26 @@ class SheetMorphGeometry {
     return rawOffset.isNegative ? -damped : damped;
   }
 
-  /// The frame a sheet occupies mid-swipe, in global coordinates.
+  /// The frame a sheet occupies mid-swipe, in global coordinates — the morph's
+  /// destination when a swipe is what closed the sheet.
   ///
-  /// The dismissed frame is [restingRect] carried down by the damped fall and
-  /// shrunk about the grabbed point. This is the morph's destination when a
-  /// swipe is what closed the sheet: the droplet has to start life on the
-  /// frame the sheet was actually wearing at the release, not the one it
-  /// rested at before the drag began.
+  /// [restingRect] is carried down by the damped fall and shrunk about the
+  /// pivot.
   ///
-  /// [horizontalOffset] only translates — it never feeds [dismissScale].
-  /// Measured off iOS 26: a 143 pt sideways sweep mid-dismissal moved the card
-  /// that far and changed its scale by 0.029, all of which the 43 px of
-  /// incidental vertical drift accounts for. Had the shrink tracked total drag
-  /// distance, the same sweep would have cost 0.374 of scale.
+  /// [scaleAnchor] supplies that pivot: the grabbed point, expressed in the
+  /// *resting* card's frame (the live finger position minus the raw fall).
+  /// Carried down with the fall, it keeps the grabbed content exactly under
+  /// the finger below the damping knee — the direct-manipulation feel of the
+  /// native gesture. Omit it and the sheet shrinks about its own centre.
   ///
-  /// [scaleAnchor] is the grabbed point, expressed in the *resting* card's
-  /// frame (the live finger position minus the raw fall). The shrink pivots
-  /// there, carried down with the damped fall — so below the damping knee the
-  /// grabbed content is exactly under the finger, which is the whole feel of
-  /// the gesture: iOS keeps the spot you grabbed pinned under the touch until
-  /// the card parks at the bottom. Omit it and the sheet shrinks about its own
-  /// centre.
+  /// [horizontalOffset] only translates, never feeding the scale — measured
+  /// off iOS 26, where a 143 pt sideways sweep changed the card's scale by
+  /// just 0.029, all attributable to incidental vertical drift.
   ///
-  /// The card's bottom edge cannot lift into view under this pivot: with
-  /// [dismissScaleGain] below 1.0 per card height, the bottom loses height to
-  /// the shrink more slowly than the fall carries it down, whatever the grab
-  /// point. The clamp at the end guards that invariant against a future
-  /// retune (a gain above 1.0 per card height would break it), pinning the
-  /// bottom at its resting line rather than revealing it.
+  /// The card's bottom edge cannot lift into view under this pivot while
+  /// [dismissScaleGain] stays below 1.0 per card height, because the fall
+  /// always outruns the shrink; the closing clamp guards that invariant
+  /// against a future retune.
   static Rect dismissedRect({
     required Rect restingRect,
     required double travel,
@@ -922,16 +880,10 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
 
   /// Whether the pointer that is dismissing the sheet dragged it first.
   ///
-  /// A dragged dismissal releases the sheet mid-swipe — shrunk and moved from
-  /// where it rested — so the morph has to start from the frame the sheet was
-  /// actually wearing at the release. This flag selects that frame over
-  /// [SheetMorphGeometry.restingRect], which is still the right source for a
-  /// barrier tap, a back gesture, or a controller close, all of which leave
-  /// the sheet sitting at rest.
-  ///
-  /// It used to skip the morph outright, on the grounds that morphing from the
-  /// resting frame would jump. That was true, but the jump was the symptom —
-  /// iOS 26 morphs on a swipe too, from exactly where the finger let go.
+  /// A dragged dismissal releases the sheet mid-swipe, so the morph starts
+  /// from the frame it was actually wearing at the release; a barrier tap,
+  /// back gesture, or controller close leaves it at rest, so those keep
+  /// [SheetMorphGeometry.restingRect].
   bool _draggedSincePointerDown = false;
 
   /// The sheet's frame at the release that started a swipe-to-dismiss.
@@ -962,40 +914,28 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
 
   /// The pointer's most recent position, updated on every move.
   ///
-  /// The shrink's y-pivot is the finger itself, and the finger may have
-  /// travelled a long way from [_scaleAnchor] before the sheet ever left its
-  /// detent — a sheet grabbed at `full` is dragged through every detent before
-  /// the dismissal starts. Deriving the pivot from where the finger *is*
-  /// rather than where it went down keeps the grabbed content anchored no
-  /// matter where the gesture began.
+  /// The shrink's y-pivot derives from where the finger *is*, not where it
+  /// went down — a sheet grabbed at `full` travels a long way before the
+  /// dismissal starts. See [_restingAnchor].
   Offset? _lastPointer;
 
-  /// Raw sideways displacement of the finger during a swipe-to-dismiss,
-  /// measured from [_horizontalAnchor].
-  ///
-  /// This is the *input* to the sideways motion, not the rendered offset —
-  /// the chase in [_horizontalOffset] pursues the damped version of it.
+  /// Raw sideways finger displacement, measured from [_horizontalAnchor] —
+  /// the input the chase in [_horizontalOffset] pursues, not the rendered
+  /// offset.
   double _horizontalRaw = 0.0;
 
-  /// The rendered sideways offset, in pixels, chasing the damped finger
-  /// offset through [_trackingSpring].
+  /// The rendered sideways offset, chasing the damped finger offset through
+  /// [_trackingSpring].
   ///
-  /// The card does not copy the finger's x directly — iOS drives it through a
-  /// spring, and that spring is most of the sideways feel. Tracked against a
-  /// native capture: during a fast sweep the card trails the finger by
-  /// ~10–15 % and then catches up (briefly even overtaking) the moment the
-  /// finger slows, while a slow drag reads as 1:1. No static response curve
-  /// can overshoot like that; a tracking spring does it for free. On release
-  /// the chase is simply retargeted to zero through the sheet's own snap
-  /// spring, carrying whatever velocity it had — so a card let go mid-fling
-  /// keeps its momentum, with no separate velocity bookkeeping.
+  /// iOS drives the card through a spring rather than copying the finger's x:
+  /// a fast sweep visibly trails and catches up when the finger slows, a slow
+  /// drag reads as 1:1 — measured off a native capture, and a signature no
+  /// static curve can produce. Release retargets the same chase to zero, so a
+  /// fling's momentum carries into the spring-back for free.
   ///
-  /// The physics are integrated by hand on [_horizontalTicker] rather than
-  /// through `AnimationController.animateWith`: `animateWith` restarts its
-  /// clock on every call, and a chase retargeted on every pointer move would
-  /// have its clock reset before ever ticking — the card freezes while the
-  /// finger moves and lurches when it hesitates. A ticker that never restarts
-  /// advances the spring every frame no matter how often the target changes.
+  /// Integrated by hand on [_horizontalTicker]: `animateWith` restarts its
+  /// clock on every call, so a chase retargeted per pointer move would freeze
+  /// while the finger keeps moving.
   double _horizontalOffset = 0.0;
 
   /// The chase's current velocity, in pixels per second.
@@ -1370,13 +1310,10 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
   /// Downward travel required before the sideways axis opens at all.
   ///
   /// Until the dismiss drag is genuinely under way, sideways movement belongs
-  /// to the sheet's own jelly-follow stretch and nothing else — a horizontal
-  /// wobble on a resting sheet, or the first moments of a diagonal grab, must
-  /// not start sliding the card around the screen.
-  ///
-  /// [kTouchSlop] worth of screen height, so the bar is exactly the distance
-  /// the gesture system itself treats as "a drag has started" — one threshold
-  /// for the whole gesture rather than a second, invented one.
+  /// to the sheet's own jelly-follow stretch — a wobble on a resting sheet
+  /// must not start sliding the card around. The bar is [kTouchSlop] worth of
+  /// screen height: the distance the gesture system itself treats as "a drag
+  /// has started", rather than a second, invented threshold.
   double _horizontalUnlockTravel() {
     if (!mounted) return double.infinity;
     final height = MediaQuery.sizeOf(context).height;

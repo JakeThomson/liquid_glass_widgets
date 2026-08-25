@@ -700,20 +700,14 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
         if (pos < pivotPos && pivotPos > 0.001) {
           // Swipe-to-dismiss, below the lowest detent: the sheet tracks the
-          // finger 1:1.
-          //
-          // This used to lerp the frame down to `-(pivotVisualHeight + 100)`,
-          // carrying the sheet ~1.32x faster than the finger so it would clear
-          // the screen by `pos == 0`. It doesn't need the head start: at
-          // `pos == 0` a 1:1 frame already lands its top edge exactly on the
-          // screen's bottom edge, so the sheet is just as gone — and it stays
-          // under the finger on the way there, which is what a direct
-          // manipulation should do.
+          // finger 1:1. No overshoot is needed — at `pos == 0` a 1:1 frame
+          // lands its top edge exactly on the screen's bottom edge, so the
+          // sheet is fully gone, and it stays under the finger on the way.
           //
           // A morphed presentation layers its own scale and horizontal offset
-          // over this frame; see `GlassSheetMorphPresenter`. Deliberately not
-          // applied here: a sheet with no trigger to morph back into keeps the
-          // plain slide-away, exactly as it always has.
+          // over this frame (see `GlassSheetMorphPresenter`); deliberately not
+          // applied here, so a sheet with no trigger to morph back into keeps
+          // the plain slide-away.
           effectiveBottom = peekBMargin - (pivotPos - pos) * mqHeight;
           effectiveHeight = pivotVisualHeight - peekBMargin;
           hPad = peekHPad;
