@@ -44,6 +44,7 @@ import 'shared/tab_bar_accessory_placement.dart';
 /// |---|---|---|
 /// | [GlassTabBar.bottom] | `UITabBar` | App-level bottom navigation |
 /// | [GlassTabBar.searchable] | `UITabBar` + search | Bottom nav + morphing search bar |
+/// | [GlassTabBar.minimizable] | `tabBarMinimizeBehavior` + `Tab(role: .search)` | Bottom nav that minimizes to the selected tab, with an optional trailing action button |
 /// | [GlassTabBar.inline] | Glass-backed `UISegmentedControl` / inline `UITabBar` | In-page content switcher with glass track |
 ///
 /// ## Usage
@@ -75,6 +76,24 @@ import 'shared/tab_bar_accessory_placement.dart';
 /// )
 /// ```
 ///
+/// ### Minimizing on scroll, no search
+/// ```dart
+/// GlassTabBar.minimizable(
+///   tabs: [
+///     GlassTab(icon: Icon(Icons.home),   label: 'Home'),
+///     GlassTab(icon: Icon(Icons.person), label: 'Profile'),
+///   ],
+///   selectedIndex: _selectedIndex,
+///   onTabSelected: (i) => setState(() => _selectedIndex = i),
+///   minimized: _scrolledDown,
+///   onMinimizedTabTap: () => setState(() => _scrolledDown = false),
+///   trailingButton: GlassTabBarTrailingButton(
+///     icon: const Icon(CupertinoIcons.plus),
+///     onTap: _openComposer,
+///   ),
+/// )
+/// ```
+///
 /// ### Inline / in-page tab switching
 /// ```dart
 /// // ✅ Glass-backed track with jelly indicator — Apple Music style
@@ -100,7 +119,7 @@ import 'shared/tab_bar_accessory_placement.dart';
 // ---------------------------------------------------------------------------
 // Placement discriminant — private, drives constructor dispatch
 // ---------------------------------------------------------------------------
-enum _GlassTabBarPlacement { bottom, searchable, inline }
+enum _GlassTabBarPlacement { bottom, searchable, minimizable, inline }
 
 /// The iOS 26 structural bottom navigation bar.
 ///
@@ -112,6 +131,14 @@ enum _GlassTabBarPlacement { bottom, searchable, inline }
 ///
 /// - **[GlassTabBar.searchable]** — bottom pill that morphs into a search bar.
 ///   Replaces the deprecated [GlassSearchableBottomBar].
+///
+/// - **[GlassTabBar.minimizable]** — the searchable placement's morph
+///   without the search: the tab pill minimizes to the selected tab's
+///   circle (typically on scroll), mirroring SwiftUI's
+///   `tabBarMinimizeBehavior`, with an optional plain
+///   [GlassTabBarTrailingButton] in the slot the search pill occupies —
+///   the generalized `Tab(role: .search)` trailing circle, for bars whose
+///   trailing affordance is an action rather than a search field.
 ///
 /// For in-page / inline tab switching, use [GlassSegmentedControl] instead.
 ///
@@ -544,6 +571,170 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
           brightnessOverride: brightnessOverride,
         );
 
+  // ─── Minimizable constructor ───────────────────────────────────────────────
+
+  /// Creates a bottom bar that minimizes to the selected tab's circle —
+  /// SwiftUI's `tabBarMinimizeBehavior`, i.e. the [GlassTabBar.searchable]
+  /// morph without the search.
+  ///
+  /// Drives the same layout engine as the searchable placement, so the
+  /// minimize is the identical spring morph, but the API speaks navigation
+  /// rather than search: [minimized] replaces `isSearchActive` (the caller
+  /// decides when — typically from scroll direction, matching
+  /// `.tabBarMinimizeBehavior(.onScrollDown)`), tapping the minimized tab
+  /// circle fires [onMinimizedTabTap] (the "bring my tabs back" control),
+  /// and the slot the search pill occupies is an optional plain action
+  /// button — [trailingButton] — or nothing at all. Both pills render at
+  /// [minimizedBarHeight] while minimized, mirroring how the native
+  /// minimized bar sits slightly smaller than the expanded one.
+  ///
+  /// The trailing slot maps onto the native components:
+  ///
+  /// - `trailingButton: null` — a plain minimizing tab bar; the tabs get the
+  ///   full bar width, and the minimized state is the selected tab's circle
+  ///   alone.
+  /// - With a [trailingButton], the button is present in both states —
+  ///   exactly how a `Tab(role: .search)` trailing circle keeps its
+  ///   priority visibility through the minimize.
+  ///
+  /// [trailingButton] may change between builds and the bar animates the
+  /// difference: the button spring-scales in and out in place at its slot.
+  /// An app that wants a button only while minimized simply passes it only
+  /// while [minimized] is true — the appearing button grows in at the
+  /// trailing edge as the tab pill shrinks to its circle.
+  const GlassTabBar.minimizable({
+    required List<GlassTab> tabs,
+    required int selectedIndex,
+    required ValueChanged<int> onTabSelected,
+    Key? key,
+    bool minimized = false,
+    VoidCallback? onMinimizedTabTap,
+    GlassTabBarTrailingButton? trailingButton,
+    Widget? bottomAccessory,
+    GlassTabBarAccessoryPlacement? bottomAccessoryPlacement,
+    bool bottomAccessoryEnabled = true,
+    double bottomAccessorySpacing = 6.0,
+    double? bottomAccessoryHeight,
+    double spacing = 8,
+    double horizontalPadding = 20,
+    double verticalPadding = 20,
+    double barHeight = 64,
+    double minimizedBarHeight = 50,
+    double barBorderRadius = _kDefaultBottomBorderRadius,
+    EdgeInsetsGeometry tabPadding = const EdgeInsets.symmetric(horizontal: 4),
+    double iconLabelSpacing = 4,
+    bool enableBlend = true,
+    double blendAmount = 10,
+    LiquidGlassSettings? settings,
+    bool showIndicator = true,
+    Color? indicatorColor,
+    LiquidGlassSettings? indicatorSettings,
+    double indicatorPinchStrength = 0.4,
+    Color? selectedIconColor,
+    Color? unselectedIconColor,
+    Color? selectedLabelColor,
+    Color? unselectedLabelColor,
+    TextStyle? selectedLabelStyle,
+    TextStyle? unselectedLabelStyle,
+    double iconSize = 24,
+    double labelFontSize = 11,
+    TextStyle? textStyle,
+    Duration glowDuration = const Duration(milliseconds: 300),
+    double glowBlurRadius = 32,
+    double glowSpreadRadius = 8,
+    double glowOpacity = 0.6,
+    GlassInteractionBehavior interactionBehavior =
+        GlassInteractionBehavior.full,
+    double pressScale = 1.04,
+    Color? interactionGlowColor,
+    double interactionGlowRadius = 1.5,
+    GlassQuality? quality,
+    double magnification = 1.15,
+    double innerBlur = 0.0,
+    bool platformViewBackdrop = false,
+    MaskingQuality maskingQuality = MaskingQuality.high,
+    GlobalKey? backgroundKey,
+    SpringDescription? springDescription,
+    GlassTabPillAnchor tabPillAnchor = GlassTabPillAnchor.start,
+    double? tabWidth,
+    double? indicatorBorderRadius,
+    EdgeInsetsGeometry indicatorExpansion =
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    VoidCallback? onBarTap,
+    bool whitenAtBottom = true,
+    double whitenBottomThreshold = 45.0,
+    double whitenAtBottomTarget = 1.0,
+    ScrollController? scrollController,
+    bool adaptiveBrightness = false,
+    ValueChanged<Brightness>? onBrightnessChanged,
+    ValueListenable<Brightness>? brightnessOverride,
+  }) : this._(
+          key: key,
+          placement: _GlassTabBarPlacement.minimizable,
+          tabs: tabs,
+          selectedIndex: selectedIndex,
+          onTabSelected: onTabSelected,
+          isSearchActive: minimized,
+          onMinimizedTabTap: onMinimizedTabTap,
+          trailingButton: trailingButton,
+          bottomAccessoryPlacement: bottomAccessoryPlacement,
+          bottomAccessory: bottomAccessory,
+          bottomAccessoryEnabled: bottomAccessoryEnabled,
+          bottomAccessorySpacing: bottomAccessorySpacing,
+          bottomAccessoryHeight: bottomAccessoryHeight,
+          spacing: spacing,
+          horizontalPadding: horizontalPadding,
+          verticalPadding: verticalPadding,
+          barHeight: barHeight,
+          searchBarHeight: minimizedBarHeight,
+          barBorderRadius: barBorderRadius,
+          tabPadding: tabPadding,
+          iconLabelSpacing: iconLabelSpacing,
+          enableBlend: enableBlend,
+          blendAmount: blendAmount,
+          settings: settings,
+          showIndicator: showIndicator,
+          indicatorColor: indicatorColor,
+          indicatorSettings: indicatorSettings,
+          indicatorPinchStrength: indicatorPinchStrength,
+          selectedIconColor: selectedIconColor,
+          unselectedIconColor: unselectedIconColor,
+          selectedLabelColor: selectedLabelColor,
+          unselectedLabelColor: unselectedLabelColor,
+          selectedLabelStyle: selectedLabelStyle,
+          unselectedLabelStyle: unselectedLabelStyle,
+          iconSize: iconSize,
+          labelFontSize: labelFontSize,
+          textStyle: textStyle,
+          glowDuration: glowDuration,
+          glowBlurRadius: glowBlurRadius,
+          glowSpreadRadius: glowSpreadRadius,
+          glowOpacity: glowOpacity,
+          interactionBehavior: interactionBehavior,
+          pressScale: pressScale,
+          interactionGlowColor: interactionGlowColor,
+          interactionGlowRadius: interactionGlowRadius,
+          quality: quality,
+          magnification: magnification,
+          innerBlur: innerBlur,
+          platformViewBackdrop: platformViewBackdrop,
+          maskingQuality: maskingQuality,
+          backgroundKey: backgroundKey,
+          springDescription: springDescription,
+          tabPillAnchor: tabPillAnchor,
+          tabWidth: tabWidth,
+          indicatorBorderRadius: indicatorBorderRadius,
+          indicatorExpansion: indicatorExpansion,
+          onBarTap: onBarTap,
+          whitenAtBottom: whitenAtBottom,
+          whitenBottomThreshold: whitenBottomThreshold,
+          whitenAtBottomTarget: whitenAtBottomTarget,
+          scrollController: scrollController,
+          adaptiveBrightness: adaptiveBrightness,
+          onBrightnessChanged: onBrightnessChanged,
+          brightnessOverride: brightnessOverride,
+        );
+
   // ─── Private unified constructor (delegate target) ─────────────────────────
 
   const GlassTabBar._(
@@ -610,6 +801,9 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
       this.controller,
       this.isSearchActive = false,
       this.searchBarHeight = 50,
+      // Minimizable-only
+      this.onMinimizedTabTap,
+      this.trailingButton,
       this.springDescription,
       this.tabPillAnchor = GlassTabPillAnchor.start,
       this.onBarTap,
@@ -877,11 +1071,21 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
   /// Optional external controller for the search state machine.
   final SearchableBottomBarController? controller;
 
-  /// Whether the search bar is currently expanded (searchable only).
+  /// Whether the search bar is currently expanded (searchable only). For
+  /// [GlassTabBar.minimizable] this carries `minimized`, which drives the
+  /// identical morph.
   final bool isSearchActive;
 
   /// Height of the pills while search is active. Defaults to 50.
   final double searchBarHeight;
+
+  /// Tapping the minimized tab circle (minimizable only) — the "bring my
+  /// tabs back" control.
+  final VoidCallback? onMinimizedTabTap;
+
+  /// The optional plain action button in the trailing slot (minimizable
+  /// only). Null means no trailing pill at all, in either state.
+  final GlassTabBarTrailingButton? trailingButton;
 
   /// Custom spring for the pill morph animation. Null = iOS 26 default.
   final SpringDescription? springDescription;
@@ -910,10 +1114,11 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
     // (expanded) and searchBarHeight (inline/mini) — use whichever is active.
     // Both branches multiply verticalPadding by 2 (top + bottom) to match
     // the symmetric Padding applied inside AdaptiveLiquidGlassLayer.
-    final effectivePillH =
-        (_placement == _GlassTabBarPlacement.searchable && isSearchActive)
-            ? searchBarHeight + verticalPadding * 2
-            : barHeight + verticalPadding * 2;
+    final effectivePillH = ((_placement == _GlassTabBarPlacement.searchable ||
+                _placement == _GlassTabBarPlacement.minimizable) &&
+            isSearchActive)
+        ? searchBarHeight + verticalPadding * 2
+        : barHeight + verticalPadding * 2;
 
     double total = effectivePillH;
 
@@ -930,10 +1135,11 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
       // Guard: gapAdjustment only makes sense in the searchable placement when
       // both heights differ. For .bottom placement isSearchActive is always false
       // so effectivePillH == barHeight + vertPad*2 and gapAdjustment == 0.
-      final gapAdjustment =
-          (_placement == _GlassTabBarPlacement.searchable && isSearchActive)
-              ? barHeight - searchBarHeight
-              : 0.0;
+      final gapAdjustment = ((_placement == _GlassTabBarPlacement.searchable ||
+                  _placement == _GlassTabBarPlacement.minimizable) &&
+              isSearchActive)
+          ? barHeight - searchBarHeight
+          : 0.0;
       total = effectivePillH -
           gapAdjustment +
           bottomAccessorySpacing +
@@ -947,6 +1153,13 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _GlassTabBarState extends State<GlassTabBar> {
+  /// The most recent non-null [GlassTabBar.trailingButton] (minimizable
+  /// only). A button removed between builds must keep rendering ITSELF while
+  /// the pill scales away — deriving the icon from the now-null button would
+  /// swap the outgoing pill to the config's default search glyph for its
+  /// last few frames.
+  GlassTabBarTrailingButton? _lastTrailingButton;
+
   @override
   void didUpdateWidget(GlassTabBar oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -960,6 +1173,8 @@ class _GlassTabBarState extends State<GlassTabBar> {
         return _buildBottom(context);
       case _GlassTabBarPlacement.searchable:
         return _buildSearchable(context);
+      case _GlassTabBarPlacement.minimizable:
+        return _buildMinimizable(context);
       case _GlassTabBarPlacement.inline:
         return _buildInline(context);
     }
@@ -1083,12 +1298,50 @@ class _GlassTabBarState extends State<GlassTabBar> {
   }
 
   /// Dispatches to [TabBarSearchableLayout] — the iOS 26-style searchable placement engine.
-  Widget _buildSearchable(BuildContext context) {
+  Widget _buildSearchable(BuildContext context) =>
+      _buildSearchableEngine(context, widget.searchConfig!);
+
+  /// Dispatches to the same engine as [_buildSearchable], with a
+  /// [GlassSearchBarConfig] assembled from the minimizable placement's
+  /// navigation vocabulary: nothing search-shaped remains (the field never
+  /// expands, there is no cancel pill, no keyboard involvement), and the
+  /// search pill's slot carries the plain [GlassTabBarTrailingButton] — or,
+  /// with no button, nothing at all.
+  Widget _buildMinimizable(BuildContext context) {
+    final trailing = widget.trailingButton;
+    if (trailing != null) _lastTrailingButton = trailing;
+    // The ICON comes from the last known button, so a button removed this
+    // build still renders itself while the pill scales away. Existence and
+    // the tap stay on the live value — a removed button must not fire (and
+    // the disappearing pill is already IgnorePointered by the engine).
+    final rendered = trailing ?? _lastTrailingButton;
+    return _buildSearchableEngine(
+      context,
+      GlassSearchBarConfig(
+        // The engine's single callback carries both taps: `true` is the
+        // trailing pill, `false` is the minimized tab circle.
+        onSearchToggle: (activate) {
+          if (activate) {
+            widget.trailingButton?.onTap();
+          } else {
+            widget.onMinimizedTabTap?.call();
+          }
+        },
+        expandWhenActive: false,
+        showsCancelButton: false,
+        searchIcon: rendered?.icon,
+        showPill: trailing != null,
+      ),
+    );
+  }
+
+  Widget _buildSearchableEngine(
+      BuildContext context, GlassSearchBarConfig config) {
     return TabBarSearchableLayout(
       tabs: widget.tabs,
       selectedIndex: widget.selectedIndex,
       onTabSelected: widget.onTabSelected,
-      searchConfig: widget.searchConfig!,
+      searchConfig: config,
       controller: widget.controller,
       isSearchActive: widget.isSearchActive,
       extraButton: widget.extraButton,
@@ -1150,6 +1403,36 @@ class _GlassTabBarState extends State<GlassTabBar> {
       brightnessOverride: widget.brightnessOverride,
     );
   }
+}
+
+// =============================================================================
+// GlassTabBarTrailingButton — the minimizable placement's action button
+// =============================================================================
+
+/// The plain action button in [GlassTabBar.minimizable]'s trailing slot —
+/// the circular glass pill the searchable placement uses for search, carrying
+/// an ordinary tap action instead. The generalized form of SwiftUI's
+/// `Tab(role: .search)` trailing circle.
+///
+/// Not to be confused with [GlassTabBarExtraButton], which is an *additional*
+/// button rendered beside the pills. This one *is* the trailing pill: it
+/// shares the bar's glass blend layer, morphs with the same springs, and
+/// shrinks to [GlassTabBar.minimizable]'s `minimizedBarHeight` alongside the
+/// minimized tab circle. Like its native counterpart it is present in both
+/// states; pass it conditionally (see [GlassTabBar.minimizable]) for
+/// app-defined policies such as a button that exists only while minimized.
+class GlassTabBarTrailingButton {
+  /// Creates the trailing button.
+  const GlassTabBarTrailingButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  /// The glyph centered on the pill.
+  final Widget icon;
+
+  /// Called when the pill is tapped.
+  final VoidCallback onTap;
 }
 
 // =============================================================================
