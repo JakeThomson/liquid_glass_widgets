@@ -117,6 +117,12 @@ export 'widgets/overlays/glass_popover.dart';
 export 'widgets/effects/progressive_blur.dart';
 // Widgets - Surfaces
 export 'widgets/surfaces/glass_app_bar.dart';
+export 'widgets/surfaces/glass_bar_item.dart';
+export 'widgets/surfaces/glass_navigation_shell.dart'
+    show
+        GlassNavigationShell,
+        GlassNavigationShellState,
+        GlassNavBarRegistration;
 export 'widgets/surfaces/glass_large_title.dart';
 export 'widgets/shared/glass_isolation_scope.dart';
 export 'widgets/surfaces/glass_scaffold.dart';
