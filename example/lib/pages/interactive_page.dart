@@ -42,11 +42,7 @@ class _InteractivePageState extends State<InteractivePage> {
           : GlassStatusBarStyle.dark,
       child: GlassScaffold(
         backgroundColor: const Color(0x00000000),
-        appBar: GlassAppBar(
-          // Back button pins above the Navigator via GlassNavigationShell,
-          // and renders in-route when no shell is installed.
-          pinnedActions: const [],
-        ),
+        appBar: const GlassAppBar.pinned(),
         body: GlassScrollEdgeEffect(
           topFadeHeight: MediaQuery.paddingOf(context).top + 44 + 40,
           fadeBottom: false,

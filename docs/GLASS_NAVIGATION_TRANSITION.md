@@ -44,14 +44,14 @@ slide and back-swipe.
 
 ## Declaring a screen's bar items
 
-Screens opt in through `GlassAppBar.pinnedActions`, declaring items as data —
-the analogue of `UIBarButtonItem`:
+Screens opt in with the `GlassAppBar.pinned` constructor, declaring items as
+data — the analogue of `UIBarButtonItem`:
 
 ```dart
 GlassScaffold(
-  appBar: GlassAppBar(
+  appBar: GlassAppBar.pinned(
     title: const Text('Repository'),
-    pinnedActions: [
+    actions: [
       GlassBarItem.icon(
         icon: const Icon(CupertinoIcons.add),
         id: 'add',
@@ -67,11 +67,18 @@ GlassScaffold(
 );
 ```
 
+`actions` defaults to empty, so the common back-button-only screen is just
+`GlassAppBar.pinned(title: ...)`. The plain `GlassAppBar` constructor keeps
+the widget-based `leading`/`actions` API and never participates in pinning —
+the constructor choice *is* the mode, so the two APIs cannot be mixed on one
+bar.
+
 - **The back button is automatic.** It appears whenever the route can be
   popped (`ModalRoute.impliesAppBarDismissal`) and never on a root route. The
   default action is `Navigator.maybePop` — what Flutter's own `BackButton`
   calls, and what Pages-API routers handle correctly. Override with `onBack`
-  for router-specific semantics such as go_router's `context.pop()`.
+  for router-specific semantics such as go_router's `context.pop()`, or set
+  `backButton: false` to suppress it.
 - **`id` mirrors `UIBarButtonItem.identifier`.** Items sharing an `id` across
   two routes are treated as the same item and hold their position while
   everything around them morphs. Without an `id`, items are matched
@@ -82,10 +89,9 @@ GlassScaffold(
   reposition a cluster — iOS 26 has none either, which is exactly why custom
   content needs no coordination: the widget *is* an item, and layout flows
   from that.
-- **`const []` and `null` mean different things.** An empty list opts the
-  screen into pinning with no trailing items (the back button still pins);
-  `null` opts the screen out entirely, and the chrome retreats while a
-  non-participating route covers it.
+- **Participation is the constructor.** A `GlassAppBar.pinned` screen keeps
+  the chrome pinned even with no actions; a plain `GlassAppBar` screen does
+  not participate, and the pinned chrome retreats while it covers the bar.
 
 ## Behaviour and constraints
 
@@ -95,7 +101,7 @@ GlassScaffold(
 | Interactive back-swipe | Same interpolation, scrubbed by the gesture; cancelled swipes rebound |
 | Destination has no actions (or no back button) | The cluster switches off/on once at the transition midpoint — appearing and disappearing are deliberately not animated |
 | Non-participating route or modal sheet on top | Chrome retreats with the covering route's transition and returns on pop |
-| No shell installed, or `GlassQuality.minimal` | `pinnedActions` renders in-route: automatic back `GlassButton` + `GlassButtonGroup.icons` capsule |
+| No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: automatic back `GlassButton` + `GlassButtonGroup.icons` capsule |
 
 Glass opacity is never animated (a glass surface's backdrop pass renders fully
 or not at all); only geometry animates, and only item *contents* cross-fade.
@@ -105,7 +111,7 @@ or not at all); only geometry animates, and only item *contents* cross-fade.
 - `GlassBarItem.spacer()` (multi-capsule grouping, mirroring
   `ToolbarSpacer`/`fixedSpace`) is parsed but not rendered yet; a cluster
   containing one asserts in debug mode.
-- Changing `pinnedActions` in place via `setState` swaps the capsule's
+- Changing a pinned bar's `actions` in place via `setState` swaps the capsule's
   contents without animating the resize.
 - One navigator per shell; nested navigators (for example go_router's
   `StatefulShellRoute` branches) are not yet supported.

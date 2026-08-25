@@ -13,9 +13,9 @@ import 'package:flutter/widgets.dart';
 /// never has to tell the bar to make room.
 ///
 /// ```dart
-/// GlassAppBar(
+/// GlassAppBar.pinned(
 ///   title: const Text('Repository'),
-///   pinnedActions: [
+///   actions: [
 ///     GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), id: 'add', onTap: _add),
 ///     GlassBarItem.custom(child: UnreadPill(count: 3), onTap: _openInbox),
 ///   ],

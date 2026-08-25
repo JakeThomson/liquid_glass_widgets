@@ -379,15 +379,16 @@ void main() {
   });
 
   group('API guards', () {
-    testWidgets('pinnedActions and actions are mutually exclusive',
+    testWidgets('the two constructors cannot mix widget and data APIs',
         (tester) async {
+      // Structurally impossible now: the plain constructor has no pinned
+      // parameters and the pinned constructor has no widget parameters, so
+      // the two APIs cannot be mixed on one bar.
       expect(
-        () => GlassAppBar(
-          pinnedActions: const [],
-          actions: const [SizedBox()],
-        ),
-        throwsAssertionError,
+        const GlassAppBar.pinned().pinnedActions,
+        isEmpty,
       );
+      expect(const GlassAppBar(actions: [SizedBox()]).pinnedActions, isNull);
     });
 
     testWidgets('spacers are rejected until multi-capsule rendering lands',
@@ -432,12 +433,18 @@ class _Screen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Screens with actions use the pinned constructor; a null actions list
+    // means this screen deliberately uses the widget-based bar and does not
+    // participate in pinning.
+    final items = actions;
     return GlassScaffold(
-      appBar: GlassAppBar(
-        title: Text(title),
-        pinnedActions: actions,
-        onBack: onBack,
-      ),
+      appBar: items == null
+          ? GlassAppBar(title: Text(title))
+          : GlassAppBar.pinned(
+              title: Text(title),
+              actions: items,
+              onBack: onBack,
+            ),
       body: Center(child: Text('$title body')),
     );
   }
@@ -457,9 +464,9 @@ class _TogglingScreenState extends State<_TogglingScreen> {
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.pinned(
         title: const Text('Toggle'),
-        pinnedActions: [
+        actions: [
           GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
           if (_extra)
             GlassBarItem.icon(

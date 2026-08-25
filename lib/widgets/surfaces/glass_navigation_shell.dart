@@ -9,8 +9,8 @@ import 'shared/glass_nav_pinned_host.dart';
 
 /// What a single route contributes to the pinned navigation chrome.
 ///
-/// Created by [GlassAppBar] when `pinnedActions` is used, and handed to the
-/// enclosing [GlassNavigationShell]. Consumers never construct this directly.
+/// Created by [GlassAppBar.pinned] bars and handed to the enclosing
+/// [GlassNavigationShell]. Consumers never construct this directly.
 @immutable
 class GlassNavBarRegistration {
   /// Creates a registration describing one route's pinned bar chrome.
@@ -66,10 +66,10 @@ class GlassNavBarRegistration {
 /// );
 /// ```
 ///
-/// Screens opt in via [GlassAppBar.pinnedActions]. Screens that don't opt in
-/// are unaffected, and when no shell is present (or the device can't render
-/// the effect) those screens fall back to rendering the same buttons inside
-/// their own app bar.
+/// Screens opt in with the [GlassAppBar.pinned] constructor. Screens using
+/// the plain [GlassAppBar] are unaffected, and when no shell is present (or
+/// the device can't render the effect) pinned bars fall back to rendering the
+/// same buttons inside the route.
 class GlassNavigationShell extends StatefulWidget {
   /// Creates a navigation shell around [child].
   const GlassNavigationShell({
