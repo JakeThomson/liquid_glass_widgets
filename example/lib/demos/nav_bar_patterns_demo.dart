@@ -239,68 +239,89 @@ class _PatternTile extends StatelessWidget {
 // =============================================================================
 
 Widget _buildDummyContent({int count = 25, double topPadding = 0}) {
+  // Content rows use plain styled Containers — glass belongs in navigation
+  // chrome (bars, menus, sheets), not in scrollable content lists.
+  final hues = [
+    const Color(0xFF3D5AFE),
+    const Color(0xFF00BFA5),
+    const Color(0xFFFF6D00),
+    const Color(0xFFD500F9),
+    const Color(0xFFFFD600),
+  ];
   return SliverList.separated(
     itemCount: count,
-    separatorBuilder: (_, __) => SizedBox(height: 12),
-    itemBuilder: (context, index) => Padding(
-      padding: EdgeInsets.only(
-        top: index == 0 ? topPadding : 0,
-        left: 24,
-        right: 24,
-      ),
-      child: GlassCard(
-        settings: RecommendedGlassSettings.overlay,
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.primaries[index % Colors.primaries.length]
-                    .withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: CupertinoColors.label.resolveFrom(context),
-                  ),
-                ),
-              ),
+    separatorBuilder: (_, __) => const SizedBox(height: 12),
+    itemBuilder: (context, index) {
+      final hue = hues[index % hues.length];
+      return Padding(
+        padding: EdgeInsets.only(
+          top: index == 0 ? topPadding : 0,
+          left: 24,
+          right: 24,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [
+                hue.withValues(alpha: 0.55),
+                hue.withValues(alpha: 0.18),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Item ${index + 1}',
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: hue.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                       color: CupertinoColors.label.resolveFrom(context),
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Scrollable content to test navigation bar behaviour',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color:
-                          CupertinoColors.secondaryLabel.resolveFrom(context),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Item ${index + 1}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.label.resolveFrom(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Scrollable content to test navigation bar behaviour',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color:
+                            CupertinoColors.secondaryLabel.resolveFrom(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 

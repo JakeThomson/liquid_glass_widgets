@@ -1,10 +1,42 @@
-# Unreleased
+# 1.0.0
 
-## Features
+## Major Milestone: General Availability
 
-- **`GlassModalSheet` morphs from a trigger button (#216):** `show()` gains `morphFrom` — the `GlassMorphAnchor` from a new `GlassMorphTrigger` wrapper — presenting the sheet with the iOS 26 liquid morph instead of the slide-up: the trigger empties, a glass droplet detaches and inflates as it travels, and lands as the sheet. Makes the sheet the second consumer of the Liquid Morph Engine after `GlassMenu`. `morphSpeed` tunes the spring.
-- **`GlassMorphTrigger` / `GlassMorphAnchor` added:** the wrapper owns the trigger's key *and* its opacity, so the trigger can empty itself for the morph and take the closing bounce on its own ticker. A `GlobalKey` cannot hide a widget it doesn't own, and a trigger still painting under the droplet reads as a duplicated button. `morphFromRect` remains for triggers that can't be wrapped, blooming from a point.
-- **Slide presentation untouched:** leave `morphFrom` / `morphFromRect` null and nothing changes. The morph falls back to the slide wherever the metaball blend is unavailable — Skia/web, `GlassQuality.minimal`, `platformViewBackdrop` — and Reduce Motion resolves it through the engine's instant spring.
+This release marks the **1.0.0 General Availability** of `liquid_glass_widgets`, delivering a stable, unified API surface, zero third-party dependencies, and production-grade iOS 26-style liquid glass with hardware-adaptive quality tiers (Metal, Vulkan, Skia, and shader-free fallbacks) across all supported Flutter platforms.
+
+### New Features
+
+- **`GlassTabBar.minimizable()` — SwiftUI `tabBarMinimizeBehavior` parity (#217):** A new named constructor that collapses the tab bar to a single selected-tab circle without requiring a search bar. `minimized` replaces `isSearchActive`, `onMinimizedTabTap` handles the restore tap, `minimizedBarHeight` shrinks both pills while minimized, and an optional `GlassTabBarTrailingButton` fills the trailing slot — exactly modelling `Tab(role: .search)` priority-visibility behaviour. Scroll-driven minimize is caller-controlled, matching the SwiftUI `.onScrollDown` pattern.
+- **`GlassSearchBarConfig.showPill` (#217):** A new boolean on `GlassSearchBarConfig` (default `true`) that removes the search pill entirely and returns its width to the tab pill. Hiding is done by unmounting the pill and spring-scaling it at its slot — `Opacity` and zero-width leave a glass remnant fused to the tab pill on the shared blend layer; only absence can hide a grouped glass surface.
+
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#217).
+
+- **`GlassModalSheet` morphs from a trigger button (#219):** `show()` gains `morphFrom` — the `GlassMorphAnchor` from a new `GlassMorphTrigger` wrapper — presenting the sheet with the iOS 26 liquid morph instead of the slide-up: the trigger empties, a glass droplet detaches and inflates as it travels, and lands as the sheet. Makes the sheet the second consumer of the Liquid Morph Engine after `GlassMenu`. `morphSpeed` tunes the spring.
+- **`GlassMorphTrigger` / `GlassMorphAnchor` (#219):** The wrapper owns the trigger's key and opacity so the trigger can empty itself for the morph and take the closing bounce on its own ticker. `morphFromRect` remains for triggers that can't be wrapped, blooming from a point. The morph degrades gracefully to the slide presentation on Skia/web, `GlassQuality.minimal`, and `platformViewBackdrop`.
+
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#219).
+
+### Breaking Changes & API Unification
+
+- **Unified Navigation Surface (`GlassTabBar`)**:
+  - Consolidated bottom navigation into `GlassTabBar` via named constructors: `GlassTabBar.bottom()`, `GlassTabBar.searchable()`, and `GlassTabBar.inline()`.
+  - Removed legacy transitional shims `GlassBottomBar` and `GlassSearchableBottomBar`.
+  - Tab items are now canonically represented by `GlassTab` across all tab bars.
+  - Tab bar collapse types `GlassTabBarCollapseConfig` and `GlassTabBarCollapseDirection` have been **removed**. The collapse-to-extra-button pattern is not an iOS 26 design primitive and was unreliable on 120 Hz ProMotion displays. Use `GlassTabBar.minimizable` instead — it directly mirrors SwiftUI's `tabBarMinimizeBehavior(.onScrollDown)` with spring physics.
+- **Modal Sheet Simplification**:
+  - Removed deprecated `enablePeek` parameter from `GlassModalSheet`, `GlassModalSheet.show()`, and `GlassModalSheetScaffold`. Sizing and peeking behavior is now governed cleanly and declaratively by `detents` and `mode`.
+- **Initialization & Setup Cleanup**:
+  - Removed deprecated `respectsAccessibility` from `LiquidGlassWidgets.initialize()`. System accessibility preferences (Reduce Motion, Reduce Transparency) are now automatically detected and respected out of the box.
+  - Removed deprecated `warmUpImpellerPipeline` from `LiquidGlassWidgets.initialize()`. Shader bytecode preloading is handled asynchronously and safely during app bootstrap.
+- **Shader Quality & Scope Purge**:
+  - Removed deprecated `usesBackdropFilter` getter from `GlassQuality`.
+  - Removed deprecated `LiquidGlassScope.stack`, `GlassRefractionSource`, and `LiquidGlassBackground` in favor of `GlassPage` and `GlassBackgroundSource`.
+  - Removed deprecated `GlassBackdropScope` stub.
+
+### Documentation & Tooling
+
+- Added comprehensive [Migration Guide](docs/MIGRATION_0.x_TO_1.0.md) detailing step-by-step code upgrades for 0.x projects.
+- Updated documentation and all example demo screens for 1.0.0 APIs.
 
 ---
 

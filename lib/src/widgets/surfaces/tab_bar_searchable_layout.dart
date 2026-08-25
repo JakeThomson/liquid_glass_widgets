@@ -1,11 +1,7 @@
 // ignore_for_file: public_member_api_docs
-// ignore_for_file: deprecated_member_use
 // Internal layout engine for [GlassTabBar] searchable placement.
 //
-// Extracted from the old _GlassSearchableBottomBarState so that [GlassTabBar]
-// is the single owner of all rendering logic. The deprecated
-// [GlassSearchableBottomBar] shim simply calls [GlassTabBar.searchable()]
-// which dispatches here.
+// Extracted so that [GlassTabBar] is the single owner of all rendering logic.
 //
 // Do NOT import this file directly — use [GlassTabBar.searchable()] instead.
 
@@ -21,12 +17,10 @@ import '../../../widgets/shared/glass_content_aware_scope.dart';
 import '../../../theme/glass_theme_data.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../theme/glass_theme_helpers.dart';
-import '../../../widgets/surfaces/glass_bottom_bar.dart'
-    show
-        GlassExtraButtonPosition,
-        GlassTabBarExtraButton,
-        GlassTabPillAnchor,
-        MaskingQuality;
+import '../../../widgets/surfaces/shared/tab_bar_extra_button.dart'
+    show GlassExtraButtonPosition, GlassTabBarExtraButton;
+import '../../../widgets/surfaces/shared/tab_bar_types.dart'
+    show GlassTabPillAnchor, MaskingQuality;
 import '../../../widgets/surfaces/glass_tab_bar.dart' show GlassTab;
 import 'tab_bar_bottom_internal.dart'
     show
