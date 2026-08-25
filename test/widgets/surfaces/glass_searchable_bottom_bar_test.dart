@@ -34,6 +34,7 @@ Widget _buildBar({
   ValueChanged<String>? onChanged,
   GlassTabBarExtraButton? extraButton,
   GlassQuality? quality,
+  bool showPill = true,
 }) {
   return createTestApp(
     child: GlassSearchableBottomBar(
@@ -50,6 +51,7 @@ Widget _buildBar({
         controller: controller,
         focusNode: focusNode,
         onChanged: onChanged,
+        showPill: showPill,
       ),
     ),
   );
@@ -1175,6 +1177,61 @@ void main() {
       await tester.pump();
       // The custom star icon must appear in the tree.
       expect(find.byIcon(CupertinoIcons.star_fill), findsOneWidget);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GlassSearchBarConfig.showPill
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('GlassSearchBarConfig.showPill', () {
+    test('defaults to true', () {
+      final config = GlassSearchBarConfig(onSearchToggle: (_) {});
+      expect(config.showPill, isTrue);
+    });
+
+    testWidgets('true renders the search pill', (tester) async {
+      await tester.pumpWidget(_buildBar());
+      await tester.pump();
+      expect(find.byIcon(CupertinoIcons.search), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('false renders no search pill in either state', (tester) async {
+      await tester.pumpWidget(_buildBar(showPill: false));
+      await tester.pump();
+      expect(find.byIcon(CupertinoIcons.search), findsNothing);
+
+      await tester.pumpWidget(
+        _buildBar(isSearchActive: true, showPill: false),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(CupertinoIcons.search), findsNothing);
+    });
+
+    testWidgets('flipping true springs the pill in', (tester) async {
+      await tester.pumpWidget(_buildBar(showPill: false));
+      await tester.pump();
+      expect(find.byIcon(CupertinoIcons.search), findsNothing);
+
+      await tester.pumpWidget(_buildBar());
+      // The appear scale is spring-driven; a couple of frames in, the pill
+      // is mounted and visible.
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byIcon(CupertinoIcons.search), findsAtLeastNWidgets(1));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(CupertinoIcons.search), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('flipping false unmounts the pill', (tester) async {
+      await tester.pumpWidget(_buildBar());
+      await tester.pump();
+      expect(find.byIcon(CupertinoIcons.search), findsAtLeastNWidgets(1));
+
+      await tester.pumpWidget(_buildBar(showPill: false));
+      await tester.pumpAndSettle();
+      // Fully disappeared pills leave the tree entirely — a zero-scale glass
+      // shape would still fuse with the tab pill on the blend layer.
+      expect(find.byIcon(CupertinoIcons.search), findsNothing);
     });
   });
 }
