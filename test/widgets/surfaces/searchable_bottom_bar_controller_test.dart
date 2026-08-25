@@ -626,4 +626,69 @@ void main() {
       expect(l.targetTabW, searchH); // 50
     });
   });
+
+  // ── computeLayout — showPill ───────────────────────────────────────────────
+
+  group('computeLayout — showPill', () {
+    const totalW = 400.0;
+    const barH = 64.0;
+    const searchH = 50.0;
+    const spacing = 8.0;
+
+    SearchablePillLayout compute({
+      required bool searching,
+      bool showPill = true,
+    }) =>
+        ctrl.computeLayout(
+          totalW: totalW,
+          searching: searching,
+          expandWhenActive: false,
+          barHeight: barH,
+          searchBarHeight: searchH,
+          spacing: spacing,
+          hasDismiss: false,
+          dismissVisible: false,
+          collapsedTabWidth: null,
+          tabPillAnchor: GlassTabPillAnchor.start,
+          extraFullW: 0,
+          extraPos: GlassExtraButtonPosition.beforeSearch,
+          extraCollapsesOnSearch: true,
+          isKeyboardActive: false,
+          keyboardH: 0,
+          tabCount: 3,
+          perTabWidth: null,
+          showPill: showPill,
+        );
+
+    test('defaults to shown — the pill slot stays reserved', () {
+      final l = compute(searching: false);
+      // maxTabW = totalW - barH - spacing = 400 - 64 - 8 = 328
+      expect(l.targetTabW, closeTo(328, 0.01));
+    });
+
+    test('an absent pill gives the tab pill the full bar', () {
+      final l = compute(searching: false, showPill: false);
+      expect(l.targetTabW, totalW);
+    });
+
+    test('an absent pill leaves the searching tab circle untouched', () {
+      final l = compute(searching: true, showPill: false);
+      expect(l.targetTabW, searchH); // collapsed circle
+    });
+
+    test('search pill targets are identical shown or absent', () {
+      // Hiding is the layout widget's job (the pill is unmounted and scaled
+      // in place at its slot) — the pill's own position/size targets must
+      // never morph with showPill, or (re)appearing would slide it in from
+      // wherever the hidden targets parked it.
+      for (final searching in [false, true]) {
+        final shown = compute(searching: searching);
+        final absent = compute(searching: searching, showPill: false);
+        expect(absent.targetSearchLeft, shown.targetSearchLeft,
+            reason: 'searching=$searching');
+        expect(absent.targetSearchW, shown.targetSearchW,
+            reason: 'searching=$searching');
+      }
+    });
+  });
 }
