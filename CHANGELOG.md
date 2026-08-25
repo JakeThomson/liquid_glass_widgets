@@ -35,6 +35,14 @@ This release marks the **1.0.0 General Availability** of `liquid_glass_widgets`,
 
 ---
 
+# 0.30.2
+
+## Bug Fixes
+
+- **GlassPullDownButton / GlassMenu crash in minimal quality (#214):** Fixed a crash when quality falls back to `GlassQuality.minimal`. `LiquidGlassBlendGroup` is now skipped when no `LiquidGlassLayer` is present in the tree. Same fix applied to `GlassPopover`.
+
+---
+
 # 0.30.1
 
 ## Bug Fixes
