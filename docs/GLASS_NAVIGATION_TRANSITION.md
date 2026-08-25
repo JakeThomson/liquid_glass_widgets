@@ -113,8 +113,14 @@ or not at all); only geometry animates, and only item *contents* cross-fade.
 
 ## Demos
 
+The example showcase app uses pinned chrome throughout — every category page
+pins its back button, and the navigation-patterns demo pins its actions,
+including a **Nested Navigation** pattern that walks a three-level drill-down
+with identifier-matched items morphing at each push:
+
 ```bash
 cd example
-flutter run -t lib/demos/nav_transition_demo.dart          # imperative Navigator
-flutter run -t lib/demos/nav_transition_gorouter_demo.dart # go_router
+flutter run                                                # full showcase
+flutter run -t lib/demos/nav_bar_patterns_demo.dart        # nav patterns
+flutter run -t lib/demos/nav_transition_gorouter_demo.dart # go_router proof
 ```
