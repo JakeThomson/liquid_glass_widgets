@@ -4,8 +4,13 @@ import 'package:flutter/cupertino.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../types/glass_quality.dart';
+import '../interactive/glass_button.dart';
+import '../interactive/glass_button_group.dart';
 import '../shared/glass_isolation_scope.dart';
+import 'glass_bar_item.dart';
 import 'glass_large_title.dart' show GlassLargeTitleController;
+import 'glass_navigation_shell.dart';
+import 'shared/glass_nav_pinned_host.dart' show GlassNavPinnedMetrics;
 
 /// A navigation bar layout widget following Apple's iOS 26 design patterns.
 ///
@@ -99,7 +104,15 @@ class GlassAppBar extends StatelessWidget
     this.buttonSettings,
     this.largeTitleController,
     this.bottom,
-  });
+    this.pinnedActions,
+    this.pinnedBackButton = true,
+    this.onBack,
+  }) : assert(
+          pinnedActions == null || actions == null,
+          'Use either pinnedActions (declared as data, hoisted to the '
+          'GlassNavigationShell) or actions (plain widgets rendered in this '
+          'bar) — not both.',
+        );
 
   // ===========================================================================
   // Properties
@@ -136,6 +149,36 @@ class GlassAppBar extends StatelessWidget
   ///
   /// When non-null, [preferredSize] is `toolbarHeight + bottom.preferredSize.height`.
   final PreferredSizeWidget? bottom;
+
+  /// Trailing bar items declared as data, so they can be pinned above the
+  /// [Navigator] by an enclosing [GlassNavigationShell].
+  ///
+  /// When a shell is present these items stay put during push and pop while
+  /// the page slides beneath them, and morph in place into the next route's
+  /// items — the iOS 26 navigation bar behaviour. Without a shell they render
+  /// inside this bar as a normal glass capsule, so screens work either way.
+  ///
+  /// An **empty list** and **null** mean different things. `const []` opts the
+  /// screen into pinning with no trailing items — the pinned back button still
+  /// applies, and a route pushed on top morphs its items in against this one.
+  /// `null` opts the screen out entirely, and the pinned chrome retreats while
+  /// this screen covers it, as it does for any non-participating route.
+  ///
+  /// Mutually exclusive with [actions].
+  final List<GlassBarItem>? pinnedActions;
+
+  /// Whether to show the pinned back button when the route can be popped.
+  ///
+  /// Only applies alongside [pinnedActions]. The button is never shown on a
+  /// root route, matching [ModalRoute.impliesAppBarDismissal].
+  final bool pinnedBackButton;
+
+  /// Overrides the back button's action.
+  ///
+  /// Defaults to `Navigator.maybePop`, which routers built on the Pages API
+  /// (go_router, auto_route, beamer) handle correctly. Supply this to use a
+  /// router-specific pop instead, such as `context.pop()`.
+  final VoidCallback? onBack;
 
   /// The total preferred size of the app bar (toolbar + bottom widget).
   @override
@@ -193,6 +236,116 @@ class GlassAppBar extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
+    // Checked here rather than in the const constructor (closures are not
+    // potentially-constant), and here rather than in the pinned host so the
+    // in-route fallback path reports it too instead of silently dropping it.
+    assert(
+      pinnedActions == null || !pinnedActions!.any((i) => i is GlassBarSpacer),
+      'GlassBarItem.spacer() is not rendered yet: pinned actions render as a '
+      'single glass capsule. Multi-capsule grouping is a follow-up.',
+    );
+    // Pinned items are registered with the shell, which decides whether it can
+    // host them. Until then — and whenever there is no shell — this bar draws
+    // them itself, so a screen renders correctly either way.
+    if (pinnedActions != null) {
+      return _GlassNavBarRegistrar(
+        actions: pinnedActions!,
+        pinnedBackButton: pinnedBackButton,
+        onBack: onBack,
+        buttonSettings: buttonSettings,
+        builder: (context, hoisted) => _buildBar(context, hoisted: hoisted),
+      );
+    }
+    return _buildBar(context, hoisted: false);
+  }
+
+  /// Builds the bar itself.
+  ///
+  /// When [hoisted] the leading and actions slots hold same-sized placeholders
+  /// instead of real buttons, so the centred title is constrained exactly as it
+  /// would be otherwise and keeps sliding with the page.
+  Widget _buildBar(BuildContext context, {required bool hoisted}) {
+    Widget? effectiveLeading = leading;
+    List<Widget>? effectiveActions = actions;
+
+    if (pinnedActions != null) {
+      final items = pinnedActions!.whereType<GlassBarActionItem>().toList();
+      final showsBack = pinnedBackButton &&
+          (ModalRoute.of(context)?.impliesAppBarDismissal ?? false);
+      const backSize = GlassNavPinnedMetrics.backDiameter;
+      const slot = GlassNavPinnedMetrics.slot;
+
+      if (hoisted) {
+        effectiveLeading = showsBack
+            ? const SizedBox(width: backSize, height: backSize)
+            : null;
+        // The placeholder lays out the real content and simply isn't painted,
+        // so it measures exactly what the pinned cluster measures — including
+        // custom items of arbitrary width. A fixed width per item would only
+        // be correct for icons, and would mis-constrain the centred title.
+        effectiveActions = items.isEmpty
+            ? null
+            : [
+                IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: Opacity(
+                      opacity: 0.0,
+                      child: SizedBox(
+                        height: slot,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final item in items)
+                              if (item is GlassBarIconItem)
+                                SizedBox(
+                                  width: slot,
+                                  child: Center(child: item.icon),
+                                )
+                              else
+                                item.content,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ];
+      } else {
+        effectiveLeading = showsBack
+            ? GlassButton(
+                icon: const Icon(CupertinoIcons.back),
+                width: backSize,
+                height: backSize,
+                iconSize: GlassNavPinnedMetrics.iconSize,
+                label: 'Back',
+                onTap: () {
+                  final back = onBack;
+                  if (back != null) {
+                    back();
+                  } else {
+                    Navigator.of(context).maybePop();
+                  }
+                },
+              )
+            : null;
+        effectiveActions = items.isEmpty
+            ? null
+            : [
+                GlassButtonGroup.icons(
+                  items: [
+                    for (final item in items)
+                      GlassButtonGroupItem(
+                        icon: item.content,
+                        onTap: item.onTap ?? () {},
+                        label: item.label,
+                        enabled: item.enabled,
+                      ),
+                  ],
+                ),
+              ];
+      }
+    }
+
     final Widget toolbarRow = SafeArea(
       bottom: false,
       child: Padding(
@@ -205,22 +358,22 @@ class GlassAppBar extends StatelessWidget
               textDirection: Directionality.of(context),
             ),
             children: [
-              if (leading != null)
+              if (effectiveLeading != null)
                 LayoutId(
                   id: _ToolbarSlot.leading,
-                  child: leading!,
+                  child: effectiveLeading,
                 ),
               LayoutId(
                 id: _ToolbarSlot.title,
                 child: _buildTitle(context),
               ),
-              if (actions != null)
+              if (effectiveActions != null)
                 LayoutId(
                   id: _ToolbarSlot.actions,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     spacing: 8,
-                    children: actions!,
+                    children: effectiveActions,
                   ),
                 ),
             ],
@@ -277,6 +430,11 @@ class GlassAppBar extends StatelessWidget
         ? const SizedBox.shrink()
         : DefaultTextStyle(
             style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+            // iOS navigation titles are a single truncated line — they never
+            // wrap, however little room the bar items leave them.
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             child: Semantics(header: true, child: title),
           );
 
@@ -471,4 +629,118 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
   @override
   bool shouldRelayout(_ToolbarLayout old) =>
       old.centerTitle != centerTitle || old.textDirection != textDirection;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pinned-chrome registration
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Registers a route's pinned bar chrome with the enclosing
+/// [GlassNavigationShell] and reports back whether the shell took it.
+///
+/// The bar keeps drawing its own buttons until the shell has both accepted the
+/// registration and had a frame to render them. Handing over on a later frame
+/// means the two never overlap and never both disappear: at the swap both are
+/// static and identical, so nothing moves.
+class _GlassNavBarRegistrar extends StatefulWidget {
+  const _GlassNavBarRegistrar({
+    required this.actions,
+    required this.pinnedBackButton,
+    required this.onBack,
+    required this.buttonSettings,
+    required this.builder,
+  });
+
+  final List<GlassBarItem> actions;
+  final bool pinnedBackButton;
+  final VoidCallback? onBack;
+  final LiquidGlassSettings? buttonSettings;
+  final Widget Function(BuildContext context, bool hoisted) builder;
+
+  @override
+  State<_GlassNavBarRegistrar> createState() => _GlassNavBarRegistrarState();
+}
+
+class _GlassNavBarRegistrarState extends State<_GlassNavBarRegistrar> {
+  GlassNavigationShellState? _shell;
+  ModalRoute<dynamic>? _route;
+  bool _handedOver = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_GlassNavBarRegistrar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sync();
+  }
+
+  void _sync() {
+    final shell = GlassNavigationShell.maybeOf(context);
+    final route = ModalRoute.of(context);
+
+    if (shell != _shell || route != _route) {
+      _release();
+      _shell = shell;
+      _route = route;
+      _handedOver = false;
+    }
+
+    // Deliberately no offstage or TickerMode guard here. Flutter builds a newly
+    // pushed route offstage once before the transition starts, and neither
+    // `offstage` nor a muted ticker notifies dependents when it flips back — so
+    // skipping those builds would strand the route unregistered for the whole
+    // transition. Which route is on top is decided by the shell's ordering
+    // instead. (Inactive branches of a nested navigator are a known gap.)
+    if (shell == null || route == null || !shell.isActive) {
+      // Drop any stale registration, then draw the chrome in-route again.
+      _release();
+      if (_handedOver) {
+        setState(() => _handedOver = false);
+      }
+      return;
+    }
+
+    shell.register(
+      route,
+      GlassNavBarRegistration(
+        actions: widget.actions,
+        showsBackButton:
+            widget.pinnedBackButton && route.impliesAppBarDismissal,
+        onBack: widget.onBack,
+        buttonSettings: widget.buttonSettings,
+      ),
+    );
+
+    if (!_handedOver) {
+      // The shell renders the chrome on the next frame; hand over then, so the
+      // bar and the shell swap in the same frame rather than one before the
+      // other.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _shell != null && _shell!.isActive) {
+          setState(() => _handedOver = true);
+        }
+      });
+    }
+  }
+
+  void _release() {
+    final shell = _shell;
+    final route = _route;
+    if (shell != null && route != null) {
+      shell.unregister(route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _release();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _handedOver);
 }
