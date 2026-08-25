@@ -17,12 +17,10 @@ import '../../../widgets/shared/glass_content_aware_scope.dart';
 import '../../../theme/glass_theme_data.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../theme/glass_theme_helpers.dart';
-import '../../../widgets/surfaces/shared/tab_bar_collapse_config.dart'
-    show
-        GlassExtraButtonPosition,
-        GlassTabBarExtraButton,
-        GlassTabPillAnchor,
-        MaskingQuality;
+import '../../../widgets/surfaces/shared/tab_bar_extra_button.dart'
+    show GlassExtraButtonPosition, GlassTabBarExtraButton;
+import '../../../widgets/surfaces/shared/tab_bar_types.dart'
+    show GlassTabPillAnchor, MaskingQuality;
 import '../../../widgets/surfaces/glass_tab_bar.dart' show GlassTab;
 import 'tab_bar_bottom_internal.dart'
     show

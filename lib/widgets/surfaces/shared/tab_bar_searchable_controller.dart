@@ -10,8 +10,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/physics.dart';
 
-import 'tab_bar_collapse_config.dart'
-    show GlassExtraButtonPosition, GlassTabPillAnchor;
+import 'tab_bar_extra_button.dart' show GlassExtraButtonPosition;
+import 'tab_bar_types.dart' show GlassTabPillAnchor;
 import '../../../src/widgets/surfaces/tab_bar_layout_utils.dart';
 
 // =============================================================================

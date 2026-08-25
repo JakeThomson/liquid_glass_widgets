@@ -120,7 +120,6 @@ export 'widgets/surfaces/glass_app_bar.dart';
 export 'widgets/surfaces/glass_large_title.dart';
 export 'widgets/shared/glass_isolation_scope.dart';
 export 'widgets/surfaces/glass_scaffold.dart';
-export 'widgets/surfaces/shared/tab_bar_collapse_config.dart';
 export 'widgets/surfaces/shared/glass_search_bar_config.dart';
 export 'widgets/surfaces/shared/tab_bar_searchable_controller.dart';
 export 'widgets/surfaces/glass_tab_bar.dart';

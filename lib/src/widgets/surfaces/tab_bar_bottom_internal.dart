@@ -21,8 +21,10 @@ import '../../../widgets/interactive/glass_button.dart';
 import '../../../widgets/shared/adaptive_glass.dart';
 import '../../../widgets/shared/animated_glass_indicator.dart';
 import '../../../widgets/shared/inherited_liquid_glass.dart';
-import '../../../widgets/surfaces/shared/tab_bar_collapse_config.dart'
-    show GlassTabBarExtraButton, MaskingQuality, JellyClipper;
+import '../../../widgets/surfaces/shared/tab_bar_extra_button.dart'
+    show GlassTabBarExtraButton;
+import '../../../widgets/surfaces/shared/tab_bar_types.dart'
+    show MaskingQuality, JellyClipper;
 import '../../../widgets/surfaces/glass_tab_bar.dart' show GlassTab;
 
 // =============================================================================

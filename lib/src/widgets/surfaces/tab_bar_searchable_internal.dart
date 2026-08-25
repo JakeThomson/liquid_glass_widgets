@@ -20,7 +20,7 @@ import '../../../widgets/interactive/glass_button.dart';
 import '../../../widgets/shared/adaptive_glass.dart';
 import '../../../widgets/shared/animated_glass_indicator.dart';
 import '../../../widgets/shared/inherited_liquid_glass.dart';
-import '../../../widgets/surfaces/shared/tab_bar_collapse_config.dart'
+import '../../../widgets/surfaces/shared/tab_bar_types.dart'
     show MaskingQuality, JellyClipper;
 import '../../../widgets/surfaces/shared/glass_search_bar_config.dart';
 import 'tab_bar_drag_gesture_mixin.dart';

@@ -7,7 +7,7 @@ import '../../theme/glass_theme.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
-import '../surfaces/shared/tab_bar_collapse_config.dart' show MaskingQuality;
+import '../surfaces/shared/tab_bar_types.dart' show MaskingQuality;
 import '../surfaces/glass_tab_bar.dart' show DividerSettings, GlassSegment;
 import '../../src/widgets/interactive/scrollable_segment_content.dart';
 import '../../src/widgets/interactive/segmented_control_internal.dart';

@@ -2,7 +2,7 @@
 
 ## Major Milestone: General Availability
 
-This release marks the **1.0.0 General Availability** of `liquid_glass_widgets`, delivering a stable, unified API surface, zero third-party dependencies, and production-ready iOS 26 liquid glass rendering across all Flutter platforms.
+This release marks the **1.0.0 General Availability** of `liquid_glass_widgets`, delivering a stable, unified API surface, zero third-party dependencies, and production-grade iOS 26-style liquid glass with hardware-adaptive quality tiers (Metal, Vulkan, Skia, and shader-free fallbacks) across all supported Flutter platforms.
 
 ### New Features
 
@@ -17,7 +17,7 @@ This release marks the **1.0.0 General Availability** of `liquid_glass_widgets`,
   - Consolidated bottom navigation into `GlassTabBar` via named constructors: `GlassTabBar.bottom()`, `GlassTabBar.searchable()`, and `GlassTabBar.inline()`.
   - Removed legacy transitional shims `GlassBottomBar` and `GlassSearchableBottomBar`.
   - Tab items are now canonically represented by `GlassTab` across all tab bars.
-  - Tab bar collapse types are unified under `GlassTabBarCollapseConfig` and `GlassTabBarCollapseDirection`.
+  - Tab bar collapse types `GlassTabBarCollapseConfig` and `GlassTabBarCollapseDirection` have been **removed**. The collapse-to-extra-button pattern is not an iOS 26 design primitive and was unreliable on 120 Hz ProMotion displays. Use `GlassTabBar.minimizable` instead — it directly mirrors SwiftUI's `tabBarMinimizeBehavior(.onScrollDown)` with spring physics.
 - **Modal Sheet Simplification**:
   - Removed deprecated `enablePeek` parameter from `GlassModalSheet`, `GlassModalSheet.show()`, and `GlassModalSheetScaffold`. Sizing and peeking behavior is now governed cleanly and declaratively by `detents` and `mode`.
 - **Initialization & Setup Cleanup**:

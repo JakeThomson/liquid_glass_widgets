@@ -12,7 +12,7 @@ import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
 import '../../../utils/glass_spring.dart';
 import '../../../widgets/shared/animated_glass_indicator.dart';
-import '../../../widgets/surfaces/shared/tab_bar_collapse_config.dart'
+import '../../../widgets/surfaces/shared/tab_bar_types.dart'
     show MaskingQuality;
 import '../../../widgets/surfaces/glass_tab_bar.dart'
     show GlassSegment, DividerSettings;
