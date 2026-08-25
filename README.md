@@ -225,7 +225,7 @@ Most apps should use `GlassCard` or `GlassGroupedSection` instead.
 `GlassDialog` · `GlassSheet` · `GlassModalSheet` · `showGlassActionSheet` · `GlassMenu` · `GlassMenuItem` · `GlassMenuDivider` · `GlassMenuLabel` · `GlassPopover`
 
 ### Surfaces
-`GlassScaffold` · `GlassAppBar` · `GlassTabBar` (`.bottom` / `.inline` / `.searchable`) · `GlassToolbar` · `GlassContentAwareScope` · `GlassContentAwareContent` · `GlassContentAwareBrightness`
+`GlassScaffold` · `GlassAppBar` · `GlassTabBar` (`.bottom` / `.inline` / `.searchable` / `.minimizable`) · `GlassTabBarTrailingButton` · `GlassToolbar` · `GlassContentAwareScope` · `GlassContentAwareContent` · `GlassContentAwareBrightness`
 
 
 
@@ -655,17 +655,9 @@ GlassPage(
 **Manual alternative — `LiquidGlassScope`:**
 
 For advanced scenarios (e.g. isolated sections within a screen, non-`GlassPage` setups),
-use `LiquidGlassScope` directly:
+use `LiquidGlassScope` directly with `GlassBackgroundSource`:
 
 ```dart
-// Shorthand — wallpaper behind your Scaffold:
-LiquidGlassScope.stack(
-  background: Image.asset('assets/wallpaper.jpg', fit: BoxFit.cover),
-  content: Scaffold(
-    body: Center(child: GlassSegmentedControl(...)),
-  ),
-)
-
 // Manual — granular control over which surface is sampled:
 LiquidGlassScope(
   child: Stack(
@@ -688,7 +680,7 @@ On Impeller, `GlassQuality.premium` uses the native scene graph — no
 | When | Recommendation |
 |---|---|
 | Skia / Web (recommended) | `GlassPage(background:...)` — automatic wiring |
-| Skia / Web (manual) | `LiquidGlassScope.stack` with `GlassQuality.standard` |
+| Skia / Web (manual) | `LiquidGlassScope` + `GlassBackgroundSource` with `GlassQuality.standard` |
 | iOS / macOS (Impeller) | `GlassQuality.premium` — native scene graph |
 | Multiple isolated sections | Separate `LiquidGlassScope` per section |
 
@@ -853,7 +845,8 @@ Focused, self-contained demos — one widget, one file, runnable standalone:
 |---|---|
 | `glass_menu_demo.dart` — all 9 menu alignments | `cd example && flutter run -t lib/demos/glass_menu_demo.dart` |
 | `glass_tab_bar_scrollable_demo.dart` — scrollable tab bar | `cd example && flutter run -t lib/demos/glass_tab_bar_scrollable_demo.dart` |
-| `glass_modal_sheet_demo.dart` — peek / half / full states | `cd example && flutter run -t lib/demos/glass_modal_sheet_demo.dart` |
+| `minimizable_bar_demo.dart` — scroll-minimize + trailing button | `cd example && flutter run -t lib/demos/minimizable_bar_demo.dart` |
+| `glass_modal_sheet_demo.dart` — peek / half / full states + liquid morph trigger | `cd example && flutter run -t lib/demos/glass_modal_sheet_demo.dart` |
 | `glass_tab_bar_bottom_demo.dart` — magic-lens masking | `cd example && flutter run -t lib/demos/glass_tab_bar_bottom_demo.dart` |
 | `bottom_bar_tab_width_demo.dart` — tabWidth showcase | `cd example && flutter run -t lib/demos/bottom_bar_tab_width_demo.dart` |
 | `searchable_bar_demo.dart` — searchable bar edge cases | `cd example && flutter run -t lib/demos/searchable_bar_demo.dart` |

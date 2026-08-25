@@ -121,7 +121,6 @@ void main() {
                 onTap: () {},
                 label: 'Add',
               ),
-              collapseConfig: const GlassTabBarCollapseConfig(),
               bottomAccessory: Builder(builder: (context) {
                 final placement =
                     GlassTabBarAccessoryPlacementScope.of(context);
@@ -136,15 +135,14 @@ void main() {
         ),
       );
 
-      // Verify the scope resolves to expanded
+      // Placement is always expanded — collapse is no longer available.
       expect(find.text('expanded'), findsOneWidget);
 
-      // Trigger collapse via scroll
+      // Scroll down: placement stays expanded (minimizable is separate API).
       await tester.drag(find.byType(ListView), const Offset(0, -500));
       await tester.pumpAndSettle();
 
-      // Verify the scope resolves to inline when collapsed
-      expect(find.text('inline'), findsOneWidget);
+      expect(find.text('expanded'), findsOneWidget);
     });
 
     testWidgets('GlassScaffold safely resolves PreferredSizeWidget bottomBar',

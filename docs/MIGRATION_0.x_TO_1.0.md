@@ -13,8 +13,8 @@ This guide details all breaking changes between `0.30.x` and `1.0.0` and provide
 | `GlassBottomBar(...)` | `GlassTabBar.bottom(...)` | Unified under `GlassTabBar` navigation widget |
 | `GlassSearchableBottomBar(...)` | `GlassTabBar.searchable(...)` | Unified under `GlassTabBar` navigation widget |
 | `GlassBottomBarTab(...)` | `GlassTab(...)` | Canonical tab representation across all tab bars |
-| `GlassBottomBarCollapseConfig` | `GlassTabBarCollapseConfig` | Scoped to the canonical tab bar |
-| `GlassBottomBarCollapseDirection` | `GlassTabBarCollapseDirection` | Scoped to the canonical tab bar |
+| `GlassBottomBarCollapseConfig` | Removed — use `GlassTabBar.minimizable` | Collapse-to-button pattern is not an iOS 26 design primitive |
+| `GlassBottomBarCollapseDirection` | Removed — use `GlassTabBar.minimizable` | See above |
 | `GlassModalSheet(enablePeek: ...)` | Removed (use `detents` and `mode`) | Sheet geometry derived directly from detents |
 | `LiquidGlassWidgets.initialize(respectsAccessibility: ...)` | Removed (automatic) | System accessibility preferences detected natively |
 | `LiquidGlassWidgets.initialize(warmUpImpellerPipeline: ...)` | Removed | Shaders are pre-warmed automatically via AOT runtime |
@@ -57,9 +57,6 @@ GlassTabBar.bottom(
   ],
   selectedIndex: _selectedIndex,
   onTabSelected: (index) => setState(() => _selectedIndex = index),
-  collapseConfig: GlassTabBarCollapseConfig(
-    direction: GlassTabBarCollapseDirection.towardsExtraButton,
-  ),
 )
 ```
 
@@ -182,6 +179,59 @@ Common errors and their fixes:
 | `enablePeek` named parameter not found | Remove it — sheet sizing is now via `detents:` |
 | `GlassRefractionSource` undefined | Replace with `GlassBackgroundSource` |
 | `LiquidGlassScope.stack` undefined | Replace with `GlassPage` |
+| `collapseConfig` parameter not found | Remove it — use `GlassTabBar.minimizable` for scroll-collapse |
+| `GlassTabBarCollapseConfig` undefined | Removed — see §7 below |
+| `GlassTabBarCollapseDirection` undefined | Removed — see §7 below |
 
 If you encounter anything not covered here, open an issue at
 [github.com/sdegenaar/liquid_glass_widgets/issues](https://github.com/sdegenaar/liquid_glass_widgets/issues).
+
+---
+
+### 7. Collapse Config Removed: `GlassTabBarCollapseConfig` / `GlassTabBarCollapseDirection`
+
+`GlassTabBarCollapseConfig` and `GlassTabBarCollapseDirection` have been **removed entirely** in 1.0.0.
+
+The collapse-to-button pattern — where the tab pill slides sideways into a corner `+` button — is not an iOS 26 design primitive. Apple's tab bar has two states: static and minimized. The implementation was also unreliable on 120 Hz ProMotion displays.
+
+#### Migration path
+
+Use `GlassTabBar.minimizable` instead. It directly mirrors SwiftUI's `tabBarMinimizeBehavior(.onScrollDown)` with spring physics and works correctly on all devices.
+
+```dart
+// Before (0.x — no longer compiles):
+GlassTabBar.bottom(
+  tabs: _tabs,
+  selectedIndex: _index,
+  onTabSelected: (i) => setState(() => _index = i),
+  extraButton: GlassTabBarExtraButton(icon: Icon(Icons.add), onTap: _onAdd),
+  collapseConfig: GlassTabBarCollapseConfig(),
+  scrollController: _controller,
+)
+
+// After (1.0.0):
+NotificationListener<UserScrollNotification>(
+  onNotification: (n) {
+    if (n.direction == ScrollDirection.reverse && !_minimized) {
+      setState(() => _minimized = true);
+    } else if (n.direction == ScrollDirection.forward && _minimized) {
+      setState(() => _minimized = false);
+    }
+    return false;
+  },
+  child: GlassTabBar.minimizable(
+    tabs: _tabs,
+    selectedIndex: _index,
+    onTabSelected: (i) => setState(() => _index = i),
+    minimized: _minimized,
+    onMinimizedTabTap: () => setState(() => _minimized = false),
+    // Optional persistent trailing button (replaces extraButton):
+    trailingButton: GlassTabBarTrailingButton(
+      icon: Icon(Icons.add),
+      onTap: _onAdd,
+    ),
+  ),
+)
+```
+
+If you need a **persistent action button on a static, non-collapsing bar**, `GlassTabBarExtraButton` remains available on `GlassTabBar.bottom` without any `collapseConfig`.

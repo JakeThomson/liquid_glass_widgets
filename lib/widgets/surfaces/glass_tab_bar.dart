@@ -9,14 +9,21 @@ import '../../types/glass_quality.dart';
 import '../shared/inherited_liquid_glass.dart';
 import 'shared/glass_search_bar_config.dart';
 import 'shared/tab_bar_accessory_placement.dart';
-import 'shared/tab_bar_collapse_config.dart';
+import 'shared/tab_bar_extra_button.dart';
 import 'shared/tab_bar_searchable_controller.dart';
+import 'shared/tab_bar_types.dart';
 import '../../src/widgets/surfaces/tab_bar_bottom_layout.dart';
 import '../../src/widgets/surfaces/tab_bar_searchable_layout.dart';
 
 export 'shared/glass_search_bar_config.dart';
 export 'shared/tab_bar_accessory_placement.dart';
-export 'shared/tab_bar_collapse_config.dart';
+export 'shared/tab_bar_extra_button.dart'
+    show
+        GlassTabBarExtraButton,
+        GlassExtraButtonPlacement,
+        GlassExtraButtonPosition;
+export 'shared/tab_bar_types.dart'
+    show GlassTabPillAnchor, JellyClipper, MaskingQuality;
 
 /// The iOS 26 structural navigation bar widget.
 ///
@@ -174,7 +181,6 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
     required ValueChanged<int> onTabSelected,
     Key? key,
     GlassTabBarExtraButton? extraButton,
-    GlassTabBarCollapseConfig? collapseConfig,
     ScrollController? scrollController,
     Widget? bottomAccessory,
     bool bottomAccessoryEnabled = true,
@@ -232,7 +238,6 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
           selectedIndex: selectedIndex,
           onTabSelected: onTabSelected,
           extraButton: extraButton,
-          collapseConfig: collapseConfig,
           scrollController: scrollController,
           bottomAccessory: bottomAccessory,
           bottomAccessoryEnabled: bottomAccessoryEnabled,
@@ -772,7 +777,6 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
       this.tabWidth,
       this.indicatorBorderRadius,
       this.extraButton,
-      this.collapseConfig,
       this.interactionBehavior = GlassInteractionBehavior.full,
       this.pressScale = 1.04,
       this.interactionGlowColor,
@@ -806,12 +810,6 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
         assert(
           selectedIndex >= 0 && selectedIndex < tabs.length,
           'selectedIndex must be within bounds of tabs list',
-        ),
-        assert(
-          placement != _GlassTabBarPlacement.bottom ||
-              collapseConfig == null ||
-              extraButton != null,
-          'GlassTabBar.bottom collapseConfig requires extraButton.',
         ),
         assert(
           bottomAccessory == null || bottomAccessoryHeight != null,
@@ -983,9 +981,6 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
 
   /// Optional extra action button (bottom/searchable only).
   final GlassTabBarExtraButton? extraButton;
-
-  /// Optional vertical-swipe collapse behavior for [GlassTabBar.bottom].
-  final GlassTabBarCollapseConfig? collapseConfig;
 
   /// Which physical interaction effects are active. Defaults to [GlassInteractionBehavior.full].
   final GlassInteractionBehavior interactionBehavior;
@@ -1175,7 +1170,6 @@ class _GlassTabBarState extends State<GlassTabBar> {
       selectedIndex: widget.selectedIndex,
       onTabSelected: widget.onTabSelected,
       extraButton: widget.extraButton,
-      collapseConfig: widget.collapseConfig,
       bottomAccessory: widget.bottomAccessory,
       bottomAccessoryEnabled: widget.bottomAccessoryEnabled,
       bottomAccessorySpacing: widget.bottomAccessorySpacing,
