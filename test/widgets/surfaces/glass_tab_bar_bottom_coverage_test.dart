@@ -278,5 +278,59 @@ void main() {
       final path = clipper.getClip(const Size(300, 60));
       expect(path.fillType, PathFillType.evenOdd);
     });
+
+    test(
+        'shouldReclip returns true when expansion, transform, borderRadius, or inverse differ',
+        () {
+      final base = JellyClipper(
+        itemCount: 3,
+        alignment: Alignment.center,
+        thickness: 1.0,
+        expansion: const EdgeInsets.all(14.0),
+        transform: Matrix4.identity(),
+        borderRadius: 32.0,
+      );
+
+      final diffExpansion = JellyClipper(
+        itemCount: 3,
+        alignment: Alignment.center,
+        thickness: 1.0,
+        expansion: const EdgeInsets.all(8.0),
+        transform: Matrix4.identity(),
+        borderRadius: 32.0,
+      );
+      expect(base.shouldReclip(diffExpansion), isTrue);
+
+      final diffTransform = JellyClipper(
+        itemCount: 3,
+        alignment: Alignment.center,
+        thickness: 1.0,
+        expansion: const EdgeInsets.all(14.0),
+        transform: Matrix4.translationValues(1, 1, 0),
+        borderRadius: 32.0,
+      );
+      expect(base.shouldReclip(diffTransform), isTrue);
+
+      final diffBorderRadius = JellyClipper(
+        itemCount: 3,
+        alignment: Alignment.center,
+        thickness: 1.0,
+        expansion: const EdgeInsets.all(14.0),
+        transform: Matrix4.identity(),
+        borderRadius: 16.0,
+      );
+      expect(base.shouldReclip(diffBorderRadius), isTrue);
+
+      final diffInverse = JellyClipper(
+        itemCount: 3,
+        alignment: Alignment.center,
+        thickness: 1.0,
+        expansion: const EdgeInsets.all(14.0),
+        transform: Matrix4.identity(),
+        borderRadius: 32.0,
+        inverse: true,
+      );
+      expect(base.shouldReclip(diffInverse), isTrue);
+    });
   });
 }
