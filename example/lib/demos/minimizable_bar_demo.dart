@@ -61,6 +61,14 @@ enum _TrailingMode {
 // Home
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Public entry point — use this when navigating from the example app shell.
+class MinimizableBarDemo extends StatelessWidget {
+  const MinimizableBarDemo({super.key});
+
+  @override
+  Widget build(BuildContext context) => const _DemoHome();
+}
+
 class _DemoHome extends StatefulWidget {
   const _DemoHome();
 

@@ -14,7 +14,7 @@ import 'package:liquid_glass_widgets_example/demos/glass_modal_sheet_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/video_player_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/text_field_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/bottom_bar_tab_width_demo.dart';
-import 'package:liquid_glass_widgets_example/demos/collapse_bar_demo.dart';
+import 'package:liquid_glass_widgets_example/demos/minimizable_bar_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/buttons_and_shadows_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/content_aware_brightness_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/indicator_parity_demo.dart';
@@ -792,18 +792,9 @@ class _ExamplesTab extends StatelessWidget {
                   ),
                   SizedBox(height: 14),
 
-                  // Row 4: Collapse Bar
+                  // Row 4: Quality Tiers (full width — Collapse Bar removed in v1.0.0)
                   Row(
                     children: [
-                      Expanded(
-                        child: _SmallDemoCard(
-                          title: 'Collapse Bar',
-                          icon: CupertinoIcons.arrow_down_right_circle_fill,
-                          color: const Color(0xFF30D158),
-                          destination: const CollapseBarDemoPage(),
-                        ),
-                      ),
-                      SizedBox(width: 14),
                       Expanded(
                         child: _SmallDemoCard(
                           title: 'Quality Tiers',
@@ -813,6 +804,19 @@ class _ExamplesTab extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  SizedBox(height: 14),
+
+                  _LargeDemoCard(
+                    title: 'Minimizable Bar',
+                    subtitle:
+                        'Scroll-collapse navigation with trailing action button',
+                    icon: CupertinoIcons.arrow_down_to_line_alt,
+                    gradient: const [
+                      Color(0xFF0A2342),
+                      Color(0xFF0A84FF),
+                    ],
+                    destination: const MinimizableBarDemo(),
                   ),
                   SizedBox(height: 14),
 

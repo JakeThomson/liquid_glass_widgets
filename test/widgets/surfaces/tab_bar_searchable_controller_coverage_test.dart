@@ -3,8 +3,10 @@
 
 import 'package:flutter/physics.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:liquid_glass_widgets/widgets/surfaces/glass_bottom_bar.dart'
-    show GlassExtraButtonPosition, GlassTabPillAnchor;
+import 'package:liquid_glass_widgets/widgets/surfaces/shared/tab_bar_extra_button.dart'
+    show GlassExtraButtonPosition;
+import 'package:liquid_glass_widgets/widgets/surfaces/shared/tab_bar_types.dart'
+    show GlassTabPillAnchor;
 import 'package:liquid_glass_widgets/widgets/surfaces/shared/tab_bar_searchable_controller.dart';
 
 void main() {
