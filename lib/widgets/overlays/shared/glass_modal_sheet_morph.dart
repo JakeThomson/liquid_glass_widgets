@@ -477,6 +477,33 @@ class SheetMorphGeometry {
                 cardFraction);
   }
 
+  /// The closing morph's starting velocity for a swipe released at
+  /// [verticalVelocity] px/s, in morph-progress units per second.
+  ///
+  /// A flung sheet is already shrinking when the finger leaves it; starting
+  /// the droplet from rest puts a visible stall between the two. The rate the
+  /// shrink was running at is [dismissScaleGain] per card height dragged (see
+  /// [dismissScale]), and morph progress spans trigger-sized to full-sized, so
+  /// the shrink rate converts straight into progress per second. Negative,
+  /// because the closing spring runs toward zero.
+  ///
+  /// Clamped: a flick can report several thousand px/s, and past a point the
+  /// droplet is gone before it can be seen travelling.
+  static double closeVelocityFor({
+    required double verticalVelocity,
+    required double cardHeight,
+  }) {
+    if (cardHeight <= 0.0 || verticalVelocity <= 0.0) return 0.0;
+    return math.max(
+      -_maxCloseVelocity,
+      -dismissScaleGain * verticalVelocity / cardHeight,
+    );
+  }
+
+  /// Ceiling on [closeVelocityFor], in morph-progress units per second — about
+  /// four times the resting close's own kick.
+  static const double _maxCloseVelocity = 10.0;
+
   /// Travel at which the fall stops being 1:1 and starts easing, as a fraction
   /// of the card's height.
   ///
@@ -919,6 +946,15 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
   /// dismissal starts. See [_restingAnchor].
   Offset? _lastPointer;
 
+  /// Measures the velocity a dismissing fling hands to the closing morph.
+  ///
+  /// The sheet's own recognizer keeps its velocity to itself, so the presenter
+  /// tracks the pointer it is already listening to rather than reaching into
+  /// the sheet for one. Read at the dismissal, not at the release: the sheet
+  /// pops the route from its own end-of-drag handler, which runs before this
+  /// Listener sees the pointer up.
+  VelocityTracker? _velocityTracker;
+
   /// Raw sideways finger displacement, measured from [_horizontalAnchor] —
   /// the input the chase in [_horizontalOffset] pursues, not the rendered
   /// offset.
@@ -1107,7 +1143,25 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
       // ticked, so the controller still reports the release position.
       _dismissFrom = _draggedSincePointerDown ? _releaseRect() : null;
     });
-    _morph.close();
+    _morph.close(velocityHint: _closeVelocityHint());
+  }
+
+  /// The velocity the closing droplet sets off at, or null to use the morph's
+  /// own resting kick.
+  ///
+  /// Only a swipe has momentum to hand over — a barrier tap, back gesture or
+  /// controller close starts from rest. Never slower than the resting kick:
+  /// the fling is allowed to hurry the close along, not to drag it out.
+  double? _closeVelocityHint() {
+    if (!_draggedSincePointerDown || !mounted) return null;
+    final hint = SheetMorphGeometry.closeVelocityFor(
+      // Downward only: an upward flick, or a lift from a standstill, has no
+      // momentum for the close to continue.
+      verticalVelocity:
+          _velocityTracker?.getVelocity().pixelsPerSecond.dy ?? 0.0,
+      cardHeight: _pivotRect(MediaQuery.sizeOf(context)).height,
+    );
+    return math.min(hint, LiquidMorphPhysics.closeVelocityHint);
   }
 
   /// The sheet's frame at the moment a swipe let go of it.
@@ -1205,6 +1259,8 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    _velocityTracker = VelocityTracker.withKind(event.kind)
+      ..addPosition(event.timeStamp, event.position);
     _dragOrigin = event.position;
     _scaleAnchor = event.position;
     _lastPointer = event.position;
@@ -1253,6 +1309,7 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
         (event.position - origin).distance > kTouchSlop) {
       _draggedSincePointerDown = true;
     }
+    _velocityTracker?.addPosition(event.timeStamp, event.position);
     _lastPointer = event.position;
     _trackHorizontal(event.position.dx);
   }
@@ -1347,6 +1404,7 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
   }
 
   void _onPointerRelease(PointerEvent event) {
+    _velocityTracker = null;
     _dragOrigin = null;
     _horizontalAnchor = null;
     _horizontalRaw = 0.0;

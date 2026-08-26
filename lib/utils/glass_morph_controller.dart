@@ -220,9 +220,17 @@ class GlassMorphController extends ChangeNotifier {
   ///
   /// Injects [LiquidMorphPhysics.closeVelocityHint] to immediately drive the
   /// spring toward zero with momentum, creating the satisfying "snap-back" feel.
-  void close() {
+  ///
+  /// [velocityHint] overrides that default, in morph-progress units per second
+  /// (negative drives toward zero). Pass it when the close continues a gesture
+  /// the user was already making, so the spring starts at the speed the finger
+  /// left rather than from rest.
+  void close({double? velocityHint}) {
     _isClosing = true;
-    _runSpring(0.0, velocityHint: LiquidMorphPhysics.closeVelocityHint);
+    _runSpring(
+      0.0,
+      velocityHint: velocityHint ?? LiquidMorphPhysics.closeVelocityHint,
+    );
   }
 
   // ─── Physics computation ──────────────────────────────────────────────────

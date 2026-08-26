@@ -39,7 +39,20 @@ const _peekGeometry = SheetGeometry(
 const _glassSettings = LiquidGlassSettings(blur: 10.0);
 const _solidSettings = LiquidGlassSettings(blur: 0.0);
 
-Widget _app(Widget child, {bool disableAnimations = false}) => MaterialApp(
+Widget _app(
+  Widget child, {
+  bool disableAnimations = false,
+  TextDirection? textDirection,
+}) =>
+    MaterialApp(
+      // Wrapped around the Navigator rather than the home, so a presented
+      // route inherits the direction too.
+      builder: textDirection == null
+          ? null
+          : (context, navigator) => Directionality(
+                textDirection: textDirection,
+                child: navigator!,
+              ),
       home: MediaQuery(
         data: MediaQueryData(
           size: _screen,
@@ -395,6 +408,85 @@ void main() {
       expect(wellPast - justPast, lessThan(340.0),
           reason: 'but far less than '
               'the finger did');
+    });
+
+    test('mirrors exactly — nothing here is direction-aware', () {
+      // The resistance is a function of the card's room on the side it is
+      // heading for, so a mirrored card pushed the other way behaves
+      // identically. There is no leading/trailing edge to get backwards under
+      // [Directionality], and no flip to apply for RTL.
+      const mirrored = Rect.fromLTRB(200, 500, 400, 800);
+      for (final offset in [40.0, 150.0, 260.0, 600.0]) {
+        expect(
+          SheetMorphGeometry.horizontalOffsetFor(
+            rawOffset: -offset,
+            cardRect: mirrored,
+            screenWidth: 400,
+          ),
+          -SheetMorphGeometry.horizontalOffsetFor(
+            rawOffset: offset,
+            cardRect: card,
+            screenWidth: 400,
+          ),
+          reason: 'a $offset pt push is the same push either way round',
+        );
+      }
+    });
+  });
+
+  group('SheetMorphGeometry.closeVelocityFor', () {
+    test('a fling hands the close the speed it was shrinking at', () {
+      // 0.64 per card height dragged, so 400 pt/s down a 400 pt card is
+      // 0.64 of the morph per second — heading toward zero.
+      expect(
+        SheetMorphGeometry.closeVelocityFor(
+          verticalVelocity: 400,
+          cardHeight: 400,
+        ),
+        closeTo(-SheetMorphGeometry.dismissScaleGain, 1e-9),
+      );
+      // Twice the speed, twice the handover; a shorter card, more of it.
+      expect(
+        SheetMorphGeometry.closeVelocityFor(
+          verticalVelocity: 800,
+          cardHeight: 400,
+        ),
+        closeTo(-2 * SheetMorphGeometry.dismissScaleGain, 1e-9),
+      );
+      expect(
+        SheetMorphGeometry.closeVelocityFor(
+          verticalVelocity: 400,
+          cardHeight: 200,
+        ),
+        closeTo(-2 * SheetMorphGeometry.dismissScaleGain, 1e-9),
+      );
+    });
+
+    test('a flick is capped rather than trusted', () {
+      expect(
+        SheetMorphGeometry.closeVelocityFor(
+          verticalVelocity: 20000,
+          cardHeight: 400,
+        ),
+        -10.0,
+      );
+    });
+
+    test('nothing is handed over by a release that was not falling', () {
+      expect(
+        SheetMorphGeometry.closeVelocityFor(
+          verticalVelocity: -900,
+          cardHeight: 400,
+        ),
+        0.0,
+      );
+      expect(
+        SheetMorphGeometry.closeVelocityFor(
+          verticalVelocity: 900,
+          cardHeight: 0,
+        ),
+        0.0,
+      );
     });
   });
 
@@ -1163,7 +1255,10 @@ void main() {
 
     const triggerKey = Key('trigger-content');
 
-    Future<GlassMorphAnchor> pumpTrigger(WidgetTester tester) async {
+    Future<GlassMorphAnchor> pumpTrigger(
+      WidgetTester tester, {
+      TextDirection? textDirection,
+    }) async {
       late GlassMorphAnchor anchor;
       await tester.pumpWidget(
         _app(
@@ -1174,6 +1269,7 @@ void main() {
               return const SizedBox(key: triggerKey, width: 56, height: 56);
             }),
           ),
+          textDirection: textDirection,
         ),
       );
       await tester.pump();
@@ -1554,6 +1650,79 @@ void main() {
       );
       expect(tester.getRect(body).center.dx, closeTo(resting.center.dx, 0.5));
       expect(tester.getRect(body).width, closeTo(resting.width, 0.5));
+    });
+
+    testWidgets('the sideways resistance reads the same in RTL',
+        (tester) async {
+      // [SheetMorphGeometry.horizontalOffsetFor] measures the room the card
+      // has, not a leading or a trailing edge, so an RTL app gets the
+      // identical gesture — and must not be given a Directionality flip on
+      // the assumption that it is mirrored.
+      Future<double> sweep(TextDirection direction) async {
+        final anchor = await pumpTrigger(tester, textDirection: direction);
+        await present(tester, anchor);
+        await tester.pumpAndSettle();
+
+        final body = find.text('Sheet body');
+        final drag = await tester.startGesture(const Offset(200, 420));
+        await drag.moveBy(const Offset(0, 60));
+        await tester.pump();
+        final falling = tester.getRect(body).center.dx;
+
+        await drag.moveBy(const Offset(200, 0));
+        await tester.pump(const Duration(milliseconds: 150));
+        await tester.pump(const Duration(milliseconds: 150));
+        final swept = tester.getRect(body).center.dx - falling;
+
+        await drag.up();
+        await tester.pumpAndSettle();
+        // The next pass pumps a fresh app around the same Navigator, so this
+        // sheet has to go or both are on screen at once.
+        tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+        await tester.pumpAndSettle();
+        return swept;
+      }
+
+      final ltr = await sweep(TextDirection.ltr);
+      final rtl = await sweep(TextDirection.rtl);
+      expect(ltr, greaterThan(0.0), reason: 'the sweep did move the card');
+      expect(rtl, closeTo(ltr, 0.5));
+    });
+
+    testWidgets('a flung dismissal hands the trigger back sooner',
+        (tester) async {
+      // The closing droplet continues the fling rather than starting from
+      // rest, so the faster release is further through the morph at every
+      // point — including the catch, which is when the trigger reappears.
+      Future<int> framesToTriggerBack({required bool fling}) async {
+        final anchor = await pumpTrigger(tester);
+        await present(tester, anchor);
+        await tester.pumpAndSettle();
+
+        // Same distance either way; only the time it takes differs.
+        var clock = Duration.zero;
+        final drag = await tester.startGesture(const Offset(200, 420));
+        for (var i = 0; i < 8; i++) {
+          clock += fling
+              ? const Duration(milliseconds: 4)
+              : const Duration(milliseconds: 80);
+          await drag.moveBy(const Offset(0, 40), timeStamp: clock);
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await drag.up();
+
+        var frames = 0;
+        while (triggerOpacity(tester) < 1.0 && frames < 300) {
+          await tester.pump(const Duration(milliseconds: 8));
+          frames++;
+        }
+        await tester.pumpAndSettle();
+        return frames;
+      }
+
+      final flung = await framesToTriggerBack(fling: true);
+      final eased = await framesToTriggerBack(fling: false);
+      expect(flung, lessThan(eased));
     });
 
     testWidgets('the rendered mid-swipe frame is exactly the geometry\'s',

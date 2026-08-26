@@ -86,7 +86,7 @@ GlassMorphController({
 | Method | Description |
 |---|---|
 | `open()` | Drives the spring toward `1.0`. Resets `hasHandedOff`. Safe to call mid-close. |
-| `close()` | Drives the spring toward `0.0` with `closeVelocityHint = -2.5` for the rubber-band snap. |
+| `close()` | Drives the spring toward `0.0` with `closeVelocityHint = -2.5` for the rubber-band snap. Pass `velocityHint` to continue a gesture instead — the sheet's swipe-dismissal seeds the speed it was shrinking at. |
 
 ### Key accessors
 

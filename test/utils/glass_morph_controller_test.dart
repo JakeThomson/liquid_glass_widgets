@@ -192,6 +192,27 @@ void main() {
       expect(ctrl.hasHandedOff, isTrue);
     });
 
+    testWidgets('a velocityHint starts the close at that speed instead',
+        (tester) async {
+      final ctrl = await _mount(tester);
+      ctrl.open();
+      await tester.pumpAndSettle();
+
+      ctrl.close(velocityHint: -6.0);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(ctrl.velocity, closeTo(-6.0, 0.5));
+
+      // And it is further along than the resting kick would have taken it.
+      final flung = ctrl.value;
+      ctrl.open();
+      await tester.pumpAndSettle();
+      ctrl.close();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(flung, lessThan(ctrl.value));
+    });
+
     testWidgets('close() can be called before open() without crashing',
         (tester) async {
       final ctrl = await _mount(tester);

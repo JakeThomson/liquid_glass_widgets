@@ -1,3 +1,11 @@
+# Unreleased
+
+## Improvements
+
+- **The closing morph continues the fling (#223):** `GlassMorphController.close()` takes an optional `velocityHint`, and a swipe-to-dismiss seeds it with the shrink rate the gesture was running at — capped, and never slower than the resting snap — so a fast release no longer stalls into a droplet starting from rest.
+
+---
+
 # 1.1.0
 
 ## New Features
