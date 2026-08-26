@@ -411,6 +411,67 @@ GlassScaffold(
 
 > See `example/lib/demos/nav_bar_patterns_demo.dart` for complete `GlassScaffold` usage patterns.
 
+### Scroll-to-Minimize
+
+`GlassTabBar.minimizable` shrinks to the selected tab's circle as you scroll —
+SwiftUI's `.tabBarMinimizeBehavior(_:)`. Hand it a `GlassTabBarMinimizeController`
+and the scroll view it floats over, and it drives itself:
+
+```dart
+final _scroll = ScrollController();
+final _minimize = GlassTabBarMinimizeController(
+  behavior: GlassBarMinimizeBehavior.onScrollDown,
+);
+
+@override
+void dispose() {
+  _minimize.dispose();
+  _scroll.dispose();
+  super.dispose();
+}
+
+@override
+Widget build(BuildContext context) => GlassScaffold(
+      body: ListView.builder(controller: _scroll, ...),
+      bottomBar: GlassTabBar.minimizable(
+        tabs: _tabs,
+        selectedIndex: _index,
+        onTabSelected: (i) => setState(() => _index = i),
+        minimizeController: _minimize,
+        scrollController: _scroll,
+        onMinimizedTabTap: _minimize.expand,
+      ),
+    );
+```
+
+| SwiftUI | This package |
+|---|---|
+| `.tabBarMinimizeBehavior(.automatic)` | `GlassBarMinimizeBehavior.automatic` |
+| `.tabBarMinimizeBehavior(.never)` | `GlassBarMinimizeBehavior.never` |
+| `.tabBarMinimizeBehavior(.onScrollDown)` | `GlassBarMinimizeBehavior.onScrollDown` |
+| `.tabBarMinimizeBehavior(.onScrollUp)` | `GlassBarMinimizeBehavior.onScrollUp` |
+| `@Environment(\.tabViewBottomAccessoryPlacement)` | `GlassTabBarAccessoryPlacementScope.of(context)` |
+
+The bar also expands when you scroll back to the resting edge of the content
+and when you tap the minimized circle, and stays put when the content is too
+short to scroll. Each tab owns its own scroll view on iOS — pass the current
+tab's controller and call `expand()` from `onTabSelected` to match.
+
+A `bottomAccessory` does not follow the bar on its own — pass
+`GlassTabBarAccessoryPlacement.inline` in the same rebuild the minimize lands
+in, and it animates down into the bar. Note that the bar positions your
+accessory but paints no surface behind it, so give it its own glass.
+
+Minimizing is an iPhone-only behaviour on iOS — the iPad tab bar is a top bar
+and never minimizes. This package does not gate on platform or screen size, so
+if you want that parity, choose a different surface for the regular size class.
+
+Without a controller, `minimized` stays a plain controlled prop and you decide
+when to flip it.
+
+> See `example/lib/demos/minimizable_bar_demo.dart` for all four behaviours,
+> per-tab scroll views, a non-scrollable tab, and the inline accessory.
+
 ### Content-Aware Brightness
 
 Glass bars automatically adapt their icon and label colors to match the content
@@ -845,7 +906,7 @@ Focused, self-contained demos — one widget, one file, runnable standalone:
 |---|---|
 | `glass_menu_demo.dart` — all 9 menu alignments | `cd example && flutter run -t lib/demos/glass_menu_demo.dart` |
 | `glass_tab_bar_scrollable_demo.dart` — scrollable tab bar | `cd example && flutter run -t lib/demos/glass_tab_bar_scrollable_demo.dart` |
-| `minimizable_bar_demo.dart` — scroll-minimize + trailing button | `cd example && flutter run -t lib/demos/minimizable_bar_demo.dart` |
+| `minimizable_bar_demo.dart` — scroll-to-minimize, all four behaviours, inline accessory | `cd example && flutter run -t lib/demos/minimizable_bar_demo.dart` |
 | `glass_modal_sheet_demo.dart` — peek / half / full states + liquid morph trigger | `cd example && flutter run -t lib/demos/glass_modal_sheet_demo.dart` |
 | `glass_tab_bar_bottom_demo.dart` — magic-lens masking | `cd example && flutter run -t lib/demos/glass_tab_bar_bottom_demo.dart` |
 | `bottom_bar_tab_width_demo.dart` — tabWidth showcase | `cd example && flutter run -t lib/demos/bottom_bar_tab_width_demo.dart` |

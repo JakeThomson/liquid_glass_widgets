@@ -441,10 +441,18 @@ class SearchableBottomBarController extends ChangeNotifier {
   // ── Convenience spring factory ────────────────────────────────────────────
 
   /// Creates a [SpringSimulation] from [from] → [to] using [spring].
+  ///
+  /// [velocity] carries the in-flight speed of the axis being retargeted.
+  /// Passing it matters whenever a morph reverses before it settles — which
+  /// scroll-driven minimizing makes routine, since scrolling down and straight
+  /// back up is an ordinary gesture. Relaunching from rest in that case reads
+  /// as a stall followed by a restart. Defaults to 0.0, which is what an idle
+  /// [AnimationController] reports, so a first-launch spring is unchanged.
   static SpringSimulation makeSpring({
     required SpringDescription spring,
     required double from,
     required double to,
+    double velocity = 0.0,
   }) =>
-      SpringSimulation(spring, from, to, 0.0);
+      SpringSimulation(spring, from, to, velocity);
 }
