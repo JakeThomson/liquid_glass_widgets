@@ -623,10 +623,9 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   /// Without one, [minimized] stays a plain controlled prop and the caller
   /// decides when to flip it.
   ///
-  /// A [bottomAccessory] follows the bar: with no explicit
-  /// [bottomAccessoryPlacement] it moves inline as the bar minimizes, the way
-  /// iOS 26 animates a `tabViewBottomAccessory` down into the minimized bar.
-  /// Pass [GlassTabBarAccessoryPlacement.expanded] to pin it.
+  /// A [bottomAccessory] does not follow the bar on its own — pass
+  /// [GlassTabBarAccessoryPlacement.inline] in the same rebuild the minimize
+  /// lands in and it animates down into the bar.
   const GlassTabBar.minimizable({
     required List<GlassTab> tabs,
     required int selectedIndex,
