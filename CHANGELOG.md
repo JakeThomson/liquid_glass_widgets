@@ -6,6 +6,10 @@
 
 Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#223).
 
+## Documentation
+
+- **`GlassModalSheet.peekSize` docs:** Clarified that `peekSize` accepts both absolute pixels (`> 1.0`) and a screen-height fraction (`≤ 1.0`), consistent with `halfSize` and `fullSize`.
+
 ---
 
 

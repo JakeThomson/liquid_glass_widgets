@@ -77,7 +77,7 @@ This is where you configure the physical shape-shifting "Apple Maps" effect.
 | :--- | :--- | :--- | :--- |
 | `halfSize` | `double` | `0.45` | `(x > 1.0 ? x / screenHeight : x)`. Resolves to absolute pixels if > 1.0, otherwise fraction. |
 | `fullSize` | `double?` | `null` | If `null`, defaults to `(screenHeight - 90) / screenHeight` to mimic iOS system page sheets. |
-| `peekSize` | `double` | `90.0` | Minimum visible height. In `persistent` mode, this is the floor for all gestures. |
+| `peekSize` | `double` | `90.0` | Minimum visible height. `> 1.0` = absolute pixels; `≤ 1.0` = fraction of screen height. In `persistent` mode, this is the floor for all gestures. |
 | `horizontalMargin` | `double` | `8.0` | Base side margin. Lerps to `0.0` during the last 20% of the expansion to `full`. |
 | `peekHorizontalMargin`| `double?` | `null` | If provided, margin lerps from this value to `horizontalMargin` during Peek→Half transition. |
 | `bottomMargin` | `double` | `8.0` | Base bottom margin. In `full` state, lerps to `-extraHeight` to hide the bottom rounded edge. |
