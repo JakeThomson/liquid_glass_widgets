@@ -229,6 +229,23 @@ void main() {
       );
     });
 
+    test('degenerate card fraction or screen height returns safe fallbacks',
+        () {
+      expect(
+        SheetMorphGeometry.dampedDismissTravel(0.1, cardFraction: 0.0),
+        0.0,
+      );
+      expect(SheetMorphGeometry.dismissScale(0.1, cardFraction: 0.0), 1.0);
+      const resting = Rect.fromLTRB(8, 400, 392, 794);
+      final rect = SheetMorphGeometry.dismissedRect(
+        restingRect: resting,
+        travel: 0.1,
+        screenHeight: 0.0,
+      );
+      expect(rect.width, resting.width);
+      expect(rect.height, resting.height);
+    });
+
     test('an untouched sheet dismisses from exactly its resting frame', () {
       const resting = Rect.fromLTRB(8, 400, 392, 794);
       expect(
@@ -1416,6 +1433,52 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets(
+        'dragging back up above the threshold closes the sideways axis and springs home',
+        (tester) async {
+      final anchor = await pumpTrigger(tester);
+      await present(tester, anchor);
+      await tester.pumpAndSettle();
+
+      final body = find.text('Sheet body');
+      final resting = tester.getRect(body);
+
+      // Committed to the downward drag: axis opens.
+      final swipe = await tester.startGesture(const Offset(200, 420));
+      await swipe.moveBy(const Offset(0, 60));
+      await tester.pump();
+      final opened = tester.getRect(body);
+      expect(opened.width, lessThan(resting.width * 0.95));
+
+      await swipe.moveBy(const Offset(70, 0));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(
+        tester.getRect(body).center.dx,
+        greaterThan(opened.center.dx),
+        reason: 'sheet follows finger sideways while falling',
+      );
+
+      // Drag back up above the lowest detent threshold without releasing finger.
+      await swipe.moveBy(const Offset(0, -60));
+      await tester.pump();
+
+      // Pumping frames should animate return spring back to centre.
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 25));
+      }
+
+      expect(
+        tester.getRect(body).center.dx,
+        closeTo(resting.center.dx, 1.0),
+        reason: 'axis closed and card sprang back to centre',
+      );
+
+      await swipe.up();
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('a swipe can be pushed sideways, and springs back if released',
         (tester) async {
       // iOS lets a falling sheet be pushed around the screen, not just down.
@@ -1660,6 +1723,25 @@ void main() {
         ),
         throwsAssertionError,
       );
+    });
+
+    testWidgets('abrupt route removal triggers anchor restore for safety',
+        (tester) async {
+      final anchor = await pumpTrigger(tester);
+      await present(tester, anchor);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(triggerOpacity(tester), 0.0);
+
+      final route = ModalRoute.of(
+        tester.element(find.byType(GlassSheetMorphPresenter)),
+      )!;
+      Navigator.of(
+        tester.element(find.byType(GlassSheetMorphPresenter)),
+      ).removeRoute(route);
+      await tester.pumpAndSettle();
+
+      expect(triggerOpacity(tester), 1.0);
     });
   });
 
