@@ -28,8 +28,6 @@ Widget _app({
   required ScrollController scroll,
   int itemCount = 60,
   bool extendBody = true,
-  Widget? bottomAccessory,
-  GlassTabBarAccessoryPlacement? accessoryPlacement,
 }) {
   return MaterialApp(
     home: GlassScaffold(
@@ -47,9 +45,6 @@ Widget _app({
         minimizeController: minimize,
         scrollController: scroll,
         onMinimizedTabTap: minimize.expand,
-        bottomAccessory: bottomAccessory,
-        bottomAccessoryHeight: bottomAccessory == null ? null : 48,
-        bottomAccessoryPlacement: accessoryPlacement,
         maskingQuality: MaskingQuality.off,
       ),
     ),
