@@ -810,7 +810,7 @@ class _ExamplesTab extends StatelessWidget {
                   _LargeDemoCard(
                     title: 'Minimizable Bar',
                     subtitle:
-                        'Scroll-collapse navigation with trailing action button',
+                        'tabBarMinimizeBehavior — minimizes as you scroll',
                     icon: CupertinoIcons.arrow_down_to_line_alt,
                     gradient: const [
                       Color(0xFF0A2342),

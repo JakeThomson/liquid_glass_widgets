@@ -76,7 +76,25 @@ class MinimizableBarDemo extends StatelessWidget {
   const MinimizableBarDemo({super.key});
 
   @override
-  Widget build(BuildContext context) => const _DemoHome();
+  Widget build(BuildContext context) {
+    // Reached from the showcase, which has its own light/dark toggle, this
+    // route would otherwise take its default text colour from the ambient
+    // theme while the scaffold below paints a fixed dark background — black
+    // on black in light mode.
+    //
+    // CupertinoTheme alone does not fix it: the app installs DefaultTextStyle
+    // once at the top from ITS theme, and nesting a CupertinoTheme lower down
+    // does not re-install one. So set both, and pin the same brightness
+    // `_DemoApp` gives the standalone entrypoint.
+    const theme = CupertinoThemeData(brightness: Brightness.dark);
+    return CupertinoTheme(
+      data: theme,
+      child: DefaultTextStyle(
+        style: theme.textTheme.textStyle,
+        child: const _DemoHome(),
+      ),
+    );
+  }
 }
 
 class _DemoHome extends StatefulWidget {
@@ -149,6 +167,10 @@ class _DemoHomeState extends State<_DemoHome> {
     return GlassScaffold(
       extendBody: _extendBody,
       backgroundColor: const Color(0xFF0A0A0F),
+      // The background is fixed dark, so the status bar has to be too —
+      // reached from the showcase in light mode it would otherwise be black
+      // on black.
+      statusBarStyle: GlassStatusBarStyle.light,
       body: _buildBody(),
       bottomBar: GlassTabBar.minimizable(
         tabs: _tabs,
@@ -201,7 +223,8 @@ class _DemoHomeState extends State<_DemoHome> {
         children: [
           const Text(
             'GlassTabBar.minimizable',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            style: TextStyle(
+                fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
           ),
           const SizedBox(height: 4),
           Text(
@@ -225,7 +248,9 @@ class _DemoHomeState extends State<_DemoHome> {
               for (final b in GlassBarMinimizeBehavior.values)
                 b: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Text(b.label, style: const TextStyle(fontSize: 13)),
+                  child: Text(b.label,
+                      style:
+                          const TextStyle(fontSize: 13, color: Colors.white)),
                 ),
             },
           ),
@@ -240,7 +265,9 @@ class _DemoHomeState extends State<_DemoHome> {
               for (final m in _TrailingMode.values)
                 m: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Text(m.label, style: const TextStyle(fontSize: 13)),
+                  child: Text(m.label,
+                      style:
+                          const TextStyle(fontSize: 13, color: Colors.white)),
                 ),
             },
           ),
@@ -281,7 +308,8 @@ class _DemoHomeState extends State<_DemoHome> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 14)),
+                Text(title,
+                    style: const TextStyle(fontSize: 14, color: Colors.white)),
                 Text(
                   subtitle,
                   style: TextStyle(
@@ -345,7 +373,8 @@ class _ContentCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Text(
         'Item number $index',
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
       ),
     );
   }
