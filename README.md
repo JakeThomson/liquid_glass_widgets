@@ -470,7 +470,7 @@ Without a controller, `minimized` stays a plain controlled prop and you decide
 when to flip it.
 
 > See `example/lib/demos/minimizable_bar_demo.dart` for all four behaviours,
-> per-tab scroll views, a non-scrollable tab, and the inline accessory.
+> per-tab scroll views, a non-scrollable tab, and `extendBody: false`.
 
 ### Content-Aware Brightness
 
@@ -906,7 +906,7 @@ Focused, self-contained demos — one widget, one file, runnable standalone:
 |---|---|
 | `glass_menu_demo.dart` — all 9 menu alignments | `cd example && flutter run -t lib/demos/glass_menu_demo.dart` |
 | `glass_tab_bar_scrollable_demo.dart` — scrollable tab bar | `cd example && flutter run -t lib/demos/glass_tab_bar_scrollable_demo.dart` |
-| `minimizable_bar_demo.dart` — scroll-to-minimize, all four behaviours, inline accessory | `cd example && flutter run -t lib/demos/minimizable_bar_demo.dart` |
+| `minimizable_bar_demo.dart` — scroll-to-minimize, all four behaviours | `cd example && flutter run -t lib/demos/minimizable_bar_demo.dart` |
 | `glass_modal_sheet_demo.dart` — peek / half / full states + liquid morph trigger | `cd example && flutter run -t lib/demos/glass_modal_sheet_demo.dart` |
 | `glass_tab_bar_bottom_demo.dart` — magic-lens masking | `cd example && flutter run -t lib/demos/glass_tab_bar_bottom_demo.dart` |
 | `bottom_bar_tab_width_demo.dart` — tabWidth showcase | `cd example && flutter run -t lib/demos/bottom_bar_tab_width_demo.dart` |
