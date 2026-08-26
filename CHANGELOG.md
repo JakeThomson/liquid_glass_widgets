@@ -18,6 +18,26 @@
 - **`GlassModalSheet` swipe-dismissals morph back from the release point (#223):** Dragging a morphed sheet away used to skip the morph and slide the sheet off. Below the lowest detent the sheet now shrinks about the grabbed point as it follows the finger — the interactive zoom-dismissal measured off iOS 26 — and the release hands that exact frame to the closing morph. Sideways, the card chases the finger through a tracking spring, pinning at the screen edge. A release short of the dismiss threshold springs back. Sheets shown without `morphFrom` keep their plain slide-away unchanged.
 - **Scroll-to-minimize for `GlassTabBar.minimizable` (#228):** A new `GlassTabBarMinimizeController` drives the minimize from scrolling — the Flutter equivalent of SwiftUI's `.tabBarMinimizeBehavior(_:)`. `GlassBarMinimizeBehavior` mirrors Apple's enum case for case. The trigger is accumulated distance, not a per-frame delta — fixing the 1.0.0 ProMotion 120 Hz reliability issue.
 
+- **Bottom accessory follows the bar (behaviour change):** on
+  `GlassTabBar.minimizable`, a `bottomAccessory` with no explicit
+  `bottomAccessoryPlacement` now resolves to
+  `GlassTabBarAccessoryPlacement.inline` while the bar is minimized, matching
+  how iOS 26 animates a `tabViewBottomAccessory` down into the minimized bar.
+  Previously it stayed `expanded` unless `inline` was passed explicitly.
+
+  **This changes what `GlassTabBarAccessoryPlacementScope.of(context)` returns**
+  for affected callers — an accessory that switches on it will render its
+  compact variant on scroll where it previously did not, with no code change on
+  your side — and shrinks `preferredSize` by
+  `bottomAccessorySpacing + bottomAccessoryHeight` while minimized. Affects only
+  bars that have an accessory, pass no explicit placement, and reach the
+  minimized state. Pass `GlassTabBarAccessoryPlacement.expanded` to keep the
+  previous behaviour.
+
+  `GlassTabBar.searchable` is deliberately unchanged. Auto-collapsing on search
+  was removed in 0.x because it hid the mini-player behind the search capsule,
+  and that decision stands — a search field expanding is not the bar minimizing.
+
 ## Bug Fixes
 
 - **Spring reversals no longer stall (#228):** `SearchableBottomBarController.makeSpring` now carries in-flight velocity through retargets; reversing mid-morph no longer reads as a stall followed by a restart. Also benefits `GlassTabBar.searchable`.
