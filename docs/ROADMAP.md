@@ -509,8 +509,17 @@ Ideas for consideration after stable. None of these are committed.
 - [ ] `GlassDatePicker` / `GlassTimePicker` — iOS date/time picker wheels with
   glass treatment.
 - [ ] `GlassColorWell` — iOS 26 colour picker pill.
-- [ ] `GlassNavigationTransition` — coordinated glass morphing during
-  `CupertinoPageRoute` push/pop transitions.
+- [x] `GlassNavigationTransition` — shipped as `GlassNavigationShell` +
+  `GlassAppBar.pinned`: back button and actions pin above the `Navigator`
+  and morph in place across push/pop transitions.
+- [ ] **Pinning becomes the default `GlassAppBar`** (next major). The
+  `.pinned` constructor is the transition vehicle, not the destination: on
+  iOS 26 the pinned behaviour *is* the navigation bar, so once
+  `GlassBarItem` reaches parity with the widget API (menu items, spacers /
+  multi-capsule grouping, text and prominent styles), a major release can
+  make the data API the plain `GlassAppBar` and demote the widget-based
+  `leading`/`actions` constructor to the legacy mode. Blocked on that
+  parity; land items additively first.
 
 ### Enhancements
 - [ ] **Scroll-to-minimize** (`GlassBarMinimizeBehavior.onScrollDown`) — tab bar
