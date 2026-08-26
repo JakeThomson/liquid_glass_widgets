@@ -242,6 +242,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
                 clipExpansion: widget.clipExpansion,
                 captureImage: widget.captureImage,
                 captureOriginInScreenSpace: widget.captureOriginInScreenSpace,
+                selfScaled: LiquidGlassSelfScaleScope.of(context),
                 child: child!,
               ),
               child: widget.child,
@@ -264,6 +265,7 @@ class _RawShapes extends SingleChildRenderObjectWidget {
     this.clipExpansion = EdgeInsets.zero,
     this.captureImage,
     this.captureOriginInScreenSpace = Offset.zero,
+    this.selfScaled = false,
   });
 
   final FragmentShader renderShader;
@@ -274,6 +276,9 @@ class _RawShapes extends SingleChildRenderObjectWidget {
   final EdgeInsets clipExpansion;
   final ui.Image? captureImage;
   final Offset captureOriginInScreenSpace;
+
+  /// See [LiquidGlassSelfScaleScope].
+  final bool selfScaled;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -287,6 +292,7 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       clipExpansion: clipExpansion,
       captureImage: captureImage,
       captureOriginInScreenSpace: captureOriginInScreenSpace,
+      selfScaled: selfScaled,
     );
   }
 
@@ -303,7 +309,8 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       ..backdropKey = backdropKey
       ..clipExpansion = clipExpansion
       ..captureImage = captureImage
-      ..captureOriginInScreenSpace = captureOriginInScreenSpace;
+      ..captureOriginInScreenSpace = captureOriginInScreenSpace
+      ..selfScaled = selfScaled;
   }
 }
 
@@ -319,7 +326,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     super.captureImage,
     super.captureOriginInScreenSpace,
     EdgeInsets clipExpansion = EdgeInsets.zero,
-  }) : _clipExpansion = clipExpansion;
+    bool selfScaled = false,
+  })  : _clipExpansion = clipExpansion,
+        _selfScaled = selfScaled;
 
   // ── Cached blur filter ──────────────────────────────────────────────────
   // The BackdropFilterLayer's blur filter is rebuilt only when blurSigma
@@ -339,6 +348,15 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     markNeedsPaint();
   }
 
+  /// See [LiquidGlassSelfScaleScope]. Repaints on change: the shader's shape
+  /// bounds are derived from [matteTransform], which this switches.
+  bool _selfScaled;
+  set selfScaled(bool value) {
+    if (_selfScaled == value) return;
+    _selfScaled = value;
+    markNeedsPaint();
+  }
+
   List<BoxShadow> shadows;
 
   @override
@@ -352,6 +370,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   Offset? _unscaledCaptureOrigin;
 
   bool _hasScale(Matrix4 m) {
+    // A surface scaling itself leaves its backdrop where it was, so the live
+    // transform is the right one and freezing would strand the shape.
+    if (_selfScaled) return false;
     // Detects the CupertinoSheet push-back, which scales the page down
     // uniformly on both X and Y axes simultaneously (< 1.0 on both).
     //
@@ -364,8 +385,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     // Use a very tight tolerance (0.9999) to catch the very first frame of the CupertinoSheet
     // scale animation. A looser tolerance (0.99) allowed early frames of the animation
     // (e.g., 0.995) to overwrite the snapshot before freezing, causing a slight jump.
-    return (scaleX < 0.9999 && scaleX > 0.0) &&
-        (scaleY < 0.9999 && scaleY > 0.0);
+    const threshold = LiquidGlassSelfScaleScope.freezeScaleThreshold;
+    return (scaleX < threshold && scaleX > 0.0) &&
+        (scaleY < threshold && scaleY > 0.0);
   }
 
   /// Snapshots the layer's current screen-space transform and capture origin
