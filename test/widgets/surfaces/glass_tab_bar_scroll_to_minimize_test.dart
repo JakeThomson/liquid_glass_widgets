@@ -28,6 +28,8 @@ Widget _app({
   required ScrollController scroll,
   int itemCount = 60,
   bool extendBody = true,
+  Widget? bottomAccessory,
+  GlassTabBarAccessoryPlacement? accessoryPlacement,
 }) {
   return MaterialApp(
     home: GlassScaffold(
@@ -45,6 +47,9 @@ Widget _app({
         minimizeController: minimize,
         scrollController: scroll,
         onMinimizedTabTap: minimize.expand,
+        bottomAccessory: bottomAccessory,
+        bottomAccessoryHeight: bottomAccessory == null ? null : 48,
+        bottomAccessoryPlacement: accessoryPlacement,
         maskingQuality: MaskingQuality.off,
       ),
     ),
@@ -232,6 +237,83 @@ void main() {
 
       expect(tester.getSize(find.byType(GlassTabBar)).height,
           lessThan(expandedBar.height));
+    });
+  });
+
+  group('GlassTabBar.minimizable — bottom accessory placement', () {
+    late GlassTabBarAccessoryPlacement observed;
+
+    Widget probe() => Builder(
+          builder: (context) {
+            observed = GlassTabBarAccessoryPlacementScope.of(context);
+            return const SizedBox(height: 48, child: Text('mini player'));
+          },
+        );
+
+    testWidgets('moves inline when the bar minimizes and no placement is set',
+        (tester) async {
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      final minimize = GlassTabBarMinimizeController(
+        behavior: GlassBarMinimizeBehavior.onScrollDown,
+      );
+      addTearDown(minimize.dispose);
+
+      await tester.pumpWidget(_app(
+        minimize: minimize,
+        scroll: scroll,
+        bottomAccessory: probe(),
+      ));
+      await tester.pumpAndSettle();
+      expect(observed, GlassTabBarAccessoryPlacement.expanded);
+
+      minimize.minimize();
+      await tester.pumpAndSettle();
+      expect(observed, GlassTabBarAccessoryPlacement.inline);
+    });
+
+    testWidgets('an explicit placement always wins', (tester) async {
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      final minimize = GlassTabBarMinimizeController(
+        behavior: GlassBarMinimizeBehavior.onScrollDown,
+      );
+      addTearDown(minimize.dispose);
+
+      await tester.pumpWidget(_app(
+        minimize: minimize,
+        scroll: scroll,
+        bottomAccessory: probe(),
+        accessoryPlacement: GlassTabBarAccessoryPlacement.expanded,
+      ));
+      await tester.pumpAndSettle();
+
+      minimize.minimize();
+      await tester.pumpAndSettle();
+      expect(observed, GlassTabBarAccessoryPlacement.expanded);
+    });
+
+    testWidgets('searchable does not pull its accessory inline on search',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: GlassScaffold(
+          body: const SizedBox.expand(),
+          bottomBar: GlassTabBar.searchable(
+            tabs: _testTabs,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            isSearchActive: true,
+            searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+            bottomAccessory: probe(),
+            bottomAccessoryHeight: 48,
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(observed, GlassTabBarAccessoryPlacement.expanded,
+          reason: 'a search field expanding is not the bar minimizing');
     });
   });
 
