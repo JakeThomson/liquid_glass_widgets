@@ -329,13 +329,13 @@ class GlassAppBar extends StatelessWidget
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             for (final item in items)
-                              if (item is GlassBarIconItem)
+                              if (item is GlassBarCustomItem)
+                                item.child
+                              else
                                 SizedBox(
                                   width: slot,
-                                  child: Center(child: item.icon),
-                                )
-                              else
-                                item.content,
+                                  child: Center(child: item.content),
+                                ),
                           ],
                         ),
                       ),
@@ -367,12 +367,21 @@ class GlassAppBar extends StatelessWidget
                 GlassButtonGroup.icons(
                   items: [
                     for (final item in items)
-                      GlassButtonGroupItem(
-                        icon: item.content,
-                        onTap: item.onTap,
-                        label: item.label,
-                        enabled: item.enabled,
-                      ),
+                      if (item is GlassBarMenuItem)
+                        GlassButtonGroupItem.menu(
+                          icon: item.icon,
+                          menuItems: item.menuItems,
+                          menuAlignment: item.menuAlignment,
+                          menuWidth: item.menuWidth,
+                          label: item.label,
+                        )
+                      else
+                        GlassButtonGroupItem(
+                          icon: item.content,
+                          onTap: item.onTap,
+                          label: item.label,
+                          enabled: item.enabled,
+                        ),
                   ],
                 ),
               ];

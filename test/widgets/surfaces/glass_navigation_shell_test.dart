@@ -423,6 +423,131 @@ void main() {
     });
   });
 
+  group('pull-down menus', () {
+    List<GlassBarItem> menuActions({String label = 'Copy'}) => [
+          GlassBarItem.menu(
+            icon: const Icon(CupertinoIcons.ellipsis),
+            id: 'more',
+            label: 'More',
+            menuItems: [GlassMenuItem(title: label, onTap: () {})],
+          ),
+        ];
+
+    testWidgets('a menu item opens the pull-down from the pinned capsule',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: menuActions(),
+      )));
+      await settle(tester);
+
+      expect(find.text('Copy'), findsNothing);
+      await tester.tap(find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.byIcon(CupertinoIcons.ellipsis),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Copy'), findsOneWidget);
+    });
+
+    testWidgets('a menu cannot be opened mid-transition', (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: menuActions(),
+      )));
+      await settle(tester);
+      await _push(
+        tester,
+        _Screen(title: 'Detail', actions: menuActions(label: 'Delete')),
+      );
+
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.ellipsis),
+        ),
+        warnIfMissed: false,
+      );
+      await tester.pump();
+      expect(find.text('Copy'), findsNothing);
+      expect(find.text('Delete'), findsNothing);
+
+      await settle(tester);
+    });
+
+    testWidgets('an open menu is dismissed when navigation starts',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: menuActions(),
+      )));
+      await settle(tester);
+
+      await tester.tap(find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.byIcon(CupertinoIcons.ellipsis),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Copy'), findsOneWidget);
+
+      // The capsule outlives the route, so nothing else would take the menu
+      // down as the page slides out from under it.
+      await _push(tester, const _Screen(title: 'Detail', actions: []));
+      await settle(tester);
+
+      expect(find.text('Copy'), findsNothing);
+    });
+
+    testWidgets('only the first menu item in a cluster opens a menu',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.menu(
+            icon: const Icon(CupertinoIcons.ellipsis),
+            menuItems: [GlassMenuItem(title: 'First', onTap: () {})],
+          ),
+          GlassBarItem.menu(
+            icon: const Icon(CupertinoIcons.square_arrow_up),
+            menuItems: [GlassMenuItem(title: 'Second', onTap: () {})],
+          ),
+        ],
+      )));
+      await settle(tester);
+
+      await tester.tap(find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.byIcon(CupertinoIcons.square_arrow_up),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Second'), findsNothing);
+
+      await tester.tap(find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.byIcon(CupertinoIcons.ellipsis),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('First'), findsOneWidget);
+    });
+
+    testWidgets('without a shell the menu still opens in-route',
+        (tester) async {
+      GlassNavigationShellState.debugPinningSupported = false;
+      await tester.pumpWidget(CupertinoApp(
+        home: _Screen(title: 'Root', actions: menuActions()),
+      ));
+      await settle(tester);
+
+      expect(find.byType(GlassNavPinnedHost), findsNothing);
+      await tester.tap(find.byIcon(CupertinoIcons.ellipsis));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Copy'), findsOneWidget);
+    });
+  });
+
   group('fallback rendering', () {
     Finder inRouteCapsule() => find.descendant(
           of: find.byType(GlassAppBar),

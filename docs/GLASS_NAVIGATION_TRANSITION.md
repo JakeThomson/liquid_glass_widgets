@@ -89,6 +89,13 @@ bar.
   reposition a cluster — iOS 26 has none either, which is exactly why custom
   content needs no coordination: the widget *is* an item, and layout flows
   from that.
+- **`GlassBarItem.menu` is the `UIBarButtonItem.menu` analogue.** The whole
+  capsule morphs into the pull-down, matching iOS 26's `GlassEffectContainer`
+  and `GlassButtonGroupItem.menu`. Only the first menu item in a cluster opens
+  a menu; a second is treated as a plain icon. A menu cannot be opened while a
+  transition is running, and one already open is dismissed if navigation
+  starts — the capsule outlives the route that owns the menu, so nothing else
+  would take it down.
 - **Participation is the constructor.** A `GlassAppBar.pinned` screen keeps
   the chrome pinned even with no actions; a plain `GlassAppBar` screen does
   not participate, and the pinned chrome retreats while it covers the bar.
@@ -101,6 +108,7 @@ bar.
 | Interactive back-swipe | Same interpolation, scrubbed by the gesture; cancelled swipes rebound |
 | Destination has no actions (or no back button) | The cluster switches off/on once at the transition midpoint — appearing and disappearing are deliberately not animated |
 | Tap while a transition runs | Ignored. The chrome is showing a blend of two routes' items, so a tap would fire an action the user can no longer see |
+| Navigation starts with a menu open | The menu is dismissed; the capsule outlives the route, so nothing else would |
 | Non-participating route or modal sheet on top | Chrome retreats with the covering route's transition and returns on pop |
 | No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: automatic back `GlassButton` + `GlassButtonGroup.icons` capsule |
 
@@ -114,8 +122,10 @@ is a transition state, not the end state. On iOS 26 the pinned behaviour *is*
 the navigation bar, so the intended trajectory is:
 
 1. Land the data API additively (this release) — nothing shipped changes.
-2. Bring `GlassBarItem` to parity with the widget API: menu items, spacers /
-   multi-capsule grouping, text and prominent styles.
+2. Bring `GlassBarItem` to parity with the widget API. Menus have landed;
+   what remains is text styles (small) and spacers / multi-capsule grouping /
+   prominent items (structural — one capsule becomes *n*, and the count can
+   differ between the two routes).
 3. At the next major, make pinning the default `GlassAppBar` and demote the
    widget-based `leading`/`actions` constructor to a legacy mode.
 
