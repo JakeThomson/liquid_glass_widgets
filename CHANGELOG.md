@@ -1,3 +1,11 @@
+# Unreleased
+
+## New Features
+
+- **`GlassModalSheet` swipe-dismissals morph back from the release point (#222):** dragging a morphed sheet away used to skip the morph and slide the sheet off. Below the lowest detent the sheet now shrinks about the grabbed point as it follows the finger — the interactive zoom-dismissal measured off iOS 26 — and the release hands that exact frame to the closing morph. Sideways the card chases the finger through a tracking spring, pinning at the screen edge. A release short of the dismiss threshold springs back; sheets shown without `morphFrom` keep their plain slide-away.
+
+---
+
 # 1.0.0
 
 ## Major Milestone: General Availability

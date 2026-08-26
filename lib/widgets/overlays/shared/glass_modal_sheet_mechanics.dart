@@ -441,6 +441,16 @@ class GlassModalSheetController {
   /// Notifies on every sheet position change — drag and snap animation alike.
   /// Null until the sheet is mounted; read [progress] from inside the listener.
   Listenable? get progressListenable => _state?._progressNotifier;
+
+  /// The sheet's live position, straight off its animation controller, or null
+  /// while no sheet is attached.
+  ///
+  /// [value] reports the position the sheet last *built* at. That is what
+  /// consumers want, but it lags by a frame inside a pointer handler or a
+  /// [progressListenable] callback — both run before the sheet rebuilds — and
+  /// the null case distinguishes "not mounted yet" from a sheet genuinely
+  /// sitting at 0.0.
+  double? get _livePosition => _state?._animationController.value;
 }
 
 // ===========================================================================
