@@ -583,7 +583,12 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Initial state when the scaffold is first displayed.
   final GlassSheetState initialState;
 
-  /// Height in the 'peek' state. Default: 90.0.
+  /// Minimum visible height in the 'peek' state.
+  ///
+  /// - If 0.0 < value <= 1.0: Treated as a fraction of screen height.
+  /// - If value > 1.0: Treated as absolute pixels.
+  ///
+  /// Default: 90.0 (absolute pixels).
   final double peekSize;
 
   /// Corner radius of the top edges in its floating state.

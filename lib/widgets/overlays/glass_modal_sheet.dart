@@ -51,7 +51,12 @@ class GlassModalSheet extends StatefulWidget {
   /// - If null: Defaults to screen height minus 90px (iOS Page Sheet style).
   final double? fullSize;
 
-  /// Height in the 'peek' state. Default: 90.0.
+  /// Minimum visible height in the 'peek' state.
+  ///
+  /// - If 0.0 < value <= 1.0: Treated as a fraction of screen height.
+  /// - If value > 1.0: Treated as absolute pixels.
+  ///
+  /// Default: 90.0 (absolute pixels).
   final double peekSize;
 
   /// Internal padding for the sheet content.
