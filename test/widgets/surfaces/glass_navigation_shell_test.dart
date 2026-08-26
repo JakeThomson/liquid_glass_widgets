@@ -28,6 +28,12 @@ void main() {
     await tester.pump();
   }
 
+  /// The back button drawn by the shell, as opposed to any in-route fallback.
+  Finder pinnedBack() => find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.byIcon(CupertinoIcons.back),
+      );
+
   group('registration and hoisting', () {
     testWidgets('a screen with pinnedActions hands its items to the host',
         (tester) async {
@@ -299,6 +305,121 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('the back button is inert for the length of a push',
+        (tester) async {
+      var custom = 0;
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await _push(
+        tester,
+        _Screen(title: 'Detail', actions: const [], onBack: () => custom++),
+      );
+
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(pinnedBack(), warnIfMissed: false);
+      await tester.pump();
+      expect(custom, 0);
+
+      await settle(tester);
+      await tester.tap(pinnedBack());
+      expect(custom, 1);
+    });
+
+    testWidgets('the back button is inert from the first frame of a pop',
+        (tester) async {
+      var custom = 0;
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await _push(
+        tester,
+        _Screen(title: 'Detail', actions: const [], onBack: () => custom++),
+      );
+      await settle(tester);
+
+      // A pop leaves progress at 1.0 for its first frames, so by value alone
+      // this is indistinguishable from being at rest — only the controller's
+      // status says the transition is running.
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pump();
+      await tester.tap(pinnedBack(), warnIfMissed: false);
+      await tester.pump();
+      expect(custom, 0);
+
+      await settle(tester);
+    });
+
+    testWidgets(
+        'the back button is inert mid back-swipe and live again once '
+        'a cancelled swipe rebounds', (tester) async {
+      var custom = 0;
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await _push(
+        tester,
+        _Screen(title: 'Detail', actions: const [], onBack: () => custom++),
+      );
+      await settle(tester);
+
+      final swipe = await tester.startGesture(const Offset(2, 300));
+      await swipe.moveBy(const Offset(80, 0));
+      await tester.pump();
+
+      await tester.tap(pinnedBack(), warnIfMissed: false);
+      await tester.pump();
+      expect(custom, 0);
+
+      // Cancelling springs the route back. The rebound's final value tick
+      // lands on 1.0 before the controller reports itself completed, so the
+      // chrome only learns it is at rest again from the status change.
+      await swipe.moveBy(const Offset(-70, 0));
+      await swipe.up();
+      await settle(tester);
+
+      await tester.tap(pinnedBack());
+      expect(custom, 1);
+      expect(find.text('Detail'), findsOneWidget);
+    });
+
+    testWidgets('pinned actions are inert mid-transition', (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await _push(
+        tester,
+        _Screen(
+          title: 'Detail',
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              onTap: () => taps++,
+            ),
+          ],
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 300));
+      final add = find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.byIcon(CupertinoIcons.add),
+      );
+      expect(add, findsOneWidget);
+      await tester.tap(add, warnIfMissed: false);
+      await tester.pump();
+      expect(taps, 0);
+
+      await settle(tester);
+      await tester.tap(add);
+      expect(taps, 1);
     });
   });
 

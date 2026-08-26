@@ -49,9 +49,13 @@ sealed class GlassBarItem {
   ///
   /// Constrained to the cluster's height; give the child its own padding if it
   /// needs breathing room. Supply [id] to keep it matched across routes.
+  ///
+  /// [onTap] is optional here, unlike on [GlassBarItem.icon]: a custom view is
+  /// as often a status readout as it is a button, and one that handles its own
+  /// gestures wants the cluster to stay out of the way.
   const factory GlassBarItem.custom({
     required Widget child,
-    VoidCallback? onTap,
+    VoidCallback onTap,
     Object? id,
     String? label,
     bool enabled,
@@ -81,8 +85,16 @@ sealed class GlassBarActionItem extends GlassBarItem {
     this.enabled = true,
   });
 
-  /// Called when the item is tapped. Null makes the item non-interactive.
-  final VoidCallback? onTap;
+  /// The tap handler for items that do not want one, mirroring
+  /// `GlassButtonGroupItem.menu`.
+  static void _noOp() {}
+
+  /// Called when the item is tapped.
+  ///
+  /// Never null: an icon in a navigation bar that does nothing is a bug, so
+  /// [GlassBarItem.icon] requires one. Passive [GlassBarItem.custom] content
+  /// gets an internal no-op instead, keeping every reader of it callable.
+  final VoidCallback onTap;
 
   /// Identity used to match this item against items on other routes.
   ///
@@ -106,7 +118,7 @@ final class GlassBarIconItem extends GlassBarActionItem {
   /// Creates an icon item. Prefer [GlassBarItem.icon].
   const GlassBarIconItem({
     required this.icon,
-    required VoidCallback super.onTap,
+    required super.onTap,
     super.id,
     super.label,
     super.enabled,
@@ -128,7 +140,7 @@ final class GlassBarCustomItem extends GlassBarActionItem {
   /// Creates a custom item. Prefer [GlassBarItem.custom].
   const GlassBarCustomItem({
     required this.child,
-    super.onTap,
+    super.onTap = GlassBarActionItem._noOp,
     super.id,
     super.label,
     super.enabled,

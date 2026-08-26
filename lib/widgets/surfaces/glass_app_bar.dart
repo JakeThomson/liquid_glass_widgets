@@ -369,7 +369,7 @@ class GlassAppBar extends StatelessWidget
                     for (final item in items)
                       GlassButtonGroupItem(
                         icon: item.content,
-                        onTap: item.onTap ?? () {},
+                        onTap: item.onTap,
                         label: item.label,
                         enabled: item.enabled,
                       ),

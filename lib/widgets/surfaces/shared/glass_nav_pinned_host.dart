@@ -86,6 +86,7 @@ class GlassNavPinnedState {
     required this.to,
     required this.progress,
     required this.coverage,
+    required this.settled,
     required this.topRoute,
   });
 
@@ -103,6 +104,15 @@ class GlassNavPinnedState {
   /// Drives the chrome out of the way when a plain route or a modal sheet is
   /// presented above the pinned bar.
   final double coverage;
+
+  /// Whether the chrome is at rest and may be tapped.
+  ///
+  /// False for the whole of a push, pop or back-swipe. Taps are swallowed
+  /// while a transition runs because the chrome is showing a blend of two
+  /// routes' items, so acting on one of them would fire an action the user
+  /// can no longer see. [progress] cannot answer this on its own — a pop
+  /// begins at 1.0 — so the shell derives it from the route instead.
+  final bool settled;
 
   /// The topmost registered route, used for the default back action.
   final ModalRoute<dynamic> topRoute;
@@ -197,13 +207,11 @@ class _PinnedBackButton extends StatelessWidget {
         : state.from.showsBackButton;
     if (!shown || coverageScale <= 0.01) return const SizedBox.shrink();
 
-    final atRest = state.progress >= 0.999;
-
     return Transform.scale(
       scale: coverageScale,
       alignment: Alignment.centerLeft,
       child: IgnorePointer(
-        ignoring: !atRest,
+        ignoring: !state.settled,
         child: GlassButton(
           icon: const Icon(CupertinoIcons.back),
           width: GlassNavPinnedMetrics.backDiameter,
@@ -690,7 +698,6 @@ class _PinnedActionsCapsule extends StatelessWidget {
     if (!visible || coverageScale <= 0.01) return const SizedBox.shrink();
 
     final slots = matchGlassNavActions(fromItems, toItems);
-    final atRest = p >= 0.999;
     final showsIncoming = GlassNavPinnedMetrics.showsIncomingAt(p);
 
     // Where each slot sits within each cluster, leading to trailing.
@@ -745,7 +752,7 @@ class _PinnedActionsCapsule extends StatelessWidget {
           slot: i,
           isFrom: false,
           opacity: crossFades ? q : 1.0,
-          child: _ClusterItem(item: toItem, enabled: atRest),
+          child: _ClusterItem(item: toItem, enabled: state.settled),
         ));
       }
     }
@@ -756,7 +763,7 @@ class _PinnedActionsCapsule extends StatelessWidget {
       scale: coverageScale,
       alignment: Alignment.centerRight,
       child: IgnorePointer(
-        ignoring: !atRest,
+        ignoring: !state.settled,
         child: GlassButton.custom(
           onTap: () {},
           shape: const LiquidRoundedRectangle(
@@ -797,7 +804,7 @@ class _ClusterItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final interactive = enabled && item.enabled && item.onTap != null;
+    final interactive = enabled && item.enabled;
 
     Widget content = switch (item) {
       GlassBarIconItem(:final icon) => SizedBox(
