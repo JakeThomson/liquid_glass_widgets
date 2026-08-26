@@ -106,6 +106,21 @@ bar.
 Glass opacity is never animated (a glass surface's backdrop pass renders fully
 or not at all); only geometry animates, and only item *contents* cross-fade.
 
+## Direction
+
+`GlassAppBar.pinned` is deliberately the opt-in, not the default — but that
+is a transition state, not the end state. On iOS 26 the pinned behaviour *is*
+the navigation bar, so the intended trajectory is:
+
+1. Land the data API additively (this release) — nothing shipped changes.
+2. Bring `GlassBarItem` to parity with the widget API: menu items, spacers /
+   multi-capsule grouping, text and prominent styles.
+3. At the next major, make pinning the default `GlassAppBar` and demote the
+   widget-based `leading`/`actions` constructor to a legacy mode.
+
+Screens written against `GlassAppBar.pinned` today are already written for
+that future.
+
 ## Current limitations
 
 - `GlassBarItem.spacer()` (multi-capsule grouping, mirroring
