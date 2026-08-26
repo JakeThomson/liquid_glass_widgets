@@ -1200,7 +1200,20 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
         target.top - rawFallen.top * scale,
         0.0,
       )..scaleByDouble(scale, scale, 1.0, 1.0),
-      child: child,
+      // The premium renderer freezes its shader UVs under a uniform scale-down,
+      // for the CupertinoSheet push-back — where the sampled page shrinks along
+      // with the glass. A swipe is the other arrangement: the page behind holds
+      // still, and freezing strands the surface's rim and rounded corners at
+      // the size the sheet had when the drag began. Always present, so the
+      // sheet's depth in the element tree never changes; only the flag moves.
+      child: LiquidGlassSelfScaleScope(
+        // The renderer's own threshold, not an invented one: the flag is set
+        // exactly when the freeze would otherwise fire. A sheet at its detent
+        // sits a hair under 1.0 (its live position lags its layout by a sub-
+        // pixel), which must not read as a swipe.
+        selfScaled: scale < LiquidGlassSelfScaleScope.freezeScaleThreshold,
+        child: child,
+      ),
     );
   }
 

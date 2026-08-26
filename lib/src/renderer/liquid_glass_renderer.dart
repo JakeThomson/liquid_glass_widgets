@@ -17,6 +17,8 @@ export 'liquid_glass.dart' show LiquidGlass;
 export 'liquid_glass_blend_group.dart' show LiquidGlassBlendGroup;
 export 'liquid_glass_settings.dart' show LiquidGlassSettings;
 export 'liquid_shape.dart';
+export 'internal/liquid_glass_self_scale_scope.dart'
+    show LiquidGlassSelfScaleScope;
 export 'rendering/liquid_glass_layer.dart' show LiquidGlassLayer;
 export 'stretch.dart'
     show
