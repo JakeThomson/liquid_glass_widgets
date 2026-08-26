@@ -10,13 +10,17 @@ import '../shared/inherited_liquid_glass.dart';
 import 'shared/glass_search_bar_config.dart';
 import 'shared/tab_bar_accessory_placement.dart';
 import 'shared/tab_bar_extra_button.dart';
+import 'shared/tab_bar_minimize_controller.dart';
 import 'shared/tab_bar_searchable_controller.dart';
 import 'shared/tab_bar_types.dart';
+import '../../src/widgets/surfaces/dynamic_preferred_size.dart';
 import '../../src/widgets/surfaces/tab_bar_bottom_layout.dart';
 import '../../src/widgets/surfaces/tab_bar_searchable_layout.dart';
 
+export 'shared/glass_bar_minimize_behavior.dart';
 export 'shared/glass_search_bar_config.dart';
 export 'shared/tab_bar_accessory_placement.dart';
+export 'shared/tab_bar_minimize_controller.dart';
 export 'shared/tab_bar_extra_button.dart'
     show
         GlassTabBarExtraButton,
@@ -152,7 +156,7 @@ enum _GlassTabBarPlacement { bottom, searchable, minimizable, inline }
 /// GlassTabBar.bottom(tabs: [...], ...)
 /// GlassTabBar.searchable(tabs: [...], searchConfig: ..., ...)
 /// ```
-class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
+class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   // ─── Bottom constructor ────────────────────────────────────────────────────
 
   /// Creates a floating bottom tab bar — the iOS 26 `UITabBarController` equivalent.
@@ -597,12 +601,39 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
   /// An app that wants a button only while minimized simply passes it only
   /// while [minimized] is true — the appearing button grows in at the
   /// trailing edge as the tab pill shrinks to its circle.
+  ///
+  /// ### Minimizing on scroll
+  ///
+  /// Pass a [GlassTabBarMinimizeController] as [minimizeController] and the
+  /// bar minimizes itself from the scroll view given to [scrollController] —
+  /// the equivalent of `.tabBarMinimizeBehavior(.onScrollDown)`. The
+  /// controller then owns the state and [minimized] is ignored:
+  ///
+  /// ```dart
+  /// GlassTabBar.minimizable(
+  ///   tabs: tabs,
+  ///   selectedIndex: index,
+  ///   onTabSelected: onTabSelected,
+  ///   minimizeController: _minimize,
+  ///   scrollController: _scroll,
+  ///   onMinimizedTabTap: _minimize.expand,
+  /// )
+  /// ```
+  ///
+  /// Without one, [minimized] stays a plain controlled prop and the caller
+  /// decides when to flip it.
+  ///
+  /// A [bottomAccessory] follows the bar: with no explicit
+  /// [bottomAccessoryPlacement] it moves inline as the bar minimizes, the way
+  /// iOS 26 animates a `tabViewBottomAccessory` down into the minimized bar.
+  /// Pass [GlassTabBarAccessoryPlacement.expanded] to pin it.
   const GlassTabBar.minimizable({
     required List<GlassTab> tabs,
     required int selectedIndex,
     required ValueChanged<int> onTabSelected,
     Key? key,
     bool minimized = false,
+    GlassTabBarMinimizeController? minimizeController,
     VoidCallback? onMinimizedTabTap,
     GlassTabBarTrailingButton? trailingButton,
     Widget? bottomAccessory,
@@ -672,6 +703,7 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
           isSearchActive: minimized,
           onMinimizedTabTap: onMinimizedTabTap,
           trailingButton: trailingButton,
+          minimizeController: minimizeController,
           bottomAccessoryPlacement: bottomAccessoryPlacement,
           bottomAccessory: bottomAccessory,
           bottomAccessoryEnabled: bottomAccessoryEnabled,
@@ -798,6 +830,7 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
       // Minimizable-only
       this.onMinimizedTabTap,
       this.trailingButton,
+      this.minimizeController,
       this.springDescription,
       this.tabPillAnchor = GlassTabPillAnchor.start,
       this.onBarTap,
@@ -810,6 +843,12 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
         assert(
           selectedIndex >= 0 && selectedIndex < tabs.length,
           'selectedIndex must be within bounds of tabs list',
+        ),
+        assert(
+          minimizeController == null || !isSearchActive,
+          'Pass either minimizeController or minimized: true, not both — the '
+          'controller owns the minimize state when supplied, so a hardcoded '
+          'minimized: true would be silently ignored.',
         ),
         assert(
           bottomAccessory == null || bottomAccessoryHeight != null,
@@ -1091,15 +1130,36 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
   /// Scroll controller wired for searchable whitening and bottom-bar collapse.
   final ScrollController? scrollController;
 
+  /// Drives [minimized] from scrolling on the minimizable placement — the
+  /// equivalent of SwiftUI's `.tabBarMinimizeBehavior(_:)`.
+  ///
+  /// When supplied it owns the minimize state and [minimized] is ignored;
+  /// pass the same [ScrollController] to [scrollController] and to the scroll
+  /// view the bar floats over. See [GlassTabBarMinimizeController].
+  final GlassTabBarMinimizeController? minimizeController;
+
+  /// Whether the bar is minimized right now, from whichever source owns it.
+  bool get _effectiveMinimized =>
+      minimizeController?.minimized ?? isSearchActive;
+
+  /// The bar only changes height on its own when a minimize controller drives
+  /// it — otherwise the size follows the widget's own props and the scaffold
+  /// re-reads it on the rebuild that changed them.
+  @override
+  Listenable? get preferredSizeListenable => minimizeController;
+
   @override
   Size get preferredSize {
+    final minimized = _effectiveMinimized;
+    final isMinimizable = _placement == _GlassTabBarPlacement.minimizable;
+    final isMorphing =
+        _placement == _GlassTabBarPlacement.searchable || isMinimizable;
+
     // Base pill height. The searchable variant alternates between barHeight
     // (expanded) and searchBarHeight (inline/mini) — use whichever is active.
     // Both branches multiply verticalPadding by 2 (top + bottom) to match
     // the symmetric Padding applied inside AdaptiveLiquidGlassLayer.
-    final effectivePillH = ((_placement == _GlassTabBarPlacement.searchable ||
-                _placement == _GlassTabBarPlacement.minimizable) &&
-            isSearchActive)
+    final effectivePillH = (isMorphing && minimized)
         ? searchBarHeight + verticalPadding * 2
         : barHeight + verticalPadding * 2;
 
@@ -1118,11 +1178,8 @@ class GlassTabBar extends StatefulWidget implements PreferredSizeWidget {
       // Guard: gapAdjustment only makes sense in the searchable placement when
       // both heights differ. For .bottom placement isSearchActive is always false
       // so effectivePillH == barHeight + vertPad*2 and gapAdjustment == 0.
-      final gapAdjustment = ((_placement == _GlassTabBarPlacement.searchable ||
-                  _placement == _GlassTabBarPlacement.minimizable) &&
-              isSearchActive)
-          ? barHeight - searchBarHeight
-          : 0.0;
+      final gapAdjustment =
+          (isMorphing && minimized) ? barHeight - searchBarHeight : 0.0;
       total = effectivePillH -
           gapAdjustment +
           bottomAccessorySpacing +
@@ -1144,8 +1201,32 @@ class _GlassTabBarState extends State<GlassTabBar> {
   GlassTabBarTrailingButton? _lastTrailingButton;
 
   @override
+  void initState() {
+    super.initState();
+    widget.minimizeController?.addListener(_onMinimizeChanged);
+  }
+
+  @override
   void didUpdateWidget(GlassTabBar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.minimizeController != oldWidget.minimizeController) {
+      oldWidget.minimizeController?.removeListener(_onMinimizeChanged);
+      widget.minimizeController?.addListener(_onMinimizeChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.minimizeController?.removeListener(_onMinimizeChanged);
+    super.dispose();
+  }
+
+  /// The bar has to subscribe on its own account, even though [GlassScaffold]
+  /// also listens: the scaffold re-parents the SAME [GlassTabBar] instance on
+  /// its rebuild, and the framework skips an update when the widget is
+  /// identical — so without this the bar would never re-render.
+  void _onMinimizeChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -1325,7 +1406,8 @@ class _GlassTabBarState extends State<GlassTabBar> {
       onTabSelected: widget.onTabSelected,
       searchConfig: config,
       controller: widget.controller,
-      isSearchActive: widget.isSearchActive,
+      isSearchActive: widget._effectiveMinimized,
+      minimizeController: widget.minimizeController,
       extraButton: widget.extraButton,
       bottomAccessoryPlacement: widget.bottomAccessoryPlacement,
       bottomAccessory: widget.bottomAccessory,

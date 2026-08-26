@@ -1,3 +1,53 @@
+# Unreleased
+
+## Features
+
+- **Scroll-to-minimize for `GlassTabBar.minimizable`:** A new
+  `GlassTabBarMinimizeController` drives the minimize from scrolling — the
+  Flutter equivalent of SwiftUI's `.tabBarMinimizeBehavior(_:)`. Pass it as
+  `minimizeController` alongside the scroll view's `scrollController` and the
+  bar minimizes and expands on its own; `minimized` remains available as a
+  plain controlled prop for callers that drive it themselves.
+  `GlassBarMinimizeBehavior` mirrors Apple's enum case for case — `automatic`,
+  `never`, `onScrollDown`, `onScrollUp`. Apple documents `automatic` only as
+  "the system default" without saying what it resolves to; as of iOS 26 it is
+  observed to mean no minimization on iPhone, so this package resolves it to
+  `never` and callers opt in explicitly.
+
+  The bar also re-expands on reaching the resting edge of the content and on
+  tapping the minimized circle, stays inert when the content cannot scroll, and
+  ignores rubber-band overscroll, `jumpTo`, keyboard viewport insets and layout
+  corrections. Minimizing is an iPhone-only behaviour on iOS; this package
+  documents that rather than gating on platform, so the behaviour never
+  silently switches itself off.
+
+  **The trigger is distance accumulated since the last direction reversal, not
+  a per-frame delta.** A per-frame gate is really a test on velocity ÷ refresh
+  rate, so its activation velocity doubles between 60 Hz and 120 Hz ProMotion —
+  and ProMotion switches rate adaptively, so it is not stable even on one
+  device. That frame-rate coupling is why the tab bar's previous
+  collapse-to-extra-button pattern was removed in 1.0.0 as "unreliable on
+  120 Hz ProMotion displays". Accumulated distance has no such coupling, and a
+  parameterised 60/120 Hz test locks the invariance in.
+
+## Bug Fixes
+
+- **Spring reversals no longer stall:** `SearchableBottomBarController.makeSpring`
+  discarded the in-flight velocity when a morph was retargeted mid-animation,
+  so reversing read as a stall followed by a restart. It now carries the
+  velocity through (new optional `velocity` parameter, defaulting to the
+  previous behaviour), and the launch sites read the controller's value and
+  velocity inside the post-frame callback rather than a frame earlier during
+  build. Rare when the morph was only ever toggled by a tap; routine once
+  scrolling drives it. Also benefits `GlassTabBar.searchable`.
+- **Whiten-at-bottom crash with a shared `ScrollController`:** the searchable
+  and minimizable placements read `ScrollController.position` guarded only by
+  `hasClients`, which asserts when two scroll views share one controller —
+  the few hundred milliseconds of an `AnimatedSwitcher` cross-fade or a
+  `Navigator` transition. Those frames are now skipped instead.
+
+---
+
 # 1.0.0
 
 ## Major Milestone: General Availability
