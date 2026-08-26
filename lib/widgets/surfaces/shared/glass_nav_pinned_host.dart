@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../interactive/glass_button.dart';
+import '../../overlays/glass_menu.dart';
 import '../../shared/glass_isolation_scope.dart';
 import '../glass_app_bar.dart';
 import '../glass_bar_item.dart';
@@ -659,7 +660,7 @@ class _ClusterChild extends ParentDataWidget<_ClusterParentData> {
 /// A single persistent glass shell that sizes itself to a measured cluster.
 /// The shell only ever animates geometry; the items inside it — which are not
 /// glass — cross-fade freely.
-class _PinnedActionsCapsule extends StatelessWidget {
+class _PinnedActionsCapsule extends StatefulWidget {
   const _PinnedActionsCapsule({
     required this.state,
     required this.coverageScale,
@@ -671,7 +672,29 @@ class _PinnedActionsCapsule extends StatelessWidget {
   final double coverageScale;
 
   @override
+  State<_PinnedActionsCapsule> createState() => _PinnedActionsCapsuleState();
+}
+
+class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
+  /// Drives the pull-down of whichever item is currently the menu trigger.
+  final GlassMenuController _menu = GlassMenuController();
+
+  @override
+  void didUpdateWidget(covariant _PinnedActionsCapsule oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Dismiss on the first unsettled frame. A route-owned menu goes away with
+    // its route, but this capsule outlives every route it serves, so an open
+    // menu would otherwise hang over the bar while the page slid out from
+    // under it.
+    if (oldWidget.state.settled && !widget.state.settled && _menu.isOpen) {
+      _menu.close();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final coverageScale = widget.coverageScale;
     final fromItems = state.from.actionItems;
     final toItems = state.to.actionItems;
 
@@ -699,6 +722,18 @@ class _PinnedActionsCapsule extends StatelessWidget {
 
     final slots = matchGlassNavActions(fromItems, toItems);
     final showsIncoming = GlassNavPinnedMetrics.showsIncomingAt(p);
+
+    // Whichever side is showing owns the menu. A menu can only be opened at
+    // rest, where that is always the incoming side, but the trigger is rebuilt
+    // every frame and must agree with the icons actually on screen. Only the
+    // first menu item counts, matching GlassButtonGroup.
+    GlassBarMenuItem? menuItem;
+    for (final item in showsIncoming ? toItems : fromItems) {
+      if (item is GlassBarMenuItem) {
+        menuItem = item;
+        break;
+      }
+    }
 
     // Where each slot sits within each cluster, leading to trailing.
     final orders = <_SlotOrder>[];
@@ -752,40 +787,77 @@ class _PinnedActionsCapsule extends StatelessWidget {
           slot: i,
           isFrom: false,
           opacity: crossFades ? q : 1.0,
-          child: _ClusterItem(item: toItem, enabled: state.settled),
+          child: _ClusterItem(
+            item: toItem,
+            enabled: state.settled,
+            // Only the cluster's chosen trigger opens the menu; a second menu
+            // item falls through to its no-op, as in GlassButtonGroup.
+            onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
+          ),
         ));
       }
     }
 
     if (children.isEmpty) return const SizedBox.shrink();
 
+    // Wrapped unconditionally, even with no menu item: inserting or removing a
+    // GlassMenu ancestor would remount the capsule's element, and a glass shell
+    // that remounts mid-morph pops its backdrop. Closed, GlassMenu adds only
+    // inert wrappers and mounts no overlay, so the empty case costs nothing.
     return Transform.scale(
       scale: coverageScale,
       alignment: Alignment.centerRight,
       child: IgnorePointer(
         ignoring: !state.settled,
-        child: GlassButton.custom(
-          onTap: () {},
-          shape: const LiquidRoundedRectangle(
-            borderRadius: GlassNavPinnedMetrics.capsuleRadius,
+        child: GlassMenu(
+          controller: _menu,
+          items: menuItem?.menuItems ?? const <Widget>[],
+          menuAlignment: menuItem?.menuAlignment,
+          // The fallback is never read: with no menu item there is no trigger
+          // to open one. It matches GlassMenu's own default.
+          menuWidth: menuItem?.menuWidth ?? 200,
+          triggerBuilder: (context, _) => _buildCapsule(
+            orders: orders,
+            widthT: widthT,
+            positionT: eased,
+            children: children,
           ),
-          // Sized by the measured cluster, exactly as GlassButtonGroup.icons
-          // sizes to its content.
-          width: null,
-          height: null,
-          stretch: GlassNavPinnedMetrics.capsuleStretch,
-          useOwnLayer: true,
-          canRequestFocus: false,
-          excludeFromSemantics: true,
-          child: ClipRect(
-            child: _PinnedCluster(
-              orders: orders,
-              widthT: widthT,
-              positionT: eased,
-              height: GlassNavPinnedMetrics.slot,
-              children: children,
-            ),
-          ),
+        ),
+      ),
+    );
+  }
+
+  /// The glass shell itself, sized by the measured cluster.
+  ///
+  /// Split out so it can be handed to [GlassMenu.triggerBuilder] — the menu
+  /// morphs the whole capsule, not the tapped item's slot, matching iOS 26's
+  /// `GlassEffectContainer`.
+  Widget _buildCapsule({
+    required List<_SlotOrder> orders,
+    required double widthT,
+    required double positionT,
+    required List<Widget> children,
+  }) {
+    return GlassButton.custom(
+      onTap: () {},
+      shape: const LiquidRoundedRectangle(
+        borderRadius: GlassNavPinnedMetrics.capsuleRadius,
+      ),
+      // Sized by the measured cluster, exactly as GlassButtonGroup.icons
+      // sizes to its content.
+      width: null,
+      height: null,
+      stretch: GlassNavPinnedMetrics.capsuleStretch,
+      useOwnLayer: true,
+      canRequestFocus: false,
+      excludeFromSemantics: true,
+      child: ClipRect(
+        child: _PinnedCluster(
+          orders: orders,
+          widthT: widthT,
+          positionT: positionT,
+          height: GlassNavPinnedMetrics.slot,
+          children: children,
         ),
       ),
     );
@@ -797,10 +869,21 @@ class _PinnedActionsCapsule extends StatelessWidget {
 /// Icons are padded to the standard slot width; custom content is measured at
 /// whatever width it wants, which is what lets it sit in the bar at all.
 class _ClusterItem extends StatelessWidget {
-  const _ClusterItem({required this.item, required this.enabled});
+  const _ClusterItem({
+    required this.item,
+    required this.enabled,
+    this.onMenuTap,
+  });
 
   final GlassBarActionItem item;
   final bool enabled;
+
+  /// Opens the capsule's pull-down.
+  ///
+  /// Supplied only for the one item acting as the menu trigger, and only on
+  /// the side that can be tapped, so an outgoing item never reopens a menu on
+  /// its way out.
+  final VoidCallback? onMenuTap;
 
   @override
   Widget build(BuildContext context) {
@@ -808,6 +891,10 @@ class _ClusterItem extends StatelessWidget {
 
     Widget content = switch (item) {
       GlassBarIconItem(:final icon) => SizedBox(
+          width: GlassNavPinnedMetrics.slot,
+          child: Center(child: icon),
+        ),
+      GlassBarMenuItem(:final icon) => SizedBox(
           width: GlassNavPinnedMetrics.slot,
           child: Center(child: icon),
         ),
@@ -831,7 +918,7 @@ class _ClusterItem extends StatelessWidget {
       label: item.label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: interactive ? item.onTap : null,
+        onTap: interactive ? (onMenuTap ?? item.onTap) : null,
         child: content,
       ),
     );

@@ -353,10 +353,28 @@ class _InlineTitleDemo extends StatelessWidget {
           ),
         ),
         actions: [
-          GlassBarItem.icon(
+          GlassBarItem.menu(
             icon: const Icon(CupertinoIcons.ellipsis),
             label: 'More',
-            onTap: () {},
+            menuItems: [
+              GlassMenuItem(
+                title: 'Share',
+                icon: const Icon(CupertinoIcons.share),
+                onTap: () {},
+              ),
+              GlassMenuItem(
+                title: 'Duplicate',
+                icon: const Icon(CupertinoIcons.doc_on_doc),
+                onTap: () {},
+              ),
+              GlassMenuDivider(),
+              GlassMenuItem(
+                title: 'Delete',
+                icon: const Icon(CupertinoIcons.delete),
+                isDestructive: true,
+                onTap: () {},
+              ),
+            ],
           ),
         ],
       ),
@@ -1098,10 +1116,28 @@ class _NestedNavDemo extends StatelessWidget {
             label: 'Compose',
             onTap: () {},
           ),
-          GlassBarItem.icon(
+          GlassBarItem.menu(
             icon: const Icon(CupertinoIcons.ellipsis),
             label: 'More',
-            onTap: () {},
+            menuItems: [
+              GlassMenuItem(
+                title: 'Mark unread',
+                icon: const Icon(CupertinoIcons.envelope_badge),
+                onTap: () {},
+              ),
+              GlassMenuItem(
+                title: 'Move to…',
+                icon: const Icon(CupertinoIcons.folder),
+                onTap: () {},
+              ),
+              GlassMenuDivider(),
+              GlassMenuItem(
+                title: 'Delete',
+                icon: const Icon(CupertinoIcons.delete),
+                isDestructive: true,
+                onTap: () {},
+              ),
+            ],
           ),
         ];
       default:

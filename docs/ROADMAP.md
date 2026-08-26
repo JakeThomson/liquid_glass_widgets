@@ -515,11 +515,15 @@ Ideas for consideration after stable. None of these are committed.
 - [ ] **Pinning becomes the default `GlassAppBar`** (next major). The
   `.pinned` constructor is the transition vehicle, not the destination: on
   iOS 26 the pinned behaviour *is* the navigation bar, so once
-  `GlassBarItem` reaches parity with the widget API (menu items, spacers /
-  multi-capsule grouping, text and prominent styles), a major release can
+  `GlassBarItem` reaches parity with the widget API, a major release can
   make the data API the plain `GlassAppBar` and demote the widget-based
-  `leading`/`actions` constructor to the legacy mode. Blocked on that
-  parity; land items additively first.
+  `leading`/`actions` constructor to the legacy mode. Remaining parity work,
+  which is what gates the flip:
+  - [ ] Text and prominent item styles. Text is small; prominent needs its
+    own glass shell per item, so it shares the work below.
+  - [ ] `GlassBarItem.spacer()` rendering — multi-capsule grouping and
+    per-item `sharesBackground`. Structural: one capsule becomes *n*, and
+    the count can differ between the two routes being interpolated.
 
 ### Enhancements
 - [ ] **Scroll-to-minimize** (`GlassBarMinimizeBehavior.onScrollDown`) — tab bar

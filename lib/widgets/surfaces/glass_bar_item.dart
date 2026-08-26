@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../overlays/glass_menu.dart';
+
 /// A single item in a pinned navigation-bar cluster.
 ///
 /// Mirrors UIKit's `UIBarButtonItem`: items are declared as **data**, and the
@@ -61,6 +63,26 @@ sealed class GlassBarItem {
     bool enabled,
   }) = GlassBarCustomItem;
 
+  /// An icon that opens a [GlassMenu] pull-down, mirroring
+  /// `UIBarButtonItem.menu` — the standard iOS 26 overflow button.
+  ///
+  /// The whole capsule morphs into the menu rather than just the icon's slot,
+  /// matching iOS 26's `GlassEffectContainer` behaviour and
+  /// [GlassButtonGroupItem.menu]. Only the first menu item in a cluster opens
+  /// a menu; a second is treated as a plain icon.
+  ///
+  /// [menuItems] takes [GlassMenuItem] and [GlassMenuDivider] widgets — the
+  /// same contract as [GlassMenu.items]. An open menu is dismissed if
+  /// navigation starts underneath it.
+  const factory GlassBarItem.menu({
+    required Widget icon,
+    required List<Widget> menuItems,
+    GlassMenuAlignment? menuAlignment,
+    double menuWidth,
+    Object? id,
+    String? label,
+  }) = GlassBarMenuItem;
+
   /// Splits the shared glass background, mirroring SwiftUI's
   /// `ToolbarSpacer(.fixed)` and UIKit's `UIBarButtonItem.fixedSpace`.
   ///
@@ -94,6 +116,8 @@ sealed class GlassBarActionItem extends GlassBarItem {
   /// Never null: an icon in a navigation bar that does nothing is a bug, so
   /// [GlassBarItem.icon] requires one. Passive [GlassBarItem.custom] content
   /// gets an internal no-op instead, keeping every reader of it callable.
+  /// [GlassBarItem.menu] does the same — its tap opens the menu, which the
+  /// cluster drives directly.
   final VoidCallback onTap;
 
   /// Identity used to match this item against items on other routes.
@@ -151,6 +175,40 @@ final class GlassBarCustomItem extends GlassBarActionItem {
 
   @override
   Widget get content => child;
+}
+
+/// A pull-down menu item in a pinned navigation-bar cluster.
+///
+/// Created via [GlassBarItem.menu].
+final class GlassBarMenuItem extends GlassBarActionItem {
+  /// Creates a menu item. Prefer [GlassBarItem.menu].
+  const GlassBarMenuItem({
+    required this.icon,
+    required this.menuItems,
+    this.menuAlignment,
+    this.menuWidth = 200,
+    super.id,
+    super.label,
+  }) : super(onTap: GlassBarActionItem._noOp);
+
+  /// The icon widget, typically an [Icon]. Conventionally an ellipsis.
+  ///
+  /// Size and colour are applied by the enclosing cluster.
+  final Widget icon;
+
+  /// The menu's contents: [GlassMenuItem] and [GlassMenuDivider] widgets.
+  final List<Widget> menuItems;
+
+  /// Where the menu expands relative to the capsule.
+  ///
+  /// Defaults to auto-detection from the capsule's screen position.
+  final GlassMenuAlignment? menuAlignment;
+
+  /// Width of the expanded menu panel, in logical pixels.
+  final double menuWidth;
+
+  @override
+  Widget get content => icon;
 }
 
 /// A glass-background break in a pinned cluster.

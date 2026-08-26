@@ -324,14 +324,25 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
       child: Stack(
         children: [
           widget.child,
+          // The chrome gets an Overlay of its own because it deliberately sits
+          // above the app's Navigator, and therefore outside the Navigator's
+          // Overlay — a GlassBarItem.menu portals to the root overlay, and up
+          // here there would otherwise be none to find. This one is full-screen
+          // and origin-aligned, so the menu's global-coordinate morph lands on
+          // its trigger exactly as it does inside a route, and its dismiss
+          // barrier covers the page below. It is a *sibling* of the Navigator,
+          // not an ancestor, so nothing inside the app resolves its root
+          // overlay to this one.
           if (widget.enabled)
-            ListenableBuilder(
-              listenable: _tick,
-              builder: (context, _) {
-                final state = resolveState();
-                if (state == null) return const SizedBox.shrink();
-                return GlassNavPinnedHost(state: state);
-              },
+            Overlay.wrap(
+              child: ListenableBuilder(
+                listenable: _tick,
+                builder: (context, _) {
+                  final state = resolveState();
+                  if (state == null) return const SizedBox.shrink();
+                  return GlassNavPinnedHost(state: state);
+                },
+              ),
             ),
         ],
       ),
