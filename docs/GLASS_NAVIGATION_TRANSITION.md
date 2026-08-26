@@ -100,6 +100,7 @@ bar.
 | Push/pop between participating routes | Chrome pinned; capsule width and item positions interpolate; changed icons cross-fade |
 | Interactive back-swipe | Same interpolation, scrubbed by the gesture; cancelled swipes rebound |
 | Destination has no actions (or no back button) | The cluster switches off/on once at the transition midpoint — appearing and disappearing are deliberately not animated |
+| Tap while a transition runs | Ignored. The chrome is showing a blend of two routes' items, so a tap would fire an action the user can no longer see |
 | Non-participating route or modal sheet on top | Chrome retreats with the covering route's transition and returns on pop |
 | No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: automatic back `GlassButton` + `GlassButtonGroup.icons` capsule |
 

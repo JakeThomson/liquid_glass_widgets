@@ -171,17 +171,28 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
     _scheduleNotify();
   }
 
+  /// Listens to both the value and the status of [animation].
+  ///
+  /// The status matters on its own: a transition's last value tick lands on
+  /// 1.0 (or 0.0) *before* the controller reports itself completed, so a
+  /// value-only listener never hears the frame where a rebounding back-swipe
+  /// stops being a transition. [GlassNavPinnedState.settled] reads that
+  /// status, so it needs the notification.
   void _listenTo(Animation<double>? animation) {
     if (animation == null || !_listened.add(animation)) return;
     animation.addListener(_onAnimationTick);
+    animation.addStatusListener(_onAnimationStatus);
   }
 
   void _unlisten(Animation<double>? animation) {
     if (animation == null || !_listened.remove(animation)) return;
     animation.removeListener(_onAnimationTick);
+    animation.removeStatusListener(_onAnimationStatus);
   }
 
   void _onAnimationTick() => _tick.notify();
+
+  void _onAnimationStatus(AnimationStatus status) => _scheduleNotify();
 
   /// Notifies listeners, deferring past build/layout when necessary.
   ///
@@ -218,8 +229,9 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
   /// Pages-API router works unchanged.
   List<MapEntry<ModalRoute<dynamic>, GlassNavBarRegistration>>
       get _orderedEntries {
-    final entries =
-        _registry.entries.where((e) => e.key.isActive).toList(growable: false);
+    final entries = _registry.entries
+        .where((e) => _participates(e.key))
+        .toList(growable: false);
     final insertionIndex = <ModalRoute<dynamic>, int>{};
     var i = 0;
     for (final route in _registry.keys) {
@@ -233,6 +245,18 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
     });
     return entries;
   }
+
+  /// Whether [route] still contributes chrome this frame.
+  ///
+  /// `isActive` goes false the instant a route is popped, while its exit
+  /// transition still has its full duration left to run. Filtering on that
+  /// alone drops the outgoing route from the interpolation on the very first
+  /// frame of a button-driven pop, snapping the chrome to the destination
+  /// instead of morphing into it. A reversing route is still on screen and
+  /// still owns chrome. The back-swipe never hit this, because a swipe only
+  /// pops the route once the gesture commits.
+  static bool _participates(ModalRoute<dynamic> route) =>
+      route.isActive || route.animation?.status == AnimationStatus.reverse;
 
   static double _coverageOf(ModalRoute<dynamic> route) =>
       route.secondaryAnimation?.value ?? 0.0;
@@ -257,6 +281,17 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
     // top route is covered by something this shell doesn't manage.
     final coverage = top.key.isCurrent ? 0.0 : _coverageOf(top.key);
 
+    // Whether the chrome may be tapped. Deliberately not derived from
+    // `progress`: a pop starts at 1.0 and a back-swipe sits there until the
+    // finger moves, so by value alone a transition that is very much running
+    // looks finished. The controller's status and the navigator's gesture flag
+    // are what actually tell the two apart, and `isCurrent` covers a route
+    // that something unregistered has been pushed over.
+    final settled = top.key.isCurrent &&
+        (top.key.animation?.status ?? AnimationStatus.completed) ==
+            AnimationStatus.completed &&
+        !(top.key.navigator?.userGestureInProgress ?? false);
+
     return GlassNavPinnedState(
       from: below?.value ??
           const GlassNavBarRegistration(
@@ -266,6 +301,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
       to: top.value,
       progress: progress.clamp(0.0, 1.0),
       coverage: coverage.clamp(0.0, 1.0),
+      settled: settled,
       topRoute: top.key,
     );
   }
@@ -274,6 +310,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
   void dispose() {
     for (final animation in _listened) {
       animation.removeListener(_onAnimationTick);
+      animation.removeStatusListener(_onAnimationStatus);
     }
     _listened.clear();
     _tick.dispose();

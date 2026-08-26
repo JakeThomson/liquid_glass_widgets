@@ -159,4 +159,23 @@ void main() {
       expect(matchGlassNavActions([], []), isEmpty);
     });
   });
+
+  group('item tap handlers', () {
+    test('an icon item requires a handler, a custom item does not', () {
+      var taps = 0;
+      final icon = GlassBarItem.icon(
+        icon: const Icon(CupertinoIcons.add),
+        onTap: () => taps++,
+      ) as GlassBarActionItem;
+      final passive =
+          const GlassBarItem.custom(child: SizedBox()) as GlassBarActionItem;
+
+      icon.onTap();
+      expect(taps, 1);
+
+      // Passive custom content still exposes a callable handler, so nothing
+      // downstream has to null-check its way around a status readout.
+      expect(passive.onTap, returnsNormally);
+    });
+  });
 }
