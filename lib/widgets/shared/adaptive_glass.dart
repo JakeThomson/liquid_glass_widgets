@@ -380,13 +380,21 @@ class AdaptiveGlass extends StatelessWidget {
       // tier never actually goes. Composite the finished result instead: it
       // is an ordinary painted shader here, not a backdrop pass, so opacity
       // is legal on it in a way it is not on the premium path.
-      final faded = baseSettings.visibility >= 1.0
-          ? lightweightWidget
-          : Opacity(
-              opacity: baseSettings.visibility.clamp(0.0, 1.0),
-              child: lightweightWidget,
-            );
-      return _wrapWithDecorations(context, baseSettings, faded);
+      //
+      // Unconditionally, like the container path above. Swapping the Opacity
+      // in only while it bites changes the tree shape at the moment a
+      // transition starts and again as it settles, which remounts the shader
+      // widget below it on both — the glitch frame the whole effect is built
+      // to avoid. It costs nothing to leave in: RenderOpacity paints its
+      // child directly at alpha 255 and reports no compositing need there.
+      return _wrapWithDecorations(
+        context,
+        baseSettings,
+        Opacity(
+          opacity: baseSettings.visibility.clamp(0.0, 1.0),
+          child: lightweightWidget,
+        ),
+      );
     }
 
     // Impeller + Premium Path: Use the renderer's native path.
