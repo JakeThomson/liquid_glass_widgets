@@ -129,6 +129,7 @@ class GlassScaffold extends StatelessWidget {
     this.topEdgeFadeExtent = 20.0,
     this.bottomEdgeFadeExtent = 20.0,
     this.edgeStyle = GlassScrollEdgeStyle.soft,
+    this.maxSigma = 18.0,
     this.extendBody = true,
     this.appBarHeight = 44.0,
     this.bottomBarHeight,
@@ -240,16 +241,42 @@ class GlassScaffold extends StatelessWidget {
   ///
   /// The total top fade height = safe area top + [appBarHeight] +
   /// [topEdgeFadeExtent]. Defaults to 20.0.
+  ///
+  /// Negative values (e.g. `-20.0`) are valid and retract the fade boundary
+  /// inside the app bar area — especially useful with [GlassScrollEdgeStyle.blur]
+  /// to keep content sharp until it passes directly beneath the bar.
   final double topEdgeFadeExtent;
 
   /// Extra fade height beyond the auto-calculated bottom bar area.
   ///
   /// The total bottom fade height = [bottomBarHeight] + safe area bottom +
   /// [bottomEdgeFadeExtent]. Defaults to 20.0.
+  ///
+  /// Negative values (e.g. `-20.0` or `-30.0`) are valid and retract the fade
+  /// boundary inside the bottom bar area — ideal for floating tab bars and
+  /// [GlassScrollEdgeStyle.blur] so content stays 100% sharp until it is
+  /// physically beneath the glass capsule.
   final double bottomEdgeFadeExtent;
 
-  /// The edge fade style. See [GlassScrollEdgeStyle].
+  /// The edge fade style applied at the top and bottom of the scroll body.
+  /// See [GlassScrollEdgeStyle].
+  ///
+  /// Defaults to [GlassScrollEdgeStyle.soft], which matches iOS 26's
+  /// `.scrollEdgeEffectStyle(.soft)` — a diffused gradient fade.
+  ///
+  /// Set to [GlassScrollEdgeStyle.blur] for a stronger hardware-accelerated
+  /// progressive Gaussian frost. This is a design enhancement beyond the
+  /// iOS 26 system default — opt in explicitly when you want a more aggressive
+  /// frosted-glass edge look. Note it adds a [BackdropFilterLayer] per edge.
+  ///
+  /// Set to [GlassScrollEdgeStyle.hard] for a crisp cutoff, matching iOS 26's
+  /// `.scrollEdgeEffectStyle(.hard)`.
   final GlassScrollEdgeStyle edgeStyle;
+
+  /// Maximum blur sigma for [GlassScrollEdgeStyle.blur].
+  ///
+  /// Defaults to 18.0.
+  final double maxSigma;
 
   // ===========================================================================
   // Layout
@@ -430,6 +457,7 @@ class GlassScaffold extends StatelessWidget {
         fadeTop: doFadeTop,
         fadeBottom: doFadeBottom,
         style: edgeStyle,
+        maxSigma: maxSigma,
         // Pass the explicit background colour so the async-capture fallback
         // gradient uses the correct colour in dark mode instead of defaulting
         // to CupertinoTheme.scaffoldBackgroundColor (which is near-black).
