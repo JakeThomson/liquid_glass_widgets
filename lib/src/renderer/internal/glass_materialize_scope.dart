@@ -1,0 +1,126 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
+import 'package:flutter/widgets.dart';
+
+import '../liquid_glass_settings.dart';
+
+/// Threads a materialize transition's per-frame state to the glass surfaces
+/// below it, so they dissolve through the shader's own uniforms instead of
+/// layer opacity.
+///
+/// An ancestor [Opacity] or [ImageFiltered] cannot fade glass: a backdrop
+/// pass renders fully or not at all, so the glass pops while its child fades
+/// (the same Impeller limitation [ProgressiveBlur] documents for ShaderMask).
+/// Every uniform upload already reads the `effective*` getters on
+/// [LiquidGlassSettings], which scale by [LiquidGlassSettings.visibility] —
+/// at zero the refraction warp lerps to identity and the render object skips
+/// the pass entirely. That is the legal fade channel, and this scope is how a
+/// transition widget reaches it for every surface in its subtree at once.
+///
+/// Two channels ride on the scope:
+///
+/// * **Glass** — [glassProgress] scales `visibility` (and the widget-level
+///   shadow, whiten and backer decorations, which are painted outside the
+///   shader and would otherwise stay at full strength while the glass
+///   dissolves). The raw `blur` is simultaneously lerped up toward
+///   [blobSigma], so `effectiveBlur = blur × visibility` is zero at rest and
+///   at full dematerialization but peaks in between — the soft unresolved
+///   blob the native transition shows while glass forms.
+/// * **Content** — [contentOpacity] and [contentSigma] fade and gaussian-blur
+///   the glass *child*, which is ordinary painted content where those
+///   compose fine. Kept separate from the glass channel so the transition can
+///   lag one behind the other (glass resolves first, the icon sharpens last).
+class GlassMaterializeScope extends InheritedWidget {
+  /// Declares the materialize state for the glass surfaces below [child].
+  const GlassMaterializeScope({
+    required this.glassProgress,
+    required this.contentOpacity,
+    required this.contentSigma,
+    required this.blobSigma,
+    required super.child,
+    super.key,
+  });
+
+  /// How materialized the glass is: 0.0 = fully dematerialized, 1.0 = at
+  /// rest. At 1.0 the scope is inert — [resolveSettings] returns its input
+  /// unchanged and [wrapContent] adds nothing.
+  final double glassProgress;
+
+  /// Opacity applied to glass children, on top of the visibility fade the
+  /// glass channel already applies through [LiquidGlassSettings].
+  final double contentOpacity;
+
+  /// Gaussian sigma applied to glass children, in logical pixels.
+  final double contentSigma;
+
+  /// The raw shader blur at full dematerialization, in logical pixels.
+  ///
+  /// A configured blur above this keeps its own value, so a heavily frosted
+  /// surface never *sharpens* while dissolving.
+  final double blobSigma;
+
+  /// The nearest scope above [context], or null when no transition is
+  /// running anywhere above.
+  static GlassMaterializeScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<GlassMaterializeScope>();
+
+  /// Applies the nearest scope's glass channel to [base].
+  ///
+  /// Returns [base] itself — the same instance — when no scope is present or
+  /// the scope is at rest, so resting glass pays nothing beyond the inherited
+  /// lookup.
+  static LiquidGlassSettings resolveSettings(
+    BuildContext context,
+    LiquidGlassSettings base,
+  ) {
+    final scope = maybeOf(context);
+    if (scope == null || scope.glassProgress >= 1.0) return base;
+    return scope._transform(base);
+  }
+
+  /// Applies the nearest scope's content channel around [child].
+  ///
+  /// Returns [child] untouched when no scope is present or the scope is at
+  /// rest. The opacity and filter widgets are otherwise both always present,
+  /// even at a momentary sigma of zero, so the child's element tree keeps one
+  /// shape for the whole of a transition.
+  static Widget wrapContent(BuildContext context, Widget child) {
+    final scope = maybeOf(context);
+    if (scope == null || scope.glassProgress >= 1.0) return child;
+    return Opacity(
+      opacity: scope.contentOpacity.clamp(0.0, 1.0),
+      child: ImageFiltered(
+        imageFilter: ui.ImageFilter.blur(
+          sigmaX: scope.contentSigma,
+          sigmaY: scope.contentSigma,
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  LiquidGlassSettings _transform(LiquidGlassSettings base) {
+    final t = glassProgress.clamp(0.0, 1.0);
+    final blobBlur = math.max(base.blur, blobSigma);
+    return base.copyWith(
+      visibility: base.visibility * t,
+      blur: blobBlur + (base.blur - blobBlur) * t,
+      shadowElevation: base.shadowElevation * t,
+      whitenStrength: base.whitenStrength * t,
+      // A custom `shadow` list is passed through unscaled — copyWith cannot
+      // null it out, and scaling each BoxShadow here would surprise a caller
+      // who set exact values. The built-in elevation shadow fades instead.
+      backerColor: base.backerColor?.withValues(
+        alpha: base.backerColor!.a * t,
+      ),
+    );
+  }
+
+  @override
+  bool updateShouldNotify(GlassMaterializeScope oldWidget) =>
+      glassProgress != oldWidget.glassProgress ||
+      contentOpacity != oldWidget.contentOpacity ||
+      contentSigma != oldWidget.contentSigma ||
+      blobSigma != oldWidget.blobSigma;
+}

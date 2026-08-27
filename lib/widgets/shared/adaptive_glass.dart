@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
+import '../../src/renderer/internal/glass_materialize_scope.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../theme/glass_theme.dart';
 import 'package:flutter/foundation.dart'
@@ -155,8 +156,20 @@ class AdaptiveGlass extends StatelessWidget {
     // we must inherit the real settings from the ancestor layer.
     final inherited =
         context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
-    final baseSettings =
-        (!useOwnLayer && inherited != null) ? inherited.settings : settings;
+    // A running materialize transition dissolves this surface through the
+    // settings' visibility channel. Applying it here covers the Frosted and
+    // Standard tiers and the widget-level decorations (shadow, backer); the
+    // Premium tiers pass the raw `settings` field into a [LiquidGlassLayer],
+    // which resolves the same scope itself — the two never overlap, so the
+    // transform is never applied twice.
+    final baseSettings = GlassMaterializeScope.resolveSettings(
+      context,
+      (!useOwnLayer && inherited != null) ? inherited.settings : settings,
+    );
+    // The content channel fades and blurs the child on the tiers that render
+    // it as plain paint. Premium/grouped children flow through [LiquidGlass],
+    // which applies the same wrap internally.
+    final content = GlassMaterializeScope.wrapContent(context, child);
 
     // ---- MINIMAL FAST-PATH ---------------------------------------------------
     // GlassQuality.minimal bypasses all custom shaders. Renders via
@@ -185,7 +198,7 @@ class AdaptiveGlass extends StatelessWidget {
           isAccessibilityFallback: false,
           isInteractive: isInteractive,
           platformViewBackdrop: platformViewBackdrop,
-          child: child,
+          child: content,
         ),
       );
     }
@@ -215,7 +228,7 @@ class AdaptiveGlass extends StatelessWidget {
           glowIntensity: glowIntensity,
           isAccessibilityFallback: true,
           isInteractive: isInteractive,
-          child: child,
+          child: content,
         ),
       );
     }
@@ -323,7 +336,7 @@ class AdaptiveGlass extends StatelessWidget {
               settings: effectiveSettings,
               quality: quality,
               isBlurProvidedByAncestor: true,
-              child: child,
+              child: content,
             ),
           ),
         );
@@ -337,7 +350,7 @@ class AdaptiveGlass extends StatelessWidget {
         densityFactor: densityFactor, // 0.0 or 1.0 based on elevation
         glowIntensity:
             glowIntensity * 0.35, // Normalise additive glow to match Impeller
-        child: child,
+        child: content,
       );
 
       return _wrapWithDecorations(context, baseSettings, lightweightWidget);
