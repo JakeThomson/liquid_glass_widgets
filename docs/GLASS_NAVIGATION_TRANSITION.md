@@ -79,10 +79,40 @@ bar.
   calls, and what Pages-API routers handle correctly. Override with `onBack`
   for router-specific semantics such as go_router's `context.pop()`, or set
   `backButton: false` to suppress it.
+- **`leading` replaces the back button.** A non-empty `leading` stands in for
+  it, which is UIKit's rule for `leftBarButtonItems` — *"A custom left item
+  replaces the regular back button unless you set
+  leftItemsSupplementBackButton to YES"* — and Flutter's own `AppBar`, which
+  implies a leading only when none was given. Set
+  `leadingItemsSupplementBackButton: true` for both, mirroring the UIKit
+  property of the same name. `backButton: false` still wins over either.
+
+  ```dart
+  GlassAppBar.pinned(
+    title: const Text('New Issue'),
+    leading: [
+      GlassBarItem.icon(
+        icon: const Icon(CupertinoIcons.xmark),
+        label: 'Cancel',
+        background: GlassBarItemBackground.separate,
+        onTap: () => Navigator.of(context).pop(),
+      ),
+    ],
+  )
+  ```
+- **`GlassBarItemBackground` decides what glass an item gets.** It collapses
+  the two booleans iOS 26 added to `UIBarButtonItem` into their three distinct
+  results: `shared` (the default — `sharesBackground`, items form one capsule),
+  `separate` (`sharesBackground: NO` — its own shell, which at a lone icon's
+  size is the circular button the back button already is), and `none`
+  (`hidesSharedBackground` — no glass, for content that carries its own shape,
+  such as a profile photo).
 - **`id` mirrors `UIBarButtonItem.identifier`.** Items sharing an `id` across
   two routes are treated as the same item and hold their position while
   everything around them morphs. Without an `id`, items are matched
-  positionally from the trailing edge — UIKit's documented default heuristic.
+  positionally from the edge their cluster is anchored to — the trailing edge
+  for `actions`, the leading edge for `leading` — UIKit's documented default
+  heuristic.
 - **`GlassBarItem.custom` is the `customView:` analogue.** Any widget can sit
   in the capsule; it is measured at its intrinsic width during layout and the
   capsule sizes itself around it. There is deliberately no API to offset or
@@ -107,10 +137,11 @@ bar.
 | Push/pop between participating routes | Chrome pinned; capsule width and item positions interpolate; changed icons cross-fade |
 | Interactive back-swipe | Same interpolation, scrubbed by the gesture; cancelled swipes rebound |
 | Destination has no actions (or no back button) | The cluster switches off/on once at the transition midpoint — appearing and disappearing are deliberately not animated |
+| Leading changes between a glass item and a bare one | Same single switch at the midpoint: glass cannot cross-fade into something that is not glass |
 | Tap while a transition runs | Ignored. The chrome is showing a blend of two routes' items, so a tap would fire an action the user can no longer see |
 | Navigation starts with a menu open | The menu is dismissed; the capsule outlives the route, so nothing else would |
 | Non-participating route or modal sheet on top | Chrome retreats with the covering route's transition and returns on pop |
-| No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: automatic back `GlassButton` + `GlassButtonGroup.icons` capsule |
+| No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: the same leading and trailing groups, drawn inside the bar |
 
 Glass opacity is never animated (a glass surface's backdrop pass renders fully
 or not at all); only geometry animates, and only item *contents* cross-fade.
@@ -122,10 +153,10 @@ is a transition state, not the end state. On iOS 26 the pinned behaviour *is*
 the navigation bar, so the intended trajectory is:
 
 1. Land the data API additively (this release) — nothing shipped changes.
-2. Bring `GlassBarItem` to parity with the widget API. Menus have landed;
-   what remains is text styles (small) and spacers / multi-capsule grouping /
-   prominent items (structural — one capsule becomes *n*, and the count can
-   differ between the two routes).
+2. Bring `GlassBarItem` to parity with the widget API. Menus, `leading` and
+   per-item backgrounds have landed; what remains is text styles (small) and
+   `GlassBarItem.spacer()` rendering (structural — splitting a run of shared
+   items into *n* capsules whose count can differ between the two routes).
 3. At the next major, make pinning the default `GlassAppBar` and demote the
    widget-based `leading`/`actions` constructor to a legacy mode.
 
@@ -134,14 +165,24 @@ that future.
 
 ## Current limitations
 
-- `GlassBarItem.spacer()` (multi-capsule grouping, mirroring
-  `ToolbarSpacer`/`fixedSpace`) is parsed but not rendered yet; a cluster
-  containing one asserts in debug mode.
+- `GlassBarItem.spacer()` (mirroring `ToolbarSpacer`/`fixedSpace`) is parsed
+  but not rendered yet; a cluster containing one asserts in debug mode.
+  `GlassBarItemBackground.separate` already gives one item its own shell,
+  which covers the common case.
+- A lone `shared` item still renders at the capsule's height rather than the
+  circular button's, so a single action is 2pt larger than a single `separate`
+  one. Unifying them would resize every shipped one-action bar, so it is
+  deliberately left for a major.
+- Two wide clusters can meet in the middle of the bar. iOS 27 answers this
+  with `UIBarButtonItem.visibilityPriority` and `ToolbarOverflowMenu`; nothing
+  here clamps or overflows yet.
 - Changing a pinned bar's `actions` in place via `setState` swaps the capsule's
   contents without animating the resize.
 - One navigator per shell; nested navigators (for example go_router's
   `StatefulShellRoute` branches) are not yet supported.
-- RTL layouts are untested.
+- RTL layouts are untested. The clusters themselves are now placed with
+  `Positioned.directional` and anchored to the logical edge, but item order
+  within a cluster is not mirrored.
 
 ## Demos
 
@@ -149,6 +190,11 @@ The example showcase app uses pinned chrome throughout — every category page
 pins its back button, and the navigation-patterns demo pins its actions,
 including a **Nested Navigation** pattern that walks a three-level drill-down
 with identifier-matched items morphing at each push:
+
+The **Leading Items** pattern in the same demo walks the four leading
+configurations — a bare avatar, the implied back button, a leading that
+replaces it, and one that sits beside it — while the trailing capsule holds
+its identifier-matched items throughout.
 
 ```bash
 cd example

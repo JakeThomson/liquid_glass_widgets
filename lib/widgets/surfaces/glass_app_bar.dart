@@ -10,7 +10,8 @@ import '../shared/glass_isolation_scope.dart';
 import 'glass_bar_item.dart';
 import 'glass_large_title.dart' show GlassLargeTitleController;
 import 'glass_navigation_shell.dart';
-import 'shared/glass_nav_pinned_host.dart' show GlassNavPinnedMetrics;
+import 'shared/glass_nav_pinned_host.dart'
+    show GlassNavBarGroup, GlassNavPinnedMetrics, groupGlassNavBarItems;
 
 /// A navigation bar layout widget following Apple's iOS 26 design patterns.
 ///
@@ -110,7 +111,9 @@ class GlassAppBar extends StatelessWidget
     this.largeTitleController,
     this.bottom,
   })  : pinnedActions = null,
+        pinnedLeading = const <GlassBarItem>[],
         pinnedBackButton = true,
+        pinnedLeadingItemsSupplementBackButton = false,
         onBack = null;
 
   /// Creates a glass app bar whose chrome pins above the [Navigator].
@@ -121,21 +124,28 @@ class GlassAppBar extends StatelessWidget
   /// bar behaviour. Without a shell (or where the effect cannot render) the
   /// same items render inside this bar, so screens work either way.
   ///
-  /// [actions] are declared as data ([GlassBarItem]), mirroring
+  /// [leading] and [actions] are declared as data ([GlassBarItem]), mirroring
   /// `UIBarButtonItem` — there is no widget-based `leading`/`actions` in this
   /// mode, because arbitrary widgets cannot be hoisted to the shell. Items
   /// sharing an id across routes morph as the same item; see
   /// [GlassBarItem.icon].
   ///
   /// The back button appears whenever the route can be popped and never on a
-  /// root route. Set [backButton] to false to suppress it, and [onBack] to
-  /// replace the default `Navigator.maybePop()` — for example with
-  /// go_router's `context.pop()`.
+  /// root route. A non-empty [leading] **replaces** it — UIKit's rule for
+  /// `leftBarButtonItems`, and Flutter's for [AppBar.leading], which implies a
+  /// leading only when none was given. Set
+  /// [leadingItemsSupplementBackButton] to show both, mirroring
+  /// `UINavigationItem.leftItemsSupplementBackButton`. Set [backButton] to
+  /// false to suppress the back button outright, and [onBack] to replace its
+  /// default `Navigator.maybePop()` — for example with go_router's
+  /// `context.pop()`.
   const GlassAppBar.pinned({
     super.key,
     this.title,
+    List<GlassBarItem> leading = const [],
     List<GlassBarItem> actions = const [],
     bool backButton = true,
+    bool leadingItemsSupplementBackButton = false,
     this.onBack,
     this.centerTitle = true,
     // Whitelisted: Structural transparent default, not a Material colour.
@@ -146,7 +156,10 @@ class GlassAppBar extends StatelessWidget
     this.largeTitleController,
     this.bottom,
   })  : pinnedActions = actions,
+        pinnedLeading = leading,
         pinnedBackButton = backButton,
+        pinnedLeadingItemsSupplementBackButton =
+            leadingItemsSupplementBackButton,
         leading = null,
         actions = null;
 
@@ -198,12 +211,28 @@ class GlassAppBar extends StatelessWidget
   /// glass capsule.
   final List<GlassBarItem>? pinnedActions;
 
+  /// Leading bar items declared as data, pinned above the [Navigator] by an
+  /// enclosing [GlassNavigationShell].
+  ///
+  /// Set by [GlassAppBar.pinned] (its `leading` parameter, defaulting to
+  /// empty); always empty on the plain constructor, which uses the
+  /// widget-based [leading] instead.
+  final List<GlassBarItem> pinnedLeading;
+
   /// Whether a [GlassAppBar.pinned] bar shows the automatic back button when
   /// the route can be popped.
   ///
   /// The button is never shown on a root route, matching
-  /// [ModalRoute.impliesAppBarDismissal].
+  /// [ModalRoute.impliesAppBarDismissal], and a non-empty [pinnedLeading]
+  /// replaces it unless [pinnedLeadingItemsSupplementBackButton] is set.
   final bool pinnedBackButton;
+
+  /// Whether [pinnedLeading] appears in addition to the automatic back button
+  /// rather than instead of it.
+  ///
+  /// Mirrors `UINavigationItem.leftItemsSupplementBackButton`, which is
+  /// likewise false by default.
+  final bool pinnedLeadingItemsSupplementBackButton;
 
   /// Overrides the automatic back button's action on a [GlassAppBar.pinned]
   /// bar.
@@ -273,17 +302,21 @@ class GlassAppBar extends StatelessWidget
     // potentially-constant), and here rather than in the pinned host so the
     // in-route fallback path reports it too instead of silently dropping it.
     assert(
-      pinnedActions == null || !pinnedActions!.any((i) => i is GlassBarSpacer),
-      'GlassBarItem.spacer() is not rendered yet: pinned actions render as a '
-      'single glass capsule. Multi-capsule grouping is a follow-up.',
+      pinnedActions == null ||
+          !pinnedActions!.any((i) => i is GlassBarSpacer) &&
+              !pinnedLeading.any((i) => i is GlassBarSpacer),
+      'GlassBarItem.spacer() is not rendered yet: a run of items renders as a '
+      'single glass capsule. Splitting a run with a spacer is a follow-up; '
+      'GlassBarItemBackground.separate already gives one item its own shell.',
     );
     // Pinned items are registered with the shell, which decides whether it can
     // host them. Until then — and whenever there is no shell — this bar draws
     // them itself, so a screen renders correctly either way.
     if (pinnedActions != null) {
       return _GlassNavBarRegistrar(
+        leading: pinnedLeading,
         actions: pinnedActions!,
-        pinnedBackButton: pinnedBackButton,
+        pinnedBackButton: _impliesBackButton,
         onBack: onBack,
         buttonSettings: buttonSettings,
         builder: (context, hoisted) => _buildBar(context, hoisted: hoisted),
@@ -291,6 +324,17 @@ class GlassAppBar extends StatelessWidget
     }
     return _buildBar(context, hoisted: false);
   }
+
+  /// Whether the automatic back button belongs to this bar's leading cluster.
+  ///
+  /// A custom leading replaces it, mirroring UIKit — *"A custom left item
+  /// replaces the regular back button unless you set
+  /// leftItemsSupplementBackButton to YES"* — and [AppBar], which implies a
+  /// leading only when none was given. Whether the route can be popped at all
+  /// is decided separately, against [ModalRoute.impliesAppBarDismissal].
+  bool get _impliesBackButton =>
+      pinnedBackButton &&
+      (pinnedLeading.isEmpty || pinnedLeadingItemsSupplementBackButton);
 
   /// Builds the bar itself.
   ///
@@ -302,90 +346,43 @@ class GlassAppBar extends StatelessWidget
     List<Widget>? effectiveActions = actions;
 
     if (pinnedActions != null) {
-      final items = pinnedActions!.whereType<GlassBarActionItem>().toList();
-      final showsBack = pinnedBackButton &&
+      final leadingGroups = groupGlassNavBarItems(
+        pinnedLeading.whereType<GlassBarActionItem>().toList(),
+      );
+      final actionGroups = groupGlassNavBarItems(
+        pinnedActions!.whereType<GlassBarActionItem>().toList(),
+      );
+      final showsBack = _impliesBackButton &&
           (ModalRoute.of(context)?.impliesAppBarDismissal ?? false);
       const backSize = GlassNavPinnedMetrics.backDiameter;
-      const slot = GlassNavPinnedMetrics.slot;
 
-      if (hoisted) {
-        effectiveLeading = showsBack
-            ? const SizedBox(width: backSize, height: backSize)
-            : null;
-        // The placeholder lays out the real content and simply isn't painted,
-        // so it measures exactly what the pinned cluster measures — including
-        // custom items of arbitrary width. A fixed width per item would only
-        // be correct for icons, and would mis-constrain the centred title.
-        effectiveActions = items.isEmpty
-            ? null
-            : [
-                IgnorePointer(
-                  child: ExcludeSemantics(
-                    child: Opacity(
-                      opacity: 0.0,
-                      child: SizedBox(
-                        height: slot,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (final item in items)
-                              if (item is GlassBarCustomItem)
-                                item.child
-                              else
-                                SizedBox(
-                                  width: slot,
-                                  child: Center(child: item.content),
-                                ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ];
-      } else {
-        effectiveLeading = showsBack
-            ? GlassButton(
-                icon: const Icon(CupertinoIcons.back),
-                width: backSize,
-                height: backSize,
-                iconSize: GlassNavPinnedMetrics.iconSize,
-                label: 'Back',
-                onTap: () {
-                  final back = onBack;
-                  if (back != null) {
-                    back();
-                  } else {
-                    Navigator.of(context).maybePop();
-                  }
-                },
-              )
-            : null;
-        effectiveActions = items.isEmpty
-            ? null
-            : [
-                GlassButtonGroup.icons(
-                  items: [
-                    for (final item in items)
-                      if (item is GlassBarMenuItem)
-                        GlassButtonGroupItem.menu(
-                          icon: item.icon,
-                          menuItems: item.menuItems,
-                          menuAlignment: item.menuAlignment,
-                          menuWidth: item.menuWidth,
-                          label: item.label,
-                        )
-                      else
-                        GlassButtonGroupItem(
-                          icon: item.content,
-                          onTap: item.onTap,
-                          label: item.label,
-                          enabled: item.enabled,
-                        ),
-                  ],
-                ),
-              ];
-      }
+      // The placeholders lay out the real content and simply aren't painted,
+      // so they measure exactly what the pinned clusters measure — including
+      // custom items of arbitrary width. A fixed width per item would only be
+      // correct for icons, and would mis-constrain the centred title.
+      final List<Widget> leadingSlot = [
+        if (showsBack)
+          hoisted
+              ? const SizedBox(width: backSize, height: backSize)
+              : _inRouteBackButton(context),
+        for (final group in leadingGroups)
+          hoisted ? _measuringGroup(group) : _inRouteGroup(group),
+      ];
+      final List<Widget> actionsSlot = [
+        for (final group in actionGroups)
+          hoisted ? _measuringGroup(group) : _inRouteGroup(group),
+      ];
+
+      effectiveLeading = leadingSlot.isEmpty
+          ? null
+          : leadingSlot.length == 1
+              ? leadingSlot.single
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: GlassNavPinnedMetrics.groupGap,
+                  children: leadingSlot,
+                );
+      effectiveActions = actionsSlot.isEmpty ? null : actionsSlot;
     }
 
     final Widget toolbarRow = SafeArea(
@@ -452,6 +449,95 @@ class GlassAppBar extends StatelessWidget
       isolated: true,
       defaultQuality: GlassQuality.premium,
       child: content,
+    );
+  }
+
+  /// The automatic back button as this bar draws it itself.
+  ///
+  /// Only reached where the shell cannot pin — no shell installed, or a
+  /// quality tier that cannot render glass — so a pinned screen still works.
+  Widget _inRouteBackButton(BuildContext context) {
+    return GlassButton(
+      icon: const Icon(CupertinoIcons.back),
+      width: GlassNavPinnedMetrics.backDiameter,
+      height: GlassNavPinnedMetrics.backDiameter,
+      iconSize: GlassNavPinnedMetrics.iconSize,
+      label: Localizations.of<CupertinoLocalizations>(
+            context,
+            CupertinoLocalizations,
+          )?.backButtonLabel ??
+          'Back',
+      onTap: () {
+        final back = onBack;
+        if (back != null) {
+          back();
+        } else {
+          Navigator.of(context).maybePop();
+        }
+      },
+    );
+  }
+
+  /// One group of pinned items, drawn in-route.
+  Widget _inRouteGroup(GlassNavBarGroup group) {
+    if (group.background == GlassBarItemBackground.none) {
+      final item = group.items.single;
+      return Semantics(
+        button: true,
+        label: item.label,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: item.enabled ? item.onTap : null,
+          child: SizedBox(height: group.height, child: item.content),
+        ),
+      );
+    }
+    return GlassButtonGroup.icons(
+      items: [
+        for (final item in group.items)
+          if (item is GlassBarMenuItem)
+            GlassButtonGroupItem.menu(
+              icon: item.icon,
+              menuItems: item.menuItems,
+              menuAlignment: item.menuAlignment,
+              menuWidth: item.menuWidth,
+              label: item.label,
+            )
+          else
+            GlassButtonGroupItem(
+              icon: item.content,
+              onTap: item.onTap,
+              label: item.label,
+              enabled: item.enabled,
+            ),
+      ],
+    );
+  }
+
+  /// An unpainted stand-in the size of one pinned group.
+  Widget _measuringGroup(GlassNavBarGroup group) {
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: Opacity(
+          opacity: 0.0,
+          child: SizedBox(
+            height: group.height,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final item in group.items)
+                  if (item is GlassBarCustomItem)
+                    item.child
+                  else
+                    SizedBox(
+                      width: group.slotWidth,
+                      child: Center(child: item.content),
+                    ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -686,6 +772,7 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
 /// static and identical, so nothing moves.
 class _GlassNavBarRegistrar extends StatefulWidget {
   const _GlassNavBarRegistrar({
+    required this.leading,
     required this.actions,
     required this.pinnedBackButton,
     required this.onBack,
@@ -693,6 +780,7 @@ class _GlassNavBarRegistrar extends StatefulWidget {
     required this.builder,
   });
 
+  final List<GlassBarItem> leading;
   final List<GlassBarItem> actions;
   final bool pinnedBackButton;
   final VoidCallback? onBack;
@@ -750,6 +838,7 @@ class _GlassNavBarRegistrarState extends State<_GlassNavBarRegistrar> {
       route,
       GlassNavBarRegistration(
         actions: widget.actions,
+        leading: widget.leading,
         showsBackButton:
             widget.pinnedBackButton && route.impliesAppBarDismissal,
         onBack: widget.onBack,
