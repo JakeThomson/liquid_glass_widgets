@@ -97,8 +97,8 @@ GlassScaffold(
 > **Why `GlassScaffold`?** Glass effects refract and blur against whatever is behind them. Without a controlled background, glass surfaces can appear flat, incorrectly tinted, or invisible. `GlassScaffold` wires up the background source, glass rendering layer, and bar isolation automatically — one widget instead of five.
 
 > **Accessibility is on by default.** The library automatically reads the
-> device's Reduce Motion and Reduce Transparency settings — no extra setup
-> required. See [Accessibility](#accessibility) for details.
+> device's Reduce Motion setting and approximates Reduce Transparency via the
+> Increase Contrast signal — no extra setup required. See [Accessibility](#accessibility) for details.
 
 ### Choose the right widget
 
@@ -144,7 +144,7 @@ Both parameters are optional — omit them and the library uses sensible default
 - **One-line setup** — `LiquidGlassWidgets.wrap(child: myApp)` handles accessibility bridging, adaptive quality, and global theming; use `GlassScaffold` per screen for automatic backdrop isolation, z-ordering, edge fading, and status bar styling
 - **Content-aware brightness** — glass bars automatically flip between light and dark icons/labels based on the content scrolling behind them. One flag on `GlassScaffold`, matches iOS 26 behaviour
 - **Gyroscope lighting** — `GlassMotionScope` drives specular highlights from any `Stream<double>`
-- **WCAG-compliant by default** — Reduce Motion and Reduce Transparency are respected automatically; no setup required
+- **WCAG-compliant by default** — Reduce Motion is respected automatically. Reduce Transparency is approximated via the Increase Contrast signal (see [Accessibility](#accessibility))
 - **Full keyboard & screen reader support** — every interactive widget supports Tab navigation, Space/Enter activation, and VoiceOver/TalkBack semantics out of the box; focus is visualised with an iOS 26-style outset ring
 - **Full RTL (Right-to-Left) support** — layouts, drag directions, tab ordering, and physics auto-reverse for Arabic, Hebrew, and Persian
 
@@ -601,7 +601,7 @@ Each value maps to a fixed power-of-2 exponent. The GPU uses a zero-transcendent
 3. **Standard quality for scrollable content** — lists, forms, interactive widgets
 4. **Premium quality for fixed surfaces** — app bars, bottom bars, and hero sections
 5. **Minimal quality for shader-dense screens** — use `GlassQuality.minimal` for background panels and list cards to fire zero custom shader invocations during scroll, then keep `standard` or `premium` only on the focal element
-6. **Accessibility fallbacks are zero-cost** — when Reduce Transparency is active, the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
+6. **Accessibility fallbacks are zero-cost** — when High Contrast is active (the iOS signal the library reads), the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
 
 ### Automatic Quality Adaptation *(experimental)*
 
@@ -770,11 +770,20 @@ Every glass widget in this package respects the user's system accessibility pref
 | System Setting | Effect on glass widgets |
 |---|---|
 | **Reduce Motion** (iOS/macOS/Android) | All spring/jelly animations snap instantly to their target |
-| **Reduce Transparency / High Contrast** | Glass shader replaced with a plain frosted `BackdropFilter` panel — zero GPU shader cost |
+| **High Contrast** (iOS/macOS) | Glass shader replaced with a plain frosted `BackdropFilter` panel — zero GPU shader cost |
+
+> **Note on Reduce Transparency:** Flutter's `AccessibilityFeatures` does not expose a
+> dedicated `reduceTransparency` flag. The library approximates it via
+> `MediaQuery.highContrastOf(context)`, which maps to **Increase Contrast** on iOS —
+> a different system toggle. A user with Reduce Transparency on and Increase Contrast
+> off will still receive the full shader. This is a Flutter engine limitation; the
+> `GlassAccessibilityScope` comment documents it honestly. The `reduceTransparency`
+> override parameter on `GlassAccessibilityScope` works as documented for manual control.
 
 ### No setup needed
 
-Just ship your app. If the user has Reduce Motion on, your widgets snap. If they have Reduce Transparency on, they get a solid frosted fallback. Nothing to configure.
+Just ship your app. If the user has Reduce Motion on, your widgets snap. If they have
+High Contrast on, they get a solid frosted fallback. Nothing to configure.
 
 ### Optional: `GlassAccessibilityScope`
 
@@ -861,6 +870,54 @@ flutter test --exclude-tags golden
 flutter test --tags golden
 ```
 
+
+## Known Limitations
+
+### `cupertino_icons` is required in your app
+
+Glass widgets use `CupertinoIcons` glyphs (e.g. `GlassPasswordField`'s eye/lock icons).
+The font ships in the [`cupertino_icons`](https://pub.dev/packages/cupertino_icons) package,
+which is a direct dependency of `flutter_tools` and present in every `flutter create` app —
+but if you have removed it from your `pubspec.yaml`, icons will render as `?` boxes.
+Add it back as a direct dependency if needed:
+
+```yaml
+dependencies:
+  cupertino_icons: ^1.0.8
+```
+
+### `MaterialApp` and the `Material` ancestor
+
+`liquid_glass_widgets` is Material-free by design and does not provide a `Material`
+ancestor widget. When used under `MaterialApp`, Flutter requires a `Material` in the
+tree for `Text` to render correctly — without one, text shows debug yellow underlines.
+
+The fix is one line in your `MaterialApp.builder`:
+
+```dart
+MaterialApp(
+  builder: (context, child) => Material(
+    type: MaterialType.transparency,
+    child: child!,
+  ),
+  home: const MyHomePage(),
+)
+```
+
+The package's own example app uses `CupertinoApp` to avoid this entirely — which is
+the cleanest approach for new projects. If you are migrating an existing `MaterialApp`,
+the `builder` workaround above is the minimal fix.
+
+### `GlassScaffold.backgroundColor` dual role
+
+`backgroundColor` serves two purposes: it is the solid background colour rendered
+behind everything when no `background:` widget is provided, **and** it is the colour
+used for the scroll edge fade overlay. If you provide a `background:` widget, the
+`backgroundColor` has no visible effect except on the edge fade — which defaults to
+`CupertinoTheme.scaffoldBackgroundColor` (near-black in dark mode) when left null.
+If your deep-fade edge looks like a dark wash, set `backgroundColor` explicitly.
+
+---
 
 ## Dependencies
 

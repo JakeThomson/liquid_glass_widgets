@@ -187,10 +187,19 @@ class GlassScaffold extends StatelessWidget {
   /// background: Container(color: myColor)
   /// ```
   /// When both [background] and [backgroundColor] are provided, [background]
-  /// takes precedence.
+  /// takes precedence and [backgroundColor] has no effect as a solid fill.
   ///
-  /// When neither is set the Scaffold inherits `Theme.scaffoldBackgroundColor`
-  /// as normal — the inner Scaffold is **not** forced transparent.
+  /// **Scroll edge fade colour:** [backgroundColor] is also used as the target
+  /// colour for the `GlassScrollEdgeEffect` overlay (the fade at the top/bottom
+  /// of the body). When `background` is set, this is its *only* visible role.
+  /// If left null the fade defaults to `CupertinoTheme.scaffoldBackgroundColor`
+  /// (near-black in dark mode), which can produce an unexpected dark wash.
+  /// Set this explicitly whenever you use a `background` widget and the edge
+  /// fade colour matters.
+  ///
+  /// When neither [background] nor [backgroundColor] is set the Scaffold
+  /// inherits `Theme.scaffoldBackgroundColor` as normal — the inner Scaffold
+  /// is **not** forced transparent.
   final Color? backgroundColor;
 
   /// Glass settings for the page's rendering layer. See [GlassPage.settings].
