@@ -689,18 +689,26 @@ class _GlassModalSheetState extends State<GlassModalSheet>
         effectiveHeight = targetVisualHeight - effectiveBottom;
       } else {
         // Dismissible mode: hiding downwards
-        final pivotPos = _geometry.enablePeek
-            ? _geometry.positionForState(GlassSheetState.peek, mqHeight)
-            : halfPos;
+        // Shared with the morph, so the droplet measures the swipe from the
+        // same detent the sheet falls away from.
+        final pivotPos = _geometry.positionForState(
+          SheetMorphGeometry.dismissPivotState(_geometry),
+          mqHeight,
+        );
 
         final pivotVisualHeight = pivotPos * mqHeight;
 
         if (pos < pivotPos && pivotPos > 0.001) {
-          // Sliding from hidden up to pivot
-          final slideProgress = (pos / pivotPos).clamp(0.0, 1.0);
-          final offscreenBottom = -(pivotVisualHeight + 100.0);
-          effectiveBottom =
-              lerpDouble(offscreenBottom, peekBMargin, slideProgress)!;
+          // Swipe-to-dismiss, below the lowest detent: the sheet tracks the
+          // finger 1:1. No overshoot is needed — at `pos == 0` a 1:1 frame
+          // lands its top edge exactly on the screen's bottom edge, so the
+          // sheet is fully gone, and it stays under the finger on the way.
+          //
+          // A morphed presentation layers its own scale and horizontal offset
+          // over this frame (see `GlassSheetMorphPresenter`); deliberately not
+          // applied here, so a sheet with no trigger to morph back into keeps
+          // the plain slide-away.
+          effectiveBottom = peekBMargin - (pivotPos - pos) * mqHeight;
           effectiveHeight = pivotVisualHeight - peekBMargin;
           hPad = peekHPad;
           topRadius = peekTRadius;
