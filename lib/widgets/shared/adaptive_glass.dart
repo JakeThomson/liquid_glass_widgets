@@ -184,8 +184,24 @@ class AdaptiveGlass extends StatelessWidget {
     // one tier that actually blurs over a PlatformView. This finally delivers
     // the "live BackdropFilter path" the canUsePremiumShader comment promises.
     // --------------------------------------------------------------------------
+    // A surface faded to nothing renders nothing. Without this it falls into
+    // the frosted fallback below — `effectiveBlur` is blur × visibility, so
+    // fading a surface out drives it to zero and reroutes it into a renderer
+    // that has no notion of visibility, leaving a solid tinted disc exactly
+    // where the glass was supposed to have gone.
+    // Zero opacity rather than the bare child: the premium path wraps content
+    // in `Opacity(settings.visibility)`, so at zero the icon goes with the
+    // glass. Returning the child unwrapped made it pop back into view at the
+    // exact moment the surface finished disappearing.
+    if (baseSettings.visibility <= 0.0) {
+      return Opacity(opacity: 0.0, child: content);
+    }
+
     if (quality == GlassQuality.minimal ||
-        baseSettings.effectiveBlur == 0 ||
+        // Deliberately the *configured* blur, not the effective one: this
+        // path is for surfaces asking for no frost, not for surfaces on
+        // their way out.
+        baseSettings.blur == 0 ||
         platformViewBackdrop) {
       return _wrapWithDecorations(
         context,
@@ -272,7 +288,7 @@ class AdaptiveGlass extends StatelessWidget {
       if (skipNormalization) {
         normalizedSettings = baseSettings.copyWith(
           glassColor: baseSettings.glassColor.withValues(
-            alpha: (baseSettings.glassColor.a *
+            alpha: (baseSettings.effectiveGlassColor.a *
                     baseSettings.standardOpacityMultiplier)
                 .clamp(0.0, 1.0),
           ),
@@ -287,7 +303,7 @@ class AdaptiveGlass extends StatelessWidget {
           lightIntensity:
               (baseSettings.effectiveLightIntensity * 0.6).clamp(0.0, 10.0),
           glassColor: baseSettings.glassColor.withValues(
-            alpha: (baseSettings.glassColor.a *
+            alpha: (baseSettings.effectiveGlassColor.a *
                     baseSettings.standardOpacityMultiplier)
                 .clamp(0.0, 1.0),
           ),
@@ -327,16 +343,19 @@ class AdaptiveGlass extends StatelessWidget {
         return _wrapWithDecorations(
           context,
           baseSettings,
-          LightweightLiquidGlass(
-            shape: shape,
-            settings: effectiveSettings,
-            densityFactor: 0.0, // Containers are never elevated
-            glowIntensity: 0.0, // Containers don't glow
-            child: InheritedLiquidGlass(
+          Opacity(
+            opacity: baseSettings.visibility.clamp(0.0, 1.0),
+            child: LightweightLiquidGlass(
+              shape: shape,
               settings: effectiveSettings,
-              quality: quality,
-              isBlurProvidedByAncestor: true,
-              child: content,
+              densityFactor: 0.0, // Containers are never elevated
+              glowIntensity: 0.0, // Containers don't glow
+              child: InheritedLiquidGlass(
+                settings: effectiveSettings,
+                quality: quality,
+                isBlurProvidedByAncestor: true,
+                child: content,
+              ),
             ),
           ),
         );
@@ -353,7 +372,18 @@ class AdaptiveGlass extends StatelessWidget {
         child: content,
       );
 
-      return _wrapWithDecorations(context, baseSettings, lightweightWidget);
+      // The lightweight shader has no visibility uniform — it renders at full
+      // strength whatever the settings say — so a surface fading out on this
+      // tier never actually goes. Composite the finished result instead: it
+      // is an ordinary painted shader here, not a backdrop pass, so opacity
+      // is legal on it in a way it is not on the premium path.
+      final faded = baseSettings.visibility >= 1.0
+          ? lightweightWidget
+          : Opacity(
+              opacity: baseSettings.visibility.clamp(0.0, 1.0),
+              child: lightweightWidget,
+            );
+      return _wrapWithDecorations(context, baseSettings, faded);
     }
 
     // Impeller + Premium Path: Use the renderer's native path.
