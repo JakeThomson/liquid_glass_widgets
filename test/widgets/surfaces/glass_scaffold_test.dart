@@ -106,6 +106,55 @@ void main() {
       expect(scrollEdge.topFadeHeight, 64.0);
     });
 
+    testWidgets(
+        'defaults to GlassScrollEdgeStyle.soft and does not render ProgressiveBlur',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassScaffold(
+              topEdgeFade: true,
+              body: SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+
+      final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
+        find.byType(GlassScrollEdgeEffect),
+      );
+      expect(scrollEdge.style, GlassScrollEdgeStyle.soft);
+      expect(find.byType(ProgressiveBlur), findsNothing);
+    });
+
+    testWidgets(
+        'forwards explicit blur edgeStyle to GlassScrollEdgeEffect and renders ProgressiveBlur',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassScaffold(
+              topEdgeFade: true,
+              edgeStyle: GlassScrollEdgeStyle.blur,
+              maxSigma: 22,
+              body: SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+
+      final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
+        find.byType(GlassScrollEdgeEffect),
+      );
+      expect(scrollEdge.style, GlassScrollEdgeStyle.blur);
+      expect(scrollEdge.maxSigma, 22);
+
+      final blur = tester.widget<ProgressiveBlur>(find.byType(ProgressiveBlur));
+      expect(blur.maxSigma, 22);
+    });
+
     // ── Isolation scope: bars get premium quality hint ───────────────────────
 
     testWidgets('wraps bars in GlassIsolationScope with defaultQuality premium',
