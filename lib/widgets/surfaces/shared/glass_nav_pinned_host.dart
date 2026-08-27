@@ -59,10 +59,10 @@ abstract final class GlassNavPinnedMetrics {
   /// the cluster is still partially dissolved, never while it is fully solid.
   static const double materializeStart = 0.45;
 
-  /// Scale a cluster gathers to while dematerialized, from the native
+  /// Scale a cluster swells to while dematerialized, from the native
   /// capture. Gentler than the standalone default: the bar's clusters are
   /// anchored to an edge, where a deep scale reads as a slide.
-  static const double materializeScaleFrom = 0.9;
+  static const double materializeScaleFrom = 1.1;
 
   /// End of the window over which a disappearing cluster dematerializes, in
   /// route progress. The window starts at 0.0.
@@ -285,7 +285,7 @@ class _PinnedBackButton extends StatelessWidget {
       profile: state.to.showsBackButton
           ? GlassMaterializeProfile.entrance
           : GlassMaterializeProfile.exit,
-      // It sits against the leading edge, so it gathers toward it.
+      // It sits against the leading edge, so it swells from it.
       alignment: Alignment.centerLeft,
       scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
       child: Transform.scale(
@@ -923,7 +923,7 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
       profile: toItems.isNotEmpty
           ? GlassMaterializeProfile.entrance
           : GlassMaterializeProfile.exit,
-      // Anchored to the trailing edge, so it gathers toward it.
+      // Anchored to the trailing edge, so it swells from it.
       alignment: Alignment.centerRight,
       scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
       child: Transform.scale(

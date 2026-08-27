@@ -331,10 +331,10 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
           ..setFloatUniforms(initialIndex: 28, (value) {
             value.setFloats([
-              settings.ambientRim * scale,
-              settings.fresnelStrength,
+              settings.effectiveAmbientRim * scale,
+              settings.effectiveFresnelStrength,
               scale,
-              settings.edgeAbsorption,
+              settings.effectiveEdgeAbsorption,
             ]);
           })
           ..setImageSampler(
@@ -470,10 +470,10 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
       ..setFloatUniforms(initialIndex: 28, (value) {
         value.setFloats([
-          settings.ambientRim * scale,
-          settings.fresnelStrength,
+          settings.effectiveAmbientRim * scale,
+          settings.effectiveFresnelStrength,
           scale,
-          settings.edgeAbsorption,
+          settings.effectiveEdgeAbsorption,
         ]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).

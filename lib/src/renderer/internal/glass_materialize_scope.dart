@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
@@ -20,13 +19,12 @@ import '../liquid_glass_settings.dart';
 ///
 /// Two channels ride on the scope:
 ///
-/// * **Glass** — [glassProgress] scales `visibility` (and the widget-level
-///   shadow, whiten and backer decorations, which are painted outside the
-///   shader and would otherwise stay at full strength while the glass
-///   dissolves). The raw `blur` is simultaneously lerped up toward
-///   [blobSigma], so `effectiveBlur = blur × visibility` is zero at rest and
-///   at full dematerialization but peaks in between — the soft unresolved
-///   blob the native transition shows while glass forms.
+/// * **Glass** — [glassProgress] scales `visibility`, which every shader
+///   uniform and the widget-level decorations already read through the
+///   `effective*` getters. The configured blur is left alone: the shader
+///   multiplies it by visibility, so a dissolving surface stops blurring its
+///   backdrop as it goes. Driving the blur *up* to keep the surface looking
+///   frosty smears whatever is behind a shape nobody can see any more.
 /// * **Content** — [contentOpacity] and [contentSigma] fade and gaussian-blur
 ///   the glass *child*, which is ordinary painted content where those
 ///   compose fine. Kept separate from the glass channel so the transition can
@@ -37,7 +35,6 @@ class GlassMaterializeScope extends InheritedWidget {
     required this.glassProgress,
     required this.contentOpacity,
     required this.contentSigma,
-    required this.blobSigma,
     required super.child,
     super.key,
   });
@@ -53,12 +50,6 @@ class GlassMaterializeScope extends InheritedWidget {
 
   /// Gaussian sigma applied to glass children, in logical pixels.
   final double contentSigma;
-
-  /// The raw shader blur at full dematerialization, in logical pixels.
-  ///
-  /// A configured blur above this keeps its own value, so a heavily frosted
-  /// surface never *sharpens* while dissolving.
-  final double blobSigma;
 
   /// The nearest scope above [context], or null when no transition is
   /// running anywhere above.
@@ -81,13 +72,22 @@ class GlassMaterializeScope extends InheritedWidget {
 
   /// Applies the nearest scope's content channel around [child].
   ///
-  /// Returns [child] untouched when no scope is present or the scope is at
-  /// rest. The opacity and filter widgets are otherwise both always present,
-  /// even at a momentary sigma of zero, so the child's element tree keeps one
+  /// Returns [child] untouched when no scope is present or the content
+  /// channel is itself at rest. It deliberately does *not* test
+  /// [glassProgress]: the two channels are staggered, so the glass reaches
+  /// 1.0 while the content is still sharpening. Gating this on the glass
+  /// dropped the blur in a single frame at that crossing — the icon snapped
+  /// between sharp and soft with the glass shell unchanged around it.
+  ///
+  /// The opacity and filter widgets are otherwise both always present, even
+  /// at a momentary sigma of zero, so the child's element tree keeps one
   /// shape for the whole of a transition.
   static Widget wrapContent(BuildContext context, Widget child) {
     final scope = maybeOf(context);
-    if (scope == null || scope.glassProgress >= 1.0) return child;
+    if (scope == null ||
+        (scope.contentOpacity >= 1.0 && scope.contentSigma <= 0.0)) {
+      return child;
+    }
     return Opacity(
       opacity: scope.contentOpacity.clamp(0.0, 1.0),
       child: ImageFiltered(
@@ -102,10 +102,8 @@ class GlassMaterializeScope extends InheritedWidget {
 
   LiquidGlassSettings _transform(LiquidGlassSettings base) {
     final t = glassProgress.clamp(0.0, 1.0);
-    final blobBlur = math.max(base.blur, blobSigma);
     return base.copyWith(
       visibility: base.visibility * t,
-      blur: blobBlur + (base.blur - blobBlur) * t,
       shadowElevation: base.shadowElevation * t,
       whitenStrength: base.whitenStrength * t,
       // A custom `shadow` list is passed through unscaled — copyWith cannot
@@ -121,6 +119,5 @@ class GlassMaterializeScope extends InheritedWidget {
   bool updateShouldNotify(GlassMaterializeScope oldWidget) =>
       glassProgress != oldWidget.glassProgress ||
       contentOpacity != oldWidget.contentOpacity ||
-      contentSigma != oldWidget.contentSigma ||
-      blobSigma != oldWidget.blobSigma;
+      contentSigma != oldWidget.contentSigma;
 }

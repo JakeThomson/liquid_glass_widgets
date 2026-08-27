@@ -43,34 +43,50 @@ abstract final class GlassMaterializeChoreography {
   /// Glass channel of an entrance: resolved by three quarters of the way in,
   /// so the shape exists before the icon does.
   ///
-  /// The curve eases in as well as out. An ease-out alone leaves the channel
-  /// with a steep slope at zero — a cubic starts at 3× — so the glass is
-  /// already a fifth present one frame into the window, which reads as the
-  /// surface popping in and then drifting rather than forming.
+  /// Eased in, not in-and-out: the surface must not decelerate at the top,
+  /// because iOS keeps the glass faint and resolves it late, and a symmetric
+  /// S-curve ran ahead through the middle and then idled at the end.
+  ///
+  /// Sine rather than cubic because the ease has to be gentle, not absent —
+  /// a cubic ease-in is so flat off the line that the surface visibly starts
+  /// after the native one, while an ease-*out* starts at 3× and pops it in.
   static const Interval entranceGlass =
-      Interval(0.0, 0.75, curve: Curves.easeInOutCubic);
+      Interval(0.0, 0.92, curve: Curves.linear);
 
   /// Content channel of an entrance: starts after the glass has begun to
   /// form and sharpens right up to the end.
-  static const Interval entranceContent =
-      Interval(0.25, 1.0, curve: Curves.easeInOut);
-
-  /// Glass channel of an exit: holds almost to the end of the axis, so the
-  /// shell outlives its content on the way out.
   ///
-  /// Eased at both ends for the same reason as [entranceGlass]. The axis is
-  /// walked toward zero here, so a bare ease-in would shed the last of the
-  /// glass in a single frame.
-  static const Interval exitGlass =
-      Interval(0.0, 0.85, curve: Curves.easeInOutCubic);
+  /// Late and eased in, because the native icon stays soft well after its
+  /// shell has formed and only resolves at the very end; a symmetric curve
+  /// cleared the blur through the middle and read as too brief.
+  static const Interval entranceContent =
+      Interval(0.35, 1.0, curve: Curves.linear);
+
+  /// Glass channel of an exit: a steady dissolve across the whole axis.
+  ///
+  /// Measured against the native transition, its shell comes off at close to
+  /// a constant rate, so this is linear over the full range. Both departures
+  /// from that read as too fast: an ease-in is steepest at the top and
+  /// dropped the surface away in the opening frames, and cutting the range
+  /// short finished the dissolve before the native one had.
+  static const Interval exitGlass = Interval(0.0, 1.0, curve: Curves.linear);
 
   /// Content channel of an exit: gone by 0.45, while [exitGlass] is still
   /// well above zero — the visibly empty shell the native bar shows.
-  static const Interval exitContent =
-      Interval(0.45, 1.0, curve: Curves.easeInOut);
+  ///
+  /// Eased *in* rather than in-and-out, because this axis is walked from 1.0
+  /// downwards: an ease-in is steepest at the top, so the icon starts
+  /// softening the moment the exit begins. Measured beside the native
+  /// transition, a symmetric curve held the icon crisp for several frames
+  /// after the shell had begun to go, and the lag was visible.
+  static const Interval exitContent = Interval(0.45, 1.0, curve: Curves.linear);
 
-  /// Scale curve, shared by both profiles.
-  static const Curve scale = Curves.easeInOutCubic;
+  // The scale deliberately has no curve of its own: it follows whichever
+  // glass channel is playing, so the surface arrives at its natural size at
+  // the same moment it arrives at full strength. Given its own symmetric
+  // curve it settled by about three quarters of the way in and then sat
+  // there while the glass was still fading up — the container reached its
+  // normal state first, which reads as two separate animations.
 }
 
 // =============================================================================
@@ -97,7 +113,6 @@ class GlassMaterializeEffect extends StatelessWidget {
     required this.child,
     this.alignment = Alignment.center,
     this.scaleFrom = 1.0,
-    this.blobSigma = 12.0,
     this.contentSigma = 8.0,
     super.key,
   });
@@ -117,9 +132,6 @@ class GlassMaterializeEffect extends StatelessWidget {
 
   /// Scale at full dematerialization; 1.0 disables the scale entirely.
   final double scaleFrom;
-
-  /// The raw shader blur while the glass is unresolved, in logical pixels.
-  final double blobSigma;
 
   /// Peak gaussian sigma on the glass content, in logical pixels.
   final double contentSigma;
@@ -148,13 +160,14 @@ class GlassMaterializeEffect extends StatelessWidget {
           content = GlassMaterializeChoreography.exitContent.transform(t);
       }
       sigma = contentSigma * (1.0 - content);
-      scale = scaleFrom +
-          (1.0 - scaleFrom) * GlassMaterializeChoreography.scale.transform(t);
+      scale = scaleFrom + (1.0 - scaleFrom) * glass;
     }
 
     return LiquidGlassSelfScaleScope(
       // The backdrop holds still while the effect scales the glass, so the
       // shader must follow the live transform rather than freeze its UVs.
+      // Only a scale-down triggers that freeze, so this is inert for the
+      // default swell; it matters when a caller passes a scaleFrom below 1.
       selfScaled: scale < LiquidGlassSelfScaleScope.freezeScaleThreshold,
       child: Transform.scale(
         scale: scale,
@@ -163,7 +176,6 @@ class GlassMaterializeEffect extends StatelessWidget {
           glassProgress: glass,
           contentOpacity: content,
           contentSigma: sigma,
-          blobSigma: blobSigma,
           child: child,
         ),
       ),

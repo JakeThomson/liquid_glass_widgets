@@ -64,8 +64,7 @@ class GlassMaterializeTransition extends StatelessWidget {
     required this.animation,
     required this.child,
     this.alignment = Alignment.center,
-    this.scaleFrom = 0.85,
-    this.blobSigma = 12.0,
+    this.scaleFrom = 1.15,
     this.contentSigma = 8.0,
     super.key,
   });
@@ -85,13 +84,12 @@ class GlassMaterializeTransition extends StatelessWidget {
   /// reads better converging toward that edge.
   final Alignment alignment;
 
-  /// Scale at full dematerialization, from the native capture (~0.85).
+  /// Scale at full dematerialization, from the native capture (~1.15).
   ///
-  /// Pass 1.0 to disable the scale entirely.
+  /// Greater than one: the surface swells as it leaves and settles inward as
+  /// it arrives, which is the direction iOS moves. Pass 1.0 to disable the
+  /// scale entirely.
   final double scaleFrom;
-
-  /// The shader blur of the unresolved blob, in logical pixels.
-  final double blobSigma;
 
   /// Peak gaussian sigma on the glass content, in logical pixels.
   final double contentSigma;
@@ -112,7 +110,6 @@ class GlassMaterializeTransition extends StatelessWidget {
             : GlassMaterializeProfile.entrance,
         alignment: alignment,
         scaleFrom: scaleFrom,
-        blobSigma: blobSigma,
         contentSigma: contentSigma,
         child: child!,
       ),
@@ -155,8 +152,7 @@ class GlassMaterialize extends StatefulWidget {
     this.duration = GlassDefaults.materializeDuration,
     this.exitDuration = GlassDefaults.dematerializeDuration,
     this.alignment = Alignment.center,
-    this.scaleFrom = 0.85,
-    this.blobSigma = 12.0,
+    this.scaleFrom = 1.15,
     this.contentSigma = 8.0,
     this.maintainState = true,
     this.onEnd,
@@ -181,9 +177,6 @@ class GlassMaterialize extends StatefulWidget {
 
   /// Scale at full dematerialization; 1.0 disables the scale entirely.
   final double scaleFrom;
-
-  /// The shader blur of the unresolved blob, in logical pixels.
-  final double blobSigma;
 
   /// Peak gaussian sigma on the glass content, in logical pixels.
   final double contentSigma;
@@ -268,7 +261,6 @@ class _GlassMaterializeState extends State<GlassMaterialize>
       animation: _controller,
       alignment: widget.alignment,
       scaleFrom: widget.scaleFrom,
-      blobSigma: widget.blobSigma,
       contentSigma: widget.contentSigma,
       child: widget.child,
     );
