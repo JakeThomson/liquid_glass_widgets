@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/services.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../src/widgets/surfaces/dynamic_preferred_size.dart';
 import '../../types/glass_quality.dart';
 import '../../theme/glass_theme_data.dart';
 import '../shared/glass_content_aware_scope.dart';
@@ -362,6 +363,26 @@ class GlassScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Some bars change height from their own internal state — a tab bar
+    // minimizing on scroll — without the widget instance being replaced.
+    // Their preferredSize is read below, so the scaffold has to know when it
+    // has changed; nothing else would mark this build dirty.
+    //
+    // Only build() re-runs. `body` is the same Widget instance every time, so
+    // the element for the app's content is re-parented rather than rebuilt.
+    final bar = bottomBar;
+    final barResize =
+        bar is GlassDynamicPreferredSize ? bar.preferredSizeListenable : null;
+    if (barResize != null) {
+      return ListenableBuilder(
+        listenable: barResize,
+        builder: _buildContent,
+      );
+    }
+    return _buildContent(context, null);
+  }
+
+  Widget _buildContent(BuildContext context, Widget? _) {
     final mediaQuery = MediaQuery.of(context);
     final topPad = mediaQuery.padding.top;
     final botPad = mediaQuery.padding.bottom;
