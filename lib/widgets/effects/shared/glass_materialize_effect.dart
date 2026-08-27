@@ -42,24 +42,35 @@ enum GlassMaterializeProfile {
 abstract final class GlassMaterializeChoreography {
   /// Glass channel of an entrance: resolved by three quarters of the way in,
   /// so the shape exists before the icon does.
+  ///
+  /// The curve eases in as well as out. An ease-out alone leaves the channel
+  /// with a steep slope at zero — a cubic starts at 3× — so the glass is
+  /// already a fifth present one frame into the window, which reads as the
+  /// surface popping in and then drifting rather than forming.
   static const Interval entranceGlass =
-      Interval(0.0, 0.75, curve: Curves.easeOutCubic);
+      Interval(0.0, 0.75, curve: Curves.easeInOutCubic);
 
   /// Content channel of an entrance: starts after the glass has begun to
   /// form and sharpens right up to the end.
   static const Interval entranceContent =
-      Interval(0.25, 1.0, curve: Curves.easeOut);
+      Interval(0.25, 1.0, curve: Curves.easeInOut);
 
   /// Glass channel of an exit: holds almost to the end of the axis, so the
   /// shell outlives its content on the way out.
-  static const Interval exitGlass = Interval(0.0, 0.85, curve: Curves.easeIn);
+  ///
+  /// Eased at both ends for the same reason as [entranceGlass]. The axis is
+  /// walked toward zero here, so a bare ease-in would shed the last of the
+  /// glass in a single frame.
+  static const Interval exitGlass =
+      Interval(0.0, 0.85, curve: Curves.easeInOutCubic);
 
   /// Content channel of an exit: gone by 0.45, while [exitGlass] is still
   /// well above zero — the visibly empty shell the native bar shows.
-  static const Interval exitContent = Interval(0.45, 1.0);
+  static const Interval exitContent =
+      Interval(0.45, 1.0, curve: Curves.easeInOut);
 
   /// Scale curve, shared by both profiles.
-  static const Curve scale = Curves.easeOutCubic;
+  static const Curve scale = Curves.easeInOutCubic;
 }
 
 // =============================================================================
