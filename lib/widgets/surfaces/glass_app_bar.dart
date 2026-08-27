@@ -10,6 +10,7 @@ import '../shared/glass_isolation_scope.dart';
 import 'glass_bar_item.dart';
 import 'glass_large_title.dart' show GlassLargeTitleController;
 import 'glass_navigation_shell.dart';
+import 'glass_pinned_bar_chrome.dart';
 import 'shared/glass_nav_pinned_host.dart' show GlassNavPinnedMetrics;
 
 /// A navigation bar layout widget following Apple's iOS 26 design patterns.
@@ -269,21 +270,13 @@ class GlassAppBar extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    // Checked here rather than in the const constructor (closures are not
-    // potentially-constant), and here rather than in the pinned host so the
-    // in-route fallback path reports it too instead of silently dropping it.
-    assert(
-      pinnedActions == null || !pinnedActions!.any((i) => i is GlassBarSpacer),
-      'GlassBarItem.spacer() is not rendered yet: pinned actions render as a '
-      'single glass capsule. Multi-capsule grouping is a follow-up.',
-    );
     // Pinned items are registered with the shell, which decides whether it can
     // host them. Until then — and whenever there is no shell — this bar draws
     // them itself, so a screen renders correctly either way.
     if (pinnedActions != null) {
-      return _GlassNavBarRegistrar(
+      return GlassPinnedBarChrome(
         actions: pinnedActions!,
-        pinnedBackButton: pinnedBackButton,
+        backButton: pinnedBackButton,
         onBack: onBack,
         buttonSettings: buttonSettings,
         builder: (context, hoisted) => _buildBar(context, hoisted: hoisted),
@@ -671,118 +664,4 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
   @override
   bool shouldRelayout(_ToolbarLayout old) =>
       old.centerTitle != centerTitle || old.textDirection != textDirection;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Pinned-chrome registration
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Registers a route's pinned bar chrome with the enclosing
-/// [GlassNavigationShell] and reports back whether the shell took it.
-///
-/// The bar keeps drawing its own buttons until the shell has both accepted the
-/// registration and had a frame to render them. Handing over on a later frame
-/// means the two never overlap and never both disappear: at the swap both are
-/// static and identical, so nothing moves.
-class _GlassNavBarRegistrar extends StatefulWidget {
-  const _GlassNavBarRegistrar({
-    required this.actions,
-    required this.pinnedBackButton,
-    required this.onBack,
-    required this.buttonSettings,
-    required this.builder,
-  });
-
-  final List<GlassBarItem> actions;
-  final bool pinnedBackButton;
-  final VoidCallback? onBack;
-  final LiquidGlassSettings? buttonSettings;
-  final Widget Function(BuildContext context, bool hoisted) builder;
-
-  @override
-  State<_GlassNavBarRegistrar> createState() => _GlassNavBarRegistrarState();
-}
-
-class _GlassNavBarRegistrarState extends State<_GlassNavBarRegistrar> {
-  GlassNavigationShellState? _shell;
-  ModalRoute<dynamic>? _route;
-  bool _handedOver = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _sync();
-  }
-
-  @override
-  void didUpdateWidget(_GlassNavBarRegistrar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _sync();
-  }
-
-  void _sync() {
-    final shell = GlassNavigationShell.maybeOf(context);
-    final route = ModalRoute.of(context);
-
-    if (shell != _shell || route != _route) {
-      _release();
-      _shell = shell;
-      _route = route;
-      _handedOver = false;
-    }
-
-    // Deliberately no offstage or TickerMode guard here. Flutter builds a newly
-    // pushed route offstage once before the transition starts, and neither
-    // `offstage` nor a muted ticker notifies dependents when it flips back — so
-    // skipping those builds would strand the route unregistered for the whole
-    // transition. Which route is on top is decided by the shell's ordering
-    // instead. (Inactive branches of a nested navigator are a known gap.)
-    if (shell == null || route == null || !shell.isActive) {
-      // Drop any stale registration, then draw the chrome in-route again.
-      _release();
-      if (_handedOver) {
-        setState(() => _handedOver = false);
-      }
-      return;
-    }
-
-    shell.register(
-      route,
-      GlassNavBarRegistration(
-        actions: widget.actions,
-        showsBackButton:
-            widget.pinnedBackButton && route.impliesAppBarDismissal,
-        onBack: widget.onBack,
-        buttonSettings: widget.buttonSettings,
-      ),
-    );
-
-    if (!_handedOver) {
-      // The shell renders the chrome on the next frame; hand over then, so the
-      // bar and the shell swap in the same frame rather than one before the
-      // other.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _shell != null && _shell!.isActive) {
-          setState(() => _handedOver = true);
-        }
-      });
-    }
-  }
-
-  void _release() {
-    final shell = _shell;
-    final route = _route;
-    if (shell != null && route != null) {
-      shell.unregister(route);
-    }
-  }
-
-  @override
-  void dispose() {
-    _release();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.builder(context, _handedOver);
 }

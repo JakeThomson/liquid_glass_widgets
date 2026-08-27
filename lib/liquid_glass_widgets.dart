@@ -123,6 +123,7 @@ export 'widgets/surfaces/glass_navigation_shell.dart'
         GlassNavigationShell,
         GlassNavigationShellState,
         GlassNavBarRegistration;
+export 'widgets/surfaces/glass_pinned_bar_chrome.dart';
 export 'widgets/surfaces/glass_large_title.dart';
 export 'widgets/shared/glass_isolation_scope.dart';
 export 'widgets/surfaces/glass_scaffold.dart';
