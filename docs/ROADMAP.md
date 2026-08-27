@@ -35,23 +35,13 @@ For historical version notes (0.14 → 1.0), see [`CHANGELOG.md`](../CHANGELOG.m
 
 ## Active: 1.1.x Hardening
 
-### Scroll Edge Effect Fidelity
+### Scroll Edge Effect Fidelity (Shipped in 1.2.0)
 
-`GlassScrollEdgeEffect` currently captures the page background once and paints
-a static texture strip over scroll content (a fade/wipe). iOS 26's
-`.scrollEdgeEffectStyle` progressively blurs the **live** content under the bar —
-the content frosts, not disappears.
-
-The primitive to fix this already exists: `lib/widgets/effects/progressive_blur.dart`
-runs a fragment shader as the `ui.ImageFilter` of a `BackdropFilter`, binding the
-live backdrop to the shader's sampler with a gradient sigma. Nothing in the library
-composes it.
-
-**Planned fix:** Add `GlassScrollEdgeStyle.blur` that routes through `ProgressiveBlur`
-instead of the current texture-wipe painter. `GlassScaffold` already computes the fade
-extents needed. Driving `maxSigma` from the scroll offset gives scroll-driven
-materialisation as a bonus — the app bar surface transitions from transparent to
-frosted on scroll, which is the iOS 26 behaviour.
+`GlassScrollEdgeEffect` and `GlassScaffold` now default to `GlassScrollEdgeStyle.blur`,
+composing `ProgressiveBlur` with a 2-pass separable Gaussian shader (`shaders/progressive_blur.frag`).
+Content scrolling beneath navigation chrome now progressively blurs live (matching iOS 26
+`.scrollEdgeEffectStyle`), preserving contrast and legibility for bar controls while keeping
+underlying content visible. `maxSigma` is configurable and can be driven from scroll offset.
 
 See [`docs/PROGRESSIVE_BLUR.md`](PROGRESSIVE_BLUR.md) for the `ProgressiveBlur` API.
 
