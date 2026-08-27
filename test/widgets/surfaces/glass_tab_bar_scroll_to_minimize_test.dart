@@ -293,6 +293,36 @@ void main() {
       expect(observed, GlassTabBarAccessoryPlacement.expanded);
     });
 
+    testWidgets('the reserved height drops to match, so the scaffold stays in '
+        'sync', (tester) async {
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      final minimize = GlassTabBarMinimizeController(
+        behavior: GlassBarMinimizeBehavior.onScrollDown,
+      );
+      addTearDown(minimize.dispose);
+
+      await tester.pumpWidget(_app(
+        minimize: minimize,
+        scroll: scroll,
+        bottomAccessory: probe(),
+      ));
+      await tester.pumpAndSettle();
+      expect(_barHeight(tester), greaterThan(_expandedHeight),
+          reason: 'expanded, the accessory adds its own row above the pill');
+
+      minimize.minimize();
+      await tester.pumpAndSettle();
+
+      // Inline, the accessory sits beside the pill and costs no height, so the
+      // bar is exactly as tall as one with no accessory at all. This is the
+      // invariant the shared resolver exists to hold: preferredSize is what
+      // GlassScaffold insets the body by, and the layout engine has to draw
+      // the same thing.
+      expect(_barHeight(tester), _minimizedHeight);
+      expect(tester.getSize(find.byType(GlassTabBar)).height, _minimizedHeight);
+    });
+
     testWidgets('searchable does not pull its accessory inline on search',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
