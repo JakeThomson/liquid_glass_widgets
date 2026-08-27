@@ -5,6 +5,8 @@
 /// `.tabBarMinimizeBehavior(_:)`:
 ///
 ///   - all four [GlassBarMinimizeBehavior] cases, switchable at runtime
+///   - both scroll sources: the bar's `scrollController`, and a
+///     `NotificationListener` for hosts that cannot reach one
 ///   - per-tab scroll views, re-targeted on tab change the way UIKit
 ///     re-resolves `contentScrollView(for: .bottom)`
 ///   - a tab whose content is shorter than the viewport, which never minimizes
@@ -47,8 +49,17 @@ class _DemoApp extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Trailing-slot modes
+// Demo modes
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Where the minimize controller gets its scrolling from.
+enum _ScrollSource {
+  controller('Controller'),
+  notifications('Listener');
+
+  const _ScrollSource(this.label);
+  final String label;
+}
 
 enum _TrailingMode {
   none('None'),
@@ -107,6 +118,7 @@ class _DemoHome extends StatefulWidget {
 class _DemoHomeState extends State<_DemoHome> {
   int _selectedIndex = 0;
   _TrailingMode _trailingMode = _TrailingMode.always;
+  _ScrollSource _scrollSource = _ScrollSource.controller;
   int _composerTaps = 0;
   bool _extendBody = true;
 
@@ -176,10 +188,13 @@ class _DemoHomeState extends State<_DemoHome> {
         tabs: _tabs,
         selectedIndex: _selectedIndex,
         onTabSelected: _onTabSelected,
-        // The controller owns `minimized` — no `minimized:` prop, no
-        // NotificationListener, no scroll bookkeeping in this file.
+        // The controller owns `minimized` — no `minimized:` prop and no
+        // scroll bookkeeping in this file.
         minimizeController: _minimize,
-        scrollController: _scrollControllers[_selectedIndex],
+        // Null under `Listener`, where the body feeds the controller instead.
+        scrollController: _scrollSource == _ScrollSource.controller
+            ? _scrollControllers[_selectedIndex]
+            : null,
         onMinimizedTabTap: _minimize.expand,
         trailingButton: _trailingButton,
       ),
@@ -195,7 +210,7 @@ class _DemoHomeState extends State<_DemoHome> {
       _ => 40,
     };
 
-    return CustomScrollView(
+    final scrollView = CustomScrollView(
       controller: controller,
       reverse: reverse,
       slivers: [
@@ -212,6 +227,18 @@ class _DemoHomeState extends State<_DemoHome> {
           ),
         ),
       ],
+    );
+
+    if (_scrollSource == _ScrollSource.controller) return scrollView;
+
+    // What an app-level scaffold does when it wraps arbitrary screen bodies
+    // and cannot reach whichever ScrollController the current screen owns.
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        _minimize.handleNotification(notification);
+        return false; // let it keep bubbling
+      },
+      child: scrollView,
     );
   }
 
@@ -230,7 +257,8 @@ class _DemoHomeState extends State<_DemoHome> {
           Text(
             'Scroll to minimize — .tabBarMinimizeBehavior(_:). Tap the '
             'minimized circle to bring the tabs back. "Chat" is bottom-'
-            'aligned (try Up); "Short" cannot scroll, so it never minimizes.',
+            'aligned (try Up); "Short" cannot scroll, so it never minimizes. '
+            'Either scroll source drives it identically.',
             style: TextStyle(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.6),
@@ -249,6 +277,23 @@ class _DemoHomeState extends State<_DemoHome> {
                 b: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Text(b.label,
+                      style:
+                          const TextStyle(fontSize: 13, color: Colors.white)),
+                ),
+            },
+          ),
+          const SizedBox(height: 12),
+          _label('SCROLL SOURCE'),
+          const SizedBox(height: 6),
+          CupertinoSlidingSegmentedControl<_ScrollSource>(
+            groupValue: _scrollSource,
+            onValueChanged: (s) =>
+                setState(() => _scrollSource = s ?? _ScrollSource.controller),
+            children: {
+              for (final s in _ScrollSource.values)
+                s: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(s.label,
                       style:
                           const TextStyle(fontSize: 13, color: Colors.white)),
                 ),
@@ -282,6 +327,7 @@ class _DemoHomeState extends State<_DemoHome> {
           Text(
             'minimized: ${_minimize.minimized}   ·   '
             'resolved: ${_minimize.resolvedBehavior.name}   ·   '
+            'source: ${_scrollSource.label}   ·   '
             'composer taps: $_composerTaps',
             style: TextStyle(
               fontSize: 12,
