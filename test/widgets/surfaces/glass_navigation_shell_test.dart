@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/widgets/effects/shared/glass_materialize_effect.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/shared/glass_nav_pinned_host.dart';
 
 void main() {
@@ -26,6 +27,22 @@ void main() {
   Future<void> settle(WidgetTester tester) async {
     await tester.pumpAndSettle();
     await tester.pump();
+  }
+
+  /// How materialized the pinned actions capsule is this frame, 0 to 1.
+  ///
+  /// Reads the effect wrapper the host puts around the capsule; a capsule
+  /// that is not mounted at all reads as 0.
+  double capsulePhase(WidgetTester tester) {
+    final effects = find.descendant(
+      of: find.byType(GlassNavPinnedHost),
+      matching: find.byType(GlassMaterializeEffect),
+    );
+    for (final element in effects.evaluate()) {
+      final effect = element.widget as GlassMaterializeEffect;
+      if (effect.alignment == Alignment.centerRight) return effect.progress;
+    }
+    return 0.0;
   }
 
   /// The back button drawn by the shell, as opposed to any in-route fallback.
@@ -330,6 +347,136 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a capsule with nowhere to go dematerializes, it does not pop',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+      )));
+      await settle(tester);
+
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      // Part-way into the push the outgoing capsule must still be mounted and
+      // mid-dissolve: a phase of exactly 0 or 1 here is the old hard switch.
+      await tester.pump(const Duration(milliseconds: 120));
+      final phase = capsulePhase(tester);
+      expect(phase, greaterThan(0.0));
+      expect(phase, lessThan(1.0));
+
+      await settle(tester);
+      expect(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.add),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('a settled capsule sits at a paint-neutral phase',
+        (tester) async {
+      // The effect wraps the capsule unconditionally so its glass shell is
+      // never remounted as a transition starts; at rest it must be inert.
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+      )));
+      await settle(tester);
+      expect(capsulePhase(tester), 1.0);
+    });
+
+    testWidgets('a cancelled back-swipe rewinds the dissolve without remount',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+      )));
+      await settle(tester);
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      await settle(tester);
+
+      // Scrub deep enough to enter the dissolve window — the root's capsule
+      // only begins re-forming once the pop passes dematerializeEnd — then
+      // drag back to the edge so the gesture is cancelled rather than
+      // committed, and the whole dissolve has to run backwards.
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final gesture = await tester.startGesture(const Offset(2, 300));
+      await gesture.moveTo(Offset(width * 0.48, 300));
+      await tester.pump();
+      final mid = capsulePhase(tester);
+      expect(mid, greaterThan(0.0));
+      expect(mid, lessThan(1.0),
+          reason: 'the root capsule is part-way back on a scrub');
+
+      await gesture.moveTo(const Offset(4, 300));
+      await tester.pump();
+      await gesture.up();
+      await settle(tester);
+      // Back where it started: the destination still has no capsule.
+      expect(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.add),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('reduce motion switches instead of dissolving', (tester) async {
+      await tester.pumpWidget(CupertinoApp(
+        builder: (context, child) => GlassAccessibilityScope(
+          reduceMotion: true,
+          child: GlassNavigationShell(child: child!),
+        ),
+        home: _Screen(
+          title: 'Root',
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              onTap: () {},
+            ),
+          ],
+        ),
+      ));
+      await settle(tester);
+
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      await tester.pump(const Duration(milliseconds: 120));
+      // Identity: fully present or fully gone, never in between.
+      expect(capsulePhase(tester), anyOf(0.0, 1.0));
+    });
+
+    testWidgets('GlassEffectTransition.identity restores the hard switch',
+        (tester) async {
+      await tester.pumpWidget(CupertinoApp(
+        builder: (context, child) => GlassNavigationShell(
+          effectTransition: GlassEffectTransition.identity,
+          child: child!,
+        ),
+        home: _Screen(
+          title: 'Root',
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              onTap: () {},
+            ),
+          ],
+        ),
+      ));
+      await settle(tester);
+
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(capsulePhase(tester), anyOf(0.0, 1.0));
     });
 
     testWidgets('chrome retreats under a non-participating route',
