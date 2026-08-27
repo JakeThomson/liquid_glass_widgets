@@ -1556,6 +1556,40 @@ void main() {
       expect(tester.getRect(body).width, closeTo(resting.width, 0.5));
     });
 
+    testWidgets('the swipe declares its scale to the premium renderer',
+        (tester) async {
+      // The renderer freezes its shader UVs under a uniform scale-down, for
+      // the CupertinoSheet push-back — where the page being sampled shrinks
+      // with the glass. A swipe is the opposite: the page behind holds still,
+      // and a frozen transform strands the surface's rim and rounded corners
+      // at the size the sheet had when the drag began.
+      final anchor = await pumpTrigger(tester);
+      await present(tester, anchor);
+      await tester.pumpAndSettle();
+
+      bool selfScaled() => tester
+          .widget<LiquidGlassSelfScaleScope>(
+            find.descendant(
+              of: find.byType(GlassSheetMorphPresenter),
+              matching: find.byType(LiquidGlassSelfScaleScope),
+            ),
+          )
+          .selfScaled;
+
+      expect(selfScaled(), isFalse,
+          reason: 'at rest the sheet is not scaling itself, so a push-back '
+              'over it must still freeze');
+
+      final drag = await tester.startGesture(const Offset(200, 420));
+      await drag.moveBy(const Offset(0, 60));
+      await tester.pump();
+      expect(selfScaled(), isTrue, reason: 'the shrink is under way');
+
+      await drag.up();
+      await tester.pumpAndSettle();
+      expect(selfScaled(), isFalse, reason: 'and released, it is over');
+    });
+
     testWidgets('the rendered mid-swipe frame is exactly the geometry\'s',
         (tester) async {
       // The release hands [SheetMorphGeometry.dismissedRect] to the morph as
