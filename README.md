@@ -466,6 +466,20 @@ Minimizing is an iPhone-only behaviour on iOS — the iPad tab bar is a top bar
 and never minimizes. This package does not gate on platform or screen size, so
 if you want that parity, choose a different surface for the regular size class.
 
+Where you cannot reach the scroll view's controller — an app-level scaffold
+wrapping arbitrary screen bodies, each tab owning a different one — drive the
+controller from scroll notifications instead and leave `scrollController` off:
+
+```dart
+NotificationListener<ScrollNotification>(
+  onNotification: (notification) {
+    _minimize.handleNotification(notification);
+    return false;
+  },
+  child: body,
+)
+```
+
 Without a controller, `minimized` stays a plain controlled prop and you decide
 when to flip it.
 
