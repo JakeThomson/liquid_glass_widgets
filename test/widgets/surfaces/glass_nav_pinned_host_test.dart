@@ -8,49 +8,77 @@ GlassBarIconItem _icon(IconData icon, {Object? id}) =>
     GlassBarIconItem(icon: Icon(icon), onTap: () {}, id: id);
 
 void main() {
-  group('capsule presence', () {
-    bool visible(double p, {bool fromEmpty = false, bool toEmpty = true}) =>
-        GlassNavPinnedMetrics.capsuleVisibleAt(
-          fromEmpty: fromEmpty,
-          toEmpty: toEmpty,
+  group('cluster materialize phase', () {
+    double phase(double p, {bool inFrom = true, bool inTo = false}) =>
+        GlassNavPinnedMetrics.clusterPhaseAt(
+          inFrom: inFrom,
+          inTo: inTo,
           progress: p,
         );
 
-    test('a cluster that disappears is shown until the swap point', () {
-      expect(visible(0.0), isTrue);
-      expect(visible(0.49), isTrue);
-      expect(visible(0.5), isFalse);
-      expect(visible(1.0), isFalse);
+    test('a cluster that disappears dematerializes over the head', () {
+      expect(phase(0.0), 1.0);
+      expect(phase(GlassNavPinnedMetrics.dematerializeEnd / 2),
+          closeTo(0.5, 1e-9));
+      expect(phase(GlassNavPinnedMetrics.dematerializeEnd), 0.0);
+      expect(phase(1.0), 0.0);
     });
 
-    test('a cluster that appears is shown from the swap point', () {
-      bool v(double p) => visible(p, fromEmpty: true, toEmpty: false);
-      expect(v(0.0), isFalse);
-      expect(v(0.49), isFalse);
-      expect(v(0.5), isTrue);
-      expect(v(1.0), isTrue);
+    test('a cluster that appears materializes over the tail', () {
+      double p(double v) => phase(v, inFrom: false, inTo: true);
+      expect(p(0.0), 0.0);
+      expect(p(GlassNavPinnedMetrics.materializeStart), 0.0);
+      expect(p(1.0), 1.0);
+      final mid = (GlassNavPinnedMetrics.materializeStart + 1.0) / 2;
+      expect(p(mid), closeTo(0.5, 1e-9));
+    });
+
+    test('both phases are monotone, so a scrubbed swipe never jumps', () {
+      var lastExit = phase(0.0);
+      var lastEnter = phase(0.0, inFrom: false, inTo: true);
+      for (var i = 1; i <= 100; i++) {
+        final p = i / 100;
+        final exit = phase(p);
+        final enter = phase(p, inFrom: false, inTo: true);
+        expect(exit, lessThanOrEqualTo(lastExit + 1e-9));
+        expect(enter, greaterThanOrEqualTo(lastEnter - 1e-9));
+        lastExit = exit;
+        lastEnter = enter;
+      }
     });
 
     test(
-      'appearing and disappearing are exact mirrors, so a push and the pop '
-      'that undoes it swap at the same instant',
+      'the outgoing cluster is never solid once the incoming one begins, so '
+      'the two are never both fully present',
       () {
         for (var i = 0; i <= 100; i++) {
           final p = i / 100;
+          final exit = phase(p);
+          final enter = phase(p, inFrom: false, inTo: true);
           expect(
-            visible(p),
-            isNot(visible(p, fromEmpty: true, toEmpty: false)),
-            reason: 'the two directions must be complementary at p=$p',
+            exit + enter,
+            lessThanOrEqualTo(1.0 + 1e-9),
+            reason: 'phases overlap at p=$p',
           );
         }
       },
     );
 
-    test('a cluster present on both sides never disappears', () {
+    test('the configuration never swaps while a cluster is still solid', () {
+      // The window must straddle swapAt: swapping the items shown inside a
+      // fully opaque capsule is the pop this effect exists to remove.
+      expect(phase(GlassNavPinnedMetrics.swapAt), lessThan(1.0));
+      expect(
+        phase(GlassNavPinnedMetrics.swapAt, inFrom: false, inTo: true),
+        greaterThan(0.0),
+      );
+    });
+
+    test('a cluster present on both sides never dissolves', () {
       for (var i = 0; i <= 100; i++) {
         expect(
-          visible(i / 100, fromEmpty: false, toEmpty: false),
-          isTrue,
+          phase(i / 100, inFrom: true, inTo: true),
+          1.0,
           reason: 'a surviving capsule morphs in place, it does not blink',
         );
       }
@@ -58,10 +86,7 @@ void main() {
 
     test('nothing to show on either side renders nothing', () {
       for (var i = 0; i <= 100; i++) {
-        expect(
-          visible(i / 100, fromEmpty: true, toEmpty: true),
-          isFalse,
-        );
+        expect(phase(i / 100, inFrom: false, inTo: false), 0.0);
       }
     });
   });
@@ -74,20 +99,20 @@ void main() {
       expect(GlassNavPinnedMetrics.showsIncomingAt(1.0), isTrue);
     });
 
-    test('the capsule and its items swap at the same instant', () {
-      // Items appear with their side, so they must not use a different
-      // threshold from the capsule that contains them.
+    test('the incoming capsule is already forming when its items swap in', () {
+      // Items appear with their side, so the capsule that contains them must
+      // have begun materializing by the time the configuration flips.
       expect(
         GlassNavPinnedMetrics.showsIncomingAt(GlassNavPinnedMetrics.swapAt),
         isTrue,
       );
       expect(
-        GlassNavPinnedMetrics.capsuleVisibleAt(
-          fromEmpty: true,
-          toEmpty: false,
+        GlassNavPinnedMetrics.clusterPhaseAt(
+          inFrom: false,
+          inTo: true,
           progress: GlassNavPinnedMetrics.swapAt,
         ),
-        isTrue,
+        greaterThan(0.0),
       );
     });
   });

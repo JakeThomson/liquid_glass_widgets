@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import '../../src/renderer/liquid_glass_settings.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../../types/glass_quality.dart';
+import '../effects/glass_materialize.dart';
 import 'glass_bar_item.dart';
 import 'shared/glass_nav_pinned_host.dart';
 
@@ -76,6 +77,7 @@ class GlassNavigationShell extends StatefulWidget {
     super.key,
     required this.child,
     this.enabled = true,
+    this.effectTransition = GlassEffectTransition.materialize,
   });
 
   /// The subtree containing the [Navigator], typically the `child` handed to
@@ -87,6 +89,19 @@ class GlassNavigationShell extends StatefulWidget {
   /// When false the shell is inert and every screen renders its bar chrome
   /// in-route, exactly as if no shell were installed.
   final bool enabled;
+
+  /// How chrome that appears or disappears across a transition animates —
+  /// a back button on the first push off the root, an actions capsule on a
+  /// route whose destination has none.
+  ///
+  /// Defaults to [GlassEffectTransition.materialize], mirroring iOS 26.
+  /// [GlassEffectTransition.identity] restores the single switch at the
+  /// transition midpoint, which is what reduce motion selects too.
+  ///
+  /// Set on the shell rather than per screen because the choreography spans
+  /// two routes: with a knob on each bar, a push between routes that disagree
+  /// would have no answer for which one wins.
+  final GlassEffectTransition effectTransition;
 
   /// The nearest enclosing shell, or null if there is none.
   static GlassNavigationShellState? maybeOf(BuildContext context) {
@@ -303,6 +318,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
       coverage: coverage.clamp(0.0, 1.0),
       settled: settled,
       topRoute: top.key,
+      transition: widget.effectTransition,
     );
   }
 
