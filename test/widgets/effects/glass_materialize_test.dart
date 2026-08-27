@@ -167,6 +167,37 @@ void main() {
       expect(scope.glassProgress, greaterThan(0.0));
     });
 
+    testWidgets('the glass emerges gradually instead of popping in',
+        (tester) async {
+      // Regression: an ease-out alone has a slope of 3 at zero, which put the
+      // glass a fifth of the way present on the first frame of the window —
+      // it read as the surface appearing instantly and then drifting. The
+      // first frames must be barely visible.
+      const frames = 17; // the entrance window, at 60fps
+      double glassAt(double phase) =>
+          GlassMaterializeChoreography.entranceGlass.transform(phase);
+
+      expect(glassAt(1 / frames), lessThan(0.05));
+      expect(glassAt(2 / frames), lessThan(0.10));
+
+      // And it must still finish: half-way through the window it is well
+      // under way, and it reaches full before the window closes.
+      expect(glassAt(0.5), greaterThan(0.2));
+      expect(glassAt(1.0), 1.0);
+    });
+
+    testWidgets('the glass sheds its last frames gradually too',
+        (tester) async {
+      // The exit walks the same axis toward zero, so a bare ease-in would
+      // drop the remaining glass in a single frame.
+      const frames = 17;
+      double glassAt(double phase) =>
+          GlassMaterializeChoreography.exitGlass.transform(phase);
+
+      expect(glassAt(1 / frames), lessThan(0.05));
+      expect(glassAt(2 / frames), lessThan(0.10));
+    });
+
     testWidgets('the tree shape is the same at rest as mid-transition',
         (tester) async {
       // A shell that remounts as a transition starts or settles pops its
