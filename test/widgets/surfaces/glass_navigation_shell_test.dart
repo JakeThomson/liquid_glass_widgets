@@ -45,6 +45,20 @@ void main() {
     return 0.0;
   }
 
+  /// How materialized the pinned back button is this frame, 0 to 1; -1 when
+  /// it is not mounted at all.
+  double backPhase(WidgetTester tester) {
+    final effects = find.descendant(
+      of: find.byType(GlassNavPinnedHost),
+      matching: find.byType(GlassMaterializeEffect),
+    );
+    for (final element in effects.evaluate()) {
+      final effect = element.widget as GlassMaterializeEffect;
+      if (effect.alignment == Alignment.centerLeft) return effect.progress;
+    }
+    return -1.0;
+  }
+
   /// The back button drawn by the shell, as opposed to any in-route fallback.
   Finder pinnedBack() => find.descendant(
         of: find.byType(GlassNavPinnedHost),
@@ -477,6 +491,40 @@ void main() {
       await _push(tester, const _Screen(title: 'Empty', actions: []));
       await tester.pump(const Duration(milliseconds: 120));
       expect(capsulePhase(tester), anyOf(0.0, 1.0));
+    });
+
+    testWidgets('entering chrome never flashes solid before it materializes',
+        (tester) async {
+      // Regression: a route's `animation` is a ProxyAnimation reporting itself
+      // complete at 1.0 until the navigator attaches the real controller,
+      // which happens after the first build — the build that registers the
+      // bar. The shell read that as "fully entered" and painted the incoming
+      // back button solid for one frame before it dropped back and animated.
+      await tester.pumpWidget(shellApp(const _Screen(
+        title: 'Root',
+        actions: [],
+      )));
+      await settle(tester);
+
+      await _push(tester, const _Screen(title: 'Detail', actions: []));
+
+      var sawRamp = false;
+      for (var i = 0; i < 30; i++) {
+        await tester
+            .pump(i == 0 ? Duration.zero : const Duration(milliseconds: 16));
+        final phase = backPhase(tester);
+        if (phase > 0.0 && phase < 1.0) sawRamp = true;
+        // Before the ramp has started the button must be absent, never solid.
+        if (!sawRamp) {
+          expect(
+            phase,
+            lessThan(1.0),
+            reason: 'frame $i painted the back button solid before the '
+                'transition had begun',
+          );
+        }
+      }
+      expect(sawRamp, isTrue, reason: 'the back button should materialize');
     });
 
     testWidgets('chrome retreats under a non-participating route',

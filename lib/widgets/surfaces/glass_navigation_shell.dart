@@ -287,7 +287,26 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
 
     // Progress of the top route's own entrance: 1 at rest, 0 when it has just
     // been pushed, and scrubbed by the interactive back-swipe during a pop.
-    final progress = top.key.animation?.value ?? 1.0;
+    var progress = top.key.animation?.value ?? 1.0;
+
+    // A route's `animation` is a ProxyAnimation that reports itself complete
+    // at 1.0 until the navigator attaches the real controller in `didPush`,
+    // which lands *after* the route's first build — and that build is when its
+    // bar registers. Taken at face value it says a route that has not begun to
+    // move is fully entered, so the incoming chrome paints solid for one frame
+    // before dropping back to 0 and materializing: a visible flash.
+    //
+    // The route underneath is the witness. It is covered in lockstep with the
+    // top route's entrance, so at rest the two agree (1.0 and fully covered),
+    // and during a real transition they agree at every scrubbed value. Only
+    // the frame before the controller is attached has the top route claiming
+    // to be fully in while nothing below it has been covered at all.
+    if (below != null &&
+        progress == 1.0 &&
+        _coverageOf(below.key) == 0.0 &&
+        top.key.animation?.status == AnimationStatus.completed) {
+      progress = 0.0;
+    }
 
     // Retreat only when something *unregistered* sits above the top route —
     // a plain route or a modal sheet. `isCurrent` is what distinguishes that
