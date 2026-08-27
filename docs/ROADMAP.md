@@ -117,7 +117,8 @@ Ideas under consideration. None committed.
   is the transition vehicle; once `GlassBarItem` reaches parity with the widget API,
   a major release can make the data-driven API the plain `GlassAppBar`. Remaining
   parity work: text/prominent item styles, `GlassBarItem.spacer()` rendering with
-  multi-capsule grouping.
+  multi-capsule grouping. The pinned `leading` API and per-item backgrounds
+  landed in 1.2.
 
 ### Platform Edge Cases
 
