@@ -88,6 +88,11 @@ void main() {
     });
 
     testWidgets('widget-level decorations fade with the glass', (tester) async {
+      // Asserted through the `effective*` getters, which is how every consumer
+      // reads them. Regression: the scope scaled these fields by progress as
+      // well, and the getters then scaled the result by the visibility the
+      // scope had already lowered — the shadow faded as t², so it left about
+      // twice as fast as the glass it belonged to.
       const decorated = LiquidGlassSettings(
         blur: 5,
         shadowElevation: 1.0,
@@ -95,10 +100,11 @@ void main() {
         backerColor: Color(0x59000000),
       );
       final half = await at(tester, 0.5, settings: decorated);
-      expect(half.shadowElevation, closeTo(0.5, 1e-9));
-      expect(half.whitenStrength, closeTo(0.2, 1e-9));
+      expect(half.shadowElevation, decorated.shadowElevation);
+      expect(half.effectiveShadowElevation, closeTo(0.5, 1e-9));
+      expect(half.effectiveWhitenStrength, closeTo(0.2, 1e-9));
       expect(
-        half.backerColor!.a,
+        half.effectiveBackerColor!.a,
         closeTo(decorated.backerColor!.a * 0.5, 1e-6),
       );
     });
@@ -199,8 +205,7 @@ void main() {
       expect(scope.glassProgress, greaterThan(0.0));
     });
 
-    testWidgets('neither glass channel moves far in any single frame',
-        (tester) async {
+    test('neither glass channel moves far in any single frame', () {
       // Regression: an ease-out has a slope of 3 at zero, which put the glass
       // a fifth of the way present on the first frame of its window — it read
       // as the surface appearing instantly and then drifting. What matters is
@@ -223,8 +228,7 @@ void main() {
       }
     });
 
-    testWidgets('the exit dissolves from its first frame and reaches nothing',
-        (tester) async {
+    test('the exit dissolves from its first frame and reaches nothing', () {
       // The shell must start going as soon as the exit does — a curve that is
       // flat at the top holds it at full strength while the icon leaves — and
       // must land on zero rather than trailing a faint ring behind.
@@ -235,7 +239,7 @@ void main() {
       expect(1.0 - exit.transform(1.0 - 1 / 15), greaterThan(0.03));
     });
 
-    testWidgets('the entrance still finishes', (tester) async {
+    test('the entrance still finishes', () {
       const entrance = GlassMaterializeChoreography.entranceGlass;
       expect(entrance.transform(0.5), greaterThan(0.2));
       expect(entrance.transform(1.0), 1.0);

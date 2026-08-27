@@ -171,6 +171,22 @@ class AdaptiveGlass extends StatelessWidget {
     // which applies the same wrap internally.
     final content = GlassMaterializeScope.wrapContent(context, child);
 
+    // ---- FULLY DEMATERIALIZED FAST-PATH --------------------------------------
+    // A surface faded to nothing renders nothing, and has to say so before any
+    // tier selection runs. `effectiveBlur` is blur × visibility, so fading a
+    // surface out drives it to zero and would route it into the frosted
+    // fallback below — a renderer with no notion of visibility, which leaves a
+    // solid tinted disc exactly where the glass was supposed to have gone.
+    //
+    // Zero opacity rather than the bare child: the premium path wraps content
+    // in `Opacity(settings.visibility)`, so at zero the icon goes with the
+    // glass. Returning the child unwrapped made it pop back into view at the
+    // exact moment the surface finished disappearing.
+    // --------------------------------------------------------------------------
+    if (baseSettings.visibility <= 0.0) {
+      return Opacity(opacity: 0.0, child: content);
+    }
+
     // ---- MINIMAL FAST-PATH ---------------------------------------------------
     // GlassQuality.minimal bypasses all custom shaders. Renders via
     // _FrostedFallback: ClipPath(ShapeBorderClipper) + BackdropFilter + tint.
@@ -184,19 +200,6 @@ class AdaptiveGlass extends StatelessWidget {
     // one tier that actually blurs over a PlatformView. This finally delivers
     // the "live BackdropFilter path" the canUsePremiumShader comment promises.
     // --------------------------------------------------------------------------
-    // A surface faded to nothing renders nothing. Without this it falls into
-    // the frosted fallback below — `effectiveBlur` is blur × visibility, so
-    // fading a surface out drives it to zero and reroutes it into a renderer
-    // that has no notion of visibility, leaving a solid tinted disc exactly
-    // where the glass was supposed to have gone.
-    // Zero opacity rather than the bare child: the premium path wraps content
-    // in `Opacity(settings.visibility)`, so at zero the icon goes with the
-    // glass. Returning the child unwrapped made it pop back into view at the
-    // exact moment the surface finished disappearing.
-    if (baseSettings.visibility <= 0.0) {
-      return Opacity(opacity: 0.0, child: content);
-    }
-
     if (quality == GlassQuality.minimal ||
         // Deliberately the *configured* blur, not the effective one: this
         // path is for surfaces asking for no frost, not for surfaces on
@@ -553,7 +556,7 @@ class AdaptiveGlass extends StatelessWidget {
   // layer would break metaball morphing.
   // ---------------------------------------------------------------------------
   Widget _wrapWithBacker(LiquidGlassSettings baseSettings, Widget glass) {
-    final backerColor = baseSettings.backerColor;
+    final backerColor = baseSettings.effectiveBackerColor;
     if (backerColor == null || backerColor.a == 0) return glass;
 
     return Stack(
@@ -721,7 +724,8 @@ class _FrostedFallback extends StatelessWidget {
     // value reads consistently across tiers. Minimal's tint is already a
     // uniform flat fill, so this lerp is the whole whiten here.
     const double kWhitenVeilGain = 1.5;
-    final double whiten = settings.whitenStrength.clamp(0.0, 1.0).toDouble();
+    final double whiten =
+        settings.effectiveWhitenStrength.clamp(0.0, 1.0).toDouble();
     final double veil = whiten <= 0.0
         ? 0.0
         : (whiten * kWhitenVeilGain).clamp(0.0, 1.0).toDouble();

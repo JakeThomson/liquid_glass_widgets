@@ -117,8 +117,8 @@ class GlassDefaults {
   /// Entrance duration of the materialize glass transition (250ms).
   ///
   /// Measured from iOS 26's `glassEffectTransition(.materialize)` in a 120fps
-  /// capture of the native navigation bar: the glass resolves from a blurred
-  /// blob to settled in roughly a quarter second.
+  /// capture of the native navigation bar: the glass fades up from nothing to
+  /// settled in roughly a quarter second.
   static const Duration materializeDuration = Duration(milliseconds: 250);
 
   /// Exit duration of the materialize glass transition (350ms).

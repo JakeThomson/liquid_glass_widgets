@@ -19,9 +19,9 @@ import '../liquid_glass_settings.dart';
 ///
 /// Two channels ride on the scope:
 ///
-/// * **Glass** — [glassProgress] scales `visibility`, which every shader
-///   uniform and the widget-level decorations already read through the
-///   `effective*` getters. The configured blur is left alone: the shader
+/// * **Glass** — [glassProgress] scales `visibility`, the single input every
+///   shader uniform and every widget-level decoration reads through its own
+///   `effective*` getter. The configured blur is left alone: the shader
 ///   multiplies it by visibility, so a dissolving surface stops blurring its
 ///   backdrop as it goes. Driving the blur *up* to keep the surface looking
 ///   frosty smears whatever is behind a shape nobody can see any more.
@@ -100,20 +100,16 @@ class GlassMaterializeScope extends InheritedWidget {
     );
   }
 
-  LiquidGlassSettings _transform(LiquidGlassSettings base) {
-    final t = glassProgress.clamp(0.0, 1.0);
-    return base.copyWith(
-      visibility: base.visibility * t,
-      shadowElevation: base.shadowElevation * t,
-      whitenStrength: base.whitenStrength * t,
-      // A custom `shadow` list is passed through unscaled — copyWith cannot
-      // null it out, and scaling each BoxShadow here would surprise a caller
-      // who set exact values. The built-in elevation shadow fades instead.
-      backerColor: base.backerColor?.withValues(
-        alpha: base.backerColor!.a * t,
-      ),
-    );
-  }
+  /// Scales `visibility`, and nothing else.
+  ///
+  /// Every channel that has to fade with the glass — the shader uniforms, the
+  /// shadow, the whitening veil, the backer pad — reads its own `effective*`
+  /// getter, and each of those already multiplies by `visibility`. Scaling any
+  /// of them here as well applied the progress twice: the built-in shadow
+  /// faded as t², so it left roughly twice as fast as the glass it belonged
+  /// to.
+  LiquidGlassSettings _transform(LiquidGlassSettings base) => base.copyWith(
+      visibility: base.visibility * glassProgress.clamp(0.0, 1.0));
 
   @override
   bool updateShouldNotify(GlassMaterializeScope oldWidget) =>

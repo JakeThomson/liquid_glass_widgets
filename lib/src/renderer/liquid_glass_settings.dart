@@ -335,6 +335,13 @@ class LiquidGlassSettings {
   /// Defaults to 0.0, which disables whitening entirely.
   final double whitenStrength;
 
+  /// The effective whitening taking visibility into account.
+  ///
+  /// The veil is opaque paint laid over the finished glass, so a surface
+  /// fading out has to take it with it — left raw it survives the glass and
+  /// leaves a white patch behind.
+  double get effectiveWhitenStrength => whitenStrength * visibility;
+
   /// Whether [whitenStrength] is luminance-gated (true, the default) or
   /// applied uniformly (false).
   ///
@@ -424,6 +431,15 @@ class LiquidGlassSettings {
   ///
   /// Defaults to null: no backer, and no change to existing rendering.
   final Color? backerColor;
+
+  /// The effective backer taking visibility into account.
+  ///
+  /// Like the veil and the shadow, the pad is painted outside the shader and
+  /// would otherwise stay at full strength while the glass in front of it
+  /// dissolves, leaving a bare dimmed disc.
+  Color? get effectiveBackerColor => backerColor == null || visibility >= 1.0
+      ? backerColor
+      : backerColor!.withValues(alpha: backerColor!.a * visibility);
 
   /// Solid stand-in color the lens composites where the engine can't capture the
   /// backdrop — i.e. behind a PlatformView past the glass, which the lens would

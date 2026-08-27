@@ -40,53 +40,40 @@ enum GlassMaterializeProfile {
 /// Tuned against a 120fps capture of iOS 26's
 /// `glassEffectTransition(.materialize)` on the native navigation bar.
 abstract final class GlassMaterializeChoreography {
-  /// Glass channel of an entrance: resolved by three quarters of the way in,
-  /// so the shape exists before the icon does.
+  /// Glass channel of an entrance: resolved just short of the end, so the
+  /// shape exists before the icon does.
   ///
-  /// Eased in, not in-and-out: the surface must not decelerate at the top,
-  /// because iOS keeps the glass faint and resolves it late, and a symmetric
-  /// S-curve ran ahead through the middle and then idled at the end.
-  ///
-  /// Sine rather than cubic because the ease has to be gentle, not absent —
-  /// a cubic ease-in is so flat off the line that the surface visibly starts
-  /// after the native one, while an ease-*out* starts at 3× and pops it in.
-  static const Interval entranceGlass =
-      Interval(0.0, 0.92, curve: Curves.linear);
+  /// Linear, like every channel here — [Interval]'s own default. The native
+  /// transition moves its glass at a near-constant rate, and both ways of
+  /// departing from that were visible side by side: an ease-*out* starts at
+  /// 3× and popped the surface in before drifting, while an ease-*in* is so
+  /// flat off the line that the surface visibly started after the native
+  /// one. A symmetric S-curve does both — it ran ahead through the middle
+  /// and then idled at the top.
+  static const Interval entranceGlass = Interval(0.0, 0.92);
 
   /// Content channel of an entrance: starts after the glass has begun to
   /// form and sharpens right up to the end.
   ///
-  /// Late and eased in, because the native icon stays soft well after its
-  /// shell has formed and only resolves at the very end; a symmetric curve
-  /// cleared the blur through the middle and read as too brief.
-  static const Interval entranceContent =
-      Interval(0.35, 1.0, curve: Curves.linear);
+  /// The late start is what makes the icon lag its shell — the native icon
+  /// stays soft well after the glass has formed and only resolves at the
+  /// very end. An eased curve on top of it cleared the blur through the
+  /// middle and read as too brief.
+  static const Interval entranceContent = Interval(0.35, 1.0);
 
   /// Glass channel of an exit: a steady dissolve across the whole axis.
   ///
-  /// Measured against the native transition, its shell comes off at close to
-  /// a constant rate, so this is linear over the full range. Both departures
-  /// from that read as too fast: an ease-in is steepest at the top and
-  /// dropped the surface away in the opening frames, and cutting the range
-  /// short finished the dissolve before the native one had.
-  static const Interval exitGlass = Interval(0.0, 1.0, curve: Curves.linear);
+  /// The full range, unlike [entranceGlass]: cutting it short finished the
+  /// dissolve before the native one had.
+  static const Interval exitGlass = Interval(0.0, 1.0);
 
   /// Content channel of an exit: gone by 0.45, while [exitGlass] is still
   /// well above zero — the visibly empty shell the native bar shows.
   ///
-  /// Eased *in* rather than in-and-out, because this axis is walked from 1.0
-  /// downwards: an ease-in is steepest at the top, so the icon starts
-  /// softening the moment the exit begins. Measured beside the native
-  /// transition, a symmetric curve held the icon crisp for several frames
-  /// after the shell had begun to go, and the lag was visible.
-  static const Interval exitContent = Interval(0.45, 1.0, curve: Curves.linear);
-
-  // The scale deliberately has no curve of its own: it follows whichever
-  // glass channel is playing, so the surface arrives at its natural size at
-  // the same moment it arrives at full strength. Given its own symmetric
-  // curve it settled by about three quarters of the way in and then sat
-  // there while the glass was still fading up — the container reached its
-  // normal state first, which reads as two separate animations.
+  /// This axis is walked from 1.0 downwards, so the interval's *upper* bound
+  /// is where the exit begins: the icon starts softening on the very first
+  /// frame and is out by 0.45, with the shell still above half.
+  static const Interval exitContent = Interval(0.45, 1.0);
 }
 
 // =============================================================================
@@ -160,6 +147,12 @@ class GlassMaterializeEffect extends StatelessWidget {
           content = GlassMaterializeChoreography.exitContent.transform(t);
       }
       sigma = contentSigma * (1.0 - content);
+      // The scale deliberately has no curve of its own: it rides whichever
+      // glass channel is playing, so the surface arrives at its natural size
+      // at the same moment it arrives at full strength. Given its own
+      // symmetric curve it settled about three quarters of the way in and
+      // then sat there while the glass was still fading up — the container
+      // reached its normal state first, which reads as two animations.
       scale = scaleFrom + (1.0 - scaleFrom) * glass;
     }
 

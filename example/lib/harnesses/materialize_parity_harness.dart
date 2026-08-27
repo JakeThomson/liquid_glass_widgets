@@ -3,12 +3,17 @@
 // The top button is a native SwiftUI `glassEffect` circle whose entrance and
 // exit are `glassEffectTransition(.materialize)`; the bottom is
 // [GlassMaterialize] over the same geometry. One toggle drives both, so a
-// single screen recording captures the two animations frame for frame.
+// single screen recording captures the two animations frame for frame. This
+// is how the curves in GlassMaterializeChoreography were measured.
 //
-// Not part of the example showcase — it needs the native platform view
-// registered in the iOS runner's AppDelegate.
+// NOT a showcase demo, which is why it does not live in lib/demos: it will
+// not run as-is. It needs a `liquid_glass_widgets/native_materialize`
+// UIKitView factory registered in the iOS runner's AppDelegate, backed by a
+// SwiftUI view with a `setVisible` method channel. example/ios is scaffolded
+// per checkout and is not tracked, so that registration has to be written by
+// hand before this will start.
 //
-//   cd example && flutter run -t lib/demos/materialize_parity_demo.dart
+//   cd example && flutter run -t lib/harnesses/materialize_parity_harness.dart
 library;
 
 import 'package:flutter/cupertino.dart';
@@ -29,20 +34,28 @@ class _App extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Materialize Parity',
         theme: CupertinoThemeData(brightness: Brightness.light),
-        home: MaterializeParityDemo(),
+        home: MaterializeParityHarness(),
       );
 }
 
 /// Shows the native and package transitions one above the other.
-class MaterializeParityDemo extends StatefulWidget {
+class MaterializeParityHarness extends StatefulWidget {
   /// Creates the parity harness.
-  const MaterializeParityDemo({super.key});
+  const MaterializeParityHarness({super.key});
 
   @override
-  State<MaterializeParityDemo> createState() => _MaterializeParityDemoState();
+  State<MaterializeParityHarness> createState() =>
+      _MaterializeParityHarnessState();
 }
 
-class _MaterializeParityDemoState extends State<MaterializeParityDemo> {
+class _MaterializeParityHarnessState extends State<MaterializeParityHarness> {
+  /// Cycles one press of the loop button plays — enough passes to average out
+  /// a dropped frame in a recording, without holding the harness forever.
+  static const int _loopCycles = 4;
+
+  /// Still time either side of each transition.
+  static const Duration _loopHold = Duration(milliseconds: 1400);
+
   MethodChannel? _native;
   bool _visible = true;
   bool _looping = false;
@@ -62,20 +75,22 @@ class _MaterializeParityDemoState extends State<MaterializeParityDemo> {
     setState(() => _visible = value);
   }
 
+  /// Plays [_loopCycles] hide/show cycles, then stops so the button is live
+  /// again for a single hand-driven pass.
   Future<void> _loop() async {
     if (_looping) return;
     setState(() => _looping = true);
-    // Long holds: the transitions are ~250-350ms, and the still frames either
-    // side are what make the onset legible in a recording.
-    while (mounted) {
-      await Future<void>.delayed(const Duration(milliseconds: 1400));
+    for (var i = 0; i < _loopCycles; i++) {
+      // Long holds: the transitions are ~250-350ms, and the still frames
+      // either side are what make the onset legible in a recording.
+      await Future<void>.delayed(_loopHold);
       if (!mounted) return;
       _setVisible(false);
-      await Future<void>.delayed(const Duration(milliseconds: 1400));
+      await Future<void>.delayed(_loopHold);
       if (!mounted) return;
       _setVisible(true);
     }
-    if (mounted) setState(() => _looping = false);
+    setState(() => _looping = false);
   }
 
   @override
@@ -135,7 +150,7 @@ class _MaterializeParityDemoState extends State<MaterializeParityDemo> {
                 const SizedBox(height: 12),
                 CupertinoButton(
                   onPressed: _looping ? null : _loop,
-                  child: Text(_looping ? 'Looping…' : 'Loop 4×'),
+                  child: Text(_looping ? 'Looping…' : 'Loop $_loopCycles×'),
                 ),
                 const SizedBox(height: 24),
               ],

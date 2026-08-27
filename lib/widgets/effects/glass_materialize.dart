@@ -17,9 +17,9 @@ import 'shared/glass_materialize_effect.dart';
 enum GlassEffectTransition {
   /// Fade + gaussian blur + subtle scale — SwiftUI's `.materialize`.
   ///
-  /// The glass forms out of a soft blurred blob and its content sharpens
-  /// last; on the way out the content blurs away first and the glass
-  /// dissolves after it.
+  /// The glass fades up out of nothing, settling inward from slightly
+  /// oversized, and its content sharpens last; on the way out the content
+  /// blurs away first and the glass swells and dissolves after it.
   materialize,
 
   /// No transition — SwiftUI's `.identity`. The chrome switches once at the
@@ -35,8 +35,8 @@ enum GlassEffectTransition {
 /// — the [FadeTransition] idiom, for wiring into a route transition, an
 /// [AnimationController], or an [AnimatedSwitcher].
 ///
-/// This is SwiftUI's `glassEffectTransition(.materialize)` from iOS 26:
-/// the glass forms out of a soft blurred blob with a subtle scale, and its
+/// This is SwiftUI's `glassEffectTransition(.materialize)` from iOS 26: the
+/// glass fades up as it settles inward from slightly oversized, and its
 /// content sharpens only after the shape has resolved. In reverse the order
 /// flips — content first, glass after — which this widget selects from
 /// [animation]'s status, so a reversed controller plays a true exit rather
