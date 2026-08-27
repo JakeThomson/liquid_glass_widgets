@@ -33,6 +33,7 @@ import '../../../widgets/surfaces/shared/tab_bar_searchable_controller.dart';
 import 'tab_bar_searchable_internal.dart'
     show DismissPill, SearchPill, SearchableTabIndicator;
 import '../../../widgets/surfaces/shared/tab_bar_accessory_placement.dart';
+import '../../../widgets/surfaces/shared/tab_bar_minimize_controller.dart';
 
 /// Internal [StatefulWidget] that owns the searchable-placement rendering engine.
 ///
@@ -47,6 +48,7 @@ class TabBarSearchableLayout extends StatefulWidget {
     super.key,
     this.controller,
     this.isSearchActive = false,
+    this.minimizeController,
     this.extraButton,
     this.bottomAccessoryPlacement,
     this.bottomAccessory,
@@ -119,6 +121,11 @@ class TabBarSearchableLayout extends StatefulWidget {
   final GlassSearchBarConfig searchConfig;
   final SearchableBottomBarController? controller;
   final bool isSearchActive;
+
+  /// Drives the minimize from scrolling. This engine only attaches it to
+  /// [scrollController] — the resulting state arrives through
+  /// [isSearchActive], which [GlassTabBar] resolves.
+  final GlassTabBarMinimizeController? minimizeController;
   final GlassTabBarExtraButton? extraButton;
   final GlassTabBarAccessoryPlacement? bottomAccessoryPlacement;
   final Widget? bottomAccessory;
@@ -271,6 +278,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
     _searchPillListenable =
         Listenable.merge([_searchLeftCtrl, _searchWCtrl, _pillScaleCtrl]);
     widget.scrollController?.addListener(_onScrollMaybeWhiten);
+    widget.minimizeController?.attach(widget.scrollController);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _onScrollMaybeWhiten();
     });
@@ -295,6 +303,15 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
       old.scrollController?.removeListener(_onScrollMaybeWhiten);
       widget.scrollController?.addListener(_onScrollMaybeWhiten);
       _onScrollMaybeWhiten();
+    }
+    // Both controllers can change independently. Handle the minimize
+    // controller swap first so a re-attach uses the CURRENT scroll controller;
+    // attach() itself is idempotent on identity and re-baselines either way.
+    if (widget.minimizeController != old.minimizeController) {
+      old.minimizeController?.detach();
+      widget.minimizeController?.attach(widget.scrollController);
+    } else if (widget.scrollController != old.scrollController) {
+      widget.minimizeController?.attach(widget.scrollController);
     }
     if (widget.whitenAtBottom != old.whitenAtBottom) {
       _onScrollMaybeWhiten();
@@ -322,6 +339,8 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
     _searchWCtrl.dispose();
     _pillScaleCtrl.dispose();
     widget.scrollController?.removeListener(_onScrollMaybeWhiten);
+    // Detach, never dispose — the minimize controller belongs to the app.
+    widget.minimizeController?.detach();
     _whitenBoostCtrl.dispose();
     _controller.removeListener(_onControllerChanged);
     if (_ownsController) _controller.dispose();
@@ -332,12 +351,18 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
 
   void _onScrollMaybeWhiten() {
     final c = widget.scrollController;
+    // hasClients alone is not enough: ScrollController.position asserts when
+    // more than one scroll view is attached, which happens for a few hundred
+    // milliseconds whenever two of them share a controller across an
+    // AnimatedSwitcher cross-fade or a Navigator transition. Skip those frames
+    // rather than crashing — GlassScaffold guards its header fade the same way.
+    final p = (c != null && c.hasClients && c.positions.length == 1)
+        ? c.positions.single
+        : null;
     final atBottom = widget.whitenAtBottom &&
-        c != null &&
-        c.hasClients &&
-        c.position.maxScrollExtent > 0 &&
-        (c.position.maxScrollExtent - c.position.pixels) <=
-            widget.whitenBottomThreshold;
+        p != null &&
+        p.maxScrollExtent > 0 &&
+        (p.maxScrollExtent - p.pixels) <= widget.whitenBottomThreshold;
     final target = atBottom ? 1.0 : 0.0;
     if (_whitenTarget != target) {
       _whitenTarget = target;
@@ -498,9 +523,6 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                 } else if (_controller.pillsInitialized) {
                   final retarget = _controller.checkRetarget(layout);
                   if (retarget.any) {
-                    final fromTabW = _tabWCtrl.value;
-                    final fromLeft = _searchLeftCtrl.value;
-                    final fromSearchW = _searchWCtrl.value;
                     final toTabW = targetTabW;
                     final toLeft = targetSearchLeft;
                     final toSearchW = targetSearchW;
@@ -509,22 +531,34 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                       if (!mounted) return;
                       final spring = widget.springDescription ??
                           TabBarSearchableLayout._kSpring;
+                      // Read `from` and the in-flight velocity HERE, not during
+                      // build: any still-running simulation ticks once more
+                      // between the two, so a value captured in build would
+                      // start the new spring a frame behind — visible when a
+                      // morph reverses at peak speed.
                       if (retarget.tabW) {
                         _tabWCtrl.animateWith(
                             SearchableBottomBarController.makeSpring(
-                                spring: spring, from: fromTabW, to: toTabW));
+                                spring: spring,
+                                from: _tabWCtrl.value,
+                                to: toTabW,
+                                velocity: _tabWCtrl.velocity));
                       }
                       if (retarget.searchLeft) {
                         _searchLeftCtrl.animateWith(
                             SearchableBottomBarController.makeSpring(
-                                spring: spring, from: fromLeft, to: toLeft));
+                                spring: spring,
+                                from: _searchLeftCtrl.value,
+                                to: toLeft,
+                                velocity: _searchLeftCtrl.velocity));
                       }
                       if (retarget.searchW) {
                         _searchWCtrl.animateWith(
                             SearchableBottomBarController.makeSpring(
                                 spring: spring,
-                                from: fromSearchW,
-                                to: toSearchW));
+                                from: _searchWCtrl.value,
+                                to: toSearchW,
+                                velocity: _searchWCtrl.velocity));
                       }
                     });
                   }

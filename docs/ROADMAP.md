@@ -526,9 +526,10 @@ Ideas for consideration after stable. None of these are committed.
     the count can differ between the two routes being interpolated.
 
 ### Enhancements
-- [ ] **Scroll-to-minimize** (`GlassBarMinimizeBehavior.onScrollDown`) — tab bar
+- [x] **Scroll-to-minimize** (`GlassBarMinimizeBehavior.onScrollDown`) — tab bar
   shrinks on scroll-down, re-expands on scroll-up. Matches iOS 26
-  `tabBarMinimizeBehavior`. High priority post-1.0.
+  `tabBarMinimizeBehavior`. Shipped in 1.1.0 as
+  `GlassTabBarMinimizeController`, with all four behaviour cases.
 - [x] **Tab bar bottom accessory** — persistent widget (mini player) above
   the tab bar that animates with minimize. Matches iOS 26 `tabViewBottomAccessory`.
   Currently achieved via `GlassScaffold.bodyOverlays` manually.
