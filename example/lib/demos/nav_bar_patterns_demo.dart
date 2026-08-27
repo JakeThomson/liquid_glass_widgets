@@ -11,6 +11,7 @@
 ///   7. Large title + Search Bar — two-phase iOS 26 collapse
 ///   8. Nested navigation — pinned actions morph in place across pushes
 ///   9. Bar item types — icon, pull-down menu and custom widget in one capsule
+///  10. Custom bar pinning — a plain Material AppBar pinned via GlassPinnedBarChrome
 ///
 /// Run standalone:
 ///   flutter run -t lib/demos/nav_bar_patterns_demo.dart
@@ -150,6 +151,14 @@ class NavBarPatternsDemo extends StatelessWidget {
                       'Icon, pull-down menu and custom widget — and how a custom one resizes the capsule',
                   icon: CupertinoIcons.square_on_circle,
                   onTap: () => _push(context, const _BarItemTypesDemo()),
+                ),
+                SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Custom Bar Pinning',
+                  subtitle:
+                      'A plain Material AppBar that still pins — GlassPinnedBarChrome',
+                  icon: CupertinoIcons.rectangle_stack_badge_plus,
+                  onTap: () => _push(context, const _CustomBarPinningDemo()),
                 ),
                 SizedBox(height: 16),
                 _PatternTile(
@@ -1380,6 +1389,157 @@ class _NestedNavDemo extends StatelessWidget {
           _buildDummyContent(),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 10. Custom Bar Pinning — a bar that is not a GlassAppBar
+// =============================================================================
+
+/// A two-level drill-down whose bar is a plain Flutter [AppBar].
+///
+/// This is the [GlassPinnedBarChrome] path: an app that already owns its bar —
+/// its own backdrop, its own title treatment — declares that bar's items as
+/// data and lets the shell pin them, without giving up the bar itself. The
+/// chrome morphs across the push exactly as it does for `GlassAppBar.pinned`,
+/// and the `AppBar` slides with the page underneath it.
+///
+/// `hoisted` is what keeps the hand-over invisible: until the shell has had a
+/// frame to render its copy, the `AppBar` draws its own back button and icons;
+/// after, it draws same-sized placeholders so the title never shifts.
+class _CustomBarPinningDemo extends StatelessWidget {
+  const _CustomBarPinningDemo({this.depth = 0});
+
+  final int depth;
+
+  static const _titles = ['Documents', 'Folder'];
+
+  /// The trailing icons for a level. The plus carries an id on both levels, so
+  /// it is identifier-matched and holds its position across the push.
+  static List<({IconData icon, String label, Object? id})> _iconsFor(
+    int depth,
+  ) =>
+      depth == 0
+          ? const [
+              (icon: CupertinoIcons.plus, label: 'New', id: 'add'),
+              (icon: CupertinoIcons.search, label: 'Search', id: null),
+            ]
+          : const [
+              (icon: CupertinoIcons.plus, label: 'New', id: 'add'),
+              (icon: CupertinoIcons.ellipsis, label: 'More', id: null),
+            ];
+
+  @override
+  Widget build(BuildContext context) {
+    final icons = _iconsFor(depth);
+    final canPop = depth > 0;
+
+    return GlassPinnedBarChrome(
+      actions: [
+        for (final item in icons)
+          GlassBarItem.icon(
+            icon: Icon(item.icon),
+            id: item.id,
+            label: item.label,
+            onTap: () {},
+          ),
+      ],
+      // A Material `AppBar` needs `MaterialLocalizations`, which this demo's
+      // `CupertinoApp` does not provide — an app built on `MaterialApp` gets
+      // them for free and can drop this wrapper.
+      builder: (context, hoisted) => Localizations.override(
+        context: context,
+        delegates: const [DefaultMaterialLocalizations.delegate],
+        child: Stack(
+          children: [
+            const Positioned.fill(child: ShowcaseBackground()),
+            Scaffold(
+              backgroundColor: const Color(0x00000000),
+              extendBodyBehindAppBar: true,
+              appBar: AppBar(
+                backgroundColor: const Color(0x00000000),
+                // The bar keeps its own leading and actions until the shell has
+                // taken them, then holds their space so the title stays put.
+                automaticallyImplyLeading: !hoisted,
+                leading: hoisted && canPop ? const SizedBox(width: 44) : null,
+                title: Text(_titles[depth]),
+                actions: [
+                  for (final item in icons)
+                    if (hoisted)
+                      // Unpainted, so it measures exactly what the real button
+                      // measures — a fixed width would only be right for icons.
+                      IgnorePointer(
+                        child: ExcludeSemantics(
+                          child: Opacity(
+                            opacity: 0.0,
+                            child: IconButton(
+                              icon: Icon(item.icon),
+                              onPressed: () {},
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      IconButton(
+                        icon: Icon(item.icon),
+                        tooltip: item.label,
+                        onPressed: () {},
+                      ),
+                ],
+              ),
+              body: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: MediaQuery.paddingOf(context).top + 44 + 16,
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    sliver: SliverList.list(
+                      children: [
+                        Text(
+                          depth == 0
+                              ? 'This bar is a Material AppBar, not a '
+                                  'GlassAppBar. Its items are declared as data '
+                                  'and pinned by the shell; the bar itself still '
+                                  'slides with the page.'
+                              : 'The new action was identifier-matched and held '
+                                  'its position; search cross-faded into more. '
+                                  'Swipe from the left edge to scrub the morph '
+                                  'back.',
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.4,
+                            color: CupertinoColors.secondaryLabel
+                                .resolveFrom(context),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        if (depth == 0)
+                          _PatternTile(
+                            title: 'Open ${_titles[1]}',
+                            subtitle: 'New holds, search becomes more',
+                            icon: CupertinoIcons.arrow_right_circle,
+                            onTap: () => Navigator.of(context).push(
+                              CupertinoPageRoute<void>(
+                                builder: (_) =>
+                                    const _CustomBarPinningDemo(depth: 1),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  _buildDummyContent(),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

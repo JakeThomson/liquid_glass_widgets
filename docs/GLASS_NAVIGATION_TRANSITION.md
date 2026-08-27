@@ -100,6 +100,46 @@ bar.
   the chrome pinned even with no actions; a plain `GlassAppBar` screen does
   not participate, and the pinned chrome retreats while it covers the bar.
 
+## Pinning from a bar that isn't `GlassAppBar`
+
+An app that already has its own bar — a Material `AppBar` carrying its own
+backdrop, a collapsing large-title sliver, anything a design system already
+owns — pins with `GlassPinnedBarChrome` instead. It performs the same
+registration `GlassAppBar.pinned` does internally, and hands the bar back a
+`hoisted` flag:
+
+```dart
+GlassPinnedBarChrome(
+  actions: [
+    GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: _create),
+  ],
+  builder: (context, hoisted) => AppBar(
+    title: const Text('Repository'),
+    // Same-sized placeholders once hoisted, so the title keeps the layout it
+    // had and nothing shifts at the hand-over.
+    automaticallyImplyLeading: !hoisted,
+    leading: hoisted ? const SizedBox(width: 44) : null,
+    actions: hoisted ? null : [IconButton(icon: addIcon, onPressed: _create)],
+  ),
+);
+```
+
+`hoisted` stays false until the shell has both accepted the registration *and*
+had a frame to render it — keep drawing your own chrome until then. The
+hand-over is deliberately a frame late: at the swap both copies are static and
+identical, so they never overlap and never both disappear. Where there is no
+shell, or the device can't render the effect, it stays false for good.
+
+`backButton`, `onBack` and `buttonSettings` mean exactly what they do on
+`GlassAppBar.pinned`. The one addition is `enabled`, which is how an app with a
+**nested navigator** keeps the nested stack's roots out of the shell — the
+shell ranks registered routes against one another, which only has meaning
+inside a single `Navigator`:
+
+```dart
+enabled: ModalRoute.of(context)?.impliesAppBarDismissal ?? false,
+```
+
 ## Behaviour and constraints
 
 | Situation | Behaviour |
@@ -148,7 +188,9 @@ that future.
 The example showcase app uses pinned chrome throughout — every category page
 pins its back button, and the navigation-patterns demo pins its actions,
 including a **Nested Navigation** pattern that walks a three-level drill-down
-with identifier-matched items morphing at each push:
+with identifier-matched items morphing at each push, and a **Custom Bar
+Pinning** pattern whose bar is a plain Material `AppBar` pinned through
+`GlassPinnedBarChrome`:
 
 ```bash
 cd example
