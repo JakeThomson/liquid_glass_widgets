@@ -105,30 +105,37 @@ bar.
 An app that already has its own bar — a Material `AppBar` carrying its own
 backdrop, a collapsing large-title sliver, anything a design system already
 owns — pins with `GlassPinnedBarChrome` instead. It performs the same
-registration `GlassAppBar.pinned` does internally, and hands the bar back a
-`hoisted` flag:
+registration `GlassAppBar.pinned` does internally. Declare the items once, as
+data, and drop the resolved slots into your bar:
 
 ```dart
 GlassPinnedBarChrome(
   actions: [
     GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: _create),
   ],
-  builder: (context, hoisted) => AppBar(
+  builder: (context, chrome) => AppBar(
+    automaticallyImplyLeading: false,
+    leading: chrome.leading,
+    actions: chrome.actions,
     title: const Text('Repository'),
-    // Same-sized placeholders once hoisted, so the title keeps the layout it
-    // had and nothing shifts at the hand-over.
-    automaticallyImplyLeading: !hoisted,
-    leading: hoisted ? const SizedBox(width: 44) : null,
-    actions: hoisted ? null : [IconButton(icon: addIcon, onPressed: _create)],
   ),
 );
 ```
 
-`hoisted` stays false until the shell has both accepted the registration *and*
-had a frame to render it — keep drawing your own chrome until then. The
-hand-over is deliberately a frame late: at the swap both copies are static and
-identical, so they never overlap and never both disappear. Where there is no
-shell, or the device can't render the effect, it stays false for good.
+`chrome.leading` and `chrome.actions` swap themselves at the right moment. Until
+the shell has both accepted the registration *and* had a frame to render its
+copy, they hold the real glass back button and actions capsule — the same
+widgets the shell will draw. After, they hold unpainted placeholders that lay
+out the real content, so the bar keeps the layout it had and the title never
+shifts. The hand-over is deliberately a frame late: at the swap both copies are
+static and identical, so they never overlap and never both disappear.
+
+Where there is no shell, or the device can't render the effect, the slots
+simply keep the real buttons — so a bar written this way needs no fallback of
+its own, and there is nothing to keep in sync with the item data.
+
+`chrome.hoisted` is there for a bar that wants to substitute *its own* chrome
+rather than the package's; reading it is not needed for the common case.
 
 `backButton`, `onBack` and `buttonSettings` mean exactly what they do on
 `GlassAppBar.pinned`. The one addition is `enabled`, which is how an app with a

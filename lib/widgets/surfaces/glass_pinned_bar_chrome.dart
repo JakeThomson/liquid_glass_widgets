@@ -1,50 +1,91 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/cupertino.dart';
 
-import '../../src/renderer/liquid_glass_settings.dart';
+import '../../src/renderer/liquid_glass_renderer.dart';
+import '../interactive/glass_button.dart';
+import '../interactive/glass_button_group.dart';
+import 'glass_app_bar.dart' show DefaultButtonSettings, GlassAppBar;
 import 'glass_bar_item.dart';
 import 'glass_navigation_shell.dart';
+import 'shared/glass_nav_pinned_host.dart' show GlassNavPinnedMetrics;
 
-/// Builds a bar that has handed its chrome to a [GlassNavigationShell].
+/// The bar chrome to render this frame, handed to a
+/// [GlassPinnedBarChrome.builder].
 ///
-/// `hoisted` is false while the bar still draws its own leading and actions,
-/// and true once the shell has taken them over.
+/// Drop [leading] and [actions] straight into your bar's slots. They already
+/// hold the right thing for the current state: the real glass buttons while
+/// the bar still owns its chrome, and same-sized unpainted placeholders once
+/// the shell has taken it. Reading [hoisted] is only necessary to draw
+/// something other than the package's own chrome.
+@immutable
+class GlassPinnedBarChromeData {
+  /// Creates the chrome for one frame.
+  const GlassPinnedBarChromeData({
+    required this.leading,
+    required this.actions,
+    required this.hoisted,
+  });
+
+  /// The leading slot: the automatic back button, its placeholder, or null
+  /// where the route shows no back button.
+  final Widget? leading;
+
+  /// The trailing slot: the actions capsule, its placeholder, or empty where
+  /// the route declares no actions.
+  ///
+  /// A [List] rather than a single widget so it drops into `AppBar.actions`
+  /// and [GlassAppBar.actions] unchanged; it never holds more than one entry,
+  /// because the items render as one capsule.
+  final List<Widget> actions;
+
+  /// Whether the shell has taken this route's chrome.
+  ///
+  /// False while the bar still draws it, and true once the shell has both
+  /// accepted the registration and had a frame to render its copy. [leading]
+  /// and [actions] already account for this — read it only to substitute your
+  /// own chrome for the package's.
+  final bool hoisted;
+}
+
+/// Builds a bar from the chrome resolved for the current frame.
 typedef GlassPinnedBarChromeBuilder = Widget Function(
   BuildContext context,
-  bool hoisted,
+  GlassPinnedBarChromeData chrome,
 );
 
 /// Hands a route's bar chrome to the enclosing [GlassNavigationShell], and
-/// reports back whether the shell took it.
+/// builds whatever the bar should render in the meantime.
 ///
 /// This is the registration [GlassAppBar.pinned] performs internally, exposed
 /// for bars this package does not build — a Material `AppBar` carrying its own
 /// backdrop, a collapsing large-title sliver, or anything else an existing
-/// design system already owns. Wrap the bar, declare its items as data, and
-/// the shell pins them above the [Navigator] exactly as it does for a
-/// [GlassAppBar.pinned] bar.
+/// design system already owns. Declare the items as data once and drop the
+/// resolved slots into your bar:
 ///
 /// ```dart
 /// GlassPinnedBarChrome(
 ///   actions: [
-///     GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: _add),
+///     GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: _create),
 ///   ],
-///   builder: (context, hoisted) => AppBar(
-///     title: const Text('Inbox'),
-///     // Same-sized placeholders once hoisted, so the title keeps the layout
-///     // it had and nothing shifts at the hand-over.
-///     leading: hoisted ? const SizedBox(width: 44) : const BackButton(),
-///     actions: hoisted ? null : [IconButton(icon: addIcon, onPressed: _add)],
+///   builder: (context, chrome) => AppBar(
+///     automaticallyImplyLeading: false,
+///     leading: chrome.leading,
+///     actions: chrome.actions,
+///     title: const Text('Repository'),
 ///   ),
 /// )
 /// ```
 ///
-/// The hand-over is deliberately a frame late: [builder] keeps reporting
-/// `hoisted: false` until the shell has both accepted the registration and had
-/// a frame to render it. At the swap both copies are static and identical, so
-/// they never overlap and never both disappear.
+/// The slots swap themselves at the right moment. Until the shell has both
+/// accepted the registration and had a frame to render its copy, they hold the
+/// real glass back button and actions capsule — the same widgets the shell
+/// will draw. After, they hold unpainted placeholders that lay out the real
+/// content, so the bar keeps the layout it had and the title never shifts. The
+/// hand-over is deliberately a frame late: at the swap both copies are static
+/// and identical, so they never overlap and never both disappear.
 ///
-/// Where there is no shell — or the device cannot render the effect — `hoisted`
-/// stays false, so a bar written this way works either way.
+/// Where there is no shell — or the device cannot render the effect — the
+/// slots simply keep the real buttons, so a bar written this way works either
+/// way with no fallback of its own.
 class GlassPinnedBarChrome extends StatefulWidget {
   /// Creates a registrant that pins [actions] and an automatic back button.
   const GlassPinnedBarChrome({
@@ -57,7 +98,7 @@ class GlassPinnedBarChrome extends StatefulWidget {
     this.enabled = true,
   });
 
-  /// Builds the bar itself, told whether the shell has taken the chrome.
+  /// Builds the bar from the chrome resolved for this frame.
   final GlassPinnedBarChromeBuilder builder;
 
   /// The trailing bar items to pin, declared as data.
@@ -79,12 +120,15 @@ class GlassPinnedBarChrome extends StatefulWidget {
   final VoidCallback? onBack;
 
   /// Glass settings applied to this route's pinned chrome.
+  ///
+  /// Applied to the in-route buttons as well as the pinned ones, so the two
+  /// look identical across the hand-over.
   final LiquidGlassSettings? buttonSettings;
 
   /// Whether this bar participates in pinning at all.
   ///
   /// When false the widget behaves as if no shell were installed: any existing
-  /// registration is dropped and [builder] is called with `hoisted: false`.
+  /// registration is dropped and the bar keeps drawing its own chrome.
   ///
   /// The shell ranks registered routes against one another, which only has
   /// meaning inside a single [Navigator]. An app with a nested navigator — a
@@ -104,6 +148,10 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   GlassNavigationShellState? _shell;
   ModalRoute<dynamic>? _route;
   bool _handedOver = false;
+
+  /// Whether this route shows the automatic back button at all.
+  bool get _showsBack =>
+      widget.backButton && (_route?.impliesAppBarDismissal ?? false);
 
   @override
   void didChangeDependencies() {
@@ -147,7 +195,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       route,
       GlassNavBarRegistration(
         actions: widget.actions,
-        showsBackButton: widget.backButton && route.impliesAppBarDismissal,
+        showsBackButton: _showsBack,
         onBack: widget.onBack,
         buttonSettings: widget.buttonSettings,
       ),
@@ -179,6 +227,92 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
     super.dispose();
   }
 
+  /// The back button, or the space it occupied once the shell has it.
+  Widget? _buildLeading() {
+    if (!_showsBack) return null;
+    const backSize = GlassNavPinnedMetrics.backDiameter;
+    if (_handedOver) {
+      return const SizedBox(width: backSize, height: backSize);
+    }
+    return GlassButton(
+      icon: const Icon(CupertinoIcons.back),
+      width: backSize,
+      height: backSize,
+      iconSize: GlassNavPinnedMetrics.iconSize,
+      label: 'Back',
+      onTap: () {
+        final back = widget.onBack;
+        if (back != null) {
+          back();
+        } else {
+          Navigator.of(context).maybePop();
+        }
+      },
+    );
+  }
+
+  /// The actions capsule, or the space it occupied once the shell has it.
+  List<Widget> _buildActions() {
+    final items = widget.actions.whereType<GlassBarActionItem>().toList();
+    if (items.isEmpty) return const <Widget>[];
+    const slot = GlassNavPinnedMetrics.slot;
+
+    if (_handedOver) {
+      // The placeholder lays out the real content and simply isn't painted,
+      // so it measures exactly what the pinned cluster measures — including
+      // custom items of arbitrary width. A fixed width per item would only
+      // be correct for icons, and would mis-constrain a centred title.
+      return [
+        IgnorePointer(
+          child: ExcludeSemantics(
+            child: Opacity(
+              opacity: 0.0,
+              child: SizedBox(
+                height: slot,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final item in items)
+                      if (item is GlassBarCustomItem)
+                        item.child
+                      else
+                        SizedBox(
+                          width: slot,
+                          child: Center(child: item.content),
+                        ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      GlassButtonGroup.icons(
+        items: [
+          for (final item in items)
+            if (item is GlassBarMenuItem)
+              GlassButtonGroupItem.menu(
+                icon: item.icon,
+                menuItems: item.menuItems,
+                menuAlignment: item.menuAlignment,
+                menuWidth: item.menuWidth,
+                label: item.label,
+              )
+            else
+              GlassButtonGroupItem(
+                icon: item.content,
+                onTap: item.onTap,
+                label: item.label,
+                enabled: item.enabled,
+              ),
+        ],
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     // Checked here rather than in the pinned host so the in-route fallback
@@ -188,6 +322,20 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       'GlassBarItem.spacer() is not rendered yet: pinned actions render as a '
       'single glass capsule. Multi-capsule grouping is a follow-up.',
     );
-    return widget.builder(context, _handedOver);
+
+    Widget bar = widget.builder(
+      context,
+      GlassPinnedBarChromeData(
+        leading: _buildLeading(),
+        actions: _buildActions(),
+        hoisted: _handedOver,
+      ),
+    );
+
+    final settings = widget.buttonSettings;
+    if (settings != null) {
+      bar = DefaultButtonSettings(settings: settings, child: bar);
+    }
+    return bar;
   }
 }

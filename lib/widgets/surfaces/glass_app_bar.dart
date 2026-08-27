@@ -5,13 +5,11 @@ import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../types/glass_quality.dart';
 import '../interactive/glass_button.dart';
-import '../interactive/glass_button_group.dart';
 import '../shared/glass_isolation_scope.dart';
 import 'glass_bar_item.dart';
 import 'glass_large_title.dart' show GlassLargeTitleController;
 import 'glass_navigation_shell.dart';
 import 'glass_pinned_bar_chrome.dart';
-import 'shared/glass_nav_pinned_host.dart' show GlassNavPinnedMetrics;
 
 /// A navigation bar layout widget following Apple's iOS 26 design patterns.
 ///
@@ -279,107 +277,23 @@ class GlassAppBar extends StatelessWidget
         backButton: pinnedBackButton,
         onBack: onBack,
         buttonSettings: buttonSettings,
-        builder: (context, hoisted) => _buildBar(context, hoisted: hoisted),
+        builder: (context, chrome) => _buildBar(context, chrome: chrome),
       );
     }
-    return _buildBar(context, hoisted: false);
+    return _buildBar(context);
   }
 
   /// Builds the bar itself.
   ///
-  /// When [hoisted] the leading and actions slots hold same-sized placeholders
-  /// instead of real buttons, so the centred title is constrained exactly as it
-  /// would be otherwise and keeps sliding with the page.
-  Widget _buildBar(BuildContext context, {required bool hoisted}) {
-    Widget? effectiveLeading = leading;
-    List<Widget>? effectiveActions = actions;
-
-    if (pinnedActions != null) {
-      final items = pinnedActions!.whereType<GlassBarActionItem>().toList();
-      final showsBack = pinnedBackButton &&
-          (ModalRoute.of(context)?.impliesAppBarDismissal ?? false);
-      const backSize = GlassNavPinnedMetrics.backDiameter;
-      const slot = GlassNavPinnedMetrics.slot;
-
-      if (hoisted) {
-        effectiveLeading = showsBack
-            ? const SizedBox(width: backSize, height: backSize)
-            : null;
-        // The placeholder lays out the real content and simply isn't painted,
-        // so it measures exactly what the pinned cluster measures — including
-        // custom items of arbitrary width. A fixed width per item would only
-        // be correct for icons, and would mis-constrain the centred title.
-        effectiveActions = items.isEmpty
-            ? null
-            : [
-                IgnorePointer(
-                  child: ExcludeSemantics(
-                    child: Opacity(
-                      opacity: 0.0,
-                      child: SizedBox(
-                        height: slot,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (final item in items)
-                              if (item is GlassBarCustomItem)
-                                item.child
-                              else
-                                SizedBox(
-                                  width: slot,
-                                  child: Center(child: item.content),
-                                ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ];
-      } else {
-        effectiveLeading = showsBack
-            ? GlassButton(
-                icon: const Icon(CupertinoIcons.back),
-                width: backSize,
-                height: backSize,
-                iconSize: GlassNavPinnedMetrics.iconSize,
-                label: 'Back',
-                onTap: () {
-                  final back = onBack;
-                  if (back != null) {
-                    back();
-                  } else {
-                    Navigator.of(context).maybePop();
-                  }
-                },
-              )
-            : null;
-        effectiveActions = items.isEmpty
-            ? null
-            : [
-                GlassButtonGroup.icons(
-                  items: [
-                    for (final item in items)
-                      if (item is GlassBarMenuItem)
-                        GlassButtonGroupItem.menu(
-                          icon: item.icon,
-                          menuItems: item.menuItems,
-                          menuAlignment: item.menuAlignment,
-                          menuWidth: item.menuWidth,
-                          label: item.label,
-                        )
-                      else
-                        GlassButtonGroupItem(
-                          icon: item.content,
-                          onTap: item.onTap,
-                          label: item.label,
-                          enabled: item.enabled,
-                        ),
-                  ],
-                ),
-              ];
-      }
-    }
+  /// A pinned bar takes its slots from [chrome], which holds real buttons
+  /// until the shell has taken them and same-sized placeholders after — so the
+  /// centred title is constrained identically either way and keeps sliding
+  /// with the page. A widget-based bar uses its own [leading] and [actions].
+  Widget _buildBar(BuildContext context, {GlassPinnedBarChromeData? chrome}) {
+    final Widget? effectiveLeading = chrome == null ? leading : chrome.leading;
+    final List<Widget>? effectiveActions = chrome == null
+        ? actions
+        : (chrome.actions.isEmpty ? null : chrome.actions);
 
     final Widget toolbarRow = SafeArea(
       bottom: false,

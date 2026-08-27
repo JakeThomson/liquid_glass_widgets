@@ -33,6 +33,9 @@ void main() {
   Finder inHost(Finder matching) =>
       find.descendant(of: find.byType(GlassNavPinnedHost), matching: matching);
 
+  Finder inBar(Finder matching) =>
+      find.descendant(of: find.byType(AppBar), matching: matching);
+
   group('registration', () {
     testWidgets('a plain Material AppBar hands its items to the shell',
         (tester) async {
@@ -48,7 +51,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(AppBar),
-          matching: find.byType(IconButton),
+          matching: find.byType(GlassButtonGroup),
         ),
         findsNothing,
       );
@@ -171,13 +174,41 @@ void main() {
       await settle(tester);
 
       expect(find.byType(GlassNavPinnedHost), findsNothing);
-      expect(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byIcon(CupertinoIcons.add),
+      // The widget builds the in-route capsule itself: a bar written against
+      // it never has to declare a fallback of its own.
+      expect(inBar(find.byType(GlassButtonGroup)), findsOneWidget);
+      expect(inBar(find.byIcon(CupertinoIcons.add)), findsOneWidget);
+    });
+
+    testWidgets('the in-route back button is built for you and pops',
+        (tester) async {
+      await tester.pumpWidget(shellApp(
+        shell: false,
+        const _MaterialBarScreen(
+          title: 'Inbox',
+          actionIcon: CupertinoIcons.add,
         ),
-        findsOneWidget,
-      );
+      ));
+      await settle(tester);
+
+      tester.state<NavigatorState>(find.byType(Navigator)).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const _MaterialBarScreen(
+                title: 'Thread',
+                actionIcon: CupertinoIcons.search,
+              ),
+            ),
+          );
+      await settle(tester);
+
+      final back = inBar(find.byIcon(CupertinoIcons.back));
+      expect(back, findsOneWidget);
+      await tester.tap(back);
+      await settle(tester);
+
+      expect(find.text('Thread'), findsNothing);
+      // Root route again: no back button, here or anywhere.
+      expect(find.byIcon(CupertinoIcons.back), findsNothing);
     });
 
     testWidgets('an unsupported device falls back in-route', (tester) async {
@@ -189,13 +220,10 @@ void main() {
       await settle(tester);
 
       expect(find.byType(GlassNavPinnedHost), findsNothing);
-      expect(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byIcon(CupertinoIcons.add),
-        ),
-        findsOneWidget,
-      );
+      // The widget builds the in-route capsule itself: a bar written against
+      // it never has to declare a fallback of its own.
+      expect(inBar(find.byType(GlassButtonGroup)), findsOneWidget);
+      expect(inBar(find.byIcon(CupertinoIcons.add)), findsOneWidget);
     });
 
     testWidgets('enabled: false keeps a route out of the shell entirely',
@@ -208,13 +236,7 @@ void main() {
       await settle(tester);
 
       expect(inHost(find.byIcon(CupertinoIcons.add)), findsNothing);
-      expect(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byIcon(CupertinoIcons.add),
-        ),
-        findsOneWidget,
-      );
+      expect(inBar(find.byIcon(CupertinoIcons.add)), findsOneWidget);
     });
 
     testWidgets('flipping enabled off releases a live registration',
@@ -227,13 +249,7 @@ void main() {
       await settle(tester);
 
       expect(inHost(find.byIcon(CupertinoIcons.add)), findsNothing);
-      expect(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byIcon(CupertinoIcons.add),
-        ),
-        findsOneWidget,
-      );
+      expect(inBar(find.byIcon(CupertinoIcons.add)), findsOneWidget);
     });
   });
 
@@ -249,10 +265,8 @@ void main() {
 
 /// A screen whose bar is a plain Flutter [AppBar] that still pins.
 ///
-/// Mirrors the shape an app with its own design system would use: the bar
-/// keeps its own leading and actions until [GlassPinnedBarChrome] reports the
-/// shell has taken them, then swaps in same-sized placeholders so the title
-/// keeps the layout it had.
+/// Mirrors the shape an app with its own design system would use: the items
+/// are declared once as data and the resolved slots go straight into the bar.
 class _MaterialBarScreen extends StatelessWidget {
   const _MaterialBarScreen({
     required this.title,
@@ -277,13 +291,12 @@ class _MaterialBarScreen extends StatelessWidget {
       backButton: backButton,
       onBack: onBack,
       enabled: enabled,
-      builder: (context, hoisted) => Scaffold(
+      builder: (context, chrome) => Scaffold(
         appBar: AppBar(
           title: Text(title),
-          automaticallyImplyLeading: !hoisted,
-          actions: hoisted
-              ? const [SizedBox(width: 48)]
-              : [IconButton(icon: Icon(actionIcon), onPressed: () {})],
+          automaticallyImplyLeading: false,
+          leading: chrome.leading,
+          actions: chrome.actions,
         ),
         body: Center(child: Text('$title body')),
       ),
@@ -321,28 +334,18 @@ class _TogglingScreenState extends State<_TogglingScreen> {
       ),
     );
 
-    Widget bar(bool hoisted) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Inbox'),
-            actions: hoisted
-                ? const [SizedBox(width: 48)]
-                : [
-                    IconButton(
-                      icon: const Icon(CupertinoIcons.add),
-                      onPressed: () {},
-                    ),
-                  ],
-          ),
+    Widget bar(List<Widget> actions) => Scaffold(
+          appBar: AppBar(title: const Text('Inbox'), actions: actions),
           body: body,
         );
 
-    if (!_mounted) return bar(false);
+    if (!_mounted) return bar(const []);
     return GlassPinnedBarChrome(
       actions: [
         GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
       ],
       enabled: _enabled,
-      builder: (context, hoisted) => bar(hoisted),
+      builder: (context, chrome) => bar(chrome.actions),
     );
   }
 }
@@ -359,8 +362,8 @@ class _RecordingScreen extends StatelessWidget {
       actions: [
         GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
       ],
-      builder: (context, hoisted) {
-        hoists.add(hoisted);
+      builder: (context, chrome) {
+        hoists.add(chrome.hoisted);
         return const Scaffold(body: SizedBox());
       },
     );
