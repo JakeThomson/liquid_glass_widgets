@@ -240,6 +240,68 @@ void main() {
       );
     });
 
+    testWidgets(
+        'exiting item smoothly fades out during morph without abrupt pop',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.add),
+            id: 'add',
+            onTap: () {},
+          ),
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.ellipsis),
+            id: 'more',
+            onTap: () {},
+          ),
+        ],
+      )));
+      await settle(tester);
+
+      await _push(
+        tester,
+        _Screen(
+          title: 'Detail',
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.ellipsis),
+              id: 'more',
+              onTap: () {},
+            ),
+          ],
+        ),
+      );
+
+      // Mid-transition: exiting item ('add') is still mounted with fading opacity
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.add),
+        ),
+        findsOneWidget,
+      );
+
+      await settle(tester);
+      // Once settled, only the destination screen's items remain
+      expect(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.add),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.ellipsis),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('capsule switches off when the destination has no actions',
         (tester) async {
       await tester.pumpWidget(shellApp(_Screen(
