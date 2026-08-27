@@ -20,6 +20,7 @@ import 'package:liquid_glass_widgets_example/demos/content_aware_brightness_demo
 import 'package:liquid_glass_widgets_example/demos/indicator_parity_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/rtl_layout_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/meniscus_and_blur_demo.dart';
+import 'package:liquid_glass_widgets_example/demos/scroll_edge_style_demo.dart';
 
 import 'package:liquid_glass_widgets_example/demos/google_maps_demo.dart'
     show PlatformViewDemo;
@@ -806,6 +807,19 @@ class _ExamplesTab extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  SizedBox(height: 14),
+
+                  _LargeDemoCard(
+                    title: 'Scroll Edge Effect',
+                    subtitle:
+                        'blur · soft · hard — live style switcher + maxSigma tuner',
+                    icon: CupertinoIcons.arrow_up_to_line,
+                    gradient: const [
+                      Color(0xFF003566),
+                      Color(0xFF0096C7),
+                    ],
+                    destination: const ScrollEdgeStyleDemo(),
                   ),
                   SizedBox(height: 14),
 
