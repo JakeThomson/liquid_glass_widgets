@@ -11,6 +11,8 @@
 ///   7. Large title + Search Bar — two-phase iOS 26 collapse
 ///   8. Nested navigation — pinned actions morph in place across pushes
 ///   9. Bar item types — icon, pull-down menu and custom widget in one capsule
+///  10. Header actions morph — trailing capsule bounces and blurs between
+///      clusters across pushes
 ///
 /// Run standalone:
 ///   flutter run -t lib/demos/nav_bar_patterns_demo.dart
@@ -150,6 +152,14 @@ class NavBarPatternsDemo extends StatelessWidget {
                       'Icon, pull-down menu and custom widget — and how a custom one resizes the capsule',
                   icon: CupertinoIcons.square_on_circle,
                   onTap: () => _push(context, const _BarItemTypesDemo()),
+                ),
+                SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Header Actions Morph',
+                  subtitle:
+                      'Trailing capsule contracts, bounces and blurs across pushes — iOS 26 drill-down style',
+                  icon: CupertinoIcons.wand_stars,
+                  onTap: () => _push(context, const _HeaderMorphDemo()),
                 ),
                 SizedBox(height: 16),
                 _PatternTile(
@@ -1374,6 +1384,262 @@ class _NestedNavDemo extends StatelessWidget {
                       ),
                     ),
                   ),
+              ],
+            ),
+          ),
+          _buildDummyContent(),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 10. Header Actions Morph — trailing capsule across a drill-down
+// =============================================================================
+
+/// A repository-style drill-down for exercising trailing-cluster morphs.
+///
+/// The root repository screen carries the classic `[+ ⋯]` capsule and every
+/// row pushes a screen with a different trailing cluster, so each shape the
+/// capsule has to morph through can be watched in isolation:
+///
+///   * Workflows — a single share action. Nothing is identifier-matched, so
+///     the trailing slot cross-fades while the two-icon capsule contracts
+///     around it — the classic two-icons-to-share transition.
+///   * Discussions — the add action carries `id: 'add'` on both levels, so it
+///     holds its position while the menu beside it becomes search.
+///   * Insights — three actions. The capsule widens around the cluster.
+///
+/// Swipe from the left edge to scrub any of the morphs interactively.
+class _HeaderMorphDemo extends StatelessWidget {
+  const _HeaderMorphDemo();
+
+  List<GlassBarItem> get _actions => [
+        GlassBarItem.icon(
+          icon: const Icon(CupertinoIcons.add),
+          id: 'add',
+          label: 'Add',
+          onTap: () {},
+        ),
+        GlassBarItem.menu(
+          icon: const Icon(CupertinoIcons.ellipsis),
+          label: 'More',
+          menuItems: [
+            GlassMenuItem(
+              title: 'Share repository',
+              icon: const Icon(CupertinoIcons.share),
+              onTap: () {},
+            ),
+            GlassMenuItem(
+              title: 'Favourite',
+              icon: const Icon(CupertinoIcons.star),
+              onTap: () {},
+            ),
+          ],
+        ),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+
+    return GlassScaffold(
+      background: const ShowcaseBackground(),
+      settings: RecommendedGlassSettings.standard,
+      statusBarStyle: GlassStatusBarStyle.auto,
+      appBar: GlassAppBar.pinned(
+        title: Text(
+          'Repository',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: CupertinoColors.label.resolveFrom(context),
+          ),
+        ),
+        actions: _actions,
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: SizedBox(height: topPad + 44 + 16),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverList.list(
+              children: [
+                Text(
+                  'Watch the trailing capsule while navigating: each row '
+                  'pushes a screen with a different action cluster, and the '
+                  'capsule morphs between them the way the native iOS 26 '
+                  'bar does.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _PatternTile(
+                  title: 'Workflows',
+                  subtitle: 'Two icons contract to a single share action',
+                  icon: CupertinoIcons.arrow_2_circlepath,
+                  onTap: () => _pushDestination(
+                    context,
+                    title: 'Workflows',
+                    blurb: 'Nothing here matches the previous cluster: the '
+                        'trailing slot cross-fades into share while the '
+                        'capsule contracts to one icon, and add leaves with '
+                        'it. Swipe back to scrub the morph in reverse.',
+                    actions: [
+                      GlassBarItem.icon(
+                        icon: const Icon(CupertinoIcons.share),
+                        label: 'Share',
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _PatternTile(
+                  title: 'Discussions',
+                  subtitle: 'Add holds its position, the menu becomes search',
+                  icon: CupertinoIcons.bubble_left_bubble_right,
+                  onTap: () => _pushDestination(
+                    context,
+                    title: 'Discussions',
+                    blurb: 'The add action carries the same id on both '
+                        'levels, so it is treated as the same item and holds '
+                        'its position while the menu cross-fades into '
+                        'search.',
+                    actions: [
+                      GlassBarItem.icon(
+                        icon: const Icon(CupertinoIcons.add),
+                        id: 'add',
+                        label: 'Add',
+                        onTap: () {},
+                      ),
+                      GlassBarItem.icon(
+                        icon: const Icon(CupertinoIcons.search),
+                        label: 'Search',
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _PatternTile(
+                  title: 'Insights',
+                  subtitle: 'The capsule widens around three actions',
+                  icon: CupertinoIcons.chart_bar,
+                  onTap: () => _pushDestination(
+                    context,
+                    title: 'Insights',
+                    blurb: 'Three actions where there were two: the capsule '
+                        'widens around the incoming cluster while add, '
+                        'identifier-matched again, holds its place.',
+                    actions: [
+                      GlassBarItem.icon(
+                        icon: const Icon(CupertinoIcons.add),
+                        id: 'add',
+                        label: 'Add',
+                        onTap: () {},
+                      ),
+                      GlassBarItem.icon(
+                        icon: const Icon(CupertinoIcons.calendar),
+                        label: 'Period',
+                        onTap: () {},
+                      ),
+                      GlassBarItem.icon(
+                        icon: const Icon(CupertinoIcons.share),
+                        label: 'Share',
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+          _buildDummyContent(),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
+    );
+  }
+
+  void _pushDestination(
+    BuildContext context, {
+    required String title,
+    required String blurb,
+    required List<GlassBarItem> actions,
+  }) {
+    Navigator.of(context).push(
+      CupertinoPageRoute<void>(
+        builder: (_) => _HeaderMorphDestination(
+          title: title,
+          blurb: blurb,
+          actions: actions,
+        ),
+      ),
+    );
+  }
+}
+
+/// One destination in the header-morph drill-down.
+///
+/// Nothing here beyond a pinned bar with the destination's action cluster —
+/// the screen exists so the morph to and from its cluster can be watched.
+class _HeaderMorphDestination extends StatelessWidget {
+  const _HeaderMorphDestination({
+    required this.title,
+    required this.blurb,
+    required this.actions,
+  });
+
+  final String title;
+  final String blurb;
+  final List<GlassBarItem> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+
+    return GlassScaffold(
+      background: const ShowcaseBackground(),
+      settings: RecommendedGlassSettings.standard,
+      statusBarStyle: GlassStatusBarStyle.auto,
+      appBar: GlassAppBar.pinned(
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: CupertinoColors.label.resolveFrom(context),
+          ),
+        ),
+        actions: actions,
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: SizedBox(height: topPad + 44 + 16),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverList.list(
+              children: [
+                Text(
+                  blurb,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
