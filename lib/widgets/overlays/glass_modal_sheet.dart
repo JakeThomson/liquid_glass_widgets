@@ -51,7 +51,12 @@ class GlassModalSheet extends StatefulWidget {
   /// - If null: Defaults to screen height minus 90px (iOS Page Sheet style).
   final double? fullSize;
 
-  /// Height in the 'peek' state. Default: 90.0.
+  /// Minimum visible height in the 'peek' state.
+  ///
+  /// - If 0.0 < value <= 1.0: Treated as a fraction of screen height.
+  /// - If value > 1.0: Treated as absolute pixels.
+  ///
+  /// Default: 90.0 (absolute pixels).
   final double peekSize;
 
   /// Internal padding for the sheet content.
@@ -325,10 +330,18 @@ class GlassModalSheet extends StatefulWidget {
   /// honoured by the engine, which swaps in its instant spring so the sheet
   /// resolves straight away instead of travelling.
   ///
-  /// A dismissal that leaves the sheet at rest — barrier tap, back gesture,
-  /// [GlassModalSheetController] close — morphs back into the trigger. A
-  /// swipe-down dismissal keeps the sheet's own slide-away instead, so the
-  /// sheet follows the finger it was thrown with.
+  /// Every dismissal morphs back into the trigger. One that leaves the sheet
+  /// at rest — barrier tap, back gesture, [GlassModalSheetController] close —
+  /// morphs from its resting frame. A swipe morphs from wherever the finger
+  /// let go: below the lowest detent the sheet detaches from the bottom edge,
+  /// follows the finger on both axes and shrinks uniformly with the *vertical*
+  /// travel, and the release hands that exact frame to the morph. A swipe
+  /// released short of the dismiss threshold springs back to the detent, at
+  /// full size and centred.
+  ///
+  /// This interactive shrink belongs to the morph, not to the sheet — the same
+  /// split iOS draws between its zoom transition and its detents. Present
+  /// without [morphFrom] and the sheet keeps its plain slide-away dismissal.
   static Future<T?> show<T>({
     required BuildContext context,
     required WidgetBuilder builder,
@@ -529,6 +542,7 @@ class GlassModalSheet extends StatefulWidget {
           anchor: morphFrom,
           speed: morphSpeed,
           restingState: resolvedInitialState,
+          controller: effectiveController,
           // Built from the same inputs as the sheet's own _buildGeometry, so
           // the droplet aims at the detent the sheet will actually rest at.
           geometry: SheetGeometry(

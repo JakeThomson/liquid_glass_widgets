@@ -1,50 +1,31 @@
-# Unreleased
+# 1.1.0
 
-## Features
+## New Features
 
-- **Scroll-to-minimize for `GlassTabBar.minimizable`:** A new
-  `GlassTabBarMinimizeController` drives the minimize from scrolling — the
-  Flutter equivalent of SwiftUI's `.tabBarMinimizeBehavior(_:)`. Pass it as
-  `minimizeController` alongside the scroll view's `scrollController` and the
-  bar minimizes and expands on its own; `minimized` remains available as a
-  plain controlled prop for callers that drive it themselves.
-  `GlassBarMinimizeBehavior` mirrors Apple's enum case for case — `automatic`,
-  `never`, `onScrollDown`, `onScrollUp`. Apple documents `automatic` only as
-  "the system default" without saying what it resolves to; as of iOS 26 it is
-  observed to mean no minimization on iPhone, so this package resolves it to
-  `never` and callers opt in explicitly.
-
-  The bar also re-expands on reaching the resting edge of the content and on
-  tapping the minimized circle, stays inert when the content cannot scroll, and
-  ignores rubber-band overscroll, `jumpTo`, keyboard viewport insets and layout
-  corrections. Minimizing is an iPhone-only behaviour on iOS; this package
-  documents that rather than gating on platform, so the behaviour never
-  silently switches itself off.
-
-  **The trigger is distance accumulated since the last direction reversal, not
-  a per-frame delta.** A per-frame gate is really a test on velocity ÷ refresh
-  rate, so its activation velocity doubles between 60 Hz and 120 Hz ProMotion —
-  and ProMotion switches rate adaptively, so it is not stable even on one
-  device. That frame-rate coupling is why the tab bar's previous
-  collapse-to-extra-button pattern was removed in 1.0.0 as "unreliable on
-  120 Hz ProMotion displays". Accumulated distance has no such coupling, and a
-  parameterised 60/120 Hz test locks the invariance in.
+- **GlassNavigationTransition — pinned navigation-bar chrome:** New `GlassNavigationShell` hosts the glass back button and trailing actions capsule *above* the `Navigator`, reproducing the iOS 26 navigation bar: page content and title slide during push/pop (including the interactive back-swipe, scrubbed proportionally) while the glass chrome stays pinned and morphs in place. Screens opt in with the `GlassAppBar.pinned` constructor, declaring actions as data (`GlassBarItem.icon` / `GlassBarItem.custom`); items sharing an `id` are treated as the same item across routes, mirroring `UIBarButtonItem.identifier`. Custom widgets are measured at intrinsic width, exactly as UIKit measures a `customView`. Works with any Pages-API router (go_router, auto_route, beamer) — the shell only reads `ModalRoute` animations. Without a shell, or where the effect cannot render, the same data renders in-route as today's glass capsule.
+- **`GlassBarItem.menu` — pull-down menus in a pinned bar:** The `UIBarButtonItem.menu` analogue, and the iOS 26 overflow button. The whole capsule morphs into the pull-down, matching `GlassButtonGroupItem.menu`. Menus cannot be opened mid-transition, and one already open is dismissed when navigation starts — the pinned capsule outlives the route that owns it, so nothing else would. Falls back to `GlassButtonGroupItem.menu` in-route wherever pinning does.
+- **GlassAppBar single-line titles:** The inline title no longer wraps to a second line when wide actions squeeze it; it truncates with an ellipsis, matching iOS.
+- **`GlassModalSheet` swipe-dismissals morph back from the release point (#223):** Dragging a morphed sheet away used to skip the morph and slide the sheet off. Below the lowest detent the sheet now shrinks about the grabbed point as it follows the finger — the interactive zoom-dismissal measured off iOS 26 — and the release hands that exact frame to the closing morph. Sideways, the card chases the finger through a tracking spring, pinning at the screen edge. A release short of the dismiss threshold springs back. Sheets shown without `morphFrom` keep their plain slide-away unchanged.
+- **Scroll-to-minimize for `GlassTabBar.minimizable` (#228):** A new `GlassTabBarMinimizeController` drives the minimize from scrolling — the Flutter equivalent of SwiftUI's `.tabBarMinimizeBehavior(_:)`. `GlassBarMinimizeBehavior` mirrors Apple's enum case for case. The trigger is accumulated distance, not a per-frame delta — fixing the 1.0.0 ProMotion 120 Hz reliability issue.
 
 ## Bug Fixes
 
-- **Spring reversals no longer stall:** `SearchableBottomBarController.makeSpring`
-  discarded the in-flight velocity when a morph was retargeted mid-animation,
-  so reversing read as a stall followed by a restart. It now carries the
-  velocity through (new optional `velocity` parameter, defaulting to the
-  previous behaviour), and the launch sites read the controller's value and
-  velocity inside the post-frame callback rather than a frame earlier during
-  build. Rare when the morph was only ever toggled by a tap; routine once
-  scrolling drives it. Also benefits `GlassTabBar.searchable`.
-- **Whiten-at-bottom crash with a shared `ScrollController`:** the searchable
-  and minimizable placements read `ScrollController.position` guarded only by
-  `hasClients`, which asserts when two scroll views share one controller —
-  the few hundred milliseconds of an `AnimatedSwitcher` cross-fade or a
-  `Navigator` transition. Those frames are now skipped instead.
+- **Spring reversals no longer stall (#228):** `SearchableBottomBarController.makeSpring` now carries in-flight velocity through retargets; reversing mid-morph no longer reads as a stall followed by a restart. Also benefits `GlassTabBar.searchable`.
+- **Shared `ScrollController` crash fixed (#228):** The searchable and minimizable placements reading `ScrollController.position` now safely guard when multiple scroll views share one controller during transitions.
+
+## Improvements
+
+- **`GlassNavActionSlot.crossFades` — documented widget-equality behaviour:** Cross-fade detection uses reference equality; `const` icon widgets share an instance across routes and never trigger a spurious cross-fade. Documented in the API dartdocs and the navigation guide.
+- **Multiple `GlassBarItem.menu` in one cluster — debug warning:** Using more than one menu item in a single cluster silently treated the extras as plain icons. A debug-mode `debugPrint` now surfaces this so developers see the constraint immediately rather than wondering why a second menu does not open.
+- **`GlassModalSheet` fling velocity carried into the closing morph (#227):** A fast swipe no longer stalls at the release point — the closing droplet now starts at the speed the fling was running at rather than from rest.
+
+## Documentation
+
+- **`GlassModalSheet.peekSize` docs:** Clarified that `peekSize` accepts both absolute pixels (`> 1.0`) and a screen-height fraction (`≤ 1.0`), consistent with `halfSize` and `fullSize`.
+- **New guide:** `docs/GLASS_NAVIGATION_TRANSITION.md` — setup (including `.router`), matching rules, a behaviour table, a direction section, and known limitations.
+- **`ROADMAP.md`** — `GlassNavigationTransition` checked off; the "pinning becomes the default" trajectory and parity work recorded.
+
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the navigation transition, modal sheet, and tab bar scroll-to-minimize improvements (#221, #223, #227, #228).
 
 ---
 
