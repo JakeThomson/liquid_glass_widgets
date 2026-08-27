@@ -9,6 +9,7 @@ export 'src/renderer/liquid_glass_renderer.dart'
     show
         AnchorStretchSettings,
         LiquidGlassSettings,
+        PlatformViewGlassMode,
         LiquidGlassLayer,
         LiquidGlassBlendGroup,
         GlassGlow,
