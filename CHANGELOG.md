@@ -1,3 +1,11 @@
+# Unreleased
+
+## Bug Fixes
+
+- **Premium glass no longer strands its shape when a sheet is swiped away (#229):** `RenderLiquidGlassLayer` freezes its shader UVs under a uniform scale-down, for the CupertinoSheet push-back (#192) where the sampled page shrinks with the glass. A swipe-dismissed `GlassModalSheet` produces the same matrix but holds its backdrop still, so the freeze left the surface's rim at the resting frame and squared off its rounded corners. The widget applying the scale now says which arrangement it is, via `LiquidGlassSelfScaleScope`; the push-back path is unchanged.
+
+---
+
 # 1.1.0
 
 ## New Features
