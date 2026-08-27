@@ -104,16 +104,23 @@ bar.
 
 | Situation | Behaviour |
 |---|---|
-| Push/pop between participating routes | Chrome pinned; capsule width and item positions interpolate; changed icons cross-fade |
+| Push/pop between participating routes | Chrome pinned; the capsule morphs — a gel swell past its resting width, a spring to the target that overshoots and settles — while item positions ride the same spring; glyphs blur out and arrive soft, sharpening last |
 | Interactive back-swipe | Same interpolation, scrubbed by the gesture; cancelled swipes rebound |
-| Destination has no actions (or no back button) | The cluster switches off/on once at the transition midpoint — appearing and disappearing are deliberately not animated |
+| Destination has no actions (or no back button) | The cluster gels out and in through scale on the same spring — glass opacity cannot animate, scale can |
 | Tap while a transition runs | Ignored. The chrome is showing a blend of two routes' items, so a tap would fire an action the user can no longer see |
 | Navigation starts with a menu open | The menu is dismissed; the capsule outlives the route, so nothing else would |
 | Non-participating route or modal sheet on top | Chrome retreats with the covering route's transition and returns on pop |
 | No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: automatic back `GlassButton` + `GlassButtonGroup.icons` capsule |
 
 Glass opacity is never animated (a glass surface's backdrop pass renders fully
-or not at all); only geometry animates, and only item *contents* cross-fade.
+or not at all); only geometry animates, and only item *contents* cross-fade
+and blur. The morph rides the package's bouncy spring profile for the full
+length of the route transition — capsule and page share one clock, so the
+bounce settles in the same breath the page lands, and a pop plays the same
+forward choreography toward the other cluster rather than the push in
+reverse. The gel swell is real geometry: the cluster lays out at scale and
+the glass re-renders its true shape, carrying the glyphs with it. Timing and
+blur constants live together in `GlassNavPinnedMetrics`.
 
 ## Direction
 

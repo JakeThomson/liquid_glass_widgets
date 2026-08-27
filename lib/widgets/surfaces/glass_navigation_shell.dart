@@ -287,10 +287,32 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
     // looks finished. The controller's status and the navigator's gesture flag
     // are what actually tell the two apart, and `isCurrent` covers a route
     // that something unregistered has been pushed over.
-    final settled = top.key.isCurrent &&
+    var settled = top.key.isCurrent &&
         (top.key.animation?.status ?? AnimationStatus.completed) ==
             AnimationStatus.completed &&
         !(top.key.navigator?.userGestureInProgress ?? false);
+    var effectiveProgress = progress;
+
+    // A just-pushed route's proxy animation can report completed-at-1.0 for
+    // its very first frame, one tick before the transition controller
+    // attaches — rendered as-is that frame flashes the destination chrome at
+    // rest, then snaps back to morph. The route beneath tells the truth: at
+    // a genuine rest it is fully covered by the top route, on the first
+    // frame of a push not at all.
+    if (settled && below != null && _coverageOf(below.key) < 0.001) {
+      settled = false;
+      effectiveProgress = 0.0;
+    }
+
+    // A pop plays the same forward choreography toward the other target, not
+    // the push in reverse — the host mirrors the clock and swaps the roles.
+    // The gesture flag matters as much as the status: a back-swipe holds the
+    // controller at whatever value the finger dictates without ever entering
+    // AnimationStatus.reverse.
+    final popping = !settled &&
+        ((top.key.animation?.status ?? AnimationStatus.completed) ==
+                AnimationStatus.reverse ||
+            (top.key.navigator?.userGestureInProgress ?? false));
 
     return GlassNavPinnedState(
       from: below?.value ??
@@ -299,9 +321,10 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
             showsBackButton: false,
           ),
       to: top.value,
-      progress: progress.clamp(0.0, 1.0),
+      progress: effectiveProgress.clamp(0.0, 1.0),
       coverage: coverage.clamp(0.0, 1.0),
       settled: settled,
+      popping: popping,
       topRoute: top.key,
     );
   }

@@ -9,48 +9,56 @@ GlassBarIconItem _icon(IconData icon, {Object? id}) =>
 
 void main() {
   group('capsule presence', () {
-    bool visible(double p, {bool fromEmpty = false, bool toEmpty = true}) =>
-        GlassNavPinnedMetrics.capsuleVisibleAt(
+    double presence(double p, {bool fromEmpty = false, bool toEmpty = true}) =>
+        GlassNavPinnedMetrics.capsulePresenceAt(
           fromEmpty: fromEmpty,
           toEmpty: toEmpty,
           progress: p,
         );
 
-    test('a cluster that disappears is shown until the swap point', () {
-      expect(visible(0.0), isTrue);
-      expect(visible(0.49), isTrue);
-      expect(visible(0.5), isFalse);
-      expect(visible(1.0), isFalse);
+    test('a cluster that disappears gels out through the morph window', () {
+      expect(presence(0.0), 1.0);
+      expect(presence(GlassNavPinnedMetrics.morphStart), 1.0);
+      expect(presence(GlassNavPinnedMetrics.morphEnd), closeTo(0.0, 1e-9));
+      expect(presence(1.0), 0.0);
     });
 
-    test('a cluster that appears is shown from the swap point', () {
-      bool v(double p) => visible(p, fromEmpty: true, toEmpty: false);
-      expect(v(0.0), isFalse);
-      expect(v(0.49), isFalse);
-      expect(v(0.5), isTrue);
-      expect(v(1.0), isTrue);
+    test('a cluster that appears gels in through the morph window', () {
+      double v(double p) => presence(p, fromEmpty: true, toEmpty: false);
+      expect(v(0.0), 0.0);
+      expect(v(GlassNavPinnedMetrics.morphStart), 0.0);
+      expect(v(1.0), 1.0);
+      // The spring gives an appearing capsule the same bounce past full
+      // size that a morphing one gets.
+      final peak = List.generate(101, (i) => v(i / 100))
+          .reduce((a, b) => a > b ? a : b);
+      expect(peak, greaterThan(1.0));
     });
 
     test(
       'appearing and disappearing are exact mirrors, so a push and the pop '
-      'that undoes it swap at the same instant',
+      'that undoes it play the same gel',
       () {
         for (var i = 0; i <= 100; i++) {
           final p = i / 100;
+          final appearing = presence(p, fromEmpty: true, toEmpty: false);
+          // The appearing side keeps its overshoot past 1 (the bounce); the
+          // disappearing side is its clamped complement, so it rests cleanly
+          // at zero while the other side bounces.
           expect(
-            visible(p),
-            isNot(visible(p, fromEmpty: true, toEmpty: false)),
+            presence(p),
+            closeTo((1.0 - appearing).clamp(0.0, 1.0), 1e-9),
             reason: 'the two directions must be complementary at p=$p',
           );
         }
       },
     );
 
-    test('a cluster present on both sides never disappears', () {
+    test('a cluster present on both sides never leaves full presence', () {
       for (var i = 0; i <= 100; i++) {
         expect(
-          visible(i / 100, fromEmpty: false, toEmpty: false),
-          isTrue,
+          presence(i / 100, fromEmpty: false, toEmpty: false),
+          1.0,
           reason: 'a surviving capsule morphs in place, it does not blink',
         );
       }
@@ -59,8 +67,8 @@ void main() {
     test('nothing to show on either side renders nothing', () {
       for (var i = 0; i <= 100; i++) {
         expect(
-          visible(i / 100, fromEmpty: true, toEmpty: true),
-          isFalse,
+          presence(i / 100, fromEmpty: true, toEmpty: true),
+          0.0,
         );
       }
     });
@@ -74,20 +82,21 @@ void main() {
       expect(GlassNavPinnedMetrics.showsIncomingAt(1.0), isTrue);
     });
 
-    test('the capsule and its items swap at the same instant', () {
-      // Items appear with their side, so they must not use a different
-      // threshold from the capsule that contains them.
+    test('an appearing capsule is already gelling in at the swap point', () {
+      // Items appear with their side; the capsule that carries them must be
+      // on its way in by the time the configuration swaps, so the arriving
+      // icons never render on a capsule that has not started to exist.
       expect(
         GlassNavPinnedMetrics.showsIncomingAt(GlassNavPinnedMetrics.swapAt),
         isTrue,
       );
       expect(
-        GlassNavPinnedMetrics.capsuleVisibleAt(
+        GlassNavPinnedMetrics.capsulePresenceAt(
           fromEmpty: true,
           toEmpty: false,
           progress: GlassNavPinnedMetrics.swapAt,
         ),
-        isTrue,
+        greaterThan(0.2),
       );
     });
   });
