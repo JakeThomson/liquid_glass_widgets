@@ -197,6 +197,50 @@ void main() {
         GlassNavPinnedMetrics.slot,
       );
     });
+    testWidgets('a lone shell grows into a shared capsule', (tester) async {
+      await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
+      await settle(tester);
+      await _push(tester, const _Screen(title: 'Detail'));
+      await settle(tester);
+
+      // The back button shares with nothing, so it is the circular shell.
+      Size shell() => tester.getSize(inHost(find.byType(GlassButton)));
+      expect(shell().height, GlassNavPinnedMetrics.backDiameter);
+
+      await _push(tester, _Screen(
+        title: 'Library',
+        backButton: false,
+        leading: [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.sidebar_left),
+            onTap: () {},
+          ),
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.slider_horizontal_3),
+            onTap: () {},
+          ),
+        ],
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      // Mid-morph both dimensions are between the two shells, which is the
+      // whole point: one element, geometry animating, no remount.
+      final mid = shell();
+      expect(mid.height, greaterThan(GlassNavPinnedMetrics.backDiameter));
+      expect(mid.height, lessThan(GlassNavPinnedMetrics.slot));
+      expect(mid.width, greaterThan(GlassNavPinnedMetrics.backDiameter));
+      expect(mid.width, lessThan(GlassNavPinnedMetrics.slot * 2));
+
+      await settle(tester);
+      expect(
+        shell(),
+        const Size(
+          GlassNavPinnedMetrics.slot * 2,
+          GlassNavPinnedMetrics.slot,
+        ),
+      );
+    });
   });
 
   group('anchoring', () {

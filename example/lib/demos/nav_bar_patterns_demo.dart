@@ -1027,6 +1027,9 @@ enum _LeadingStage {
 
   /// A custom leading alongside the back button.
   both,
+
+  /// Two shared items, so the lone circular shell grows into a capsule.
+  grouped,
 }
 
 /// The leading half of a pinned bar, in each of its four configurations.
@@ -1068,6 +1071,20 @@ class _LeadingItemsDemo extends StatelessWidget {
             ),
           ],
         _LeadingStage.issues => const [],
+        _LeadingStage.grouped => [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.sidebar_left),
+              id: 'sidebar',
+              label: 'Sidebar',
+              onTap: () {},
+            ),
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.slider_horizontal_3),
+              id: 'filter',
+              label: 'Filter',
+              onTap: () {},
+            ),
+          ],
         _LeadingStage.cancel || _LeadingStage.both => [
             GlassBarItem.icon(
               icon: const Icon(CupertinoIcons.xmark),
@@ -1086,6 +1103,7 @@ class _LeadingItemsDemo extends StatelessWidget {
         _LeadingStage.issues => 'Issues',
         _LeadingStage.cancel => 'New Issue',
         _LeadingStage.both => 'Filters',
+        _LeadingStage.grouped => 'Library',
       };
 
   String get _blurb => switch (stage) {
@@ -1109,6 +1127,13 @@ class _LeadingItemsDemo extends StatelessWidget {
           'leadingItemsSupplementBackButton: true shows both, mirroring '
               'UINavigationItem.leftItemsSupplementBackButton. Two shells, '
               'because neither item shares a background with the other.',
+        _LeadingStage.grouped =>
+          'Two shared items, so one capsule — and the back button it replaced '
+              'shared with nothing, so the shell arriving here grew out of a '
+              '44pt circle into a 46pt capsule twice as wide. Both dimensions '
+              'interpolate: the same morph the trailing capsule has always '
+              'done, now on the leading side. Swipe from the left edge to '
+              'scrub it.',
       };
 
   @override
@@ -1168,6 +1193,15 @@ class _LeadingItemsDemo extends StatelessWidget {
                     subtitle: 'leadingItemsSupplementBackButton: true',
                     icon: CupertinoIcons.rectangle_grid_1x2,
                     onTap: () => _pushStage(context, _LeadingStage.both),
+                  ),
+                  const SizedBox(height: 16),
+                  _PatternTile(
+                    title: 'Circle Grows Into Capsule',
+                    subtitle:
+                        'One shell, 44pt round to 46pt wide — width and height '
+                        'both interpolate',
+                    icon: CupertinoIcons.rectangle_expand_vertical,
+                    onTap: () => _pushStage(context, _LeadingStage.grouped),
                   ),
                 ],
               ],
