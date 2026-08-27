@@ -1416,40 +1416,32 @@ class _CustomBarPinningDemo extends StatelessWidget {
 
   static const _titles = ['Documents', 'Folder'];
 
-  /// The trailing icons for a level. The plus carries an id on both levels, so
+  /// The trailing items for a level. The plus carries an id on both levels, so
   /// it is identifier-matched and holds its position across the push.
-  static List<({IconData icon, String label, Object? id})> _iconsFor(
-    int depth,
-  ) =>
-      depth == 0
-          ? const [
-              (icon: CupertinoIcons.plus, label: 'New', id: 'add'),
-              (icon: CupertinoIcons.search, label: 'Search', id: null),
-            ]
-          : const [
-              (icon: CupertinoIcons.plus, label: 'New', id: 'add'),
-              (icon: CupertinoIcons.ellipsis, label: 'More', id: null),
-            ];
+  List<GlassBarItem> _actionsFor(int depth) => [
+        GlassBarItem.icon(
+          icon: const Icon(CupertinoIcons.plus),
+          id: 'add',
+          label: 'New',
+          onTap: () {},
+        ),
+        GlassBarItem.icon(
+          icon: Icon(
+            depth == 0 ? CupertinoIcons.search : CupertinoIcons.ellipsis,
+          ),
+          label: depth == 0 ? 'Search' : 'More',
+          onTap: () {},
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
-    final icons = _iconsFor(depth);
-    final canPop = depth > 0;
-
     return GlassPinnedBarChrome(
-      actions: [
-        for (final item in icons)
-          GlassBarItem.icon(
-            icon: Icon(item.icon),
-            id: item.id,
-            label: item.label,
-            onTap: () {},
-          ),
-      ],
+      actions: _actionsFor(depth),
       // A Material `AppBar` needs `MaterialLocalizations`, which this demo's
       // `CupertinoApp` does not provide — an app built on `MaterialApp` gets
       // them for free and can drop this wrapper.
-      builder: (context, hoisted) => Localizations.override(
+      builder: (context, chrome) => Localizations.override(
         context: context,
         delegates: const [DefaultMaterialLocalizations.delegate],
         child: Stack(
@@ -1460,34 +1452,13 @@ class _CustomBarPinningDemo extends StatelessWidget {
               extendBodyBehindAppBar: true,
               appBar: AppBar(
                 backgroundColor: const Color(0x00000000),
-                // The bar keeps its own leading and actions until the shell has
-                // taken them, then holds their space so the title stays put.
-                automaticallyImplyLeading: !hoisted,
-                leading: hoisted && canPop ? const SizedBox(width: 44) : null,
+                // The items were declared once, as data. These slots hold the
+                // real glass buttons until the shell takes them and hold their
+                // space after, so the bar never has to build a second copy.
+                automaticallyImplyLeading: false,
+                leading: chrome.leading,
+                actions: chrome.actions,
                 title: Text(_titles[depth]),
-                actions: [
-                  for (final item in icons)
-                    if (hoisted)
-                      // Unpainted, so it measures exactly what the real button
-                      // measures — a fixed width would only be right for icons.
-                      IgnorePointer(
-                        child: ExcludeSemantics(
-                          child: Opacity(
-                            opacity: 0.0,
-                            child: IconButton(
-                              icon: Icon(item.icon),
-                              onPressed: () {},
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      IconButton(
-                        icon: Icon(item.icon),
-                        tooltip: item.label,
-                        onPressed: () {},
-                      ),
-                ],
               ),
               body: CustomScrollView(
                 slivers: [
@@ -1503,9 +1474,9 @@ class _CustomBarPinningDemo extends StatelessWidget {
                         Text(
                           depth == 0
                               ? 'This bar is a Material AppBar, not a '
-                                  'GlassAppBar. Its items are declared as data '
-                                  'and pinned by the shell; the bar itself still '
-                                  'slides with the page.'
+                                  'GlassAppBar. Its items are declared once as '
+                                  'data and pinned by the shell; the bar itself '
+                                  'still slides with the page.'
                               : 'The new action was identifier-matched and held '
                                   'its position; search cross-faded into more. '
                                   'Swipe from the left edge to scrub the morph '
