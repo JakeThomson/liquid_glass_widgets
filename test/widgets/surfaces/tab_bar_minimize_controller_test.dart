@@ -212,7 +212,8 @@ void main() {
     });
 
     test('minimize() is a no-op unless the behaviour minimizes', () {
-      expect((_controller(GlassBarMinimizeBehavior.never)..minimize()).minimized,
+      expect(
+          (_controller(GlassBarMinimizeBehavior.never)..minimize()).minimized,
           isFalse);
       expect((_controller()..minimize()).minimized, isTrue);
     });

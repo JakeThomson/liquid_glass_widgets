@@ -250,7 +250,8 @@ void main() {
       );
     });
 
-    testWidgets('swapping the scroll controller re-targets without a spurious '
+    testWidgets(
+        'swapping the scroll controller re-targets without a spurious '
         'minimize', (tester) async {
       final first = ScrollController();
       addTearDown(first.dispose);

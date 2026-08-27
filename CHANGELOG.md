@@ -1,11 +1,3 @@
-# Unreleased
-
-## Bug Fixes
-
-- **Premium glass no longer strands its shape when a sheet is swiped away (#229):** `RenderLiquidGlassLayer` freezes its shader UVs under a uniform scale-down, for the CupertinoSheet push-back (#192) where the sampled page shrinks with the glass. A swipe-dismissed `GlassModalSheet` produces the same matrix but holds its backdrop still, so the freeze left the surface's rim at the resting frame and squared off its rounded corners. The widget applying the scale now says which arrangement it is, via `LiquidGlassSelfScaleScope`; the push-back path is unchanged.
-
----
-
 # 1.1.0
 
 ## New Features
@@ -20,6 +12,7 @@
 
 - **Spring reversals no longer stall (#228):** `SearchableBottomBarController.makeSpring` now carries in-flight velocity through retargets; reversing mid-morph no longer reads as a stall followed by a restart. Also benefits `GlassTabBar.searchable`.
 - **Shared `ScrollController` crash fixed (#228):** The searchable and minimizable placements reading `ScrollController.position` now safely guard when multiple scroll views share one controller during transitions.
+- **Premium glass shape no longer stranded during swipe-dismiss (#229):** `RenderLiquidGlassLayer` froze shader UVs under any uniform scale-down, which was correct for the CupertinoSheet push-back but wrong for a swiped `GlassModalSheet` whose backdrop holds still. A new internal `LiquidGlassSelfScaleScope` lets the sheet declare which arrangement it is; the push-back path is unchanged.
 
 ## Improvements
 
@@ -33,7 +26,7 @@
 - **New guide:** `docs/GLASS_NAVIGATION_TRANSITION.md` — setup (including `.router`), matching rules, a behaviour table, a direction section, and known limitations.
 - **`ROADMAP.md`** — `GlassNavigationTransition` checked off; the "pinning becomes the default" trajectory and parity work recorded.
 
-Thanks to [@JakeThomson](https://github.com/JakeThomson) for the navigation transition, modal sheet, and tab bar scroll-to-minimize improvements (#221, #223, #227, #228).
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the navigation transition, modal sheet, tab bar scroll-to-minimize, and premium renderer fix improvements (#221, #223, #227, #228, #230).
 
 ---
 

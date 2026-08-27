@@ -40,10 +40,10 @@ abstract final class GlassNavPinnedMetrics {
   static const double capsuleStretch = 0.15;
 
   /// Window during which a matched item's icon cross-fades.
-  static const double crossFadeStart = 0.2;
+  static const double crossFadeStart = 0.3;
 
   /// End of the icon cross-fade window.
-  static const double crossFadeEnd = 0.8;
+  static const double crossFadeEnd = 0.7;
 
   /// Point in the transition at which the chrome switches from showing the
   /// outgoing route's configuration to the incoming one.
@@ -753,48 +753,78 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
       orders.add(_SlotOrder(fromOrder: fromOrders[i], toOrder: toOrders[i]));
     }
 
-    // Cross-fade window for a matched item whose content changed.
+    // Cross-fade window for a matched item whose content changed, and
+    // entering / exiting items during a capsule morph.
     final q = ((p - GlassNavPinnedMetrics.crossFadeStart) /
             (GlassNavPinnedMetrics.crossFadeEnd -
                 GlassNavPinnedMetrics.crossFadeStart))
         .clamp(0.0, 1.0);
 
+    final morphingCapsule = fromItems.isNotEmpty && toItems.isNotEmpty;
+
     final children = <Widget>[];
     for (var i = 0; i < slots.length; i++) {
       final slot = slots[i];
-
-      // Items that exist on only one side are not animated in or out either;
-      // they appear with their side, at the same instant as the capsule.
-      if (slot.isEnter && !showsIncoming) continue;
-      if (slot.isExit && showsIncoming) continue;
-
       final crossFades = slot.crossFades;
       final fromItem = slot.fromItem;
       final toItem = slot.toItem;
 
-      // A cross-fade side at exactly zero opacity is not built at all, so a
-      // settled bar holds no invisible leftovers from the previous route.
-      if (fromItem != null && ((crossFades && q < 1.0) || toItem == null)) {
-        children.add(_ClusterChild(
-          slot: i,
-          isFrom: true,
-          opacity: crossFades ? 1.0 - q : 1.0,
-          child: _ClusterItem(item: fromItem, enabled: false),
-        ));
+      if (fromItem != null) {
+        if (toItem == null) {
+          // Exiting item: smoothly fade out with (1 - q) across the transition window.
+          // While transition is in-flight, keep mounted in morphing capsules so natural width is preserved.
+          final visible =
+              state.settled ? !showsIncoming : (morphingCapsule || q < 1.0);
+          if (visible) {
+            children.add(_ClusterChild(
+              slot: i,
+              isFrom: true,
+              opacity: state.settled ? 1.0 : (1.0 - q),
+              child: _ClusterItem(item: fromItem, enabled: false),
+            ));
+          }
+        } else if (crossFades && (!state.settled ? q < 1.0 : !showsIncoming)) {
+          // Cross-fading outgoing side.
+          children.add(_ClusterChild(
+            slot: i,
+            isFrom: true,
+            opacity: state.settled ? 1.0 : (1.0 - q),
+            child: _ClusterItem(item: fromItem, enabled: false),
+          ));
+        }
       }
-      if (toItem != null && (!crossFades || q > 0.0)) {
-        children.add(_ClusterChild(
-          slot: i,
-          isFrom: false,
-          opacity: crossFades ? q : 1.0,
-          child: _ClusterItem(
-            item: toItem,
-            enabled: state.settled,
-            // Only the cluster's chosen trigger opens the menu; a second menu
-            // item falls through to its no-op, as in GlassButtonGroup.
-            onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
-          ),
-        ));
+
+      if (toItem != null) {
+        if (fromItem == null) {
+          // Entering item: smoothly fade in with q across the transition window.
+          // While transition is in-flight, keep mounted in morphing capsules so natural width is preserved.
+          final visible =
+              state.settled ? showsIncoming : (morphingCapsule || q > 0.0);
+          if (visible) {
+            children.add(_ClusterChild(
+              slot: i,
+              isFrom: false,
+              opacity: state.settled ? 1.0 : q,
+              child: _ClusterItem(
+                item: toItem,
+                enabled: state.settled,
+                onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
+              ),
+            ));
+          }
+        } else if (!crossFades || (!state.settled ? q > 0.0 : showsIncoming)) {
+          // Matched persistent item or cross-fading incoming side.
+          children.add(_ClusterChild(
+            slot: i,
+            isFrom: false,
+            opacity: crossFades ? (state.settled ? 1.0 : q) : 1.0,
+            child: _ClusterItem(
+              item: toItem,
+              enabled: state.settled,
+              onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
+            ),
+          ));
+        }
       }
     }
 
