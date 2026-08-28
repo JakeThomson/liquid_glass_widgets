@@ -42,6 +42,36 @@ CupertinoApp.router(
 With go_router, use `CupertinoPage` in your `pageBuilder`s to keep the native
 slide and back-swipe.
 
+### If your bar is not a `GlassAppBar`
+
+The shell hoists chrome above the `Navigator` and redraws it at
+`GlassNavPinnedMetrics`. A bar that draws its own back button and actions —
+an app with an existing design system adopting pinning incrementally — must
+use the same numbers, or the chrome visibly resizes and shifts at the moment
+of hand-over:
+
+```dart
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
+SizedBox(
+  height: GlassNavPinnedMetrics.toolbarHeight,      // 44
+  child: Padding(
+    padding: const EdgeInsets.symmetric(
+      horizontal: GlassNavPinnedMetrics.horizontalPadding, // 8
+    ),
+    child: ...,
+  ),
+);
+```
+
+The two clusters are **not** the same size: the back button is
+`backDiameter` (44) while each action slot is `slot` (46). Mirroring both
+takes two numbers.
+
+Align to the geometry members only. `crossFadeStart`, `crossFadeEnd`,
+`swapAt` and `capsuleStretch` describe the shell's own choreography and may be
+retuned.
+
 ## Declaring a screen's bar items
 
 Screens opt in with the `GlassAppBar.pinned` constructor, declaring items as
@@ -99,6 +129,53 @@ bar.
 - **Participation is the constructor.** A `GlassAppBar.pinned` screen keeps
   the chrome pinned even with no actions; a plain `GlassAppBar` screen does
   not participate, and the pinned chrome retreats while it covers the bar.
+
+## Pinning from a bar that isn't `GlassAppBar`
+
+An app that already has its own bar — a Material `AppBar` carrying its own
+backdrop, a collapsing large-title sliver, anything a design system already
+owns — pins with `GlassPinnedBarChrome` instead. It performs the same
+registration `GlassAppBar.pinned` does internally. Declare the items once, as
+data, and drop the resolved slots into your bar:
+
+```dart
+GlassPinnedBarChrome(
+  actions: [
+    GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: _create),
+  ],
+  builder: (context, chrome) => AppBar(
+    automaticallyImplyLeading: false,
+    leading: chrome.leading,
+    actions: chrome.actions,
+    title: const Text('Repository'),
+  ),
+);
+```
+
+`chrome.leading` and `chrome.actions` swap themselves at the right moment. Until
+the shell has both accepted the registration *and* had a frame to render its
+copy, they hold the real glass back button and actions capsule — the same
+widgets the shell will draw. After, they hold unpainted placeholders that lay
+out the real content, so the bar keeps the layout it had and the title never
+shifts. The hand-over is deliberately a frame late: at the swap both copies are
+static and identical, so they never overlap and never both disappear.
+
+Where there is no shell, or the device can't render the effect, the slots
+simply keep the real buttons — so a bar written this way needs no fallback of
+its own, and there is nothing to keep in sync with the item data.
+
+`chrome.hoisted` is there for a bar that wants to substitute *its own* chrome
+rather than the package's; reading it is not needed for the common case.
+
+`backButton`, `onBack` and `buttonSettings` mean exactly what they do on
+`GlassAppBar.pinned`. The one addition is `enabled`, which is how an app with a
+**nested navigator** keeps the nested stack's roots out of the shell — the
+shell ranks registered routes against one another, which only has meaning
+inside a single `Navigator`:
+
+```dart
+enabled: ModalRoute.of(context)?.impliesAppBarDismissal ?? false,
+```
 
 ## Behaviour and constraints
 
@@ -181,7 +258,9 @@ that future.
 The example showcase app uses pinned chrome throughout — every category page
 pins its back button, and the navigation-patterns demo pins its actions,
 including a **Nested Navigation** pattern that walks a three-level drill-down
-with identifier-matched items morphing at each push:
+with identifier-matched items morphing at each push, and a **Custom Bar
+Pinning** pattern whose bar is a plain Material `AppBar` pinned through
+`GlassPinnedBarChrome`:
 
 ```bash
 cd example

@@ -7,7 +7,35 @@
 - **Materialize entrance & exit transitions (`GlassMaterialize`):** Glass items now appear and disappear the way iOS 26 does, mirroring SwiftUI's `glassEffectTransition(.materialize)`: the glass fades up as it settles inward from slightly oversized, and its content sharpens only after the shape has resolved — reversed on the way out, where the content blurs away first and leaves the shell briefly empty before it dissolves. `GlassMaterialize` is the implicit `visible:`-driven form (the `AnimatedOpacity` idiom); `GlassMaterializeTransition` is the explicit `Animation`-driven form (the `FadeTransition` idiom), and doubles as an `AnimatedSwitcher.transitionBuilder` via `GlassMaterializeTransition.switcherBuilder`. Works on any glass surface at any quality tier: rather than fading a layer — which pops, because a backdrop pass renders fully or not at all — the effect drives the glass shader's own visibility uniforms, where the refraction warp lerps to identity and the render pass drops out entirely at zero.
 - **Pinned navigation chrome materializes (behaviour change):** A pinned back button or actions capsule that only one of the two routes has no longer switches on or off at the transition midpoint — it materializes or dematerializes over a window straddling it. The phase is a pure function of route progress, so a pop plays the windows in reverse with the exit still leading the entrance in both directions. An interactive back-swipe does *not* scrub them: the page and title track the finger, but the chrome holds still until the gesture commits and then plays its transition over the travel that remains, so a swipe you abandon never half-dissolves anything. A capsule present on *both* routes is unaffected: it still morphs in place with one persistent glass shell. Opt out with `GlassNavigationShell.effectTransition: GlassEffectTransition.identity`, which restores the 1.1.0 behaviour exactly; **Reduce Motion selects it automatically**, and the standalone widgets likewise fall back to a plain cross-dissolve with no scale or blur.
 - **Materialize Playground Demo:** Added `example/lib/demos/materialize_demo.dart` — a single glass button, a multi-item capsule, and an `AnimatedSwitcher` swapping glass chips, each toggleable, over a busy backdrop with a live Reduce Motion switch.
+- **`GlassPinnedBarChrome` — pin a bar that isn't a `GlassAppBar`:** The registration handshake behind `GlassAppBar.pinned` is now public, so an app whose bars are its own widgets — a Material `AppBar` with a bespoke backdrop, a collapsing large-title sliver — can join a `GlassNavigationShell` without reimplementing it. Items are declared once as data; the builder receives `chrome.leading` and `chrome.actions`, which hold the real glass buttons until the shell has both accepted the registration and had a frame to render its copy, and same-sized unpainted placeholders after — so the bar never builds a second copy and nothing shifts at the hand-over. `GlassAppBar.pinned` now builds its own slots the same way, so there is one implementation rather than two. An `enabled` flag keeps a nested navigator's roots out of the shell, which ranks routes within a single `Navigator`. New **Custom Bar Pinning** pattern in the nav-patterns demo pins a plain Material `AppBar`.
 - **Scroll Edge Playground Demo:** Added a comprehensive interactive showcase in the example app (`example/lib/demos/scroll_edge_style_demo.dart`) featuring live style switching (`soft`, `hard`, `blur`), real-time extent/sigma sliders, top/bottom toggles, and floating `GlassAppBar` & `GlassTabBar.bottom` integration with solid content cards.
+- **Bottom accessory follows the bar (behaviour change) (#226):** on
+  `GlassTabBar.minimizable`, a `bottomAccessory` with no explicit
+  `bottomAccessoryPlacement` now resolves to
+  `GlassTabBarAccessoryPlacement.inline` while the bar is minimized, matching
+  how iOS 26 animates a `tabViewBottomAccessory` down into the minimized bar.
+  Previously it stayed `expanded` unless `inline` was passed explicitly.
+
+  **This changes what `GlassTabBarAccessoryPlacementScope.of(context)` returns**
+  for affected callers — an accessory that switches on it will render its
+  compact variant on scroll where it previously did not, with no code change on
+  your side — and shrinks `preferredSize` by
+  `bottomAccessorySpacing + bottomAccessoryHeight` while minimized. Affects only
+  bars that have an accessory, pass no explicit placement, and reach the
+  minimized state. Pass `GlassTabBarAccessoryPlacement.expanded` to keep the
+  previous behaviour.
+
+  `GlassTabBar.searchable` is deliberately unchanged. Auto-collapsing on search
+  was removed in 0.x because it hid the mini-player behind the search capsule,
+  and that decision stands — a search field expanding is not the bar minimizing.
+
+## API
+
+- **`GlassNavPinnedMetrics` is now exported from the package barrel:** The geometry the pinned shell redraws hoisted chrome at — 44pt back circle, 46pt action slots, 44pt toolbar band, 8pt edge inset. A bar that is not a `GlassAppBar` had no supported way to reach it and had to hardcode the numbers, which drift the first time the package retunes them. The `show` clause exposes the metrics only; `GlassNavPinnedHost` and the cluster render objects stay internal. Documented under [Glass Navigation Transition](docs/GLASS_NAVIGATION_TRANSITION.md#if-your-bar-is-not-a-glassappbar).
+
+## Bug Fixes
+
+- **`GlassTabBarMinimizeController` drivable without a `ScrollController`:** The state machine's only controller-free entry point, `handleSample`, was annotated `@visibleForTesting`, so a host that observes scrolling with a `NotificationListener` — an app-level scaffold wrapping arbitrary screen bodies, which cannot reach whichever `ScrollController` the current screen owns — could not use the controller at all. The annotation is gone, and a new `handleNotification(ScrollNotification)` drives the minimize from notifications directly, carrying the `UserScrollNotification` direction across the updates that follow it. Leave `GlassTabBar.minimizable`'s `scrollController` off when driving it this way; the example app's minimizable bar demo switches between both sources.
 
 ---
 
