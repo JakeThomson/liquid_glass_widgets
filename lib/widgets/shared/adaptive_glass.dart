@@ -343,24 +343,22 @@ class AdaptiveGlass extends StatelessWidget {
       // If this is a container (allowElevation=false), we are providing a blur
       // for all our children to use. We update the InheritedLiquidGlass tree.
       if (!allowElevation) {
+        final Widget container = LightweightLiquidGlass(
+          shape: shape,
+          settings: effectiveSettings,
+          densityFactor: 0.0, // Containers are never elevated
+          glowIntensity: 0.0, // Containers don't glow
+          child: InheritedLiquidGlass(
+            settings: effectiveSettings,
+            quality: quality,
+            isBlurProvidedByAncestor: true,
+            child: content,
+          ),
+        );
         return _wrapWithDecorations(
           context,
           baseSettings,
-          Opacity(
-            opacity: baseSettings.visibility.clamp(0.0, 1.0),
-            child: LightweightLiquidGlass(
-              shape: shape,
-              settings: effectiveSettings,
-              densityFactor: 0.0, // Containers are never elevated
-              glowIntensity: 0.0, // Containers don't glow
-              child: InheritedLiquidGlass(
-                settings: effectiveSettings,
-                quality: quality,
-                isBlurProvidedByAncestor: true,
-                child: content,
-              ),
-            ),
-          ),
+          _fadeLightweight(baseSettings, container),
         );
       }
 
@@ -375,18 +373,11 @@ class AdaptiveGlass extends StatelessWidget {
         child: content,
       );
 
-      // The lightweight shader has no visibility uniform — it renders at full
-      // strength whatever the settings say — so a surface fading out on this
-      // tier never actually goes. Composite the finished result instead: it
-      // is an ordinary painted shader here, not a backdrop pass, so opacity
-      // is legal on it in a way it is not on the premium path.
-      final faded = baseSettings.visibility >= 1.0
-          ? lightweightWidget
-          : Opacity(
-              opacity: baseSettings.visibility.clamp(0.0, 1.0),
-              child: lightweightWidget,
-            );
-      return _wrapWithDecorations(context, baseSettings, faded);
+      return _wrapWithDecorations(
+        context,
+        baseSettings,
+        _fadeLightweight(baseSettings, lightweightWidget),
+      );
     }
 
     // Impeller + Premium Path: Use the renderer's native path.
@@ -555,6 +546,27 @@ class AdaptiveGlass extends StatelessWidget {
   // like the shadow, inserting a Stack between a grouped glass and its shared
   // layer would break metaball morphing.
   // ---------------------------------------------------------------------------
+  /// Composites a lightweight-tier surface at its visibility.
+  ///
+  /// The lightweight shader has no visibility uniform — it renders at full
+  /// strength whatever the settings say — so a surface fading out on this tier
+  /// never actually goes. Compositing the finished result is legal here in a
+  /// way it is not on the premium path: this is an ordinary painted shader,
+  /// not a backdrop pass.
+  ///
+  /// Only while it bites. An [Opacity] left in the tree at full visibility is
+  /// a no-op as a blend, but not as a render object: [LightweightLiquidGlass]
+  /// captures its backdrop through a [RenderRepaintBoundary], and an extra
+  /// object in that subtree changes what gets captured. That cost is what
+  /// reverted the earlier always-on form.
+  static Widget _fadeLightweight(LiquidGlassSettings settings, Widget glass) =>
+      settings.visibility >= 1.0
+          ? glass
+          : Opacity(
+              opacity: settings.visibility.clamp(0.0, 1.0),
+              child: glass,
+            );
+
   Widget _wrapWithBacker(LiquidGlassSettings baseSettings, Widget glass) {
     final backerColor = baseSettings.effectiveBackerColor;
     if (backerColor == null || backerColor.a == 0) return glass;
