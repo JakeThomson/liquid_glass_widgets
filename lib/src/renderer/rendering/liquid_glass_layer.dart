@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
+import '../internal/glass_materialize_scope.dart';
 import '../internal/multi_shader_builder.dart';
 import '../liquid_glass_renderer.dart';
 import '../internal/render_liquid_glass_geometry.dart';
@@ -211,9 +212,15 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
 
   @override
   Widget build(BuildContext context) {
+    // [LOCAL PATCH]: a running materialize transition above this layer
+    // dissolves its glass through the settings' visibility channel — the one
+    // fade the backdrop pass honours. Identity (the same instance) at rest.
+    final settings =
+        GlassMaterializeScope.resolveSettings(context, widget.settings);
+
     if (!ImageFilter.isShaderFilterSupported) {
       return LiquidGlassRenderScope(
-        settings: widget.settings,
+        settings: settings,
         child: InheritedGeometryRenderLink(
           link: _link,
           child: widget.child,
@@ -228,7 +235,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
         // expand into the margin without hard-clipping at the original bounds.
         expansion: widget.clipExpansion,
         child: LiquidGlassRenderScope(
-          settings: widget.settings,
+          settings: settings,
           child: InheritedGeometryRenderLink(
             link: _link,
             child: ShaderBuilder(
@@ -236,7 +243,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
               (context, shader, child) => _RawShapes(
                 renderShader: shader,
                 backdropKey: BackdropGroup.of(context)?.backdropKey,
-                settings: widget.settings,
+                settings: settings,
                 shadows: widget.shadows,
                 link: _link,
                 clipExpansion: widget.clipExpansion,
