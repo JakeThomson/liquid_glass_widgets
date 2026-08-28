@@ -8,6 +8,7 @@
 ///   - per-tab scroll views, re-targeted on tab change the way UIKit
 ///     re-resolves `contentScrollView(for: .bottom)`
 ///   - a tab whose content is shorter than the viewport, which never minimizes
+///   - a bottom accessory that moves inline as the bar shrinks
 ///   - `extendBody: false`, where the body inset tracks the bar's height
 ///
 /// Run standalone:
@@ -108,6 +109,7 @@ class _DemoHomeState extends State<_DemoHome> {
   int _selectedIndex = 0;
   _TrailingMode _trailingMode = _TrailingMode.always;
   int _composerTaps = 0;
+  bool _showAccessory = false;
   bool _extendBody = true;
 
   /// One scroll view per tab, as on iOS — the minimize follows whichever one
@@ -182,6 +184,10 @@ class _DemoHomeState extends State<_DemoHome> {
         scrollController: _scrollControllers[_selectedIndex],
         onMinimizedTabTap: _minimize.expand,
         trailingButton: _trailingButton,
+        bottomAccessory: _showAccessory ? const _MiniPlayer() : null,
+        bottomAccessoryHeight: _showAccessory ? 56 : null,
+        // No explicit placement — the accessory follows the bar inline as it
+        // minimizes, the way iOS moves a tabViewBottomAccessory.
       ),
     );
   }
@@ -273,6 +279,12 @@ class _DemoHomeState extends State<_DemoHome> {
           ),
           const SizedBox(height: 8),
           _toggle(
+            value: _showAccessory,
+            onChanged: (v) => setState(() => _showAccessory = v),
+            title: 'Bottom accessory (mini player)',
+            subtitle: 'Moves inline as the bar minimizes',
+          ),
+          _toggle(
             value: _extendBody,
             onChanged: (v) => setState(() => _extendBody = v),
             title: 'extendBody',
@@ -334,6 +346,48 @@ class _DemoHomeState extends State<_DemoHome> {
           color: Colors.white.withValues(alpha: 0.45),
         ),
       );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bottom accessory — reads the placement the bar publishes
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MiniPlayer extends StatelessWidget {
+  const _MiniPlayer();
+
+  @override
+  Widget build(BuildContext context) {
+    // The Flutter equivalent of @Environment(\.tabViewBottomAccessoryPlacement).
+    final placement = GlassTabBarAccessoryPlacementScope.of(context);
+    final inline = placement == GlassTabBarAccessoryPlacement.inline;
+
+    // The bar positions the accessory but does not paint a surface behind it —
+    // the accessory is the app's widget, so it brings its own glass.
+    return GlassContainer(
+      useOwnLayer: true,
+      shape: LiquidRoundedSuperellipse(borderRadius: inline ? 22 : 20),
+      padding: EdgeInsets.symmetric(horizontal: inline ? 12 : 16),
+      child: Row(
+        children: [
+          const Icon(CupertinoIcons.music_note_2, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              inline ? 'Now playing' : 'Liquid Glass — Side A',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+          if (!inline) ...[
+            const Icon(CupertinoIcons.backward_fill, size: 18),
+            const SizedBox(width: 14),
+          ],
+          const Icon(CupertinoIcons.play_fill, size: 18),
+        ],
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
