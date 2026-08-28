@@ -113,13 +113,6 @@ Ideas under consideration. None committed.
   matching iOS tab bar customisation.
 - [ ] **`GlassSheet` snap points** — configurable detent heights (peek / half / full)
   matching `UISheetPresentationController.Detent`.
-- [ ] **Materialize at rest** — a pinned bar whose `actions` change via `setState`
-  still swaps instantly. The route-driven effect is a pure function of transition
-  progress; at rest there is none, so this needs a local spring plus reconciliation
-  when a route transition starts mid-animation. The phase rail is already in place.
-- [ ] **Per-item content blur during cluster morphs** — items entering or leaving a
-  *surviving* capsule cross-fade but do not blur, unlike a whole cluster that
-  materializes. An `ImageFiltered` per item per frame needs to earn its saveLayer.
 - [ ] **`GlassNavigationTransition` pinning as default** — the `.pinned` constructor
   is the transition vehicle; once `GlassBarItem` reaches parity with the widget API,
   a major release can make the data-driven API the plain `GlassAppBar`. Remaining
