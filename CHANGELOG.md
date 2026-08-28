@@ -42,6 +42,8 @@
 
 ## Bug Fixes
 
+- **Sheet ↔ content scroll handover (#256):** A multi-detent `GlassModalSheet` now grows and then scrolls its content on one unbroken drag, and reverses the same way. The physics below the top detent refuse the movement rather than the gesture so the `Scrollable` stays live, the sheet installs them on its vertical scrollables itself rather than only publishing them, and the gesture arena re-evaluates ownership on every move instead of latching it for the whole pointer. Content scrolling on a `ScrollController` of its own is now observed too.
+
 - **`GlassTabBarMinimizeController` drivable without a `ScrollController`:** The state machine's only controller-free entry point, `handleSample`, was annotated `@visibleForTesting`, so a host that observes scrolling with a `NotificationListener` — an app-level scaffold wrapping arbitrary screen bodies, which cannot reach whichever `ScrollController` the current screen owns — could not use the controller at all. The annotation is gone, and a new `handleNotification(ScrollNotification)` drives the minimize from notifications directly, carrying the `UserScrollNotification` direction across the updates that follow it. Leave `GlassTabBar.minimizable`'s `scrollController` off when driving it this way; the example app's minimizable bar demo switches between both sources.
 
 Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize transitions, pinned navigation chrome, leading API and per-item glass backgrounds, scroll-to-minimize controller improvements, bottom accessory inline behaviour, and metrics export (#240, #238, #236, #239, #233, #234).
