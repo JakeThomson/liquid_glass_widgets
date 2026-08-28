@@ -105,7 +105,7 @@ bar.
 | Situation | Behaviour |
 |---|---|
 | Push/pop between participating routes | Chrome pinned; capsule width and item positions interpolate; changed icons cross-fade |
-| Interactive back-swipe | Same interpolation, scrubbed by the gesture; cancelled swipes rebound |
+| Interactive back-swipe | The page and its title track the finger, but the pinned chrome holds still until the gesture commits — then plays its whole transition over the travel that is left. An abandoned swipe leaves the chrome untouched, with nothing to rebound |
 | Destination has no actions (or no back button) | The cluster materializes or dematerializes — a fade and gaussian blur with a subtle scale, mirroring SwiftUI's `glassEffectTransition(.materialize)` — over a window straddling the transition midpoint |
 | Tap while a transition runs | Ignored. The chrome is showing a blend of two routes' items, so a tap would fire an action the user can no longer see |
 | Navigation starts with a menu open | The menu is dismissed; the capsule outlives the route, so nothing else would |

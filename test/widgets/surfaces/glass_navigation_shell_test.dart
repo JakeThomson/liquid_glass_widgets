@@ -405,7 +405,66 @@ void main() {
       expect(capsulePhase(tester), 1.0);
     });
 
-    testWidgets('a cancelled back-swipe rewinds the dissolve without remount',
+    testWidgets('the chrome holds still under an uncommitted back-swipe',
+        (tester) async {
+      // Dragging is not deciding. Until the pop commits there is no answer to
+      // which route's chrome wins, so scrubbing the dissolve under the finger
+      // reads as the bar guessing — and a swipe the user abandons should
+      // never have half-dissolved anything.
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+      )));
+      await settle(tester);
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      await settle(tester);
+
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final resting = capsulePhase(tester);
+
+      final gesture = await tester.startGesture(const Offset(2, 300));
+      await gesture.moveTo(Offset(width * 0.48, 300));
+      await tester.pump();
+      expect(
+        capsulePhase(tester),
+        resting,
+        reason: 'the capsule must not move while the finger is still down',
+      );
+
+      // Committing releases it: the hold lifts and the chrome transitions.
+      await gesture.moveTo(Offset(width * 0.9, 300));
+      await gesture.up();
+
+      // It must play, and play long enough to see. Two regressions live here:
+      //
+      // The hold was keyed on `userGestureInProgress`, which Cupertino leaves
+      // true until the commit animation has finished, so the chrome stayed
+      // frozen for the whole pop and snapped at the end.
+      //
+      // Then, re-timed over the route's remaining travel, it technically
+      // animated but Cupertino sizes a committed swipe by how far the drag
+      // got — a late release left about five frames, which reads as no
+      // transition at all. Counting frames is what tells those apart; a bare
+      // "did it move" assertion passes on both.
+      var moving = 0;
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final phase = capsulePhase(tester);
+        if (phase > resting && phase < 1.0) moving++;
+      }
+      expect(moving, greaterThanOrEqualTo(6),
+          reason: 'the capsule must animate across the commit for long enough '
+              'to be seen, not snap or flash past in a couple of frames');
+
+      await settle(tester);
+      expect(capsulePhase(tester), 1.0,
+          reason: 'the root capsule is back once the pop commits');
+    });
+
+    testWidgets('a cancelled back-swipe leaves the chrome exactly as it was',
         (tester) async {
       await tester.pumpWidget(shellApp(_Screen(
         title: 'Root',
@@ -417,24 +476,25 @@ void main() {
       await _push(tester, const _Screen(title: 'Empty', actions: []));
       await settle(tester);
 
-      // Scrub deep enough to enter the dissolve window — the root's capsule
-      // only begins re-forming once the pop passes dematerializeEnd — then
-      // drag back to the edge so the gesture is cancelled rather than
-      // committed, and the whole dissolve has to run backwards.
+      // Scrub deep past the point the dissolve window used to open, then drag
+      // back to the edge so the gesture is cancelled rather than committed.
+      // Because the chrome never started moving there is nothing to rewind:
+      // it reads the same at every point of an abandoned swipe.
       final width =
           tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final resting = capsulePhase(tester);
       final gesture = await tester.startGesture(const Offset(2, 300));
       await gesture.moveTo(Offset(width * 0.48, 300));
       await tester.pump();
-      final mid = capsulePhase(tester);
-      expect(mid, greaterThan(0.0));
-      expect(mid, lessThan(1.0),
-          reason: 'the root capsule is part-way back on a scrub');
+      expect(capsulePhase(tester), resting);
 
       await gesture.moveTo(const Offset(4, 300));
       await tester.pump();
+      expect(capsulePhase(tester), resting);
       await gesture.up();
       await settle(tester);
+      expect(capsulePhase(tester), resting,
+          reason: 'an abandoned swipe leaves the chrome untouched');
       // Back where it started: the destination still has no capsule.
       expect(
         find.descendant(
