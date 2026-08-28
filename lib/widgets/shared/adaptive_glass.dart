@@ -201,17 +201,6 @@ class AdaptiveGlass extends StatelessWidget {
     // the "live BackdropFilter path" the canUsePremiumShader comment promises.
     // --------------------------------------------------------------------------
     if (quality == GlassQuality.minimal ||
-        // Deliberately the *configured* blur, not the effective one: this
-        // path is for surfaces asking for no frost, not for surfaces on
-        // their way out.
-        //
-        // Premium is exempt. A zero blur asks for no frost, not for no
-        // glass, and _FrostedFallback paints no rim, fresnel or border, so
-        // routing here also took the surface's edge and specular away. The
-        // renderer already handles a zero blur on its own: pass 1 is guarded
-        // by `effectiveBlur > 0` and simply skipped, leaving refraction and
-        // lighting intact. Standard and minimal keep the old routing.
-        (baseSettings.blur == 0 && quality != GlassQuality.premium) ||
         platformViewBackdrop) {
       return _wrapWithDecorations(
         context,
