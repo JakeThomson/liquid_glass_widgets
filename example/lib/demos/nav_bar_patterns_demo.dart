@@ -11,7 +11,9 @@
 ///   7. Large title + Search Bar — two-phase iOS 26 collapse
 ///   8. Nested navigation — pinned actions morph in place across pushes
 ///   9. Bar item types — icon, pull-down menu and custom widget in one capsule
-///  10. Custom bar pinning — a plain Material AppBar pinned via GlassPinnedBarChrome
+///  10. Leading items — a custom leading that replaces, supplements, or drops
+///      the glass behind itself entirely
+///  11. Custom bar pinning — a plain Material AppBar pinned via GlassPinnedBarChrome
 ///
 /// Run standalone:
 ///   flutter run -t lib/demos/nav_bar_patterns_demo.dart
@@ -151,6 +153,15 @@ class NavBarPatternsDemo extends StatelessWidget {
                       'Icon, pull-down menu and custom widget — and how a custom one resizes the capsule',
                   icon: CupertinoIcons.square_on_circle,
                   onTap: () => _push(context, const _BarItemTypesDemo()),
+                ),
+                SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Leading Items',
+                  subtitle:
+                      'A custom leading that replaces the back button — or sits '
+                      'beside it, or carries no glass at all',
+                  icon: CupertinoIcons.person_crop_circle,
+                  onTap: () => _push(context, const _LeadingItemsDemo()),
                 ),
                 SizedBox(height: 16),
                 _PatternTile(
@@ -1002,6 +1013,249 @@ class _BarItemTypesDemo extends StatelessWidget {
           _buildDummyContent(),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Leading Items
+// =============================================================================
+
+/// Which leading configuration a [_LeadingItemsDemo] screen is showing.
+enum _LeadingStage {
+  /// Root: a bare avatar, no glass behind it — where iOS 26 puts a profile
+  /// photo rather than a bar button.
+  profile,
+
+  /// Pushed: no leading of its own, so the automatic back button returns.
+  issues,
+
+  /// A custom leading, which replaces the back button.
+  cancel,
+
+  /// A custom leading alongside the back button.
+  both,
+
+  /// Two shared items, so the lone circular shell grows into a capsule.
+  grouped,
+}
+
+/// The leading half of a pinned bar, in each of its four configurations.
+///
+/// Push through them to watch the leading cluster morph the same way the
+/// trailing one does: the avatar and the back button swap at the transition
+/// midpoint (glass cannot cross-fade into something that isn't glass), while
+/// the trailing capsule holds its identifier-matched items throughout.
+class _LeadingItemsDemo extends StatelessWidget {
+  const _LeadingItemsDemo({this.stage = _LeadingStage.profile});
+
+  final _LeadingStage stage;
+
+  /// Unchanged across all four screens, so the trailing capsule is a constant
+  /// while the leading side is the thing that moves.
+  List<GlassBarItem> get _actions => [
+        GlassBarItem.icon(
+          icon: const Icon(CupertinoIcons.add),
+          id: 'add',
+          label: 'Add',
+          onTap: () {},
+        ),
+        GlassBarItem.icon(
+          icon: const Icon(CupertinoIcons.search),
+          id: 'search',
+          label: 'Search',
+          onTap: () {},
+        ),
+      ];
+
+  List<GlassBarItem> _leading(BuildContext context) => switch (stage) {
+        _LeadingStage.profile => [
+            // No shell at all: the photo is already a circle, and a capsule
+            // behind it would read as a second, competing surface.
+            const GlassBarItem.custom(
+              child: _Avatar(),
+              label: 'Account',
+              background: GlassBarItemBackground.none,
+            ),
+          ],
+        _LeadingStage.issues => const [],
+        _LeadingStage.grouped => [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.sidebar_left),
+              id: 'sidebar',
+              label: 'Sidebar',
+              onTap: () {},
+            ),
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.slider_horizontal_3),
+              id: 'filter',
+              label: 'Filter',
+              onTap: () {},
+            ),
+          ],
+        _LeadingStage.cancel || _LeadingStage.both => [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.xmark),
+              id: 'cancel',
+              label: 'Cancel',
+              // Its own shell, so it matches the circular back button it
+              // stands in for rather than the taller shared capsule.
+              background: GlassBarItemBackground.separate,
+              onTap: () => Navigator.of(context).pop(),
+            ),
+          ],
+      };
+
+  String get _title => switch (stage) {
+        _LeadingStage.profile => 'Profile',
+        _LeadingStage.issues => 'Issues',
+        _LeadingStage.cancel => 'New Issue',
+        _LeadingStage.both => 'Filters',
+        _LeadingStage.grouped => 'Library',
+      };
+
+  String get _blurb => switch (stage) {
+        _LeadingStage.profile =>
+          'The leading slot holds a bare avatar — GlassBarItemBackground.none, '
+              'the analogue of UIBarButtonItem.hidesSharedBackground. Push to '
+              'Issues and it swaps for the back button at the midpoint: one is '
+              'glass and the other is not, and glass opacity is never animated, '
+              'so the switch is deliberate rather than a fade.',
+        _LeadingStage.issues =>
+          'No leading of its own, so the automatic back button is implied — '
+              'exactly as before this API existed. The trailing capsule has not '
+              'moved once: both its items carry the same ids on every screen '
+              'here.',
+        _LeadingStage.cancel =>
+          'A non-empty leading replaces the back button, matching UIKit\'s '
+              'leftBarButtonItems and Flutter\'s own AppBar.leading. This one '
+              'uses GlassBarItemBackground.separate, so it gets the same '
+              'circular shell the back button had.',
+        _LeadingStage.both =>
+          'leadingItemsSupplementBackButton: true shows both, mirroring '
+              'UINavigationItem.leftItemsSupplementBackButton. Two shells, '
+              'because neither item shares a background with the other.',
+        _LeadingStage.grouped =>
+          'Two shared items, so one capsule — and the back button it replaced '
+              'shared with nothing, so the shell arriving here grew out of a '
+              '44pt circle into a 46pt capsule twice as wide. Both dimensions '
+              'interpolate: the same morph the trailing capsule has always '
+              'done, now on the leading side. Swipe from the left edge to '
+              'scrub it.',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+
+    return GlassScaffold(
+      background: const ShowcaseBackground(),
+      settings: RecommendedGlassSettings.standard,
+      statusBarStyle: GlassStatusBarStyle.auto,
+      appBar: GlassAppBar.pinned(
+        title: Text(
+          _title,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: CupertinoColors.label.resolveFrom(context),
+          ),
+        ),
+        leading: _leading(context),
+        leadingItemsSupplementBackButton: stage == _LeadingStage.both,
+        actions: _actions,
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: SizedBox(height: topPad + 44 + 16)),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverList.list(
+              children: [
+                Text(
+                  _blurb,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (stage == _LeadingStage.profile)
+                  _PatternTile(
+                    title: 'Open Issues',
+                    subtitle: 'Avatar swaps for the back button',
+                    icon: CupertinoIcons.arrow_right_circle,
+                    onTap: () => _pushStage(context, _LeadingStage.issues),
+                  ),
+                if (stage == _LeadingStage.issues) ...[
+                  _PatternTile(
+                    title: 'Cancel Replaces Back',
+                    subtitle: 'A custom leading takes the back button\'s place',
+                    icon: CupertinoIcons.xmark_circle,
+                    onTap: () => _pushStage(context, _LeadingStage.cancel),
+                  ),
+                  const SizedBox(height: 16),
+                  _PatternTile(
+                    title: 'Cancel Beside Back',
+                    subtitle: 'leadingItemsSupplementBackButton: true',
+                    icon: CupertinoIcons.rectangle_grid_1x2,
+                    onTap: () => _pushStage(context, _LeadingStage.both),
+                  ),
+                  const SizedBox(height: 16),
+                  _PatternTile(
+                    title: 'Circle Grows Into Capsule',
+                    subtitle:
+                        'One shell, 44pt round to 46pt wide — width and height '
+                        'both interpolate',
+                    icon: CupertinoIcons.rectangle_expand_vertical,
+                    onTap: () => _pushStage(context, _LeadingStage.grouped),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          _buildDummyContent(),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
+    );
+  }
+
+  void _pushStage(BuildContext context, _LeadingStage next) {
+    Navigator.of(context).push(
+      CupertinoPageRoute<void>(builder: (_) => _LeadingItemsDemo(stage: next)),
+    );
+  }
+}
+
+/// A stand-in profile photo, sized to the circular bar-button diameter.
+class _Avatar extends StatelessWidget {
+  const _Avatar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF5AC8FA), Color(0xFF007AFF)],
+        ),
+      ),
+      child: const Center(
+        child: Text(
+          'JT',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: CupertinoColors.white,
+          ),
+        ),
       ),
     );
   }

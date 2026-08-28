@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/cupertino.dart';
@@ -48,6 +49,16 @@ abstract final class GlassNavPinnedMetrics {
 
   /// Stretch factor of the capsule shell, matching `GlassButtonGroup.icons`.
   static const double capsuleStretch = 0.15;
+
+  /// Stretch factor of a shell that shares with nothing, matching the
+  /// [GlassButton] default a lone circular button has always used.
+  static const double buttonStretch = 0.5;
+
+  /// Gap between two shells within one cluster.
+  ///
+  /// Matches the gap the bar itself leaves between its leading and actions
+  /// slots, so a split cluster reads the same in-route and pinned.
+  static const double groupGap = 8.0;
 
   /// Window during which a matched item's icon cross-fades.
   static const double crossFadeStart = 0.3;
@@ -166,7 +177,7 @@ class GlassNavPinnedState {
   final GlassEffectTransition transition;
 }
 
-/// Renders the pinned back button and actions capsule above the [Navigator].
+/// Renders the pinned leading and trailing clusters above the [Navigator].
 ///
 /// A surviving cluster keeps one persistent glass shell whose geometry
 /// animates; its element is never remounted mid-morph, because a glass
@@ -216,6 +227,7 @@ class GlassNavPinnedHost extends StatelessWidget {
   Widget build(BuildContext context) {
     final topPad = MediaQuery.paddingOf(context).top;
     final settings = state.to.buttonSettings ?? state.from.buttonSettings;
+    final textDirection = Directionality.of(context);
 
     // Everything retreats together when an unregistered route covers the bar.
     // Each cluster scales about its own anchored edge: scaling the full-width
@@ -226,19 +238,18 @@ class GlassNavPinnedHost extends StatelessWidget {
     Widget chrome = Stack(
       clipBehavior: Clip.none,
       children: [
-        Positioned(
-          left: 0,
-          top: 0,
-          child: _PinnedBackButton(state: state, coverageScale: coverageScale),
-        ),
-        Positioned(
-          right: 0,
-          top: 0,
-          child: _PinnedActionsCapsule(
-            state: state,
-            coverageScale: coverageScale,
+        for (final side in _BarSide.values)
+          Positioned.directional(
+            textDirection: textDirection,
+            start: side == _BarSide.leading ? 0 : null,
+            end: side == _BarSide.trailing ? 0 : null,
+            top: 0,
+            child: _PinnedSide(
+              state: state,
+              side: side,
+              coverageScale: coverageScale,
+            ),
           ),
-        ),
       ],
     );
 
@@ -261,65 +272,242 @@ class GlassNavPinnedHost extends StatelessWidget {
 }
 
 // =============================================================================
-// Back button
+// Clusters
 // =============================================================================
 
-/// The pinned circular back button.
+/// Which edge of the bar a cluster is anchored to.
 ///
-/// It stays put for the whole transition. When only one side has a back
-/// button — pushing off the root, or popping back to it — it materializes or
-/// dematerializes over its window, like the capsule.
-class _PinnedBackButton extends StatelessWidget {
-  const _PinnedBackButton({required this.state, required this.coverageScale});
+/// Direction-relative, not absolute: the leading cluster sits on the left in
+/// LTR and on the right in RTL, matching the bar's own leading slot.
+enum _BarSide { leading, trailing }
+
+/// One glass shell's worth of items within a cluster.
+///
+/// Mirrors the grouping iOS 26 derives from `UIBarButtonItem.sharesBackground`
+/// and `hidesSharedBackground`: consecutive shared items form one capsule, and
+/// anything else stands alone.
+///
+/// Shared with [GlassAppBar]'s in-route fallback so the two paths group and
+/// size items identically; this library is not exported from the package
+/// barrel.
+@immutable
+class GlassNavBarGroup {
+  /// Creates a group of items sharing one background.
+  const GlassNavBarGroup({required this.items, required this.background});
+
+  /// The items sharing this group's background, leading to trailing.
+  final List<GlassBarActionItem> items;
+
+  /// How this group's background is drawn, taken from its items.
+  final GlassBarItemBackground background;
+
+  /// Whether a glass shell is drawn behind [items].
+  bool get glass => background != GlassBarItemBackground.none;
+
+  /// Height of the shell, and of an icon slot inside it.
+  ///
+  /// A group that shares with nothing is the 44pt circular button iOS 26 draws
+  /// for a lone bar item — at that height the capsule's 22pt radius is clamped
+  /// to exactly half the box, so the rounded rectangle *is* a circle. A shared
+  /// capsule keeps the taller icon-slot height it has always had.
+  double get height => background == GlassBarItemBackground.shared
+      ? GlassNavPinnedMetrics.slot
+      : GlassNavPinnedMetrics.backDiameter;
+
+  /// Width of an icon slot inside the shell, square with [height].
+  double get slotWidth => height;
+
+  /// Press-stretch factor for the shell.
+  double get stretch => background == GlassBarItemBackground.shared
+      ? GlassNavPinnedMetrics.capsuleStretch
+      : GlassNavPinnedMetrics.buttonStretch;
+}
+
+/// Splits a cluster's items into the shells that will actually be drawn.
+///
+/// Runs of [GlassBarItemBackground.shared] items collapse into one group;
+/// every other item stands alone, so it can be given its own shell or none.
+///
+/// Shared with [GlassAppBar]'s in-route fallback; this library is not exported
+/// from the package barrel.
+List<GlassNavBarGroup> groupGlassNavBarItems(List<GlassBarActionItem> items) {
+  final groups = <GlassNavBarGroup>[];
+  var run = <GlassBarActionItem>[];
+
+  void flushRun() {
+    if (run.isEmpty) return;
+    groups.add(GlassNavBarGroup(
+      items: run,
+      background: GlassBarItemBackground.shared,
+    ));
+    run = <GlassBarActionItem>[];
+  }
+
+  for (final item in items) {
+    if (item.background == GlassBarItemBackground.shared) {
+      run.add(item);
+      continue;
+    }
+    flushRun();
+    groups.add(GlassNavBarGroup(items: [item], background: item.background));
+  }
+  flushRun();
+  return groups;
+}
+
+/// The two sides a group interpolates between at [progress].
+///
+/// A glass shell and a bare item cannot morph into one another, because that
+/// would mean fading glass in or out. Dropping the side that is not showing
+/// turns the pair into an exit followed by an entrance, which the single
+/// switch at [GlassNavPinnedMetrics.swapAt] already handles.
+({GlassNavBarGroup? from, GlassNavBarGroup? to}) _resolveGroupSides(
+  GlassNavBarGroup? from,
+  GlassNavBarGroup? to,
+  double progress,
+) {
+  if (from != null && to != null && from.glass != to.glass) {
+    return GlassNavPinnedMetrics.showsIncomingAt(progress)
+        ? (from: null, to: to)
+        : (from: from, to: null);
+  }
+  return (from: from, to: to);
+}
+
+/// Whether a group draws anything at [state]'s progress.
+///
+/// The cluster asks before laying out, so a group that is switched off takes
+/// no gap in the row either. Asked of the materialize phase rather than of a
+/// hard switch: a group part-way through its window is still drawing, and
+/// dropping it there would pop the very transition the window exists to play.
+bool _groupShowsAt(
+  BuildContext context,
+  GlassNavPinnedState state,
+  GlassNavBarGroup? from,
+  GlassNavBarGroup? to,
+) {
+  final sides = _resolveGroupSides(from, to, state.progress);
+  if (sides.from == null && sides.to == null) return false;
+  return GlassNavPinnedHost.phaseFor(
+        context,
+        state,
+        inFrom: sides.from != null,
+        inTo: sides.to != null,
+      ) >
+      0.0;
+}
+
+/// Identity carried by the automatic back button.
+///
+/// Gives it the same standing as an item with an explicit `id`, so a back
+/// button that survives a transition holds its place instead of being matched
+/// positionally against whatever the destination happens to put first.
+const Object _backItemId = #glassNavBackItem;
+
+/// One edge's worth of pinned chrome.
+///
+/// Resolves each route's items for this side — synthesising the automatic back
+/// button as the leading cluster's first item — splits both into groups, and
+/// renders one [_PinnedGroup] per group. Groups are matched across routes by
+/// position, which is enough while a cluster is one shell in every case the
+/// package renders today.
+class _PinnedSide extends StatelessWidget {
+  const _PinnedSide({
+    required this.state,
+    required this.side,
+    required this.coverageScale,
+  });
 
   final GlassNavPinnedState state;
+  final _BarSide side;
 
   /// Retreat factor applied when an unregistered route covers the bar.
   final double coverageScale;
 
+  /// The automatic back button, as an ordinary item.
+  ///
+  /// Built here rather than stored on the registration because its label is
+  /// localised, and that needs a context. It shares with nothing, which is
+  /// what makes a back-only cluster the circle it has always been.
+  GlassBarIconItem _backItem(
+    BuildContext context,
+    GlassNavBarRegistration registration,
+  ) {
+    return GlassBarIconItem(
+      icon: const Icon(CupertinoIcons.back),
+      id: _backItemId,
+      label: Localizations.of<CupertinoLocalizations>(
+            context,
+            CupertinoLocalizations,
+          )?.backButtonLabel ??
+          // The same string DefaultCupertinoLocalizations returns, for apps
+          // that ship no localizations delegates at all.
+          'Back',
+      background: GlassBarItemBackground.separate,
+      onTap: () {
+        final onBack = registration.onBack;
+        if (onBack != null) {
+          onBack();
+        } else {
+          state.topRoute.navigator?.maybePop();
+        }
+      },
+    );
+  }
+
+  /// Everything this side renders for one route, back button included.
+  List<GlassBarActionItem> _itemsFor(
+    BuildContext context,
+    GlassNavBarRegistration registration,
+  ) {
+    if (side == _BarSide.trailing) return registration.actionItems;
+    final leading = registration.leadingItems;
+    if (!registration.showsBackButton) return leading;
+    return [_backItem(context, registration), ...leading];
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Materialized in and out over its own window, in step with the capsule.
-    final phase = GlassNavPinnedHost.phaseFor(
-      context,
-      state,
-      inFrom: state.from.showsBackButton,
-      inTo: state.to.showsBackButton,
-    );
-    if (phase <= 0.0 || coverageScale <= 0.01) return const SizedBox.shrink();
+    if (coverageScale <= 0.01) return const SizedBox.shrink();
 
-    return GlassMaterializeEffect(
-      progress: phase,
-      // The window this button traverses is the incoming one exactly when it
-      // is the incoming route that has it; the profile follows from the same
-      // fact, so a pop reverses both together.
-      profile: state.to.showsBackButton
-          ? GlassMaterializeProfile.entrance
-          : GlassMaterializeProfile.exit,
-      // It sits against the leading edge, so it swells from it.
-      alignment: Alignment.centerLeft,
-      scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
-      child: Transform.scale(
-        scale: coverageScale,
-        alignment: Alignment.centerLeft,
-        child: IgnorePointer(
-          ignoring: !state.settled,
-          child: GlassButton(
-            icon: const Icon(CupertinoIcons.back),
-            width: GlassNavPinnedMetrics.backDiameter,
-            height: GlassNavPinnedMetrics.backDiameter,
-            iconSize: GlassNavPinnedMetrics.iconSize,
-            useOwnLayer: true,
-            label: 'Back',
-            onTap: () {
-              final onBack = state.to.onBack;
-              if (onBack != null) {
-                onBack();
-              } else {
-                state.topRoute.navigator?.maybePop();
-              }
-            },
-          ),
+    final fromGroups = groupGlassNavBarItems(_itemsFor(context, state.from));
+    final toGroups = groupGlassNavBarItems(_itemsFor(context, state.to));
+    final count = math.max(fromGroups.length, toGroups.length);
+    if (count == 0) return const SizedBox.shrink();
+
+    // Anchored at the box's left edge when this side sits on the left, so each
+    // cluster grows away from the bar edge it is pinned to.
+    final ltr = Directionality.of(context) == TextDirection.ltr;
+    final anchoredAtStart = (side == _BarSide.leading) == ltr;
+
+    return Transform.scale(
+      scale: coverageScale,
+      alignment: side == _BarSide.leading
+          ? AlignmentDirectional.centerStart
+          : AlignmentDirectional.centerEnd,
+      child: IgnorePointer(
+        ignoring: !state.settled,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: GlassNavPinnedMetrics.groupGap,
+          children: [
+            for (var i = 0; i < count; i++)
+              if (_groupShowsAt(
+                context,
+                state,
+                i < fromGroups.length ? fromGroups[i] : null,
+                i < toGroups.length ? toGroups[i] : null,
+              ))
+                _PinnedGroup(
+                  // Keyed by position so a surviving shell keeps its element:
+                  // a glass surface that remounts mid-morph pops its backdrop.
+                  key: ValueKey<int>(i),
+                  state: state,
+                  from: i < fromGroups.length ? fromGroups[i] : null,
+                  to: i < toGroups.length ? toGroups[i] : null,
+                  anchoredAtStart: anchoredAtStart,
+                ),
+          ],
         ),
       ),
     );
@@ -367,15 +555,22 @@ class GlassNavActionSlot {
 /// Returned slots are ordered leading-to-trailing in the incoming cluster,
 /// with items that only exist on the outgoing route appended.
 ///
+/// [anchoredAtStart] follows the cluster it is matching: a trailing cluster
+/// counts positions from its trailing edge, a leading one from its leading
+/// edge. Either way an item keeps its place when items are added on the far
+/// side of the cluster from the bar edge it is pinned to.
+///
 /// Public for testing; held back from the barrel's `show` clause.
 @visibleForTesting
 List<GlassNavActionSlot> matchGlassNavActions(
   List<GlassBarActionItem> from,
-  List<GlassBarActionItem> to,
-) {
-  // Slot index counts from the trailing edge, because the cluster is anchored
-  // there — an item keeps its place when items are added on the leading side.
-  int slotOf(int index, int length) => length - 1 - index;
+  List<GlassBarActionItem> to, {
+  bool anchoredAtStart = false,
+}) {
+  // Slot index counts from the anchored edge, because that is the edge the
+  // cluster grows away from.
+  int slotOf(int index, int length) =>
+      anchoredAtStart ? index : length - 1 - index;
 
   final slots = <GlassNavActionSlot>[];
   final usedFrom = <int>{};
@@ -388,7 +583,7 @@ List<GlassNavActionSlot> matchGlassNavActions(
         if (from[i].id == toItem.id) return i;
       }
     }
-    // 2. Positional fallback, counting from the trailing edge. An item
+    // 2. Positional fallback, counting from the anchored edge. An item
     //    carrying a different explicit id is never matched positionally.
     final wanted = slotOf(toIndex, to.length);
     for (var i = 0; i < from.length; i++) {
@@ -452,6 +647,7 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
     required this.widthT,
     required this.positionT,
     required this.height,
+    required this.anchoredAtStart,
     required super.children,
   });
 
@@ -467,12 +663,20 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
   /// Fixed cluster height.
   final double height;
 
+  /// Whether items are placed relative to the box's left edge.
+  ///
+  /// The cluster's width changes across a morph, so only the anchored edge
+  /// holds still — items measured from the other one would drift as the shell
+  /// resized around them.
+  final bool anchoredAtStart;
+
   @override
   RenderObject createRenderObject(BuildContext context) => _RenderPinnedCluster(
         orders: orders,
         widthT: widthT,
         positionT: positionT,
         clusterHeight: height,
+        anchoredAtStart: anchoredAtStart,
       );
 
   @override
@@ -484,7 +688,8 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
       ..orders = orders
       ..widthT = widthT
       ..positionT = positionT
-      ..clusterHeight = height;
+      ..clusterHeight = height
+      ..anchoredAtStart = anchoredAtStart;
   }
 }
 
@@ -497,10 +702,12 @@ class _RenderPinnedCluster extends RenderBox
     required double widthT,
     required double positionT,
     required double clusterHeight,
+    required bool anchoredAtStart,
   })  : _orders = orders,
         _widthT = widthT,
         _positionT = positionT,
-        _clusterHeight = clusterHeight;
+        _clusterHeight = clusterHeight,
+        _anchoredAtStart = anchoredAtStart;
 
   List<_SlotOrder> _orders;
   set orders(List<_SlotOrder> value) {
@@ -527,6 +734,13 @@ class _RenderPinnedCluster extends RenderBox
   set clusterHeight(double value) {
     if (_clusterHeight == value) return;
     _clusterHeight = value;
+    markNeedsLayout();
+  }
+
+  bool _anchoredAtStart;
+  set anchoredAtStart(bool value) {
+    if (_anchoredAtStart == value) return;
+    _anchoredAtStart = value;
     markNeedsLayout();
   }
 
@@ -566,9 +780,9 @@ class _RenderPinnedCluster extends RenderBox
         (from ? toWidths[slot] : fromWidths[slot]) ??
         0.0;
 
-    // Distance from the cluster's trailing edge for each slot, per side.
-    final fromRight = List<double?>.filled(slotCount, null);
-    final toRight = List<double?>.filled(slotCount, null);
+    // Distance from the cluster's anchored edge for each slot, per side.
+    final fromEdge = List<double?>.filled(slotCount, null);
+    final toEdge = List<double?>.filled(slotCount, null);
 
     double layoutSide({required bool from}) {
       final ordered = <int>[];
@@ -586,15 +800,17 @@ class _RenderPinnedCluster extends RenderBox
       for (final slot in ordered) {
         total += widthOf(slot, from: from);
       }
-      // Walk leading to trailing, recording how much sits to the right.
+      // Walk leading to trailing, recording how far each slot sits from the
+      // anchored edge — which is what it consumed on the way there, or what is
+      // left beyond it when the far edge is the anchor.
       var consumed = 0.0;
       for (final slot in ordered) {
         final w = widthOf(slot, from: from);
-        final right = total - consumed - w;
+        final edge = _anchoredAtStart ? consumed : total - consumed - w;
         if (from) {
-          fromRight[slot] = right;
+          fromEdge[slot] = edge;
         } else {
-          toRight[slot] = right;
+          toEdge[slot] = edge;
         }
         consumed += w;
       }
@@ -607,14 +823,14 @@ class _RenderPinnedCluster extends RenderBox
     final width = lerpDouble(fromTotal, toTotal, _widthT)!;
     size = constraints.constrain(Size(width, _clusterHeight));
 
-    // Position every child by its interpolated distance from the trailing edge.
+    // Position every child by its interpolated distance from the anchored edge.
     child = firstChild;
     while (child != null) {
       final data = child.parentData! as _ClusterParentData;
       final slot = data.slot;
-      final right = lerpDouble(
-        fromRight[slot] ?? toRight[slot] ?? 0.0,
-        toRight[slot] ?? fromRight[slot] ?? 0.0,
+      final edge = lerpDouble(
+        fromEdge[slot] ?? toEdge[slot] ?? 0.0,
+        toEdge[slot] ?? fromEdge[slot] ?? 0.0,
         _positionT,
       )!;
       final slotWidth = lerpDouble(
@@ -622,7 +838,7 @@ class _RenderPinnedCluster extends RenderBox
         widthOf(slot, from: false),
         _positionT,
       )!;
-      final x = size.width - right - slotWidth;
+      final x = _anchoredAtStart ? edge : size.width - edge - slotWidth;
       data.offset = Offset(
         x + (slotWidth - child.size.width) / 2.0,
         (size.height - child.size.height) / 2.0,
@@ -744,39 +960,49 @@ class _ClusterChild extends ParentDataWidget<_ClusterParentData> {
 }
 
 // -----------------------------------------------------------------------------
-// Actions capsule
+// One group's shell
 // -----------------------------------------------------------------------------
 
-/// The pinned trailing actions cluster.
+/// One group of a cluster, on both routes, interpolated.
 ///
-/// A single persistent glass shell that sizes itself to a measured cluster.
-/// While both routes have one the shell only animates geometry; when just one
-/// does it materializes in or out around that geometry. The items inside it —
+/// A group that survives a transition keeps one persistent glass shell whose
+/// geometry animates; its element is never remounted mid-morph. While both
+/// routes have the group the shell only animates geometry; when just one does
+/// it materializes in or out around that geometry. The items inside it —
 /// which are not glass — cross-fade freely either way.
-class _PinnedActionsCapsule extends StatefulWidget {
-  const _PinnedActionsCapsule({
+class _PinnedGroup extends StatefulWidget {
+  const _PinnedGroup({
+    super.key,
     required this.state,
-    required this.coverageScale,
+    required this.from,
+    required this.to,
+    required this.anchoredAtStart,
   });
 
   final GlassNavPinnedState state;
 
-  /// Retreat factor applied when an unregistered route covers the bar.
-  final double coverageScale;
+  /// This group on the outgoing route, or null if it only enters.
+  final GlassNavBarGroup? from;
+
+  /// This group on the incoming route, or null if it only exits.
+  final GlassNavBarGroup? to;
+
+  /// Whether items are placed relative to the box's left edge.
+  final bool anchoredAtStart;
 
   @override
-  State<_PinnedActionsCapsule> createState() => _PinnedActionsCapsuleState();
+  State<_PinnedGroup> createState() => _PinnedGroupState();
 }
 
-class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
+class _PinnedGroupState extends State<_PinnedGroup> {
   /// Drives the pull-down of whichever item is currently the menu trigger.
   final GlassMenuController _menu = GlassMenuController();
 
   @override
-  void didUpdateWidget(covariant _PinnedActionsCapsule oldWidget) {
+  void didUpdateWidget(covariant _PinnedGroup oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Dismiss on the first unsettled frame. A route-owned menu goes away with
-    // its route, but this capsule outlives every route it serves, so an open
+    // its route, but this shell outlives every route it serves, so an open
     // menu would otherwise hang over the bar while the page slid out from
     // under it.
     if (oldWidget.state.settled && !widget.state.settled && _menu.isOpen) {
@@ -787,35 +1013,50 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final coverageScale = widget.coverageScale;
-    final fromItems = state.from.actionItems;
-    final toItems = state.to.actionItems;
-
-    if (fromItems.isEmpty && toItems.isEmpty) return const SizedBox.shrink();
-
     final p = state.progress;
+    final showsIncoming = GlassNavPinnedMetrics.showsIncomingAt(p);
+
+    final sides = _resolveGroupSides(widget.from, widget.to, p);
+    final from = sides.from;
+    final to = sides.to;
+    if (from == null && to == null) return const SizedBox.shrink();
+
+    final fromItems = from?.items ?? const <GlassBarActionItem>[];
+    final toItems = to?.items ?? const <GlassBarActionItem>[];
+
     // A symmetric curve, because this same interpolation is walked forwards on
     // a push and backwards on a pop. A directional ease reads correctly one way
     // and snaps the other — an easeIn exit becomes an instant entrance on pop.
     final eased = Curves.easeInOut.transform(p);
 
-    // With one side empty the capsule holds the width it has: collapsing the
+    // With one side empty the shell holds the width it has: collapsing the
     // width would leave a degenerate glass shape on the way out.
     final widthT = fromItems.isEmpty
         ? 1.0
         : toItems.isEmpty
             ? 0.0
             : eased;
+
+    // Drives the materialize window for a group that only one route has. The
+    // side has already dropped groups whose phase is zero, so this is only
+    // ever a partial phase or a full one.
     final phase = GlassNavPinnedHost.phaseFor(
       context,
       state,
       inFrom: fromItems.isNotEmpty,
       inTo: toItems.isNotEmpty,
     );
-    if (phase <= 0.0 || coverageScale <= 0.01) return const SizedBox.shrink();
 
-    final slots = matchGlassNavActions(fromItems, toItems);
-    final showsIncoming = GlassNavPinnedMetrics.showsIncomingAt(p);
+    // Geometry for a side that does not exist comes from the side that does,
+    // so an entering or exiting group holds its shape rather than resizing.
+    final fromGroup = from ?? to!;
+    final toGroup = to ?? from!;
+
+    final slots = matchGlassNavActions(
+      fromItems,
+      toItems,
+      anchoredAtStart: widget.anchoredAtStart,
+    );
 
     // Whichever side is showing owns the menu. A menu can only be opened at
     // rest, where that is always the incoming side, but the trigger is rebuilt
@@ -829,7 +1070,7 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
       }
     }
 
-    // Where each slot sits within each cluster, leading to trailing.
+    // Where each slot sits within each group, leading to trailing.
     final orders = <_SlotOrder>[];
     var fromOrder = 0;
     var toOrder = 0;
@@ -838,7 +1079,7 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
     for (var i = 0; i < slots.length; i++) {
       if (slots[i].toItem != null) toOrders[i] = toOrder++;
     }
-    // Outgoing order follows the outgoing cluster, not the slot list.
+    // Outgoing order follows the outgoing group, not the slot list.
     for (final item in fromItems) {
       final i = slots.indexWhere((s) => identical(s.fromItem, item));
       if (i >= 0) fromOrders[i] = fromOrder++;
@@ -848,13 +1089,13 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
     }
 
     // Cross-fade window for a matched item whose content changed, and
-    // entering / exiting items during a capsule morph.
+    // entering / exiting items during a morph.
     final q = ((p - GlassNavPinnedMetrics.crossFadeStart) /
             (GlassNavPinnedMetrics.crossFadeEnd -
                 GlassNavPinnedMetrics.crossFadeStart))
         .clamp(0.0, 1.0);
 
-    final morphingCapsule = fromItems.isNotEmpty && toItems.isNotEmpty;
+    final morphing = fromItems.isNotEmpty && toItems.isNotEmpty;
 
     final children = <Widget>[];
     for (var i = 0; i < slots.length; i++) {
@@ -866,15 +1107,19 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
       if (fromItem != null) {
         if (toItem == null) {
           // Exiting item: smoothly fade out with (1 - q) across the transition window.
-          // While transition is in-flight, keep mounted in morphing capsules so natural width is preserved.
+          // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
           final visible =
-              state.settled ? !showsIncoming : (morphingCapsule || q < 1.0);
+              state.settled ? !showsIncoming : (morphing || q < 1.0);
           if (visible) {
             children.add(_ClusterChild(
               slot: i,
               isFrom: true,
               opacity: state.settled ? 1.0 : (1.0 - q),
-              child: _ClusterItem(item: fromItem, enabled: false),
+              child: _ClusterItem(
+                item: fromItem,
+                enabled: false,
+                slotWidth: fromGroup.slotWidth,
+              ),
             ));
           }
         } else if (crossFades && (!state.settled ? q < 1.0 : !showsIncoming)) {
@@ -883,7 +1128,11 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
             slot: i,
             isFrom: true,
             opacity: state.settled ? 1.0 : (1.0 - q),
-            child: _ClusterItem(item: fromItem, enabled: false),
+            child: _ClusterItem(
+              item: fromItem,
+              enabled: false,
+              slotWidth: fromGroup.slotWidth,
+            ),
           ));
         }
       }
@@ -891,9 +1140,8 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
       if (toItem != null) {
         if (fromItem == null) {
           // Entering item: smoothly fade in with q across the transition window.
-          // While transition is in-flight, keep mounted in morphing capsules so natural width is preserved.
-          final visible =
-              state.settled ? showsIncoming : (morphingCapsule || q > 0.0);
+          // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
+          final visible = state.settled ? showsIncoming : (morphing || q > 0.0);
           if (visible) {
             children.add(_ClusterChild(
               slot: i,
@@ -902,6 +1150,7 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
               child: _ClusterItem(
                 item: toItem,
                 enabled: state.settled,
+                slotWidth: toGroup.slotWidth,
                 onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
               ),
             ));
@@ -915,6 +1164,7 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
             child: _ClusterItem(
               item: toItem,
               enabled: state.settled,
+              slotWidth: toGroup.slotWidth,
               onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
             ),
           ));
@@ -924,39 +1174,46 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
 
     if (children.isEmpty) return const SizedBox.shrink();
 
+    final cluster = _PinnedCluster(
+      orders: orders,
+      widthT: widthT,
+      positionT: eased,
+      height: lerpDouble(fromGroup.height, toGroup.height, eased)!,
+      anchoredAtStart: widget.anchoredAtStart,
+      children: children,
+    );
+
     // Both wrappers are unconditional, even at rest and even with no menu
-    // item: inserting or removing either would remount the capsule's element,
+    // item: inserting or removing either would remount the group's element,
     // and a glass shell that remounts mid-morph pops its backdrop. At a phase
     // of 1.0 the effect is paint-neutral, and a closed GlassMenu adds only
     // inert wrappers and mounts no overlay, so the resting case costs nothing.
     return GlassMaterializeEffect(
       progress: phase,
+      // The window this group traverses is the incoming one exactly when it is
+      // the incoming route that has it; the profile follows from the same
+      // fact, so a pop reverses both together.
       profile: toItems.isNotEmpty
           ? GlassMaterializeProfile.entrance
           : GlassMaterializeProfile.exit,
-      // Anchored to the trailing edge, so it swells from it.
-      alignment: Alignment.centerRight,
+      // It swells from the bar edge its cluster is pinned to.
+      alignment: widget.anchoredAtStart
+          ? Alignment.centerLeft
+          : Alignment.centerRight,
       scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
-      child: Transform.scale(
-        scale: coverageScale,
-        alignment: Alignment.centerRight,
-        child: IgnorePointer(
-          ignoring: !state.settled,
-          child: GlassMenu(
-            controller: _menu,
-            items: menuItem?.menuItems ?? const <Widget>[],
-            menuAlignment: menuItem?.menuAlignment,
-            // The fallback is never read: with no menu item there is no trigger
-            // to open one. It matches GlassMenu's own default.
-            menuWidth: menuItem?.menuWidth ?? 200,
-            triggerBuilder: (context, _) => _buildCapsule(
-              orders: orders,
-              widthT: widthT,
-              positionT: eased,
-              children: children,
-            ),
-          ),
-        ),
+      child: GlassMenu(
+        controller: _menu,
+        items: menuItem?.menuItems ?? const <Widget>[],
+        menuAlignment: menuItem?.menuAlignment,
+        // The fallback is never read: with no menu item there is no trigger
+        // to open one. It matches GlassMenu's own default.
+        menuWidth: menuItem?.menuWidth ?? 200,
+        triggerBuilder: (context, _) => toGroup.glass
+            ? _buildShell(
+                cluster: cluster,
+                stretch: lerpDouble(fromGroup.stretch, toGroup.stretch, eased)!,
+              )
+            : cluster,
       ),
     );
   }
@@ -964,14 +1221,13 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
   /// The glass shell itself, sized by the measured cluster.
   ///
   /// Split out so it can be handed to [GlassMenu.triggerBuilder] — the menu
-  /// morphs the whole capsule, not the tapped item's slot, matching iOS 26's
+  /// morphs the whole shell, not the tapped item's slot, matching iOS 26's
   /// `GlassEffectContainer`.
-  Widget _buildCapsule({
-    required List<_SlotOrder> orders,
-    required double widthT,
-    required double positionT,
-    required List<Widget> children,
-  }) {
+  ///
+  /// The radius is the capsule's in every case: clamped to half the box, it is
+  /// a capsule at the shared-cluster height and exactly a circle at the height
+  /// a group that shares with nothing uses.
+  Widget _buildShell({required Widget cluster, required double stretch}) {
     return GlassButton.custom(
       onTap: () {},
       shape: const LiquidRoundedRectangle(
@@ -981,19 +1237,11 @@ class _PinnedActionsCapsuleState extends State<_PinnedActionsCapsule> {
       // sizes to its content.
       width: null,
       height: null,
-      stretch: GlassNavPinnedMetrics.capsuleStretch,
+      stretch: stretch,
       useOwnLayer: true,
       canRequestFocus: false,
       excludeFromSemantics: true,
-      child: ClipRect(
-        child: _PinnedCluster(
-          orders: orders,
-          widthT: widthT,
-          positionT: positionT,
-          height: GlassNavPinnedMetrics.slot,
-          children: children,
-        ),
-      ),
+      child: ClipRect(child: cluster),
     );
   }
 }
@@ -1006,11 +1254,15 @@ class _ClusterItem extends StatelessWidget {
   const _ClusterItem({
     required this.item,
     required this.enabled,
+    required this.slotWidth,
     this.onMenuTap,
   });
 
   final GlassBarActionItem item;
   final bool enabled;
+
+  /// Width an icon is padded to, matching the height of the group it sits in.
+  final double slotWidth;
 
   /// Opens the capsule's pull-down.
   ///
@@ -1025,11 +1277,11 @@ class _ClusterItem extends StatelessWidget {
 
     Widget content = switch (item) {
       GlassBarIconItem(:final icon) => SizedBox(
-          width: GlassNavPinnedMetrics.slot,
+          width: slotWidth,
           child: Center(child: icon),
         ),
       GlassBarMenuItem(:final icon) => SizedBox(
-          width: GlassNavPinnedMetrics.slot,
+          width: slotWidth,
           child: Center(child: icon),
         ),
       GlassBarCustomItem(:final child) => child,
