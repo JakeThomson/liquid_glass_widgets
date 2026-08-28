@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as barrel;
 import 'package:liquid_glass_widgets/widgets/surfaces/glass_bar_item.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/shared/glass_nav_pinned_host.dart';
 
@@ -201,6 +202,18 @@ void main() {
       // Passive custom content still exposes a callable handler, so nothing
       // downstream has to null-check its way around a status readout.
       expect(passive.onTap, returnsNormally);
+    });
+  });
+
+  group('barrel export', () {
+    test('GlassNavPinnedMetrics is reachable from the package barrel', () {
+      // A bar that is not a GlassAppBar aligns its in-route chrome to these
+      // numbers. `show` works per declaration, so one reference guards the
+      // whole class: drop the export and this file stops compiling.
+      expect(
+        barrel.GlassNavPinnedMetrics.backDiameter,
+        GlassNavPinnedMetrics.backDiameter,
+      );
     });
   });
 }

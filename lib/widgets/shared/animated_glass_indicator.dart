@@ -280,6 +280,14 @@ class AnimatedGlassIndicator extends StatelessWidget {
               _settingsDefaults.platformViewFallbackColor
           ? override.platformViewFallbackColor
           : null,
+      // Forwarded for the same reason as the two above: without it an
+      // indicator over a platform view silently ignores the caller's
+      // PlatformViewGlassMode and renders its body opaque (black), while
+      // every other surface on the same bar honours it.
+      platformViewMode:
+          override.platformViewMode != _settingsDefaults.platformViewMode
+              ? override.platformViewMode
+              : null,
     );
   }
 

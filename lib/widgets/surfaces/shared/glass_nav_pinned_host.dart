@@ -18,6 +18,13 @@ import '../glass_navigation_shell.dart';
 /// Geometry and timing constants for the pinned chrome.
 ///
 /// Grouped here so the choreography can be tuned in one place.
+///
+/// The geometry members are exported so a bar that is not a [GlassAppBar] can
+/// draw its in-route chrome to the same numbers; without that, the chrome
+/// resizes at the moment the shell takes it over. The timing members
+/// ([crossFadeStart], [crossFadeEnd], [swapAt], [capsuleStretch]) and the
+/// helpers that read them describe the shell's own choreography and may be
+/// retuned — align to the geometry, not to these.
 abstract final class GlassNavPinnedMetrics {
   /// Width and height of one icon slot inside the actions capsule.
   ///
@@ -325,7 +332,7 @@ class _PinnedBackButton extends StatelessWidget {
 
 /// One item's place in the morph between two routes' action clusters.
 ///
-/// Public for testing; this library is not exported from the package barrel.
+/// Public for testing; held back from the barrel's `show` clause.
 @immutable
 @visibleForTesting
 class GlassNavActionSlot {
@@ -360,7 +367,7 @@ class GlassNavActionSlot {
 /// Returned slots are ordered leading-to-trailing in the incoming cluster,
 /// with items that only exist on the outgoing route appended.
 ///
-/// Public for testing; this library is not exported from the package barrel.
+/// Public for testing; held back from the barrel's `show` clause.
 @visibleForTesting
 List<GlassNavActionSlot> matchGlassNavActions(
   List<GlassBarActionItem> from,

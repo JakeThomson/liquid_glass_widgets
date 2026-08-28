@@ -9,6 +9,7 @@ export 'src/renderer/liquid_glass_renderer.dart'
     show
         AnchorStretchSettings,
         LiquidGlassSettings,
+        PlatformViewGlassMode,
         LiquidGlassLayer,
         LiquidGlassBlendGroup,
         GlassGlow,
@@ -124,6 +125,10 @@ export 'widgets/surfaces/glass_navigation_shell.dart'
         GlassNavigationShell,
         GlassNavigationShellState,
         GlassNavBarRegistration;
+// Geometry a bar that is not a GlassAppBar aligns its in-route chrome to.
+export 'widgets/surfaces/shared/glass_nav_pinned_host.dart'
+    show GlassNavPinnedMetrics;
+export 'widgets/surfaces/glass_pinned_bar_chrome.dart';
 export 'widgets/surfaces/glass_large_title.dart';
 export 'widgets/shared/glass_isolation_scope.dart';
 export 'widgets/surfaces/glass_scaffold.dart';
