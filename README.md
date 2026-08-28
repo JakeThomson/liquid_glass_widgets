@@ -457,14 +457,29 @@ and when you tap the minimized circle, and stays put when the content is too
 short to scroll. Each tab owns its own scroll view on iOS — pass the current
 tab's controller and call `expand()` from `onTabSelected` to match.
 
-A `bottomAccessory` does not follow the bar on its own — pass
-`GlassTabBarAccessoryPlacement.inline` in the same rebuild the minimize lands
-in, and it animates down into the bar. Note that the bar positions your
-accessory but paints no surface behind it, so give it its own glass.
+A `bottomAccessory` with no explicit `bottomAccessoryPlacement` moves inline as
+the bar minimizes, the way iOS animates a `tabViewBottomAccessory` down into
+the bar. Read the placement inside your accessory to swap its layout, and note
+that the bar positions the accessory but does not paint a surface behind it —
+give it its own glass. Pass `GlassTabBarAccessoryPlacement.expanded` to pin it.
 
 Minimizing is an iPhone-only behaviour on iOS — the iPad tab bar is a top bar
 and never minimizes. This package does not gate on platform or screen size, so
 if you want that parity, choose a different surface for the regular size class.
+
+Where you cannot reach the scroll view's controller — an app-level scaffold
+wrapping arbitrary screen bodies, each tab owning a different one — drive the
+controller from scroll notifications instead and leave `scrollController` off:
+
+```dart
+NotificationListener<ScrollNotification>(
+  onNotification: (notification) {
+    _minimize.handleNotification(notification);
+    return false;
+  },
+  child: body,
+)
+```
 
 Without a controller, `minimized` stays a plain controlled prop and you decide
 when to flip it.
