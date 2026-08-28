@@ -42,6 +42,36 @@ CupertinoApp.router(
 With go_router, use `CupertinoPage` in your `pageBuilder`s to keep the native
 slide and back-swipe.
 
+### If your bar is not a `GlassAppBar`
+
+The shell hoists chrome above the `Navigator` and redraws it at
+`GlassNavPinnedMetrics`. A bar that draws its own back button and actions —
+an app with an existing design system adopting pinning incrementally — must
+use the same numbers, or the chrome visibly resizes and shifts at the moment
+of hand-over:
+
+```dart
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
+SizedBox(
+  height: GlassNavPinnedMetrics.toolbarHeight,      // 44
+  child: Padding(
+    padding: const EdgeInsets.symmetric(
+      horizontal: GlassNavPinnedMetrics.horizontalPadding, // 8
+    ),
+    child: ...,
+  ),
+);
+```
+
+The two clusters are **not** the same size: the back button is
+`backDiameter` (44) while each action slot is `slot` (46). Mirroring both
+takes two numbers.
+
+Align to the geometry members only. `crossFadeStart`, `crossFadeEnd`,
+`swapAt` and `capsuleStretch` describe the shell's own choreography and may be
+retuned.
+
 ## Declaring a screen's bar items
 
 Screens opt in with the `GlassAppBar.pinned` constructor, declaring items as
