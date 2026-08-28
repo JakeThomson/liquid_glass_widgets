@@ -214,16 +214,47 @@ enabled: ModalRoute.of(context)?.impliesAppBarDismissal ?? false,
 | Situation | Behaviour |
 |---|---|
 | Push/pop between participating routes | Chrome pinned; capsule width and item positions interpolate; changed icons cross-fade |
-| Interactive back-swipe | Same interpolation, scrubbed by the gesture; cancelled swipes rebound |
-| Destination has no actions (or no back button) | The cluster switches off/on once at the transition midpoint — appearing and disappearing are deliberately not animated |
-| Leading changes between a glass item and a bare one | Same single switch at the midpoint: glass cannot cross-fade into something that is not glass |
+| Interactive back-swipe | The page and its title track the finger, but the pinned chrome holds still until the gesture commits — then plays its whole transition over the travel that is left. An abandoned swipe leaves the chrome untouched, with nothing to rebound |
+| Destination has no actions (or no back button) | The cluster materializes or dematerializes — a fade and gaussian blur with a subtle scale, mirroring SwiftUI's `glassEffectTransition(.materialize)` — over a window straddling the transition midpoint |
+| Leading changes between a glass item and a bare one | The same materialize window, not a cross-fade: glass cannot cross-fade into something that is not glass |
 | Tap while a transition runs | Ignored. The chrome is showing a blend of two routes' items, so a tap would fire an action the user can no longer see |
 | Navigation starts with a menu open | The menu is dismissed; the capsule outlives the route, so nothing else would |
 | Non-participating route or modal sheet on top | Chrome retreats with the covering route's transition and returns on pop |
 | No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: the same leading and trailing groups, drawn inside the bar |
 
-Glass opacity is never animated (a glass surface's backdrop pass renders fully
-or not at all); only geometry animates, and only item *contents* cross-fade.
+A glass surface's backdrop pass still renders fully or not at all, so glass is
+never faded with an ancestor `Opacity`. A cluster that appears or disappears
+instead dissolves through the shader's own visibility uniforms — the one fade
+the backdrop pass honours — which is what makes the materialize effect
+possible. A cluster present on *both* routes never dissolves at all: it keeps
+one persistent glass shell whose geometry animates, and only its item
+*contents* cross-fade.
+
+### `effectTransition`
+
+`GlassNavigationShell.effectTransition` selects the effect:
+
+```dart
+GlassNavigationShell(
+  effectTransition: GlassEffectTransition.identity, // no dissolve
+  child: child!,
+)
+```
+
+`GlassEffectTransition.materialize` is the default. `identity` restores the
+single switch at the transition midpoint that shipped in 1.1.0. Reduce Motion
+selects `identity` automatically, so the effect never needs to be disabled for
+accessibility.
+
+It is set on the shell rather than per screen because the choreography spans
+two routes: with a knob on each bar, a push between routes that disagree would
+have no answer for which one wins.
+
+The same effect is available on any glass, in or out of a bar, as
+[`GlassMaterialize`](../lib/widgets/effects/glass_materialize.dart) (the
+`AnimatedOpacity`-style implicit form) and `GlassMaterializeTransition` (the
+`FadeTransition`-style explicit form, which also works as an
+`AnimatedSwitcher.transitionBuilder`).
 
 ## Direction
 
@@ -256,7 +287,9 @@ that future.
   with `UIBarButtonItem.visibilityPriority` and `ToolbarOverflowMenu`; nothing
   here clamps or overflows yet.
 - Changing a pinned bar's `actions` in place via `setState` swaps the capsule's
-  contents without animating the resize.
+  contents without animating the resize, and without materializing an item
+  that appears or disappears. The effect is driven by route progress, and at
+  rest there is none to drive it.
 - One navigator per shell; nested navigators (for example go_router's
   `StatefulShellRoute` branches) are not yet supported.
 - RTL layouts are untested. The clusters themselves are now placed with

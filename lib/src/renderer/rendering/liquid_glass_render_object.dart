@@ -313,14 +313,14 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           // Slot 21: uPinchStrength
           ..setFloatUniforms(initialIndex: 19, (value) {
             value
-              ..setFloat(settings.whitenStrength)
+              ..setFloat(settings.effectiveWhitenStrength)
               ..setFloat(settings.whitenGated ? 1.0 : 0.0)
               ..setFloat(settings.pinchStrength);
           })
           // Slots 22-25: uBackgroundFallback (straight RGBA).
           ..setFloatUniforms(initialIndex: 22, (value) {
             final b = settings.platformViewFallbackColor ??
-                settings.backerColor ??
+                settings.effectiveBackerColor ??
                 const Color(0x00000000);
             value.setFloats(<double>[b.r, b.g, b.b, b.a]);
           })
@@ -331,10 +331,10 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
           ..setFloatUniforms(initialIndex: 28, (value) {
             value.setFloats([
-              settings.ambientRim * scale,
-              settings.fresnelStrength,
+              settings.effectiveAmbientRim * scale,
+              settings.effectiveFresnelStrength,
               scale,
-              settings.edgeAbsorption,
+              settings.effectiveEdgeAbsorption,
             ]);
           })
           // Slot 32: uPlatformViewMode.
@@ -461,13 +461,13 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       })
       ..setFloatUniforms(initialIndex: 19, (value) {
         value
-          ..setFloat(settings.whitenStrength)
+          ..setFloat(settings.effectiveWhitenStrength)
           ..setFloat(settings.whitenGated ? 1.0 : 0.0)
           ..setFloat(settings.pinchStrength);
       })
       ..setFloatUniforms(initialIndex: 22, (value) {
         final b = settings.platformViewFallbackColor ??
-            settings.backerColor ??
+            settings.effectiveBackerColor ??
             const Color(0x00000000);
         value.setFloats(<double>[b.r, b.g, b.b, b.a]);
       })
@@ -478,10 +478,10 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
       ..setFloatUniforms(initialIndex: 28, (value) {
         value.setFloats([
-          settings.ambientRim * scale,
-          settings.fresnelStrength,
+          settings.effectiveAmbientRim * scale,
+          settings.effectiveFresnelStrength,
           scale,
-          settings.edgeAbsorption,
+          settings.effectiveEdgeAbsorption,
         ]);
       })
       // Slot 32: uPlatformViewMode.

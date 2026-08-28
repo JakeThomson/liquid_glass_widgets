@@ -242,6 +242,16 @@ class LiquidGlassSettings {
   /// Defaults to `1.0`.
   final double fresnelStrength;
 
+  /// The effective Fresnel strength taking visibility into account.
+  ///
+  /// The rim is the last thing to go when a surface fades, so it has to fade
+  /// with it: left at full strength it outlives every other channel and
+  /// strands a bright outline where the glass used to be.
+  double get effectiveFresnelStrength => fresnelStrength * visibility;
+
+  /// The effective ambient rim taking visibility into account.
+  double get effectiveAmbientRim => ambientRim * visibility;
+
   /// The effective ambient strength taking visibility into account.
   double get effectiveAmbientStrength => ambientStrength * visibility;
 
@@ -314,13 +324,30 @@ class LiquidGlassSettings {
   /// Has no effect in dark mode.
   final List<BoxShadow>? shadow;
 
+  /// The effective elevation taking visibility into account.
+  double get effectiveShadowElevation => shadowElevation * visibility;
+
   /// Returns the effective shadow list for light-mode rendering.
   ///
-  /// Resolves [shadow] (full override) vs [shadowElevation] (scalar).
-  /// Returns an empty list when the shadow is effectively disabled.
+  /// Resolves [shadow] (full override) vs [shadowElevation] (scalar), and
+  /// scales both by [visibility] — a surface that is fading out has to take
+  /// its shadow with it, or the elevation stays at full strength underneath
+  /// vanishing glass and then snaps away with it.
   List<BoxShadow> get effectiveShadow {
-    if (shadow != null) return shadow!;
-    return GlassShadow.scaled(shadowElevation);
+    if (shadow != null) {
+      if (visibility >= 1.0) return shadow!;
+      return <BoxShadow>[
+        for (final s in shadow!)
+          BoxShadow(
+            color: s.color.withValues(alpha: s.color.a * visibility),
+            offset: s.offset,
+            blurRadius: s.blurRadius,
+            spreadRadius: s.spreadRadius,
+            blurStyle: s.blurStyle,
+          ),
+      ];
+    }
+    return GlassShadow.scaled(effectiveShadowElevation);
   }
 
   /// Light-mode whitening ("legibility veil") amount, from 0 to 1.
@@ -339,6 +366,13 @@ class LiquidGlassSettings {
   ///
   /// Defaults to 0.0, which disables whitening entirely.
   final double whitenStrength;
+
+  /// The effective whitening taking visibility into account.
+  ///
+  /// The veil is opaque paint laid over the finished glass, so a surface
+  /// fading out has to take it with it — left raw it survives the glass and
+  /// leaves a white patch behind.
+  double get effectiveWhitenStrength => whitenStrength * visibility;
 
   /// Whether [whitenStrength] is luminance-gated (true, the default) or
   /// applied uniformly (false).
@@ -365,6 +399,9 @@ class LiquidGlassSettings {
   /// - `0.12` — subtle physical darkening (dark-mode depth effect)
   /// - `0.3` — pronounced rim darkening (thick or frosted glass look)
   final double edgeAbsorption;
+
+  /// The effective meniscus darkening taking visibility into account.
+  double get effectiveEdgeAbsorption => edgeAbsorption * visibility;
 
   /// Internal shader transport — the animated pinch strength for the concave
   /// lens effect on indicator pills.
@@ -427,6 +464,15 @@ class LiquidGlassSettings {
   ///
   /// Defaults to null: no backer, and no change to existing rendering.
   final Color? backerColor;
+
+  /// The effective backer taking visibility into account.
+  ///
+  /// Like the veil and the shadow, the pad is painted outside the shader and
+  /// would otherwise stay at full strength while the glass in front of it
+  /// dissolves, leaving a bare dimmed disc.
+  Color? get effectiveBackerColor => backerColor == null || visibility >= 1.0
+      ? backerColor
+      : backerColor!.withValues(alpha: backerColor!.a * visibility);
 
   /// Solid stand-in color the lens composites where the engine can't capture the
   /// backdrop — i.e. behind a PlatformView past the glass, which the lens would

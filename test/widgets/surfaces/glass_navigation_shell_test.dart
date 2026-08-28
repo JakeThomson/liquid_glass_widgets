@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/widgets/effects/shared/glass_materialize_effect.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/shared/glass_nav_pinned_host.dart';
 
 void main() {
@@ -26,6 +27,36 @@ void main() {
   Future<void> settle(WidgetTester tester) async {
     await tester.pumpAndSettle();
     await tester.pump();
+  }
+
+  /// How materialized the pinned actions capsule is this frame, 0 to 1.
+  ///
+  /// Reads the effect wrapper the host puts around the capsule; a capsule
+  /// that is not mounted at all reads as 0.
+  double capsulePhase(WidgetTester tester) {
+    final effects = find.descendant(
+      of: find.byType(GlassNavPinnedHost),
+      matching: find.byType(GlassMaterializeEffect),
+    );
+    for (final element in effects.evaluate()) {
+      final effect = element.widget as GlassMaterializeEffect;
+      if (effect.alignment == Alignment.centerRight) return effect.progress;
+    }
+    return 0.0;
+  }
+
+  /// How materialized the pinned back button is this frame, 0 to 1; -1 when
+  /// it is not mounted at all.
+  double backPhase(WidgetTester tester) {
+    final effects = find.descendant(
+      of: find.byType(GlassNavPinnedHost),
+      matching: find.byType(GlassMaterializeEffect),
+    );
+    for (final element in effects.evaluate()) {
+      final effect = element.widget as GlassMaterializeEffect;
+      if (effect.alignment == Alignment.centerLeft) return effect.progress;
+    }
+    return -1.0;
   }
 
   /// The back button drawn by the shell, as opposed to any in-route fallback.
@@ -330,6 +361,230 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a capsule with nowhere to go dematerializes, it does not pop',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+      )));
+      await settle(tester);
+
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      // Part-way into the push the outgoing capsule must still be mounted and
+      // mid-dissolve: a phase of exactly 0 or 1 here is the old hard switch.
+      await tester.pump(const Duration(milliseconds: 120));
+      final phase = capsulePhase(tester);
+      expect(phase, greaterThan(0.0));
+      expect(phase, lessThan(1.0));
+
+      await settle(tester);
+      expect(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.add),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('a settled capsule sits at a paint-neutral phase',
+        (tester) async {
+      // The effect wraps the capsule unconditionally so its glass shell is
+      // never remounted as a transition starts; at rest it must be inert.
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+      )));
+      await settle(tester);
+      expect(capsulePhase(tester), 1.0);
+    });
+
+    testWidgets('the chrome holds still under an uncommitted back-swipe',
+        (tester) async {
+      // Dragging is not deciding. Until the pop commits there is no answer to
+      // which route's chrome wins, so scrubbing the dissolve under the finger
+      // reads as the bar guessing — and a swipe the user abandons should
+      // never have half-dissolved anything.
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+      )));
+      await settle(tester);
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      await settle(tester);
+
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final resting = capsulePhase(tester);
+
+      final gesture = await tester.startGesture(const Offset(2, 300));
+      await gesture.moveTo(Offset(width * 0.48, 300));
+      await tester.pump();
+      expect(
+        capsulePhase(tester),
+        resting,
+        reason: 'the capsule must not move while the finger is still down',
+      );
+
+      // Committing releases it: the hold lifts and the chrome transitions.
+      await gesture.moveTo(Offset(width * 0.9, 300));
+      await gesture.up();
+
+      // It must play, and play long enough to see. Two regressions live here:
+      //
+      // The hold was keyed on `userGestureInProgress`, which Cupertino leaves
+      // true until the commit animation has finished, so the chrome stayed
+      // frozen for the whole pop and snapped at the end.
+      //
+      // Then, re-timed over the route's remaining travel, it technically
+      // animated but Cupertino sizes a committed swipe by how far the drag
+      // got — a late release left about five frames, which reads as no
+      // transition at all. Counting frames is what tells those apart; a bare
+      // "did it move" assertion passes on both.
+      var moving = 0;
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final phase = capsulePhase(tester);
+        if (phase > resting && phase < 1.0) moving++;
+      }
+      expect(moving, greaterThanOrEqualTo(6),
+          reason: 'the capsule must animate across the commit for long enough '
+              'to be seen, not snap or flash past in a couple of frames');
+
+      await settle(tester);
+      expect(capsulePhase(tester), 1.0,
+          reason: 'the root capsule is back once the pop commits');
+    });
+
+    testWidgets('a cancelled back-swipe leaves the chrome exactly as it was',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+      )));
+      await settle(tester);
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      await settle(tester);
+
+      // Scrub deep past the point the dissolve window used to open, then drag
+      // back to the edge so the gesture is cancelled rather than committed.
+      // Because the chrome never started moving there is nothing to rewind:
+      // it reads the same at every point of an abandoned swipe.
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final resting = capsulePhase(tester);
+      final gesture = await tester.startGesture(const Offset(2, 300));
+      await gesture.moveTo(Offset(width * 0.48, 300));
+      await tester.pump();
+      expect(capsulePhase(tester), resting);
+
+      await gesture.moveTo(const Offset(4, 300));
+      await tester.pump();
+      expect(capsulePhase(tester), resting);
+      await gesture.up();
+      await settle(tester);
+      expect(capsulePhase(tester), resting,
+          reason: 'an abandoned swipe leaves the chrome untouched');
+      // Back where it started: the destination still has no capsule.
+      expect(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.add),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('reduce motion switches instead of dissolving', (tester) async {
+      await tester.pumpWidget(CupertinoApp(
+        builder: (context, child) => GlassAccessibilityScope(
+          reduceMotion: true,
+          child: GlassNavigationShell(child: child!),
+        ),
+        home: _Screen(
+          title: 'Root',
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              onTap: () {},
+            ),
+          ],
+        ),
+      ));
+      await settle(tester);
+
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      await tester.pump(const Duration(milliseconds: 120));
+      // Identity: fully present or fully gone, never in between.
+      expect(capsulePhase(tester), anyOf(0.0, 1.0));
+    });
+
+    testWidgets('GlassEffectTransition.identity restores the hard switch',
+        (tester) async {
+      await tester.pumpWidget(CupertinoApp(
+        builder: (context, child) => GlassNavigationShell(
+          effectTransition: GlassEffectTransition.identity,
+          child: child!,
+        ),
+        home: _Screen(
+          title: 'Root',
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              onTap: () {},
+            ),
+          ],
+        ),
+      ));
+      await settle(tester);
+
+      await _push(tester, const _Screen(title: 'Empty', actions: []));
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(capsulePhase(tester), anyOf(0.0, 1.0));
+    });
+
+    testWidgets('entering chrome never flashes solid before it materializes',
+        (tester) async {
+      // Regression: a route's `animation` is a ProxyAnimation reporting itself
+      // complete at 1.0 until the navigator attaches the real controller,
+      // which happens after the first build — the build that registers the
+      // bar. The shell read that as "fully entered" and painted the incoming
+      // back button solid for one frame before it dropped back and animated.
+      await tester.pumpWidget(shellApp(const _Screen(
+        title: 'Root',
+        actions: [],
+      )));
+      await settle(tester);
+
+      await _push(tester, const _Screen(title: 'Detail', actions: []));
+
+      var sawRamp = false;
+      for (var i = 0; i < 30; i++) {
+        await tester
+            .pump(i == 0 ? Duration.zero : const Duration(milliseconds: 16));
+        final phase = backPhase(tester);
+        if (phase > 0.0 && phase < 1.0) sawRamp = true;
+        // Before the ramp has started the button must be absent, never solid.
+        if (!sawRamp) {
+          expect(
+            phase,
+            lessThan(1.0),
+            reason: 'frame $i painted the back button solid before the '
+                'transition had begun',
+          );
+        }
+      }
+      expect(sawRamp, isTrue, reason: 'the back button should materialize');
     });
 
     testWidgets('chrome retreats under a non-participating route',

@@ -928,7 +928,7 @@ class _RenderLightweightGlass extends RenderProxyBox
     // apply. The gain calibrates the veil so a single whitenStrength value
     // reads close to the Premium path's gated whiten at the same value.
     final double whitenStrength =
-        _settings.whitenStrength.clamp(0.0, 1.0).toDouble();
+        _settings.effectiveWhitenStrength.clamp(0.0, 1.0).toDouble();
     const double kWhitenVeilGain = 1.5;
     final double whitenVeil =
         (whitenStrength * kWhitenVeilGain).clamp(0.0, 1.0).toDouble();
