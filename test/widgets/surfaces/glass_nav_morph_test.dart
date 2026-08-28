@@ -147,6 +147,35 @@ void main() {
       expect(scales.last, 1.0);
     });
 
+    testWidgets('an unchanged cluster sits perfectly still', (tester) async {
+      // Same const icon on both routes: identifier-free, but const
+      // canonicalisation makes it the same instance, so nothing enters,
+      // exits or cross-fades — the native bar keeps such a cluster frozen.
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'From',
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+        ],
+        next: _Screen(
+          title: 'To',
+          actions: [
+            GlassBarItem.icon(
+                icon: const Icon(CupertinoIcons.add), onTap: () {}),
+          ],
+        ),
+      )));
+      await tester.pumpAndSettle();
+      await tester.pump();
+
+      final samples = await trace(tester);
+      for (final (p, w, scale) in samples) {
+        expect(scale, closeTo(1.0, 1e-9),
+            reason: 'an unchanged cluster must not pulse (p=$p)');
+        expect(w, GlassNavPinnedMetrics.slot,
+            reason: 'an unchanged cluster must not resize (p=$p)');
+      }
+    });
+
     testWidgets('a pop leads with the swell, not the settle', (tester) async {
       await tester.pumpWidget(shellApp(_Screen(
         title: 'From',

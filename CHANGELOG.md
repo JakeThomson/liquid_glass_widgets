@@ -44,6 +44,8 @@
 
 ## Bug Fixes
 
+- **Matched icons no longer spuriously cross-fade:** Cross-fade detection compared item content by reference, on the documented assumption that identical `const Icon(...)` expressions share one canonical instance — which does not reliably hold, so an icon matched across a push was quietly cross-faded with itself on every transition. Invisible while the pixels were identical, but the new morph keys its gel and glyph blur off the same signal, which turned the phantom change into a visible bounce on clusters that had not changed at all. Icons are now compared by value (glyph, size, colour, key); other content stays on reference identity.
+
 - **`GlassTabBarMinimizeController` drivable without a `ScrollController`:** The state machine's only controller-free entry point, `handleSample`, was annotated `@visibleForTesting`, so a host that observes scrolling with a `NotificationListener` — an app-level scaffold wrapping arbitrary screen bodies, which cannot reach whichever `ScrollController` the current screen owns — could not use the controller at all. The annotation is gone, and a new `handleNotification(ScrollNotification)` drives the minimize from notifications directly, carrying the `UserScrollNotification` direction across the updates that follow it. Leave `GlassTabBar.minimizable`'s `scrollController` off when driving it this way; the example app's minimizable bar demo switches between both sources.
 
 Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize transitions, pinned navigation chrome, leading API and per-item glass backgrounds, scroll-to-minimize controller improvements, bottom accessory inline behaviour, and metrics export (#240, #238, #236, #239, #233, #234).

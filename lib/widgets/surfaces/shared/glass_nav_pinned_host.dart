@@ -679,7 +679,25 @@ class GlassNavActionSlot {
   bool get crossFades {
     final from = fromItem;
     final to = toItem;
-    return from != null && to != null && from.content != to.content;
+    return from != null && to != null && !_sameContent(from.content, to.content);
+  }
+
+  /// Whether two content widgets draw the same thing.
+  ///
+  /// Reference identity first — but identical `const Icon(...)` expressions
+  /// are not reliably canonicalised into one instance, so the overwhelmingly
+  /// common case of an icon is compared by value: two icons drawing the same
+  /// glyph are the same content. Anything else stays conservative on
+  /// identity; a spurious cross-fade of identical pixels is invisible, but
+  /// the morph gel keying off it is not.
+  static bool _sameContent(Widget a, Widget b) {
+    if (identical(a, b)) return true;
+    return a is Icon &&
+        b is Icon &&
+        a.icon == b.icon &&
+        a.size == b.size &&
+        a.color == b.color &&
+        a.key == b.key;
   }
 }
 
@@ -1235,14 +1253,25 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     final springT = GlassNavMorphCurve.instance.transform(morphT);
     final clampedT = springT.clamp(0.0, 1.0);
 
+    final slots = matchGlassNavActions(
+      fromItems,
+      toItems,
+      anchoredAtStart: widget.anchoredAtStart,
+    );
+
     // The gel: a swell pulse inflates the whole shell early — height, radius
     // and glyphs together, as real geometry, the way stretching any glass in
     // this package carries its contents with it — and the spring's landing
     // overshoot squeezes it back. Never a paint transform: the glass texture
-    // has no headroom for one. Groups only one route has materialize instead.
+    // has no headroom for one. Groups only one route has materialize instead,
+    // and a group the two routes agree on — the usual lone back button — sits
+    // perfectly still, exactly as the native bar keeps an unchanged cluster
+    // frozen while its neighbours morph.
     final overshoot = (springT - 1.0).clamp(0.0, 1.0);
     final morphing = fromItems.isNotEmpty && toItems.isNotEmpty;
-    final morphScale = !morphing || state.settled
+    final changes = fromItems.length != toItems.length ||
+        slots.any((s) => s.isEnter || s.isExit || s.crossFades);
+    final morphScale = !morphing || !changes || state.settled
         ? 1.0
         : 1.0 +
             GlassNavPinnedMetrics.swellPulseAt(morphT) -
@@ -1270,12 +1299,6 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // so an entering or exiting group holds its shape rather than resizing.
     final fromGroup = from ?? to!;
     final toGroup = to ?? from!;
-
-    final slots = matchGlassNavActions(
-      fromItems,
-      toItems,
-      anchoredAtStart: widget.anchoredAtStart,
-    );
 
     // Whichever side is showing owns the menu. A menu can only be opened at
     // rest, where that is always the incoming side, but the trigger is rebuilt
