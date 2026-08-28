@@ -171,13 +171,14 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     duration: GlassDefaults.dematerializeDuration,
   );
 
-  /// The chrome as it stood when the swipe committed.
+  /// The chrome as it stood when the swipe committed, or null when no commit
+  /// is playing.
   ///
   /// Frozen because the outgoing route unregisters the moment its pop
   /// finishes, which is *before* this animation ends. Resolving from the live
   /// registry would flip `from`/`to` mid-play and snap the chrome — the exact
   /// thing the fixed duration exists to avoid.
-  GlassNavPinnedState? _commitExitFrom;
+  GlassNavPinnedState? _commitExitSnapshot;
 
   /// Chrome progress the commit animation starts from.
   double _commitExitStart = 1.0;
@@ -196,11 +197,13 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     _commitExit
       ..addListener(_tick.notify)
       ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          _commitExitFrom = null;
-          _clearGestureHold();
-          _scheduleNotify();
-        }
+        if (status != AnimationStatus.completed) return;
+        _commitExitSnapshot = null;
+        _clearGestureHold();
+        // Back to rest so the next commit holds at its snapshot rather than
+        // starting from a controller still parked at 1.0.
+        _commitExit.reset();
+        _scheduleNotify();
       });
   }
 
@@ -271,8 +274,12 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
   void _onAnimationTick() => _tick.notify();
 
   void _onAnimationStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed ||
-        status == AnimationStatus.dismissed) {
+    // Not while a finger is down: several routes' animations are listened to
+    // at once, and one of them settling elsewhere must not drop the hold on
+    // the swipe currently in progress.
+    if (!_gestureActive &&
+        (status == AnimationStatus.completed ||
+            status == AnimationStatus.dismissed)) {
       _clearGestureHold();
     }
     _scheduleNotify();
@@ -391,8 +398,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     // A committed swipe plays from the frozen snapshot, not the registry: the
     // outgoing route unregisters when its pop finishes, which happens before
     // this animation does.
-    final exiting = _commitExitFrom;
-    if (exiting != null && _commitExit.isAnimating) {
+    final exiting = _commitExitSnapshot;
+    if (exiting != null) {
       return GlassNavPinnedState(
         from: exiting.from,
         to: exiting.to,
@@ -497,8 +504,17 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
       _gestureActive = false;
       _gestureHeldProgress = null;
       _commitExitStart = state.progress;
-      _commitExitFrom = state;
-      _commitExit.forward(from: 0.0);
+      _commitExitSnapshot = state;
+      // Deferred: this runs inside [_tick]'s own ListenableBuilder, and
+      // starting a controller notifies its listeners synchronously — which
+      // would mark that builder dirty in the middle of its own build. The
+      // controller rests at 0 until then, so the frame in between holds the
+      // snapshot rather than showing a gap.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _commitExitSnapshot != null) {
+          _commitExit.forward(from: 0.0);
+        }
+      });
     }
     return state;
   }
