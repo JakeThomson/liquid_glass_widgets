@@ -46,9 +46,12 @@ class GlassPinnedBarChromeData {
   /// Whether the shell has taken this route's chrome.
   ///
   /// False while the bar still draws it, and true once the shell has both
-  /// accepted the registration and had a frame to render its copy. [leading]
-  /// and [actions] already account for this — read it only to substitute your
-  /// own chrome for the package's.
+  /// accepted the registration and had a frame to render its copy. It goes
+  /// false again for as long as a dialog or a modal sheet is presented over
+  /// the route: the shell draws above the [Navigator] and cannot get beneath
+  /// one, so the bar takes its chrome back and the presentation covers it.
+  /// [leading] and [actions] already account for all of this — read it only to
+  /// substitute your own chrome for the package's.
   final bool hoisted;
 }
 
@@ -88,6 +91,12 @@ typedef GlassPinnedBarChromeBuilder = Widget Function(
 /// content, so the bar keeps the layout it had and the title never shifts. The
 /// hand-over is deliberately a frame late: at the swap both copies are static
 /// and identical, so they never overlap and never both disappear.
+///
+/// The hand-over runs in reverse too. While a dialog or a modal sheet is
+/// presented over the route the shell has nowhere valid to draw — it sits
+/// above the [Navigator] the presentation was pushed into — so the slots take
+/// the real buttons back and the presentation covers them along with the rest
+/// of the page.
 ///
 /// Where there is no shell — or the device cannot render the effect — the
 /// slots simply keep the real buttons, so a bar written this way works either
@@ -174,6 +183,9 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   ModalRoute<dynamic>? _route;
   bool _handedOver = false;
 
+  /// The shell notification this bar is currently following, if any.
+  Listenable? _chromeChanges;
+
   /// Whether this route shows the automatic back button at all.
   ///
   /// A custom leading replaces it, mirroring UIKit — *"A custom left item
@@ -204,9 +216,11 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
 
     if (shell != _shell || route != _route) {
       _release();
+      _unfollow();
       _shell = shell;
       _route = route;
       _handedOver = false;
+      _follow();
     }
 
     // Deliberately no offstage or TickerMode guard here. Flutter builds a newly
@@ -234,16 +248,43 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         buttonSettings: widget.buttonSettings,
       ),
     );
+  }
 
-    if (!_handedOver) {
-      // The shell renders the chrome on the next frame; hand over then, so the
-      // bar and the shell swap in the same frame rather than one before the
-      // other.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _shell != null && _shell!.isActive) {
-          setState(() => _handedOver = true);
-        }
-      });
+  /// Follows the shell's hand-over decision.
+  ///
+  /// The shell re-resolves on the frame *after* a registration lands or a
+  /// route changes, so the hand-over is deliberately a frame late: at the swap
+  /// both copies are static and identical, and they never overlap and never
+  /// both disappear. The same holds in reverse when a presentation takes the
+  /// chrome back — a route under a dialog or a modal sheet is not moving
+  /// either.
+  void _follow() {
+    final shell = _shell;
+    if (shell == null) return;
+    _chromeChanges = shell.chromeChanges..addListener(_onChromeChanged);
+  }
+
+  void _unfollow() {
+    _chromeChanges?.removeListener(_onChromeChanged);
+    _chromeChanges = null;
+  }
+
+  /// Takes the shell's decision as of this notification.
+  ///
+  /// Deliberately snapshotted rather than read during [build]: a bar that
+  /// asked the shell on every build would answer from routes the shell has not
+  /// re-resolved against yet, and swap a frame before it — a frame in which
+  /// both copies are on screen. Reading both from the same notification keeps
+  /// them one image.
+  void _onChromeChanged() {
+    final shell = _shell;
+    final route = _route;
+    final hoisted = widget.enabled &&
+        shell != null &&
+        route != null &&
+        shell.isHoisting(route);
+    if (mounted && hoisted != _handedOver) {
+      setState(() => _handedOver = hoisted);
     }
   }
 
@@ -258,6 +299,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   @override
   void dispose() {
     _release();
+    _unfollow();
     super.dispose();
   }
 
