@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'liquid_glass_renderer.dart';
+import 'internal/glass_materialize_scope.dart';
 import 'internal/transform_tracking_repaint_boundary_mixin.dart';
 import 'liquid_glass_blend_group.dart';
 
@@ -195,9 +196,16 @@ class LiquidGlass extends StatelessWidget {
       child: ClipPath(
         clipper: ShapeBorderClipper(shape: shape),
         clipBehavior: clipBehavior,
-        child: Opacity(
-          opacity: settings.visibility.clamp(0, 1),
-          child: child,
+        // [LOCAL PATCH]: the materialize content channel — a lagged fade and
+        // gaussian blur so the icon sharpens after the glass has resolved.
+        // The visibility Opacity below it already tracks the glass channel,
+        // because `settings` comes from the (possibly transformed) scope.
+        child: GlassMaterializeScope.wrapContent(
+          context,
+          Opacity(
+            opacity: settings.visibility.clamp(0, 1),
+            child: child,
+          ),
         ),
       ),
     );
