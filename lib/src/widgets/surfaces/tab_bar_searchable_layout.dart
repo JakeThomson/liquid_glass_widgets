@@ -49,6 +49,7 @@ class TabBarSearchableLayout extends StatefulWidget {
     this.controller,
     this.isSearchActive = false,
     this.minimizeController,
+    this.isMinimizablePlacement = false,
     this.extraButton,
     this.bottomAccessoryPlacement,
     this.bottomAccessory,
@@ -127,6 +128,11 @@ class TabBarSearchableLayout extends StatefulWidget {
   /// [scrollController] — the resulting state arrives through
   /// [isSearchActive], which [GlassTabBar] resolves.
   final GlassTabBarMinimizeController? minimizeController;
+
+  /// Whether the host is [GlassTabBar.minimizable] rather than
+  /// [GlassTabBar.searchable]. Only the former pulls its bottom accessory
+  /// inline as the bar shrinks.
+  final bool isMinimizablePlacement;
   final GlassTabBarExtraButton? extraButton;
   final GlassTabBarAccessoryPlacement? bottomAccessoryPlacement;
   final Widget? bottomAccessory;
@@ -898,7 +904,13 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
 
       final innerBarContent = barContent;
 
-      final accessoryInline = widget.bottomAccessoryPlacement ==
+      // Must resolve identically to GlassTabBar.preferredSize's call, or the
+      // scaffold reserves a height this engine does not draw.
+      final accessoryInline = resolveAccessoryPlacement(
+            explicit: widget.bottomAccessoryPlacement,
+            minimized: searching,
+            isMinimizablePlacement: widget.isMinimizablePlacement,
+          ) ==
           GlassTabBarAccessoryPlacement.inline;
 
       barContent = GlassTabBarAccessoryPlacementScope(
