@@ -45,8 +45,7 @@ void main() {
       );
 
   group('the automatic back button', () {
-    testWidgets('a back-only cluster is still the 44pt circle',
-        (tester) async {
+    testWidgets('a back-only cluster is still the 44pt circle', (tester) async {
       await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
       await settle(tester);
       await _push(tester, const _Screen(title: 'Detail'));
@@ -104,11 +103,13 @@ void main() {
     testWidgets('leadingItemsSupplementBackButton shows both', (tester) async {
       await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
       await settle(tester);
-      await _push(tester, _Screen(
-        title: 'Detail',
-        leading: [_cancel()],
-        supplement: true,
-      ));
+      await _push(
+          tester,
+          _Screen(
+            title: 'Detail',
+            leading: [_cancel()],
+            supplement: true,
+          ));
       await settle(tester);
 
       expect(inHost(find.byIcon(CupertinoIcons.back)), findsOneWidget);
@@ -120,12 +121,14 @@ void main() {
     testWidgets('backButton: false wins over supplementing', (tester) async {
       await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
       await settle(tester);
-      await _push(tester, _Screen(
-        title: 'Detail',
-        leading: [_cancel()],
-        supplement: true,
-        backButton: false,
-      ));
+      await _push(
+          tester,
+          _Screen(
+            title: 'Detail',
+            leading: [_cancel()],
+            supplement: true,
+            backButton: false,
+          ));
       await settle(tester);
 
       expect(find.byIcon(CupertinoIcons.back), findsNothing);
@@ -207,20 +210,22 @@ void main() {
       Size shell() => tester.getSize(inHost(find.byType(GlassButton)));
       expect(shell().height, GlassNavPinnedMetrics.backDiameter);
 
-      await _push(tester, _Screen(
-        title: 'Library',
-        backButton: false,
-        leading: [
-          GlassBarItem.icon(
-            icon: const Icon(CupertinoIcons.sidebar_left),
-            onTap: () {},
-          ),
-          GlassBarItem.icon(
-            icon: const Icon(CupertinoIcons.slider_horizontal_3),
-            onTap: () {},
-          ),
-        ],
-      ));
+      await _push(
+          tester,
+          _Screen(
+            title: 'Library',
+            backButton: false,
+            leading: [
+              GlassBarItem.icon(
+                icon: const Icon(CupertinoIcons.sidebar_left),
+                onTap: () {},
+              ),
+              GlassBarItem.icon(
+                icon: const Icon(CupertinoIcons.slider_horizontal_3),
+                onTap: () {},
+              ),
+            ],
+          ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
 
@@ -259,22 +264,24 @@ void main() {
       await settle(tester);
       final before = tester.getTopLeft(inHost(find.byIcon(CupertinoIcons.add)));
 
-      await _push(tester, _Screen(
-        title: 'Detail',
-        backButton: false,
-        leading: [
-          GlassBarItem.icon(
-            icon: const Icon(CupertinoIcons.add),
-            id: 'add',
-            onTap: () {},
-          ),
-          GlassBarItem.icon(
-            icon: const Icon(CupertinoIcons.search),
-            id: 'search',
-            onTap: () {},
-          ),
-        ],
-      ));
+      await _push(
+          tester,
+          _Screen(
+            title: 'Detail',
+            backButton: false,
+            leading: [
+              GlassBarItem.icon(
+                icon: const Icon(CupertinoIcons.add),
+                id: 'add',
+                onTap: () {},
+              ),
+              GlassBarItem.icon(
+                icon: const Icon(CupertinoIcons.search),
+                id: 'search',
+                onTap: () {},
+              ),
+            ],
+          ));
       await settle(tester);
 
       // The matched item holds its place while the capsule grows trailing-ward.
@@ -286,9 +293,12 @@ void main() {
     });
 
     test('matchGlassNavActions counts positions from the anchored edge', () {
-      final a = GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {});
-      final b = GlassBarItem.icon(icon: const Icon(CupertinoIcons.search), onTap: () {});
-      final c = GlassBarItem.icon(icon: const Icon(CupertinoIcons.bell), onTap: () {});
+      final a =
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {});
+      final b = GlassBarItem.icon(
+          icon: const Icon(CupertinoIcons.search), onTap: () {});
+      final c = GlassBarItem.icon(
+          icon: const Icon(CupertinoIcons.bell), onTap: () {});
 
       // Leading-anchored: the first item of each cluster is the same slot.
       final leading = matchGlassNavActions(
