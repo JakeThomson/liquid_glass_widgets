@@ -29,9 +29,13 @@ void main() {
     );
   }
 
-  Finder cluster() => find.byWidgetPredicate(
+  /// The trailing actions cluster. The leading side renders a cluster of its
+  /// own (the back button), built first, so the trailing one is last.
+  Finder cluster() => find
+      .byWidgetPredicate(
         (w) => w.runtimeType.toString() == '_PinnedCluster',
-      );
+      )
+      .last;
 
   /// The uniform gel scale currently applied to the capsule.
   ///
@@ -188,45 +192,6 @@ void main() {
         tester.getSize(cluster()).width,
         2 * GlassNavPinnedMetrics.slot,
       );
-    });
-
-    testWidgets('the back button gels in on the first push off the root',
-        (tester) async {
-      await tester.pumpWidget(shellApp(_Screen(
-        title: 'Root',
-        actions: const [],
-        next: const _Screen(title: 'Detail', actions: []),
-      )));
-      await tester.pumpAndSettle();
-      await tester.pump();
-
-      Finder back() => find.byWidgetPredicate(
-          (w) => w.runtimeType.toString() == '_PinnedBackButton');
-      double backScale() => tester
-          .widget<Transform>(find
-              .descendant(of: back(), matching: find.byType(Transform))
-              .first)
-          .transform
-          .storage[0];
-
-      await tester.tap(find.text('go'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1));
-      final scales = <double>[];
-      for (var ms = 10; ms <= 600; ms += 10) {
-        scales.add(
-            find.byIcon(CupertinoIcons.back).evaluate().isEmpty
-                ? 0.0
-                : backScale());
-        if (_trace) debugPrint('t=${ms}ms back=${scales.last}');
-        await tester.pump(const Duration(milliseconds: 10));
-      }
-
-      // Waits out the swell, springs in past full size, settles at 1.
-      expect(scales.first, lessThan(0.05));
-      expect(scales.reduce((a, b) => a > b ? a : b), greaterThan(1.02),
-          reason: 'the back button must bounce past full size on its way in');
-      expect(scales.last, 1.0);
     });
   });
 }

@@ -8,7 +8,14 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
-import 'package:flutter/widgets.dart' show ScrollController, ScrollPosition;
+import 'package:flutter/widgets.dart'
+    show
+        Axis,
+        ScrollController,
+        ScrollNotification,
+        ScrollPosition,
+        ScrollUpdateNotification,
+        UserScrollNotification;
 
 import 'glass_bar_minimize_behavior.dart';
 
@@ -291,16 +298,74 @@ class GlassTabBarMinimizeController extends ChangeNotifier {
     handleSample(GlassTabBarScrollSample.fromPosition(position));
   }
 
+  // ── Notification driving ──────────────────────────────────────────────────
+
+  /// Direction of the most recent [UserScrollNotification].
+  ///
+  /// [ScrollMetrics] carries no direction, and a [UserScrollNotification] is
+  /// dispatched once per gesture rather than once per update, so the direction
+  /// the state machine needs has to be remembered between the two.
+  ScrollDirection _notificationDirection = ScrollDirection.idle;
+
+  /// Feeds a [ScrollNotification] to the state machine, for hosts that observe
+  /// scrolling with a [NotificationListener] rather than owning a
+  /// [ScrollController].
+  ///
+  /// The alternative to [attach], for the shape [attach] cannot serve: an
+  /// app-level scaffold wrapping arbitrary screen bodies has no way to reach
+  /// whichever [ScrollController] the current screen happens to own, and on a
+  /// tab bar each tab owns a different one. Use one source or the other —
+  /// both at once counts every scroll twice.
+  ///
+  /// ```dart
+  /// NotificationListener<ScrollNotification>(
+  ///   onNotification: (notification) {
+  ///     _minimize.handleNotification(notification);
+  ///     return false; // let it keep bubbling
+  ///   },
+  ///   child: body,
+  /// )
+  /// ```
+  ///
+  /// Horizontal notifications are ignored, so a carousel in the body cannot
+  /// minimize the bar. Every vertical scroll view under the listener does
+  /// drive it, so scope the listener to the body you want followed.
+  void handleNotification(ScrollNotification notification) {
+    if (_disposed) return;
+    final metrics = notification.metrics;
+    if (metrics.axis != Axis.vertical) return;
+
+    if (notification is UserScrollNotification) {
+      _notificationDirection = notification.direction;
+      return;
+    }
+
+    // Only an update carries an offset change. Start, end and overscroll
+    // notifications would re-run the rules against an offset already sampled.
+    if (notification is! ScrollUpdateNotification) return;
+
+    handleSample(GlassTabBarScrollSample(
+      pixels: metrics.pixels,
+      minScrollExtent: metrics.minScrollExtent,
+      maxScrollExtent: metrics.maxScrollExtent,
+      viewportDimension: metrics.viewportDimension,
+      direction: _notificationDirection,
+      outOfRange: metrics.outOfRange,
+    ));
+  }
+
   // ── The decision function ─────────────────────────────────────────────────
 
   /// Feeds one scroll sample to the state machine.
   ///
-  /// Pure with respect to Flutter — visible for testing so the behaviour can
-  /// be driven from synthetic samples.
+  /// Pure with respect to Flutter, which is what makes it safe to call from
+  /// anywhere: a host that observes scrolling some other way than owning a
+  /// [ScrollController] can build its own samples and drive the controller
+  /// directly. [handleNotification] is the ready-made path for the common
+  /// case of a [NotificationListener].
   ///
   /// The order of the rules matters, and each early return also decides
   /// whether the accumulator survives.
-  @visibleForTesting
   void handleSample(GlassTabBarScrollSample sample) {
     if (!_minimizes) return;
 

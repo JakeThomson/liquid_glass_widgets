@@ -8,6 +8,36 @@ import '../../types/glass_specular_sharpness.dart';
 import 'liquid_glass_renderer.dart';
 import 'liquid_glass_render_scope.dart';
 
+/// How a glass surface resolves the parts of its body that had nothing to
+/// sample.
+///
+/// The body's colour comes from the backdrop texture. Over a platform view
+/// (a map, a camera preview, a video, a webview) that texture is empty, which
+/// in premultiplied terms is transparent black, so a body that is forced fully
+/// opaque resolves to solid black.
+enum PlatformViewGlassMode {
+  /// The body stays fully opaque over the whole shape. Where nothing was
+  /// sampled it resolves to [LiquidGlassSettings.platformViewFallbackColor],
+  /// or to black when that is unset.
+  ///
+  /// This is the default and the historical behaviour.
+  fallbackColor,
+
+  /// Coverage follows what was actually sampled: opaque where the backdrop
+  /// held content, clear where it held nothing, so the platform view shows
+  /// through instead of a black or invented fill. The rim keeps its own
+  /// coverage, so the edge still reads.
+  ///
+  /// On an ordinary backdrop every sample is opaque, so this is identical to
+  /// [fallbackColor]. It only differs where there was nothing to read.
+  ///
+  /// Note for tab bars: over a platform view the indicator refracts the bar's
+  /// own icon layer, and that layer is drawn on screen as well. With a body
+  /// that is no longer opaque, both copies become visible. See
+  /// `SearchableTabIndicator.passthroughOverPlatformView`.
+  passthrough,
+}
+
 /// Represents the settings for a liquid glass effect.
 class LiquidGlassSettings {
   /// Creates a new [LiquidGlassSettings] with the given settings.
@@ -40,6 +70,7 @@ class LiquidGlassSettings {
     this.edgeAbsorption = 0.0,
     this.backerColor,
     this.platformViewFallbackColor,
+    this.platformViewMode = PlatformViewGlassMode.fallbackColor,
   }) : pinchStrength = 0.0;
 
   /// Private constructor used exclusively by [copyWithPinch].
@@ -70,6 +101,7 @@ class LiquidGlassSettings {
     required this.edgeAbsorption,
     this.backerColor,
     this.platformViewFallbackColor,
+    this.platformViewMode = PlatformViewGlassMode.fallbackColor,
     required this.pinchStrength,
   });
 
@@ -210,6 +242,16 @@ class LiquidGlassSettings {
   /// Defaults to `1.0`.
   final double fresnelStrength;
 
+  /// The effective Fresnel strength taking visibility into account.
+  ///
+  /// The rim is the last thing to go when a surface fades, so it has to fade
+  /// with it: left at full strength it outlives every other channel and
+  /// strands a bright outline where the glass used to be.
+  double get effectiveFresnelStrength => fresnelStrength * visibility;
+
+  /// The effective ambient rim taking visibility into account.
+  double get effectiveAmbientRim => ambientRim * visibility;
+
   /// The effective ambient strength taking visibility into account.
   double get effectiveAmbientStrength => ambientStrength * visibility;
 
@@ -282,13 +324,30 @@ class LiquidGlassSettings {
   /// Has no effect in dark mode.
   final List<BoxShadow>? shadow;
 
+  /// The effective elevation taking visibility into account.
+  double get effectiveShadowElevation => shadowElevation * visibility;
+
   /// Returns the effective shadow list for light-mode rendering.
   ///
-  /// Resolves [shadow] (full override) vs [shadowElevation] (scalar).
-  /// Returns an empty list when the shadow is effectively disabled.
+  /// Resolves [shadow] (full override) vs [shadowElevation] (scalar), and
+  /// scales both by [visibility] — a surface that is fading out has to take
+  /// its shadow with it, or the elevation stays at full strength underneath
+  /// vanishing glass and then snaps away with it.
   List<BoxShadow> get effectiveShadow {
-    if (shadow != null) return shadow!;
-    return GlassShadow.scaled(shadowElevation);
+    if (shadow != null) {
+      if (visibility >= 1.0) return shadow!;
+      return <BoxShadow>[
+        for (final s in shadow!)
+          BoxShadow(
+            color: s.color.withValues(alpha: s.color.a * visibility),
+            offset: s.offset,
+            blurRadius: s.blurRadius,
+            spreadRadius: s.spreadRadius,
+            blurStyle: s.blurStyle,
+          ),
+      ];
+    }
+    return GlassShadow.scaled(effectiveShadowElevation);
   }
 
   /// Light-mode whitening ("legibility veil") amount, from 0 to 1.
@@ -307,6 +366,13 @@ class LiquidGlassSettings {
   ///
   /// Defaults to 0.0, which disables whitening entirely.
   final double whitenStrength;
+
+  /// The effective whitening taking visibility into account.
+  ///
+  /// The veil is opaque paint laid over the finished glass, so a surface
+  /// fading out has to take it with it — left raw it survives the glass and
+  /// leaves a white patch behind.
+  double get effectiveWhitenStrength => whitenStrength * visibility;
 
   /// Whether [whitenStrength] is luminance-gated (true, the default) or
   /// applied uniformly (false).
@@ -333,6 +399,9 @@ class LiquidGlassSettings {
   /// - `0.12` — subtle physical darkening (dark-mode depth effect)
   /// - `0.3` — pronounced rim darkening (thick or frosted glass look)
   final double edgeAbsorption;
+
+  /// The effective meniscus darkening taking visibility into account.
+  double get effectiveEdgeAbsorption => edgeAbsorption * visibility;
 
   /// Internal shader transport — the animated pinch strength for the concave
   /// lens effect on indicator pills.
@@ -372,6 +441,7 @@ class LiquidGlassSettings {
         edgeAbsorption: edgeAbsorption,
         backerColor: backerColor,
         platformViewFallbackColor: platformViewFallbackColor,
+        platformViewMode: platformViewMode,
         pinchStrength: value,
       );
 
@@ -395,6 +465,15 @@ class LiquidGlassSettings {
   /// Defaults to null: no backer, and no change to existing rendering.
   final Color? backerColor;
 
+  /// The effective backer taking visibility into account.
+  ///
+  /// Like the veil and the shadow, the pad is painted outside the shader and
+  /// would otherwise stay at full strength while the glass in front of it
+  /// dissolves, leaving a bare dimmed disc.
+  Color? get effectiveBackerColor => backerColor == null || visibility >= 1.0
+      ? backerColor
+      : backerColor!.withValues(alpha: backerColor!.a * visibility);
+
   /// Solid stand-in color the lens composites where the engine can't capture the
   /// backdrop — i.e. behind a PlatformView past the glass, which the lens would
   /// otherwise render black (see `platformViewBackdrop` on the glass widgets).
@@ -409,6 +488,12 @@ class LiquidGlassSettings {
   /// recipes that relied on `backerColor` doubling as the PlatformView fill are
   /// unchanged.
   final Color? platformViewFallbackColor;
+
+  /// How the body resolves where the backdrop had nothing to sample.
+  ///
+  /// Defaults to [PlatformViewGlassMode.fallbackColor], which is the existing
+  /// behaviour, so this changes nothing unless it is asked for.
+  final PlatformViewGlassMode platformViewMode;
 
   /// The effective saturation taking visibility into account.
   double get effectiveSaturation => 1 + (saturation - 1) * visibility;
@@ -460,6 +545,9 @@ class LiquidGlassSettings {
         backerColor: Color.lerp(a.backerColor, b.backerColor, t),
         platformViewFallbackColor: Color.lerp(
             a.platformViewFallbackColor, b.platformViewFallbackColor, t),
+        // A mode is not interpolable: it switches at the midpoint like any
+        // other enum in this class.
+        platformViewMode: t < 0.5 ? a.platformViewMode : b.platformViewMode,
         // pinchStrength is interaction state — lerp it so transitions are smooth
         // when the indicator fades between active/resting states.
         pinchStrength: lerpDouble(a.pinchStrength, b.pinchStrength, t)!);
@@ -498,6 +586,7 @@ class LiquidGlassSettings {
     double? edgeAbsorption,
     Color? backerColor,
     Color? platformViewFallbackColor,
+    PlatformViewGlassMode? platformViewMode,
   }) =>
       LiquidGlassSettings._withPinch(
         visibility: visibility ?? this.visibility,
@@ -524,6 +613,7 @@ class LiquidGlassSettings {
         backerColor: backerColor ?? this.backerColor,
         platformViewFallbackColor:
             platformViewFallbackColor ?? this.platformViewFallbackColor,
+        platformViewMode: platformViewMode ?? this.platformViewMode,
         pinchStrength: pinchStrength,
       );
 
@@ -554,6 +644,7 @@ class LiquidGlassSettings {
         other.edgeAbsorption == edgeAbsorption &&
         other.backerColor == backerColor &&
         other.platformViewFallbackColor == platformViewFallbackColor &&
+        other.platformViewMode == platformViewMode &&
         other.pinchStrength == pinchStrength;
   }
 
@@ -581,6 +672,7 @@ class LiquidGlassSettings {
         edgeAbsorption,
         backerColor,
         platformViewFallbackColor,
+        platformViewMode,
         pinchStrength,
       ]);
 }

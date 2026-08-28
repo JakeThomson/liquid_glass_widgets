@@ -20,6 +20,7 @@ import 'package:liquid_glass_widgets_example/demos/content_aware_brightness_demo
 import 'package:liquid_glass_widgets_example/demos/indicator_parity_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/rtl_layout_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/meniscus_and_blur_demo.dart';
+import 'package:liquid_glass_widgets_example/demos/materialize_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/scroll_edge_style_demo.dart';
 
 import 'package:liquid_glass_widgets_example/demos/google_maps_demo.dart'
@@ -807,6 +808,19 @@ class _ExamplesTab extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  SizedBox(height: 14),
+
+                  _LargeDemoCard(
+                    title: 'Materialize',
+                    subtitle:
+                        'glassEffectTransition(.materialize) — entrance & exit',
+                    icon: CupertinoIcons.sparkles,
+                    gradient: const [
+                      Color(0xFF1B2A4A),
+                      Color(0xFF7B2D5E),
+                    ],
+                    destination: const MaterializeDemo(),
                   ),
                   SizedBox(height: 14),
 
