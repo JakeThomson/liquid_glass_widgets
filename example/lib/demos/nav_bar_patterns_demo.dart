@@ -1795,6 +1795,11 @@ class _CustomBarPinningDemo extends StatelessWidget {
 ///     around it — the classic two-icons-to-share transition.
 ///   * Discussions — the add action carries `id: 'add'` on both levels, so it
 ///     holds its position while the menu beside it becomes search.
+///   * Pull Requests — the same two actions as the root. Nothing changes,
+///     so nothing moves: an unchanged cluster sits perfectly still, exactly
+///     as the native bar keeps it.
+///   * Watchers — no actions at all. The capsule dematerializes — the glass
+///     dissolves through the shader — while the back button stays pinned.
 ///   * Insights — three actions. The capsule widens around the cluster.
 ///
 /// Swipe from the left edge to scrub any of the morphs interactively.
@@ -1911,6 +1916,58 @@ class _HeaderMorphDemo extends StatelessWidget {
                         onTap: () {},
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _PatternTile(
+                  title: 'Pull Requests',
+                  subtitle: 'Identical actions — the capsule sits perfectly still',
+                  icon: CupertinoIcons.arrow_branch,
+                  onTap: () => _pushDestination(
+                    context,
+                    title: 'Pull Requests',
+                    blurb: 'The same two actions as the previous screen: '
+                        'nothing enters, leaves or changes, so the capsule '
+                        'does not move at all while the page slides under '
+                        'it.',
+                    actions: [
+                      GlassBarItem.icon(
+                        icon: const Icon(CupertinoIcons.add),
+                        id: 'add',
+                        label: 'Add',
+                        onTap: () {},
+                      ),
+                      GlassBarItem.menu(
+                        icon: const Icon(CupertinoIcons.ellipsis),
+                        label: 'More',
+                        menuItems: [
+                          GlassMenuItem(
+                            title: 'Share repository',
+                            icon: const Icon(CupertinoIcons.share),
+                            onTap: () {},
+                          ),
+                          GlassMenuItem(
+                            title: 'Favourite',
+                            icon: const Icon(CupertinoIcons.star),
+                            onTap: () {},
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _PatternTile(
+                  title: 'Watchers',
+                  subtitle: 'All actions leave — the capsule dematerializes',
+                  icon: CupertinoIcons.eye,
+                  onTap: () => _pushDestination(
+                    context,
+                    title: 'Watchers',
+                    blurb: 'No actions here: the capsule dissolves away '
+                        'while the back button stays pinned, and '
+                        'materializes back in on the pop.',
+                    actions: const [],
                   ),
                 ),
                 const SizedBox(height: 12),
