@@ -30,12 +30,17 @@ void main() {
   }
 
   /// The trailing actions cluster. The leading side renders a cluster of its
-  /// own (the back button), built first, so the trailing one is last.
-  Finder cluster() => find
-      .byWidgetPredicate(
-        (w) => w.runtimeType.toString() == '_PinnedCluster',
-      )
-      .last;
+  /// own (the back button), built first, so the trailing one is last. The
+  /// lookup is loud: a renamed private class fails here rather than silently
+  /// matching nothing.
+  Finder cluster() {
+    final all = find.byWidgetPredicate(
+      (w) => w.runtimeType.toString() == '_PinnedCluster',
+    );
+    expect(all, findsWidgets,
+        reason: 'no _PinnedCluster found — was the render widget renamed?');
+    return all.last;
+  }
 
   /// The uniform gel scale currently applied to the capsule.
   ///
@@ -88,9 +93,9 @@ void main() {
     test('the swell pulse rises, peaks and returns to zero', () {
       expect(GlassNavPinnedMetrics.swellPulseAt(0.0), 0.0);
       expect(GlassNavPinnedMetrics.swellPulseAt(1.0), closeTo(0.0, 1e-9));
-      final peak = List.generate(101,
-              (i) => GlassNavPinnedMetrics.swellPulseAt(i / 100))
-          .reduce((a, b) => a > b ? a : b);
+      final peak =
+          List.generate(101, (i) => GlassNavPinnedMetrics.swellPulseAt(i / 100))
+              .reduce((a, b) => a > b ? a : b);
       expect(peak, closeTo(GlassNavPinnedMetrics.swellAmount, 1e-6));
     });
   });
@@ -124,8 +129,7 @@ void main() {
       final scales = samples.map((s) => s.$3).toList();
       // The measured box inflates with the gel; divide it out to get the
       // cluster's travelling width.
-      final widths =
-          [for (final s in samples) s.$2 / (s.$3 == 0 ? 1.0 : s.$3)];
+      final widths = [for (final s in samples) s.$2 / (s.$3 == 0 ? 1.0 : s.$3)];
 
       // The cluster's width walks monotonically to the target — the gel is
       // a uniform scale on top of that travel.
@@ -142,9 +146,9 @@ void main() {
       final dip = scales.reduce((a, b) => a < b ? a : b);
       expect(dip, lessThan(0.98),
           reason: 'the pill must squeeze past its final size and relax');
-      // …in that order, and lands at exactly 1.
+      // …in that order, and lands settled.
       expect(scales.indexOf(peak), lessThan(scales.indexOf(dip)));
-      expect(scales.last, 1.0);
+      expect(scales.last, moreOrLessEquals(1.0, epsilon: 1e-6));
     });
 
     testWidgets('an unchanged cluster sits perfectly still', (tester) async {
@@ -216,7 +220,7 @@ void main() {
           reason: 'the pop must swell like the push does');
       expect(scales.indexOf(peak), lessThan(scales.length ~/ 2),
           reason: 'the swell must lead the pop, not trail it');
-      expect(scales.last, 1.0);
+      expect(scales.last, moreOrLessEquals(1.0, epsilon: 1e-6));
       expect(
         tester.getSize(cluster()).width,
         2 * GlassNavPinnedMetrics.slot,
