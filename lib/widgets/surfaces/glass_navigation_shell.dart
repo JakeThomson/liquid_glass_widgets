@@ -18,6 +18,7 @@ class GlassNavBarRegistration {
   /// Creates a registration describing one route's pinned bar chrome.
   const GlassNavBarRegistration({
     required this.actions,
+    this.leading = const <GlassBarItem>[],
     required this.showsBackButton,
     this.onBack,
     this.buttonSettings,
@@ -25,6 +26,13 @@ class GlassNavBarRegistration {
 
   /// The trailing cluster items for this route.
   final List<GlassBarItem> actions;
+
+  /// The leading cluster items for this route, excluding the back button.
+  ///
+  /// Whether the back button also appears is [showsBackButton]'s business: the
+  /// bar has already applied the replace-or-supplement rule by the time it
+  /// registers, so the host reads one flag rather than re-deriving it.
+  final List<GlassBarItem> leading;
 
   /// Whether this route shows the pinned back button.
   final bool showsBackButton;
@@ -38,6 +46,10 @@ class GlassNavBarRegistration {
   /// The tappable items in [actions], with spacers removed.
   List<GlassBarActionItem> get actionItems =>
       actions.whereType<GlassBarActionItem>().toList(growable: false);
+
+  /// The tappable items in [leading], with spacers removed.
+  List<GlassBarActionItem> get leadingItems =>
+      leading.whereType<GlassBarActionItem>().toList(growable: false);
 }
 
 /// Hosts navigation-bar glass chrome **above** the [Navigator], so it stays

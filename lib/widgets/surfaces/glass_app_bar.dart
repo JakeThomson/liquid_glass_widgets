@@ -109,7 +109,9 @@ class GlassAppBar extends StatelessWidget
     this.largeTitleController,
     this.bottom,
   })  : pinnedActions = null,
+        pinnedLeading = const <GlassBarItem>[],
         pinnedBackButton = true,
+        pinnedLeadingItemsSupplementBackButton = false,
         onBack = null;
 
   /// Creates a glass app bar whose chrome pins above the [Navigator].
@@ -120,21 +122,28 @@ class GlassAppBar extends StatelessWidget
   /// bar behaviour. Without a shell (or where the effect cannot render) the
   /// same items render inside this bar, so screens work either way.
   ///
-  /// [actions] are declared as data ([GlassBarItem]), mirroring
+  /// [leading] and [actions] are declared as data ([GlassBarItem]), mirroring
   /// `UIBarButtonItem` — there is no widget-based `leading`/`actions` in this
   /// mode, because arbitrary widgets cannot be hoisted to the shell. Items
   /// sharing an id across routes morph as the same item; see
   /// [GlassBarItem.icon].
   ///
   /// The back button appears whenever the route can be popped and never on a
-  /// root route. Set [backButton] to false to suppress it, and [onBack] to
-  /// replace the default `Navigator.maybePop()` — for example with
-  /// go_router's `context.pop()`.
+  /// root route. A non-empty [leading] **replaces** it — UIKit's rule for
+  /// `leftBarButtonItems`, and Flutter's for [AppBar.leading], which implies a
+  /// leading only when none was given. Set
+  /// [leadingItemsSupplementBackButton] to show both, mirroring
+  /// `UINavigationItem.leftItemsSupplementBackButton`. Set [backButton] to
+  /// false to suppress the back button outright, and [onBack] to replace its
+  /// default `Navigator.maybePop()` — for example with go_router's
+  /// `context.pop()`.
   const GlassAppBar.pinned({
     super.key,
     this.title,
+    List<GlassBarItem> leading = const [],
     List<GlassBarItem> actions = const [],
     bool backButton = true,
+    bool leadingItemsSupplementBackButton = false,
     this.onBack,
     this.centerTitle = true,
     // Whitelisted: Structural transparent default, not a Material colour.
@@ -145,7 +154,10 @@ class GlassAppBar extends StatelessWidget
     this.largeTitleController,
     this.bottom,
   })  : pinnedActions = actions,
+        pinnedLeading = leading,
         pinnedBackButton = backButton,
+        pinnedLeadingItemsSupplementBackButton =
+            leadingItemsSupplementBackButton,
         leading = null,
         actions = null;
 
@@ -197,12 +209,28 @@ class GlassAppBar extends StatelessWidget
   /// glass capsule.
   final List<GlassBarItem>? pinnedActions;
 
+  /// Leading bar items declared as data, pinned above the [Navigator] by an
+  /// enclosing [GlassNavigationShell].
+  ///
+  /// Set by [GlassAppBar.pinned] (its `leading` parameter, defaulting to
+  /// empty); always empty on the plain constructor, which uses the
+  /// widget-based [leading] instead.
+  final List<GlassBarItem> pinnedLeading;
+
   /// Whether a [GlassAppBar.pinned] bar shows the automatic back button when
   /// the route can be popped.
   ///
   /// The button is never shown on a root route, matching
-  /// [ModalRoute.impliesAppBarDismissal].
+  /// [ModalRoute.impliesAppBarDismissal], and a non-empty [pinnedLeading]
+  /// replaces it unless [pinnedLeadingItemsSupplementBackButton] is set.
   final bool pinnedBackButton;
+
+  /// Whether [pinnedLeading] appears in addition to the automatic back button
+  /// rather than instead of it.
+  ///
+  /// Mirrors `UINavigationItem.leftItemsSupplementBackButton`, which is
+  /// likewise false by default.
+  final bool pinnedLeadingItemsSupplementBackButton;
 
   /// Overrides the automatic back button's action on a [GlassAppBar.pinned]
   /// bar.
@@ -273,8 +301,11 @@ class GlassAppBar extends StatelessWidget
     // them itself, so a screen renders correctly either way.
     if (pinnedActions != null) {
       return GlassPinnedBarChrome(
+        leading: pinnedLeading,
         actions: pinnedActions!,
         backButton: pinnedBackButton,
+        leadingItemsSupplementBackButton:
+            pinnedLeadingItemsSupplementBackButton,
         onBack: onBack,
         buttonSettings: buttonSettings,
         builder: (context, chrome) => _buildBar(context, chrome: chrome),
