@@ -1,6 +1,6 @@
 # Roadmap: 1.x → 2.0
 
-> Last updated: 2026-08-27 (reflecting 1.1.0 shipped state)
+> Last updated: 2026-08-28 (reflecting 1.2.0 in-progress state)
 
 This document tracks planned and future work for `liquid_glass_widgets` post-1.0.
 The guiding principle remains: **fewer, better widgets that map 1:1 to real iOS 26 components**.
@@ -26,10 +26,14 @@ For historical version notes (0.14 → 1.0), see [`CHANGELOG.md`](../CHANGELOG.m
 | Navigation transition morph | ✅ Done (1.1.0) | `GlassNavigationShell` + `GlassAppBar.pinned` (#221) |
 | Scroll-to-minimize | ✅ Done (1.1.0) | `GlassTabBarMinimizeController`, all four behaviour cases (#228) |
 | Tab bar bottom accessory | ✅ Done (1.1.0) | `bottomAccessory` / `bottomAccessoryHeight` on `GlassTabBar.bottom()` |
+| Materialize transitions | ✅ Done (1.2.0) | `GlassMaterialize` + `GlassMaterializeTransition`; pinned chrome materializes (#240) |
+| Custom bar pinning | ✅ Done (1.2.0) | `GlassPinnedBarChrome` public registration API (#236) |
+| Pinned leading API | ✅ Done (1.2.0) | `GlassAppBar.pinned(leading:)` + `GlassBarItemBackground` (#238) |
+| Platform view glass passthrough | ✅ Done (1.2.0) | `PlatformViewGlassMode.passthrough` + `passthroughOverPlatformView` (#247) |
 | Example app covers all widgets | ⚠️ Partial | Not verified against current widget catalogue |
 | Platform testing matrix complete | ⚠️ Partial | iOS + Android confirmed; Web, Windows, macOS need QA |
 | CHANGELOG migration guides | ⚠️ Partial | Not audited for all 1.0.x → 1.1.0 changes |
-| README widget table accurate | ⚠️ Stale | Last updated for ~0.15 era |
+| README widget table accurate | ✅ Updated (1.2.0) | Surfaces and Effects categories updated |
 
 ---
 
