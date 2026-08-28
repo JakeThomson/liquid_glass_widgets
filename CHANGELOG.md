@@ -48,6 +48,10 @@ Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize tra
 
 Thanks to [@Nixxx19](https://github.com/Nixxx19) for the platform-view glass passthrough mode and `GlassChip` backdrop parameter (#247, #250).
 
+## Bug Fixes
+
+- **Presented routes now cover the pinned chrome (#257):** A dialog, action sheet, `GlassModalSheet` or `fullscreenDialog` route is pushed *into* the `Navigator` the chrome is drawn above, so it arrived underneath — and drives no `secondaryAnimation` for the existing retreat to catch. The shell now hands the chrome back to the route while one is up, where the presentation and its barrier cover it as they cover the page; pushes are unchanged.
+
 ---
 
 # 1.1.0

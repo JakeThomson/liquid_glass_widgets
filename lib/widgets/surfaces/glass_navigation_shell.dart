@@ -144,6 +144,12 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
   /// Fires whenever the rendered chrome may have changed.
   final _TickNotifier _tick = _TickNotifier();
 
+  /// Notifies when the answer [isHoisting] gives may have changed.
+  ///
+  /// Registrants follow this rather than reading the routes themselves, so
+  /// that the bar and the shell always swap in the same frame.
+  Listenable get chromeChanges => _tick;
+
   /// Whether a deferred notification is already queued for this frame.
   bool _notifyQueued = false;
 
@@ -364,6 +370,53 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
   static double _coverageOf(ModalRoute<dynamic> route) =>
       route.secondaryAnimation?.value ?? 0.0;
 
+  /// Whether [route] should leave its chrome to the shell this frame.
+  ///
+  /// True for every registered route while the shell is drawing, not only the
+  /// topmost one: mid-transition the chrome is a blend of two routes' items,
+  /// so the outgoing route has to keep its placeholder or its own buttons
+  /// would slide out from underneath the pinned copy.
+  bool isHoisting(ModalRoute<dynamic> route) {
+    if (!isActive || !_registry.containsKey(route)) return false;
+    final ordered = _orderedEntries;
+    if (ordered.isEmpty) return false;
+    return !_isPresentedOver(ordered.first.key);
+  }
+
+  /// Whether a route this shell cannot rank has been *presented* over [route].
+  ///
+  /// UIKit's push/present split is the one that matters here, and the two need
+  /// opposite treatment. A pushed route slides the covered bar away with its
+  /// page, which the shell mirrors by retreating the chrome on the covered
+  /// route's `secondaryAnimation`. A presented one — a dialog, an action
+  /// sheet, a modal sheet, a fullscreen dialog — comes up over the whole
+  /// navigation stack with the bar inside it, and drives no exit transition to
+  /// retreat on: `CupertinoRouteTransitionMixin.canTransitionTo` refuses a
+  /// next route that is neither a `CupertinoRouteTransitionMixin` nor carries
+  /// a `delegatedTransition`, and refuses a fullscreen dialog outright.
+  ///
+  /// Retreating would be the wrong answer even if there were an animation to
+  /// retreat on. The chrome is not covered by a presentation, it is *under*
+  /// one — still on screen behind a sheet, dimming with the barrier like the
+  /// rest of the page. The shell cannot draw it there, because it draws above
+  /// the [Navigator] the presentation was pushed into, so it gives the chrome
+  /// back and the route renders it exactly where it renders when no shell is
+  /// installed at all.
+  ///
+  /// `isCurrent` cannot answer this on its own: a route being popped is not
+  /// current either, and it owns the chrome for the whole of its exit. What
+  /// separates the two is whether any transition is running.
+  static bool _isPresentedOver(ModalRoute<dynamic> route) =>
+      !route.isCurrent && _isAtRest(route);
+
+  /// Whether no transition involving [route] is in flight.
+  static bool _isAtRest(ModalRoute<dynamic> route) =>
+      (route.animation?.status ?? AnimationStatus.completed) ==
+          AnimationStatus.completed &&
+      (route.secondaryAnimation?.status ?? AnimationStatus.dismissed) ==
+          AnimationStatus.dismissed &&
+      !(route.navigator?.userGestureInProgress ?? false);
+
   /// The chrome progress to render, holding still under an active gesture.
   ///
   /// While the finger is down this returns the value the chrome had when the
@@ -427,6 +480,12 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     if (ordered.isEmpty) return null;
 
     final top = ordered.first;
+
+    // Nothing drawn above the `Navigator` can be underneath a route presented
+    // into it, so the shell stands down and the registrants take their chrome
+    // back for as long as one is up.
+    if (_isPresentedOver(top.key)) return null;
+
     final below = ordered.length > 1 ? ordered[1] : null;
 
     // Progress of the top route's own entrance: 1 at rest, 0 when it has just
