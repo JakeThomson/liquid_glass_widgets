@@ -1921,7 +1921,8 @@ class _HeaderMorphDemo extends StatelessWidget {
                 const SizedBox(height: 12),
                 _PatternTile(
                   title: 'Pull Requests',
-                  subtitle: 'Identical actions — the capsule sits perfectly still',
+                  subtitle:
+                      'Identical actions — the capsule sits perfectly still',
                   icon: CupertinoIcons.arrow_branch,
                   onTap: () => _pushDestination(
                     context,

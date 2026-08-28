@@ -121,11 +121,12 @@ abstract final class GlassNavPinnedMetrics {
   /// its silhouette stays readable the whole way in.
   static const double glyphArriveSigma = 3.5;
 
-  /// Route progress window over which an incoming glyph sharpens.
+  /// Window over which an incoming glyph sharpens, as a fraction of the
+  /// [morphStart]..[morphEnd] morph window like [crossFadeStart].
   ///
   /// Sharpening starts while the cluster is still bouncing and finishes just
   /// ahead of the landing — natively the blur is the last thing to clear.
-  static const double glyphSharpenStart = 0.5;
+  static const double glyphSharpenStart = 0.48;
 
   /// End of the incoming glyph's sharpening window.
   static const double glyphSharpenEnd = 0.9;
@@ -137,12 +138,11 @@ abstract final class GlassNavPinnedMetrics {
   static double outgoingSigmaAt(double morphT) =>
       morphBlurSigma * (morphT * 3.0).clamp(0.0, 1.0);
 
-  /// Blur of an incoming glyph at route [progress].
-  static double incomingSigmaAt(double progress) =>
+  /// Blur of an incoming glyph at [morphT] through the morph window.
+  static double incomingSigmaAt(double morphT) =>
       glyphArriveSigma *
       (1.0 -
-          ((progress - glyphSharpenStart) /
-                  (glyphSharpenEnd - glyphSharpenStart))
+          ((morphT - glyphSharpenStart) / (glyphSharpenEnd - glyphSharpenStart))
               .clamp(0.0, 1.0));
 
   /// Point in the transition at which the chrome switches from showing the
@@ -252,7 +252,7 @@ class GlassNavPinnedState {
     required this.progress,
     required this.coverage,
     required this.settled,
-    required this.popping,
+    this.popping = false,
     required this.topRoute,
     this.transition = GlassEffectTransition.materialize,
   });
@@ -679,7 +679,9 @@ class GlassNavActionSlot {
   bool get crossFades {
     final from = fromItem;
     final to = toItem;
-    return from != null && to != null && !_sameContent(from.content, to.content);
+    return from != null &&
+        to != null &&
+        !_sameContent(from.content, to.content);
   }
 
   /// Whether two content widgets draw the same thing.
@@ -788,6 +790,17 @@ class _ClusterParentData extends ContainerBoxParentData<RenderBox> {
   bool isFrom = false;
   double opacity = 1.0;
   double blurSigma = 0.0;
+
+  /// Reused across frames so a blurring glyph does not allocate a fresh
+  /// layer per paint. A [LayerHandle] keeps it alive between frames.
+  final LayerHandle<ImageFilterLayer> blurLayer =
+      LayerHandle<ImageFilterLayer>();
+
+  @override
+  void detach() {
+    blurLayer.layer = null;
+    super.detach();
+  }
 }
 
 /// Lays out both routes' clusters and interpolates between them.
@@ -896,9 +909,19 @@ class _RenderPinnedCluster extends RenderBox
   double _morphScale;
   set morphScale(double value) {
     if (_morphScale == value) return;
+    final wasScaled = _morphScale != 1.0;
     _morphScale = value;
+    if (wasScaled != (value != 1.0)) markNeedsCompositingBitsUpdate();
     markNeedsLayout();
   }
+
+  /// Compositing is required while the gel scales: the blurring glyphs paint
+  /// into their own layers, and only a transform *layer* carries those with
+  /// the scale — a canvas transform leaves them pinned at their unscaled
+  /// positions while the shell inflates around them. At rest this is false
+  /// and the cluster paints directly.
+  @override
+  bool get alwaysNeedsCompositing => _morphScale != 1.0;
 
   double _clusterHeight;
   set clusterHeight(double value) {
@@ -994,8 +1017,18 @@ class _RenderPinnedCluster extends RenderBox
     // re-renders at the true inflated size, and paint scales the children to
     // fill it, so shell and glyphs stretch as one body.
     final width = lerpDouble(fromTotal, toTotal, _widthT)!;
-    size = constraints
-        .constrain(Size(width * _morphScale, _clusterHeight * _morphScale));
+    final scaled = Size(width * _morphScale, _clusterHeight * _morphScale);
+    size = constraints.constrain(scaled);
+    // The bar hosts this cluster in an unbounded row, so the constraint never
+    // bites there; anywhere it did, paint would scale past the box (the
+    // shell's ClipRect contains it, but the layout would be lying).
+    assert(
+      size == constraints.constrain(Size(scaled.width, scaled.height)) &&
+          (constraints.biggest.width.isInfinite ||
+              scaled.width <= constraints.maxWidth + 0.001),
+      'The gel scale needs an unbounded main axis: a clamped box would paint '
+      'outside itself.',
+    );
 
     // Position every child by its interpolated distance from the anchored
     // edge — in the pre-scale space, because paint scales the lot into the
@@ -1065,19 +1098,27 @@ class _RenderPinnedCluster extends RenderBox
         .constrain(Size(width * _morphScale, _clusterHeight * _morphScale));
   }
 
+  /// The paint transform of the gel: a uniform scale about the box origin.
+  Matrix4 get _gelTransform =>
+      Matrix4.diagonal3Values(_morphScale, _morphScale, 1.0);
+
   @override
   void paint(PaintingContext context, Offset offset) {
     if (_morphScale != 1.0) {
       // Children are laid out at their natural size and scaled into the
       // inflated box, glyphs and all — the stretch carries the contents.
-      // Compositing is forced: the blurring glyphs paint into their own
-      // layers, and only a transform *layer* carries those with the scale —
-      // a canvas transform leaves them pinned at their unscaled positions
-      // while the shell inflates around them.
-      final scale = Matrix4.diagonal3Values(_morphScale, _morphScale, 1.0);
-      context.pushTransform(true, offset, scale, _paintChildren);
+      // See [alwaysNeedsCompositing] for why this is a layer, and
+      // [applyPaintTransform] for the matching hit-test/semantics mirror.
+      layer = context.pushTransform(
+        true,
+        offset,
+        _gelTransform,
+        _paintChildren,
+        oldLayer: layer as TransformLayer?,
+      );
       return;
     }
+    layer = null;
     _paintChildren(context, offset);
   }
 
@@ -1090,21 +1131,19 @@ class _RenderPinnedCluster extends RenderBox
 
       // Item contents are not glass, so fading and filtering them here is
       // safe — the shell's own glass dissolves through the shader instead.
-      // The blur sits inside the opacity so a glyph fades as one soft image.
+      // The blur sits inside the opacity so a glyph fades as one soft image;
+      // the layer is kept on the parent data and reused across frames.
       void paintContent(PaintingContext ctx, Offset off) {
         if (data.blurSigma > 0.01) {
-          ctx.pushLayer(
-            ImageFilterLayer(
-              imageFilter: ImageFilter.blur(
-                sigmaX: data.blurSigma,
-                sigmaY: data.blurSigma,
-                tileMode: TileMode.decal,
-              ),
-            ),
-            (c, o) => c.paintChild(current, o),
-            off,
+          final blurLayer = data.blurLayer.layer ??= ImageFilterLayer();
+          blurLayer.imageFilter = ImageFilter.blur(
+            sigmaX: data.blurSigma,
+            sigmaY: data.blurSigma,
+            tileMode: TileMode.decal,
           );
+          ctx.pushLayer(blurLayer, (c, o) => c.paintChild(current, o), off);
         } else {
+          data.blurLayer.layer = null;
           ctx.paintChild(current, off);
         }
       }
@@ -1123,8 +1162,25 @@ class _RenderPinnedCluster extends RenderBox
   }
 
   @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    // Mirror paint exactly: the gel scale about the box origin, then the
+    // child's offset inside the scaled space — so semantics rects,
+    // localToGlobal and hit-testing agree with what is painted mid-gel.
+    if (_morphScale != 1.0) transform.multiply(_gelTransform);
+    super.applyPaintTransform(child, transform);
+  }
+
+  @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    return defaultHitTestChildren(result, position: position);
+    if (_morphScale == 1.0) {
+      return defaultHitTestChildren(result, position: position);
+    }
+    return result.addWithPaintTransform(
+      transform: _gelTransform,
+      position: position,
+      hitTest: (result, position) =>
+          defaultHitTestChildren(result, position: position),
+    );
   }
 }
 
@@ -1344,7 +1400,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     final outSigma =
         state.settled ? 0.0 : GlassNavPinnedMetrics.outgoingSigmaAt(morphT);
     final inSigma =
-        state.settled ? 0.0 : GlassNavPinnedMetrics.incomingSigmaAt(p);
+        state.settled ? 0.0 : GlassNavPinnedMetrics.incomingSigmaAt(morphT);
 
     final children = <Widget>[];
     for (var i = 0; i < slots.length; i++) {
@@ -1460,8 +1516,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           widget.anchoredAtStart ? Alignment.centerLeft : Alignment.centerRight,
       scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
       child: FractionalTranslation(
-        translation:
-            Offset(widget.anchoredAtStart ? -f : f, -f),
+        translation: Offset(widget.anchoredAtStart ? -f : f, -f),
         child: GlassMenu(
           controller: _menu,
           items: menuItem?.menuItems ?? const <Widget>[],
@@ -1472,8 +1527,8 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           triggerBuilder: (context, _) => toGroup.glass
               ? _buildShell(
                   cluster: cluster,
-                  stretch: lerpDouble(
-                      fromGroup.stretch, toGroup.stretch, clampedT)!,
+                  stretch:
+                      lerpDouble(fromGroup.stretch, toGroup.stretch, clampedT)!,
                   morphScale: morphScale,
                 )
               : cluster,
