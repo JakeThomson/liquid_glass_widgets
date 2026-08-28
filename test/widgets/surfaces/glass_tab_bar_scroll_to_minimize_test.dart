@@ -293,7 +293,8 @@ void main() {
       expect(observed, GlassTabBarAccessoryPlacement.expanded);
     });
 
-    testWidgets('the reserved height drops to match, so the scaffold stays in '
+    testWidgets(
+        'the reserved height drops to match, so the scaffold stays in '
         'sync', (tester) async {
       final scroll = ScrollController();
       addTearDown(scroll.dispose);

@@ -1197,9 +1197,8 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           ? GlassMaterializeProfile.entrance
           : GlassMaterializeProfile.exit,
       // It swells from the bar edge its cluster is pinned to.
-      alignment: widget.anchoredAtStart
-          ? Alignment.centerLeft
-          : Alignment.centerRight,
+      alignment:
+          widget.anchoredAtStart ? Alignment.centerLeft : Alignment.centerRight,
       scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
       child: GlassMenu(
         controller: _menu,
