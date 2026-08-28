@@ -620,6 +620,11 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   /// )
   /// ```
   ///
+  /// A host that cannot reach the current screen's [ScrollController] leaves
+  /// [scrollController] off and feeds the minimize controller from a
+  /// `NotificationListener` instead — see
+  /// [GlassTabBarMinimizeController.handleNotification].
+  ///
   /// Without one, [minimized] stays a plain controlled prop and the caller
   /// decides when to flip it.
   ///
@@ -1135,7 +1140,9 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   ///
   /// When supplied it owns the minimize state and [minimized] is ignored;
   /// pass the same [ScrollController] to [scrollController] and to the scroll
-  /// view the bar floats over. See [GlassTabBarMinimizeController].
+  /// view the bar floats over, or drive the controller from a
+  /// `NotificationListener` and leave [scrollController] null. See
+  /// [GlassTabBarMinimizeController].
   final GlassTabBarMinimizeController? minimizeController;
 
   /// Whether the bar is minimized right now, from whichever source owns it.

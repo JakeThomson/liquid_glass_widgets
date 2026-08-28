@@ -29,6 +29,10 @@
 
 - **`GlassNavPinnedMetrics` is now exported from the package barrel:** The geometry the pinned shell redraws hoisted chrome at — 44pt back circle, 46pt action slots, 44pt toolbar band, 8pt edge inset. A bar that is not a `GlassAppBar` had no supported way to reach it and had to hardcode the numbers, which drift the first time the package retunes them. The `show` clause exposes the metrics only; `GlassNavPinnedHost` and the cluster render objects stay internal. Documented under [Glass Navigation Transition](docs/GLASS_NAVIGATION_TRANSITION.md#if-your-bar-is-not-a-glassappbar).
 
+## Bug Fixes
+
+- **`GlassTabBarMinimizeController` drivable without a `ScrollController`:** The state machine's only controller-free entry point, `handleSample`, was annotated `@visibleForTesting`, so a host that observes scrolling with a `NotificationListener` — an app-level scaffold wrapping arbitrary screen bodies, which cannot reach whichever `ScrollController` the current screen owns — could not use the controller at all. The annotation is gone, and a new `handleNotification(ScrollNotification)` drives the minimize from notifications directly, carrying the `UserScrollNotification` direction across the updates that follow it. Leave `GlassTabBar.minimizable`'s `scrollController` off when driving it this way; the example app's minimizable bar demo switches between both sources.
+
 ---
 
 # 1.1.0
