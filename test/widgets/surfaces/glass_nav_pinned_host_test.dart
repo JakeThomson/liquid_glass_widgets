@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as barrel;
 import 'package:liquid_glass_widgets/widgets/surfaces/glass_bar_item.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/shared/glass_nav_pinned_host.dart';
 
@@ -8,56 +9,76 @@ GlassBarIconItem _icon(IconData icon, {Object? id}) =>
     GlassBarIconItem(icon: Icon(icon), onTap: () {}, id: id);
 
 void main() {
-  group('capsule presence', () {
-    double presence(double p, {bool fromEmpty = false, bool toEmpty = true}) =>
-        GlassNavPinnedMetrics.capsulePresenceAt(
-          fromEmpty: fromEmpty,
-          toEmpty: toEmpty,
+  group('cluster materialize phase', () {
+    double phase(double p, {bool inFrom = true, bool inTo = false}) =>
+        GlassNavPinnedMetrics.clusterPhaseAt(
+          inFrom: inFrom,
+          inTo: inTo,
           progress: p,
         );
 
-    test('a cluster that disappears gels out through the morph window', () {
-      expect(presence(0.0), 1.0);
-      expect(presence(GlassNavPinnedMetrics.morphStart), 1.0);
-      expect(presence(GlassNavPinnedMetrics.morphEnd), closeTo(0.0, 1e-9));
-      expect(presence(1.0), 0.0);
+    test('a cluster that disappears dematerializes over the head', () {
+      expect(phase(0.0), 1.0);
+      expect(phase(GlassNavPinnedMetrics.dematerializeEnd / 2),
+          closeTo(0.5, 1e-9));
+      expect(phase(GlassNavPinnedMetrics.dematerializeEnd), 0.0);
+      expect(phase(1.0), 0.0);
     });
 
-    test('a cluster that appears gels in through the morph window', () {
-      double v(double p) => presence(p, fromEmpty: true, toEmpty: false);
-      expect(v(0.0), 0.0);
-      expect(v(GlassNavPinnedMetrics.morphStart), 0.0);
-      expect(v(1.0), 1.0);
-      // The spring gives an appearing capsule the same bounce past full
-      // size that a morphing one gets.
-      final peak = List.generate(101, (i) => v(i / 100))
-          .reduce((a, b) => a > b ? a : b);
-      expect(peak, greaterThan(1.0));
+    test('a cluster that appears materializes over the tail', () {
+      double p(double v) => phase(v, inFrom: false, inTo: true);
+      expect(p(0.0), 0.0);
+      expect(p(GlassNavPinnedMetrics.materializeStart), 0.0);
+      expect(p(1.0), 1.0);
+      final mid = (GlassNavPinnedMetrics.materializeStart + 1.0) / 2;
+      expect(p(mid), closeTo(0.5, 1e-9));
+    });
+
+    test('both phases are monotone, so a scrubbed swipe never jumps', () {
+      var lastExit = phase(0.0);
+      var lastEnter = phase(0.0, inFrom: false, inTo: true);
+      for (var i = 1; i <= 100; i++) {
+        final p = i / 100;
+        final exit = phase(p);
+        final enter = phase(p, inFrom: false, inTo: true);
+        expect(exit, lessThanOrEqualTo(lastExit + 1e-9));
+        expect(enter, greaterThanOrEqualTo(lastEnter - 1e-9));
+        lastExit = exit;
+        lastEnter = enter;
+      }
     });
 
     test(
-      'appearing and disappearing are exact mirrors, so a push and the pop '
-      'that undoes it play the same gel',
+      'the outgoing cluster is never solid once the incoming one begins, so '
+      'the two are never both fully present',
       () {
         for (var i = 0; i <= 100; i++) {
           final p = i / 100;
-          final appearing = presence(p, fromEmpty: true, toEmpty: false);
-          // The appearing side keeps its overshoot past 1 (the bounce); the
-          // disappearing side is its clamped complement, so it rests cleanly
-          // at zero while the other side bounces.
+          final exit = phase(p);
+          final enter = phase(p, inFrom: false, inTo: true);
           expect(
-            presence(p),
-            closeTo((1.0 - appearing).clamp(0.0, 1.0), 1e-9),
-            reason: 'the two directions must be complementary at p=$p',
+            exit + enter,
+            lessThanOrEqualTo(1.0 + 1e-9),
+            reason: 'phases overlap at p=$p',
           );
         }
       },
     );
 
-    test('a cluster present on both sides never leaves full presence', () {
+    test('the configuration never swaps while a cluster is still solid', () {
+      // The window must straddle swapAt: swapping the items shown inside a
+      // fully opaque capsule is the pop this effect exists to remove.
+      expect(phase(GlassNavPinnedMetrics.swapAt), lessThan(1.0));
+      expect(
+        phase(GlassNavPinnedMetrics.swapAt, inFrom: false, inTo: true),
+        greaterThan(0.0),
+      );
+    });
+
+    test('a cluster present on both sides never dissolves', () {
       for (var i = 0; i <= 100; i++) {
         expect(
-          presence(i / 100, fromEmpty: false, toEmpty: false),
+          phase(i / 100, inFrom: true, inTo: true),
           1.0,
           reason: 'a surviving capsule morphs in place, it does not blink',
         );
@@ -66,10 +87,7 @@ void main() {
 
     test('nothing to show on either side renders nothing', () {
       for (var i = 0; i <= 100; i++) {
-        expect(
-          presence(i / 100, fromEmpty: true, toEmpty: true),
-          0.0,
-        );
+        expect(phase(i / 100, inFrom: false, inTo: false), 0.0);
       }
     });
   });
@@ -82,21 +100,20 @@ void main() {
       expect(GlassNavPinnedMetrics.showsIncomingAt(1.0), isTrue);
     });
 
-    test('an appearing capsule is already gelling in at the swap point', () {
-      // Items appear with their side; the capsule that carries them must be
-      // on its way in by the time the configuration swaps, so the arriving
-      // icons never render on a capsule that has not started to exist.
+    test('the incoming capsule is already forming when its items swap in', () {
+      // Items appear with their side, so the capsule that contains them must
+      // have begun materializing by the time the configuration flips.
       expect(
         GlassNavPinnedMetrics.showsIncomingAt(GlassNavPinnedMetrics.swapAt),
         isTrue,
       );
       expect(
-        GlassNavPinnedMetrics.capsulePresenceAt(
-          fromEmpty: true,
-          toEmpty: false,
+        GlassNavPinnedMetrics.clusterPhaseAt(
+          inFrom: false,
+          inTo: true,
           progress: GlassNavPinnedMetrics.swapAt,
         ),
-        greaterThan(0.2),
+        greaterThan(0.0),
       );
     });
   });
@@ -185,6 +202,18 @@ void main() {
       // Passive custom content still exposes a callable handler, so nothing
       // downstream has to null-check its way around a status readout.
       expect(passive.onTap, returnsNormally);
+    });
+  });
+
+  group('barrel export', () {
+    test('GlassNavPinnedMetrics is reachable from the package barrel', () {
+      // A bar that is not a GlassAppBar aligns its in-route chrome to these
+      // numbers. `show` works per declaration, so one reference guards the
+      // whole class: drop the export and this file stops compiling.
+      expect(
+        barrel.GlassNavPinnedMetrics.backDiameter,
+        GlassNavPinnedMetrics.backDiameter,
+      );
     });
   });
 }

@@ -114,6 +114,19 @@ class GlassDefaults {
   /// Slow animation duration for deliberate effects (300ms)
   static const Duration animationDurationSlow = Duration(milliseconds: 300);
 
+  /// Entrance duration of the materialize glass transition (250ms).
+  ///
+  /// Measured from iOS 26's `glassEffectTransition(.materialize)` in a 120fps
+  /// capture of the native navigation bar: the glass fades up from nothing to
+  /// settled in roughly a quarter second.
+  static const Duration materializeDuration = Duration(milliseconds: 250);
+
+  /// Exit duration of the materialize glass transition (350ms).
+  ///
+  /// The native dematerialize runs noticeably longer than the entrance — the
+  /// content blurs away first and the glass dissolves after it.
+  static const Duration dematerializeDuration = Duration(milliseconds: 350);
+
   // ============================================================================
   // Overlay / Compositor
   // ============================================================================

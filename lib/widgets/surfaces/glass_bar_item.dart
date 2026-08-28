@@ -2,6 +2,36 @@ import 'package:flutter/widgets.dart';
 
 import '../overlays/glass_menu.dart';
 
+/// How an item's glass background is drawn.
+///
+/// Mirrors the two booleans iOS 26 added to `UIBarButtonItem`:
+/// `sharesBackground` (default `YES`) and `hidesSharedBackground` (default
+/// `NO`). Their four combinations describe three distinct results, which are
+/// the three values here.
+///
+/// Both are documented as being ignored for an item inside an explicit group
+/// of more than one; the equivalent here is that [GlassBarItemBackground.shared]
+/// is the only value that lets an item join its neighbours.
+enum GlassBarItemBackground {
+  /// The item joins one glass capsule with its neighbours.
+  ///
+  /// `sharesBackground = YES` — the default, and the only value that groups.
+  shared,
+
+  /// The item gets a glass capsule of its own, sharing with nothing.
+  ///
+  /// `sharesBackground = NO`. A lone icon in its own capsule is the circular
+  /// button iOS 26 draws for a single bar item.
+  separate,
+
+  /// No glass is drawn behind the item at all.
+  ///
+  /// `hidesSharedBackground = YES`. For content that carries its own shape —
+  /// a profile photo, a coloured badge — where a capsule behind it would read
+  /// as a second, competing surface.
+  none,
+}
+
 /// A single item in a pinned navigation-bar cluster.
 ///
 /// Mirrors UIKit's `UIBarButtonItem`: items are declared as **data**, and the
@@ -40,6 +70,7 @@ sealed class GlassBarItem {
     Object? id,
     String? label,
     bool enabled,
+    GlassBarItemBackground background,
   }) = GlassBarIconItem;
 
   /// An arbitrary widget inside the pinned cluster.
@@ -61,6 +92,7 @@ sealed class GlassBarItem {
     Object? id,
     String? label,
     bool enabled,
+    GlassBarItemBackground background,
   }) = GlassBarCustomItem;
 
   /// An icon that opens a [GlassMenu] pull-down, mirroring
@@ -81,6 +113,7 @@ sealed class GlassBarItem {
     double menuWidth,
     Object? id,
     String? label,
+    GlassBarItemBackground background,
   }) = GlassBarMenuItem;
 
   /// Splits the shared glass background, mirroring SwiftUI's
@@ -105,6 +138,7 @@ sealed class GlassBarActionItem extends GlassBarItem {
     this.id,
     this.label,
     this.enabled = true,
+    this.background = GlassBarItemBackground.shared,
   });
 
   /// The tap handler for items that do not want one, mirroring
@@ -131,6 +165,11 @@ sealed class GlassBarActionItem extends GlassBarItem {
   /// Whether the item responds to taps. Disabled items render dimmed.
   final bool enabled;
 
+  /// How this item's glass background is drawn.
+  ///
+  /// Defaults to [GlassBarItemBackground.shared], so items form one capsule.
+  final GlassBarItemBackground background;
+
   /// The widget rendered inside the cluster.
   Widget get content;
 }
@@ -146,6 +185,7 @@ final class GlassBarIconItem extends GlassBarActionItem {
     super.id,
     super.label,
     super.enabled,
+    super.background,
   });
 
   /// The icon widget, typically an [Icon].
@@ -168,6 +208,7 @@ final class GlassBarCustomItem extends GlassBarActionItem {
     super.id,
     super.label,
     super.enabled,
+    super.background,
   });
 
   /// The widget rendered inside the cluster, measured at its intrinsic width.
@@ -189,6 +230,7 @@ final class GlassBarMenuItem extends GlassBarActionItem {
     this.menuWidth = 200,
     super.id,
     super.label,
+    super.background,
   }) : super(onTap: GlassBarActionItem._noOp);
 
   /// The icon widget, typically an [Icon]. Conventionally an ellipsis.
