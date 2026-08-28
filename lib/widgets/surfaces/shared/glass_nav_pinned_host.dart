@@ -6,8 +6,11 @@ import 'package:flutter/rendering.dart';
 
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
+import '../../effects/glass_materialize.dart';
+import '../../effects/shared/glass_materialize_effect.dart';
 import '../../interactive/glass_button.dart';
 import '../../overlays/glass_menu.dart';
+import '../../shared/glass_accessibility_scope.dart';
 import '../../shared/glass_isolation_scope.dart';
 import '../glass_app_bar.dart';
 import '../glass_bar_item.dart';
@@ -67,23 +70,53 @@ abstract final class GlassNavPinnedMetrics {
   /// outgoing route's configuration to the incoming one.
   static const double swapAt = 0.5;
 
-  /// Whether the actions capsule is visible at transition [progress].
+  /// Start of the window over which an appearing cluster materializes, in
+  /// route progress. The window ends at 1.0.
   ///
-  /// Appearing and disappearing are deliberately **not** animated. Scaling a
-  /// cluster in or out looked wrong in both directions — an exit that drifts
-  /// and shrinks, an entrance that grows — and neither matches the native bar,
-  /// which cross-fades glass the package cannot cross-fade. The capsule is
-  /// simply present or absent, switching once at [swapAt]. What does animate
-  /// is the part that matters: a surviving capsule morphing in place.
-  static bool capsuleVisibleAt({
-    required bool fromEmpty,
-    required bool toEmpty,
+  /// It straddles [swapAt] deliberately: the configuration must swap while
+  /// the cluster is still partially dissolved, never while it is fully solid.
+  static const double materializeStart = 0.45;
+
+  /// Scale a cluster swells to while dematerialized, from the native
+  /// capture. Gentler than the standalone default: the bar's clusters are
+  /// anchored to an edge, where a deep scale reads as a slide.
+  static const double materializeScaleFrom = 1.1;
+
+  /// End of the window over which a disappearing cluster dematerializes, in
+  /// route progress. The window starts at 0.0.
+  static const double dematerializeEnd = 0.55;
+
+  /// The materialize phase of a cluster at transition [progress]:
+  /// 0.0 = fully dematerialized (not built), 1.0 = settled glass.
+  ///
+  /// A cluster only the incoming route has materializes over the tail of the
+  /// transition; one only the outgoing route has dematerializes over the
+  /// head. Both are pure functions of [progress], so a pop — which runs the
+  /// same value backwards — plays each window in reverse and the exit still
+  /// leads the entrance in both directions, with no direction to get wrong.
+  ///
+  /// [progress] is not raw route progress during an interactive back-swipe:
+  /// the shell holds it still until the gesture commits and then re-times it
+  /// over the remaining travel, so the chrome never dissolves under a finger
+  /// that may yet be lifted. See `GlassNavigationShellState._holdForGesture`.
+  ///
+  /// The windows are symmetric on purpose. The native asymmetry — an exit
+  /// that lingers past its entrance — lives in the effect's own sub-curves,
+  /// where it survives a reversed transition; encoding it here as
+  /// direction-aware windows would snap when a swipe reverses mid-flight,
+  /// for the same reason the capsule's geometry curve is symmetric.
+  static double clusterPhaseAt({
+    required bool inFrom,
+    required bool inTo,
     required double progress,
   }) {
-    if (fromEmpty && toEmpty) return false;
-    if (fromEmpty) return progress >= swapAt;
-    if (toEmpty) return progress < swapAt;
-    return true;
+    if (inFrom && inTo) return 1.0;
+    if (!inFrom && !inTo) return 0.0;
+    if (inTo) {
+      return ((progress - materializeStart) / (1.0 - materializeStart))
+          .clamp(0.0, 1.0);
+    }
+    return 1.0 - (progress / dematerializeEnd).clamp(0.0, 1.0);
   }
 
   /// Which side's configuration is showing at transition [progress].
@@ -107,6 +140,7 @@ class GlassNavPinnedState {
     required this.coverage,
     required this.settled,
     required this.topRoute,
+    this.transition = GlassEffectTransition.materialize,
   });
 
   /// Chrome of the route beneath the top one.
@@ -135,22 +169,59 @@ class GlassNavPinnedState {
 
   /// The topmost registered route, used for the default back action.
   final ModalRoute<dynamic> topRoute;
+
+  /// How clusters that appear or disappear outright transition.
+  ///
+  /// Set from [GlassNavigationShell.effectTransition]; the host downgrades
+  /// it to [GlassEffectTransition.identity] under reduce motion.
+  final GlassEffectTransition transition;
 }
 
 /// Renders the pinned leading and trailing clusters above the [Navigator].
 ///
 /// A surviving cluster keeps one persistent glass shell whose geometry
-/// animates; its element is never remounted mid-morph. That matters because a
-/// glass surface's backdrop pass renders fully or not at all, so fading one in
-/// or out visibly pops — geometry may animate, opacity may not. Clusters that
-/// appear or disappear outright do so in a single switch at
-/// [GlassNavPinnedMetrics.swapAt] rather than animating.
+/// animates; its element is never remounted mid-morph, because a glass
+/// surface's backdrop pass renders fully or not at all and a shell that
+/// remounts pops. Clusters that appear or disappear outright materialize
+/// instead, over the windows in [GlassNavPinnedMetrics.clusterPhaseAt] — the
+/// effect dissolves the cluster's *composited own layer* through the shader's
+/// own visibility uniform, which is a fade the backdrop pass does honour.
 class GlassNavPinnedHost extends StatelessWidget {
   /// Creates the pinned host for the given frame [state].
   const GlassNavPinnedHost({super.key, required this.state});
 
   /// The chrome to render.
   final GlassNavPinnedState state;
+
+  /// The phase an appearing or disappearing cluster is at, honouring the
+  /// shell's [GlassEffectTransition] and the user's reduce-motion setting.
+  ///
+  /// [GlassEffectTransition.identity] collapses the window back to the single
+  /// switch at [GlassNavPinnedMetrics.swapAt] this chrome used before the
+  /// effect existed, which is also what reduce motion selects — the effect's
+  /// own reduce-motion path drops the scale and blur but still cross-fades,
+  /// and a bar that dissolves on every push is the motion being asked about.
+  static double phaseFor(
+    BuildContext context,
+    GlassNavPinnedState state, {
+    required bool inFrom,
+    required bool inTo,
+  }) {
+    final identity = state.transition == GlassEffectTransition.identity ||
+        GlassAccessibilityData.of(context).reduceMotion;
+    if (identity) {
+      if (inFrom && inTo) return 1.0;
+      if (!inFrom && !inTo) return 0.0;
+      final showsIncoming =
+          GlassNavPinnedMetrics.showsIncomingAt(state.progress);
+      return (inTo ? showsIncoming : !showsIncoming) ? 1.0 : 0.0;
+    }
+    return GlassNavPinnedMetrics.clusterPhaseAt(
+      inFrom: inFrom,
+      inTo: inTo,
+      progress: state.progress,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -303,22 +374,27 @@ List<GlassNavBarGroup> groupGlassNavBarItems(List<GlassBarActionItem> items) {
   return (from: from, to: to);
 }
 
-/// Whether a group draws anything at [progress].
+/// Whether a group draws anything at [state]'s progress.
 ///
 /// The cluster asks before laying out, so a group that is switched off takes
-/// no gap in the row either.
+/// no gap in the row either. Asked of the materialize phase rather than of a
+/// hard switch: a group part-way through its window is still drawing, and
+/// dropping it there would pop the very transition the window exists to play.
 bool _groupShowsAt(
+  BuildContext context,
+  GlassNavPinnedState state,
   GlassNavBarGroup? from,
   GlassNavBarGroup? to,
-  double progress,
 ) {
-  final sides = _resolveGroupSides(from, to, progress);
+  final sides = _resolveGroupSides(from, to, state.progress);
   if (sides.from == null && sides.to == null) return false;
-  return GlassNavPinnedMetrics.capsuleVisibleAt(
-    fromEmpty: sides.from == null,
-    toEmpty: sides.to == null,
-    progress: progress,
-  );
+  return GlassNavPinnedHost.phaseFor(
+        context,
+        state,
+        inFrom: sides.from != null,
+        inTo: sides.to != null,
+      ) >
+      0.0;
 }
 
 /// Identity carried by the automatic back button.
@@ -417,9 +493,10 @@ class _PinnedSide extends StatelessWidget {
           children: [
             for (var i = 0; i < count; i++)
               if (_groupShowsAt(
+                context,
+                state,
                 i < fromGroups.length ? fromGroups[i] : null,
                 i < toGroups.length ? toGroups[i] : null,
-                state.progress,
               ))
                 _PinnedGroup(
                   // Keyed by position so a surviving shell keeps its element:
@@ -820,8 +897,8 @@ class _RenderPinnedCluster extends RenderBox
       if (data.opacity >= 1.0) {
         context.paintChild(child, childOffset);
       } else if (data.opacity > 0.0) {
-        // Item contents are not glass, so fading them is safe — unlike the
-        // capsule itself, which only ever animates geometry.
+        // Item contents are not glass, so fading them here is safe — the
+        // capsule's own shell dissolves through the shader instead.
         context.pushOpacity(
           childOffset,
           (data.opacity * 255).round(),
@@ -889,9 +966,10 @@ class _ClusterChild extends ParentDataWidget<_ClusterParentData> {
 /// One group of a cluster, on both routes, interpolated.
 ///
 /// A group that survives a transition keeps one persistent glass shell whose
-/// geometry animates; its element is never remounted mid-morph. The shell only
-/// ever animates geometry — the items inside it, which are not glass,
-/// cross-fade freely.
+/// geometry animates; its element is never remounted mid-morph. While both
+/// routes have the group the shell only animates geometry; when just one does
+/// it materializes in or out around that geometry. The items inside it —
+/// which are not glass — cross-fade freely either way.
 class _PinnedGroup extends StatefulWidget {
   const _PinnedGroup({
     super.key,
@@ -958,6 +1036,16 @@ class _PinnedGroupState extends State<_PinnedGroup> {
         : toItems.isEmpty
             ? 0.0
             : eased;
+
+    // Drives the materialize window for a group that only one route has. The
+    // side has already dropped groups whose phase is zero, so this is only
+    // ever a partial phase or a full one.
+    final phase = GlassNavPinnedHost.phaseFor(
+      context,
+      state,
+      inFrom: fromItems.isNotEmpty,
+      inTo: toItems.isNotEmpty,
+    );
 
     // Geometry for a side that does not exist comes from the side that does,
     // so an entering or exiting group holds its shape rather than resizing.
@@ -1095,23 +1183,38 @@ class _PinnedGroupState extends State<_PinnedGroup> {
       children: children,
     );
 
-    // Wrapped unconditionally, even with no menu item: inserting or removing a
-    // GlassMenu ancestor would remount the group's element, and a glass shell
-    // that remounts mid-morph pops its backdrop. Closed, GlassMenu adds only
-    // inert wrappers and mounts no overlay, so the empty case costs nothing.
-    return GlassMenu(
-      controller: _menu,
-      items: menuItem?.menuItems ?? const <Widget>[],
-      menuAlignment: menuItem?.menuAlignment,
-      // The fallback is never read: with no menu item there is no trigger
-      // to open one. It matches GlassMenu's own default.
-      menuWidth: menuItem?.menuWidth ?? 200,
-      triggerBuilder: (context, _) => toGroup.glass
-          ? _buildShell(
-              cluster: cluster,
-              stretch: lerpDouble(fromGroup.stretch, toGroup.stretch, eased)!,
-            )
-          : cluster,
+    // Both wrappers are unconditional, even at rest and even with no menu
+    // item: inserting or removing either would remount the group's element,
+    // and a glass shell that remounts mid-morph pops its backdrop. At a phase
+    // of 1.0 the effect is paint-neutral, and a closed GlassMenu adds only
+    // inert wrappers and mounts no overlay, so the resting case costs nothing.
+    return GlassMaterializeEffect(
+      progress: phase,
+      // The window this group traverses is the incoming one exactly when it is
+      // the incoming route that has it; the profile follows from the same
+      // fact, so a pop reverses both together.
+      profile: toItems.isNotEmpty
+          ? GlassMaterializeProfile.entrance
+          : GlassMaterializeProfile.exit,
+      // It swells from the bar edge its cluster is pinned to.
+      alignment: widget.anchoredAtStart
+          ? Alignment.centerLeft
+          : Alignment.centerRight,
+      scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
+      child: GlassMenu(
+        controller: _menu,
+        items: menuItem?.menuItems ?? const <Widget>[],
+        menuAlignment: menuItem?.menuAlignment,
+        // The fallback is never read: with no menu item there is no trigger
+        // to open one. It matches GlassMenu's own default.
+        menuWidth: menuItem?.menuWidth ?? 200,
+        triggerBuilder: (context, _) => toGroup.glass
+            ? _buildShell(
+                cluster: cluster,
+                stretch: lerpDouble(fromGroup.stretch, toGroup.stretch, eased)!,
+              )
+            : cluster,
+      ),
     );
   }
 
