@@ -620,12 +620,18 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   /// )
   /// ```
   ///
+  /// A host that cannot reach the current screen's [ScrollController] leaves
+  /// [scrollController] off and feeds the minimize controller from a
+  /// `NotificationListener` instead — see
+  /// [GlassTabBarMinimizeController.handleNotification].
+  ///
   /// Without one, [minimized] stays a plain controlled prop and the caller
   /// decides when to flip it.
   ///
-  /// A [bottomAccessory] does not follow the bar on its own — pass
-  /// [GlassTabBarAccessoryPlacement.inline] in the same rebuild the minimize
-  /// lands in and it animates down into the bar.
+  /// A [bottomAccessory] follows the bar: with no explicit
+  /// [bottomAccessoryPlacement] it moves inline as the bar minimizes, the way
+  /// iOS 26 animates a `tabViewBottomAccessory` down into the minimized bar.
+  /// Pass [GlassTabBarAccessoryPlacement.expanded] to pin it.
   const GlassTabBar.minimizable({
     required List<GlassTab> tabs,
     required int selectedIndex,
@@ -1134,7 +1140,9 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   ///
   /// When supplied it owns the minimize state and [minimized] is ignored;
   /// pass the same [ScrollController] to [scrollController] and to the scroll
-  /// view the bar floats over. See [GlassTabBarMinimizeController].
+  /// view the bar floats over, or drive the controller from a
+  /// `NotificationListener` and leave [scrollController] null. See
+  /// [GlassTabBarMinimizeController].
   final GlassTabBarMinimizeController? minimizeController;
 
   /// Whether the bar is minimized right now, from whichever source owns it.
@@ -1165,10 +1173,14 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
     double total = effectivePillH;
 
     // In inline mode the accessory sits BESIDE the pill (no extra height).
-    // Only explicit .inline placement counts — never auto-infer from search state,
-    // because the layout engine (TabBarSearchableLayout) does NOT auto-collapse either.
-    final isInline =
-        bottomAccessoryPlacement == GlassTabBarAccessoryPlacement.inline;
+    // This MUST resolve identically to the layout engine's own call, or the
+    // scaffold reserves a height the bar does not draw.
+    final isInline = resolveAccessoryPlacement(
+          explicit: bottomAccessoryPlacement,
+          minimized: minimized,
+          isMinimizablePlacement: isMinimizable,
+        ) ==
+        GlassTabBarAccessoryPlacement.inline;
 
     if (bottomAccessory != null &&
         !isInline &&
@@ -1407,6 +1419,8 @@ class _GlassTabBarState extends State<GlassTabBar> {
       controller: widget.controller,
       isSearchActive: widget._effectiveMinimized,
       minimizeController: widget.minimizeController,
+      isMinimizablePlacement:
+          widget._placement == _GlassTabBarPlacement.minimizable,
       extraButton: widget.extraButton,
       bottomAccessoryPlacement: widget.bottomAccessoryPlacement,
       bottomAccessory: widget.bottomAccessory,

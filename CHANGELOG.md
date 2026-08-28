@@ -4,10 +4,38 @@
 
 - **Progressive Blur Scroll Edge Style (`GlassScrollEdgeStyle.blur`):** Introduces a hardware-accelerated GPU progressive Gaussian frost option via `ProgressiveBlur`, applying an `ImageFilter.shader` pass with ease-in quadratic falloff (`falloff: 2.0`) directly over live scrolling content. Default remains `GlassScrollEdgeStyle.soft` (the diffused gradient fade matching iOS 26's `.scrollEdgeEffectStyle(.soft)`). Developers can opt into `.blur` for richer frosting over custom dynamic gradients, video backdrops, or media grids.
 - **Configurable `maxSigma` & Signed Fade Extents:** Exposes `maxSigma` (default 18.0) for `GlassScrollEdgeStyle.blur`, alongside signed `topEdgeFadeExtent` and `bottomEdgeFadeExtent` (default 20.0) on `GlassScaffold` and `GlassScrollEdgeEffect` for granular transition zone control (including negative extents for tight floating-bar insets).
+- **`GlassPinnedBarChrome` — pin a bar that isn't a `GlassAppBar`:** The registration handshake behind `GlassAppBar.pinned` is now public, so an app whose bars are its own widgets — a Material `AppBar` with a bespoke backdrop, a collapsing large-title sliver — can join a `GlassNavigationShell` without reimplementing it. Items are declared once as data; the builder receives `chrome.leading` and `chrome.actions`, which hold the real glass buttons until the shell has both accepted the registration and had a frame to render its copy, and same-sized unpainted placeholders after — so the bar never builds a second copy and nothing shifts at the hand-over. `GlassAppBar.pinned` now builds its own slots the same way, so there is one implementation rather than two. An `enabled` flag keeps a nested navigator's roots out of the shell, which ranks routes within a single `Navigator`. New **Custom Bar Pinning** pattern in the nav-patterns demo pins a plain Material `AppBar`.
 - **Pinned leading items (`GlassAppBar.pinned(leading:)`):** The pinned bar's leading slot is no longer limited to its own automatic back button, so a screen with a Cancel, a close button or a profile photo can pin its chrome instead of falling back whole. `leading` takes the same `GlassBarItem` vocabulary as `actions` and inherits the whole morph — width interpolation, `id` matching, icon cross-fade, taps swallowed mid-transition — because the cluster render object now anchors to whichever edge it is pinned to rather than always the trailing one. A non-empty `leading` **replaces** the back button, matching `UINavigationItem.leftBarButtonItems` and Flutter's own `AppBar.leading`; `leadingItemsSupplementBackButton: true` shows both, mirroring `UINavigationItem.leftItemsSupplementBackButton`. A lone back button renders exactly as before.
 - **`GlassBarItemBackground` — per-item glass:** Collapses the two booleans iOS 26 added to `UIBarButtonItem` into their three distinct results: `shared` (the default — `sharesBackground`, items form one capsule), `separate` (`sharesBackground: NO` — its own shell, which at a lone icon's size is the circular button iOS 26 draws for a single bar item) and `none` (`hidesSharedBackground` — no glass at all, for content that carries its own shape, such as a profile photo). A cluster now renders one shell per group rather than always one capsule.
 - **Leading Items demo:** The nav-patterns showcase gains a pattern walking the four leading configurations — a bare avatar, the implied back button, a leading that replaces it, and one beside it — plus the lone circular shell growing into a two-item capsule.
 - **Scroll Edge Playground Demo:** Added a comprehensive interactive showcase in the example app (`example/lib/demos/scroll_edge_style_demo.dart`) featuring live style switching (`soft`, `hard`, `blur`), real-time extent/sigma sliders, top/bottom toggles, and floating `GlassAppBar` & `GlassTabBar.bottom` integration with solid content cards.
+- **Bottom accessory follows the bar (behaviour change) (#226):** on
+  `GlassTabBar.minimizable`, a `bottomAccessory` with no explicit
+  `bottomAccessoryPlacement` now resolves to
+  `GlassTabBarAccessoryPlacement.inline` while the bar is minimized, matching
+  how iOS 26 animates a `tabViewBottomAccessory` down into the minimized bar.
+  Previously it stayed `expanded` unless `inline` was passed explicitly.
+
+  **This changes what `GlassTabBarAccessoryPlacementScope.of(context)` returns**
+  for affected callers — an accessory that switches on it will render its
+  compact variant on scroll where it previously did not, with no code change on
+  your side — and shrinks `preferredSize` by
+  `bottomAccessorySpacing + bottomAccessoryHeight` while minimized. Affects only
+  bars that have an accessory, pass no explicit placement, and reach the
+  minimized state. Pass `GlassTabBarAccessoryPlacement.expanded` to keep the
+  previous behaviour.
+
+  `GlassTabBar.searchable` is deliberately unchanged. Auto-collapsing on search
+  was removed in 0.x because it hid the mini-player behind the search capsule,
+  and that decision stands — a search field expanding is not the bar minimizing.
+
+## API
+
+- **`GlassNavPinnedMetrics` is now exported from the package barrel:** The geometry the pinned shell redraws hoisted chrome at — 44pt back circle, 46pt action slots, 44pt toolbar band, 8pt edge inset. A bar that is not a `GlassAppBar` had no supported way to reach it and had to hardcode the numbers, which drift the first time the package retunes them. The `show` clause exposes the metrics only; `GlassNavPinnedHost` and the cluster render objects stay internal. Documented under [Glass Navigation Transition](docs/GLASS_NAVIGATION_TRANSITION.md#if-your-bar-is-not-a-glassappbar).
+
+## Bug Fixes
+
+- **`GlassTabBarMinimizeController` drivable without a `ScrollController`:** The state machine's only controller-free entry point, `handleSample`, was annotated `@visibleForTesting`, so a host that observes scrolling with a `NotificationListener` — an app-level scaffold wrapping arbitrary screen bodies, which cannot reach whichever `ScrollController` the current screen owns — could not use the controller at all. The annotation is gone, and a new `handleNotification(ScrollNotification)` drives the minimize from notifications directly, carrying the `UserScrollNotification` direction across the updates that follow it. Leave `GlassTabBar.minimizable`'s `scrollController` off when driving it this way; the example app's minimizable bar demo switches between both sources.
 
 ---
 
