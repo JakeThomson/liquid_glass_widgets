@@ -161,6 +161,26 @@ mixin TabDragGestureMixin<T extends StatefulWidget> on State<T> {
     barSwayOffset = 0.0;
   }
 
+  /// Settles the indicator back onto the host's tab when the host does not
+  /// adopt a selection.
+  ///
+  /// A release commits the indicator's position locally and then reports the
+  /// target through [notifyTabChanged]. A host is free to decline that: an
+  /// action tab that opens a sheet, a guard that refuses navigation, a tab
+  /// whose route fails to push. In those cases [tabIndex] never changes, so
+  /// [updateTabAlignIfNeeded] has nothing to compare and the indicator is
+  /// left parked on a tab that is not selected, with nothing to bring it
+  /// back.
+  ///
+  /// Checked after the frame so the host has had its chance to adopt the
+  /// index. When it did, this is a no-op.
+  void reconcileWithHost(int target) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || tabIsDragging || tabIndex == target) return;
+      setState(() => tabXAlign = computeTabAlignment(tabIndex));
+    });
+  }
+
   /// Call from [didUpdateWidget] when tabIndex or tabCount may have changed.
   void updateTabAlignIfNeeded(int oldTabIndex, int oldTabCount) {
     if (oldTabIndex != tabIndex || oldTabCount != tabCount) {
@@ -349,6 +369,7 @@ mixin TabDragGestureMixin<T extends StatefulWidget> on State<T> {
         barSwayOffset = 0.0; // spring back to center
       });
       notifyTabChanged(target);
+      reconcileWithHost(target);
     });
   }
 
@@ -366,6 +387,7 @@ mixin TabDragGestureMixin<T extends StatefulWidget> on State<T> {
           barSwayOffset = 0.0; // spring back to center
         });
         notifyTabChanged(target);
+        reconcileWithHost(target);
       });
     } else {
       // Not dragging (e.g. same-tab tap): reset indicator to exact tab center.
@@ -412,8 +434,10 @@ mixin TabDragGestureMixin<T extends StatefulWidget> on State<T> {
     });
 
     if (isPlatformViewBackdrop && _pendingHybridTabIndex != null) {
-      notifyTabChanged(_pendingHybridTabIndex!);
+      final target = _pendingHybridTabIndex!;
+      notifyTabChanged(target);
       _pendingHybridTabIndex = null;
+      reconcileWithHost(target);
     }
   }
 
