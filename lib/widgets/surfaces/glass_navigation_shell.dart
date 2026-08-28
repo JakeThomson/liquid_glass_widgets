@@ -1,6 +1,7 @@
 import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter/widgets.dart';
 
+import '../../constants/glass_defaults.dart';
 import '../../src/renderer/liquid_glass_settings.dart';
 import '../../theme/glass_theme_helpers.dart';
 import '../../types/glass_quality.dart';
@@ -119,7 +120,8 @@ class GlassNavigationShell extends StatefulWidget {
 /// Routes register through [register] and are ranked by how covered they are,
 /// so the shell always knows which route is on top and which sits beneath it
 /// mid-transition.
-class GlassNavigationShellState extends State<GlassNavigationShell> {
+class GlassNavigationShellState extends State<GlassNavigationShell>
+    with SingleTickerProviderStateMixin {
   /// Registrations keyed by route, in registration order.
   final Map<ModalRoute<dynamic>, GlassNavBarRegistration> _registry =
       <ModalRoute<dynamic>, GlassNavBarRegistration>{};
@@ -133,6 +135,53 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
   /// Whether a deferred notification is already queued for this frame.
   bool _notifyQueued = false;
 
+  // ---------------------------------------------------------------------------
+  // Interactive back-swipe hold
+  // ---------------------------------------------------------------------------
+  // The chrome's own transition waits for the gesture to commit rather than
+  // scrubbing under the finger. Dragging halfway and letting go should not
+  // have half-dissolved a button on the way — until the pop is committed
+  // there is no answer yet to which chrome wins, and animating toward one
+  // reads as the bar guessing. The page and its title still track the drag;
+  // it is only the pinned chrome that waits.
+
+  /// Whether a user gesture was in progress on the previous resolve.
+  bool _gestureActive = false;
+
+  /// Chrome progress frozen at the moment the gesture began.
+  double? _gestureHeldProgress;
+
+  /// The most recent progress observed with no gesture running.
+  ///
+  /// A drag is already under way by the time the shell first resolves during
+  /// it, so this is what the chrome is held at rather than the value on that
+  /// first frame.
+  double? _ungesturedProgress;
+
+  /// Plays the chrome's transition after a swipe commits.
+  ///
+  /// The chrome cannot ride the route's remaining travel here. Cupertino
+  /// sizes the commit animation by how far the drag got —
+  /// `lerpDouble(0, maxDroppedSwipeTime, controller.value)` — so releasing
+  /// late leaves almost nothing to play over, and the whole dissolve was
+  /// being squeezed into about five frames. Given its own duration it always
+  /// reads, at the price of outliving the page transition on a late release.
+  late final AnimationController _commitExit = AnimationController(
+    vsync: this,
+    duration: GlassDefaults.dematerializeDuration,
+  );
+
+  /// The chrome as it stood when the swipe committed.
+  ///
+  /// Frozen because the outgoing route unregisters the moment its pop
+  /// finishes, which is *before* this animation ends. Resolving from the live
+  /// registry would flip `from`/`to` mid-play and snap the chrome — the exact
+  /// thing the fixed duration exists to avoid.
+  GlassNavPinnedState? _commitExitFrom;
+
+  /// Chrome progress the commit animation starts from.
+  double _commitExitStart = 1.0;
+
   bool _pinningSupported = false;
 
   /// Whether pinning is currently active.
@@ -140,6 +189,20 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
   /// False when the shell is disabled or the resolved glass quality can't
   /// render the effect, in which case registrants render in-route instead.
   bool get isActive => widget.enabled && _pinningSupported;
+
+  @override
+  void initState() {
+    super.initState();
+    _commitExit
+      ..addListener(_tick.notify)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _commitExitFrom = null;
+          _clearGestureHold();
+          _scheduleNotify();
+        }
+      });
+  }
 
   @override
   void didChangeDependencies() {
@@ -207,7 +270,13 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
 
   void _onAnimationTick() => _tick.notify();
 
-  void _onAnimationStatus(AnimationStatus status) => _scheduleNotify();
+  void _onAnimationStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      _clearGestureHold();
+    }
+    _scheduleNotify();
+  }
 
   /// Notifies listeners, deferring past build/layout when necessary.
   ///
@@ -276,9 +345,65 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
   static double _coverageOf(ModalRoute<dynamic> route) =>
       route.secondaryAnimation?.value ?? 0.0;
 
+  /// The chrome progress to render, holding still under an active gesture.
+  ///
+  /// While the finger is down this returns the value the chrome had when the
+  /// drag began, so nothing dissolves or cross-fades under a swipe that may
+  /// yet be cancelled.
+  ///
+  /// Neither release path needs re-timing here. A commit is handed to
+  /// [_commitExit], which replays the transition on its own clock; a cancelled
+  /// swipe rebounds the route back to where the chrome was already held, so
+  /// the live progress is the right answer on its own.
+  double _holdForGesture(double progress, bool gesturing) {
+    if (gesturing) {
+      // The last value seen *before* the gesture, not the one on the frame it
+      // was first observed: a drag has already travelled some distance by the
+      // time the first frame resolves, and holding at that would bake the
+      // jump it made in the meantime into the held value.
+      _gestureHeldProgress ??= _ungesturedProgress ?? progress;
+      _gestureActive = true;
+      return _gestureHeldProgress!;
+    }
+
+    // Released. A commit is taken over by [_commitExit] and never reaches
+    // here; a cancelled swipe rebounds to where it was held, so the live
+    // progress is already the right answer.
+    _gestureActive = false;
+    _gestureHeldProgress = null;
+    _ungesturedProgress = progress;
+    return progress;
+  }
+
+  /// Drops the gesture hold once a transition is over.
+  ///
+  /// Without this the next push would be re-timed against a release point
+  /// from a swipe that finished long ago.
+  void _clearGestureHold() {
+    _gestureActive = false;
+    _gestureHeldProgress = null;
+  }
+
   /// The chrome to render right now, or null when nothing should be shown.
   GlassNavPinnedState? resolveState() {
     if (!isActive) return null;
+
+    // A committed swipe plays from the frozen snapshot, not the registry: the
+    // outgoing route unregisters when its pop finishes, which happens before
+    // this animation does.
+    final exiting = _commitExitFrom;
+    if (exiting != null && _commitExit.isAnimating) {
+      return GlassNavPinnedState(
+        from: exiting.from,
+        to: exiting.to,
+        progress: _commitExitStart * (1.0 - _commitExit.value),
+        coverage: exiting.coverage,
+        settled: false,
+        topRoute: exiting.topRoute,
+        transition: exiting.transition,
+      );
+    }
+
     final ordered = _orderedEntries;
     if (ordered.isEmpty) return null;
 
@@ -315,6 +440,11 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
     // top route is covered by something this shell doesn't manage.
     final coverage = top.key.isCurrent ? 0.0 : _coverageOf(top.key);
 
+    // True for the whole of a swipe *and* the commit or rebound that follows
+    // it: Cupertino only calls `didStopUserGesture` from a status listener
+    // once that animation has finished.
+    final userGesture = top.key.navigator?.userGestureInProgress ?? false;
+
     // Whether the chrome may be tapped. Deliberately not derived from
     // `progress`: a pop starts at 1.0 and a back-swipe sits there until the
     // finger moves, so by value alone a transition that is very much running
@@ -324,21 +454,53 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
     final settled = top.key.isCurrent &&
         (top.key.animation?.status ?? AnimationStatus.completed) ==
             AnimationStatus.completed &&
-        !(top.key.navigator?.userGestureInProgress ?? false);
+        !userGesture;
 
-    return GlassNavPinnedState(
+    // Whether the finger is still down with the pop not yet committed — which
+    // is narrower than [userGesture], and is what the chrome hold needs.
+    // Holding on the broader flag kept the chrome frozen for the whole commit
+    // animation and then snapped it at the end, with no transition played.
+    //
+    // The route is the witness: committing pops it immediately, so `isActive`
+    // goes false the moment the finger lifts on a commit, while a cancelled
+    // swipe leaves it active through the rebound — exactly when the chrome
+    // should still be holding.
+    final gesturing = userGesture && top.key.isActive;
+
+    // The frame the swipe commits: the finger has lifted and the route is
+    // already popped. Freeze what the chrome looked like and hand it to
+    // [_commitExit], which plays it out on its own clock.
+    //
+    // The held value has to be read before [_holdForGesture] runs, because
+    // releasing clears it — and the held value is exactly where the chrome
+    // must start from, not the live progress the drag happened to reach.
+    final committing = _gestureActive && !gesturing && !top.key.isActive;
+    final heldAtCommit = _gestureHeldProgress ?? progress;
+
+    final state = GlassNavPinnedState(
       from: below?.value ??
           const GlassNavBarRegistration(
             actions: <GlassBarItem>[],
             showsBackButton: false,
           ),
       to: top.value,
-      progress: progress.clamp(0.0, 1.0),
+      progress: committing
+          ? heldAtCommit.clamp(0.0, 1.0)
+          : _holdForGesture(progress, gesturing).clamp(0.0, 1.0),
       coverage: coverage.clamp(0.0, 1.0),
       settled: settled,
       topRoute: top.key,
       transition: widget.effectTransition,
     );
+
+    if (committing) {
+      _gestureActive = false;
+      _gestureHeldProgress = null;
+      _commitExitStart = state.progress;
+      _commitExitFrom = state;
+      _commitExit.forward(from: 0.0);
+    }
+    return state;
   }
 
   @override
@@ -348,6 +510,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell> {
       animation.removeStatusListener(_onAnimationStatus);
     }
     _listened.clear();
+    _commitExit.dispose();
     _tick.dispose();
     super.dispose();
   }

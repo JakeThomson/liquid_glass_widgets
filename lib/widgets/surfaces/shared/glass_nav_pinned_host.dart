@@ -75,8 +75,12 @@ abstract final class GlassNavPinnedMetrics {
   /// transition; one only the outgoing route has dematerializes over the
   /// head. Both are pure functions of [progress], so a pop — which runs the
   /// same value backwards — plays each window in reverse and the exit still
-  /// leads the entrance in both directions. A back-swipe scrubs the phases
-  /// and a cancelled swipe rewinds them, with no direction to get wrong.
+  /// leads the entrance in both directions, with no direction to get wrong.
+  ///
+  /// [progress] is not raw route progress during an interactive back-swipe:
+  /// the shell holds it still until the gesture commits and then re-times it
+  /// over the remaining travel, so the chrome never dissolves under a finger
+  /// that may yet be lifted. See `GlassNavigationShellState._holdForGesture`.
   ///
   /// The windows are symmetric on purpose. The native asymmetry — an exit
   /// that lingers past its entrance — lives in the effect's own sub-curves,
