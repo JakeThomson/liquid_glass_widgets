@@ -337,6 +337,14 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               settings.edgeAbsorption,
             ]);
           })
+          // Slot 32: uPlatformViewMode.
+          ..setFloatUniforms(initialIndex: 32, (value) {
+            value.setFloat(
+              settings.platformViewMode == PlatformViewGlassMode.passthrough
+                  ? 1.0
+                  : 0.0,
+            );
+          })
           ..setImageSampler(
             1,
             geometryImage,
@@ -475,6 +483,14 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           scale,
           settings.edgeAbsorption,
         ]);
+      })
+      // Slot 32: uPlatformViewMode.
+      ..setFloatUniforms(initialIndex: 32, (value) {
+        value.setFloat(
+          settings.platformViewMode == PlatformViewGlassMode.passthrough
+              ? 1.0
+              : 0.0,
+        );
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).
       ..setImageSampler(0, capture)
