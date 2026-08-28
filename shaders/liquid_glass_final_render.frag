@@ -94,6 +94,10 @@ uniform vec2 uCaptureOffset;
 // Slot 28-31: uEdgeConfig — x: ambientRim (scaled by DPR/3.0), y: fresnelStrength, z: dprScale (DPR/3.0), w: pad
 uniform vec4 uEdgeConfig;
 
+// Slot 32: uPlatformViewMode — 0 = fallbackColor (default), 1 = passthrough.
+// See PlatformViewGlassMode. At 0 this shader is bit for bit unchanged.
+uniform float uPlatformViewMode;
+
 // uThickness directly and is already DPR-independent).
 // uniform float uRefractScale; // Removed in favor of scaling uThickness
 
@@ -551,6 +555,41 @@ void main() {
     float fresnel = rimBase * 0.12 * uEdgeConfig.y + ring * 0.45;
     finalColor.rgb = clamp(finalColor.rgb + vec3(fresnel), 0.0, 1.0);
 
-    float alpha  = geometryData.a;
+    // sortd patch: PASSTHROUGH mode, for glass over a platform view.
+    //
+    // Stock, the body is opaque over its whole shape. Over a platform view
+    // (a map, camera preview, video, webview) the backdrop texture holds
+    // nothing, so the body resolved to opaque BLACK - the black pill.
+    //
+    // The tab bar's own answer over a platform view is to refract its ICON
+    // LAYER instead of the uncapturable backdrop. That is why simply making
+    // the body transparent is not enough: the icon layer is also drawn
+    // directly, so a see-through body reveals the crisp copy next to the
+    // refracted one, i.e. doubled labels. The opaque body was hiding it.
+    //
+    // In passthrough the body is therefore dropped entirely and only the
+    // rim and its highlights are drawn. What shows inside the shape is the
+    // real content beneath, at its own crisp scale, over the live platform
+    // view - no black, no invented fill colour, and nothing drawn twice.
+    //
+    bool passthrough = uPlatformViewMode > 0.5;
+    float alpha = geometryData.a;
+    if (passthrough) {
+        // Body coverage follows what was actually sampled: opaque where the
+        // refracted content is real, clear where the backdrop held nothing,
+        // so the platform view shows through instead of resolving to black.
+        // The rim keeps its own coverage so the edge still reads.
+        // The doubling this used to cause is handled above the shader: the
+        // content under the shape is not drawn there at all (see
+        // SearchableTabIndicator.passthroughOverPlatformView).
+        float rim = clamp(fresnel * 3.0, 0.0, 1.0);
+        alpha *= max(refractColor.a, rim);
+        // Over an empty backdrop the body contributes no colour, so the edge
+        // would resolve to a flat grey band. Glass edges read as SPECULAR:
+        // push the rim toward white in proportion to its own strength, so
+        // the droplet keeps a lit, reflective edge over the platform view.
+        finalColor.rgb = mix(finalColor.rgb, vec3(1.0),
+                             rim * (1.0 - refractColor.a) * 0.85);
+    }
     fragColor    = vec4(finalColor.rgb * alpha, alpha);
 }

@@ -1,5 +1,19 @@
 import 'package:flutter/rendering.dart' show ScrollDirection;
-import 'package:flutter/widgets.dart' show ScrollController;
+import 'package:flutter/widgets.dart'
+    show
+        AxisDirection,
+        BuildContext,
+        Directionality,
+        FixedScrollMetrics,
+        ListView,
+        NotificationListener,
+        ScrollController,
+        ScrollMetrics,
+        ScrollNotification,
+        ScrollUpdateNotification,
+        SizedBox,
+        TextDirection,
+        UserScrollNotification;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -35,6 +49,54 @@ void _scroll(
 }) {
   for (var i = 0; i <= count; i++) {
     c.handleSample(_sample(from + i * step, direction: direction));
+  }
+}
+
+ScrollMetrics _metrics(
+  double pixels, {
+  double min = 0,
+  double max = 2000,
+  double viewport = 800,
+  AxisDirection axisDirection = AxisDirection.down,
+}) =>
+    FixedScrollMetrics(
+      pixels: pixels,
+      minScrollExtent: min,
+      maxScrollExtent: max,
+      viewportDimension: viewport,
+      axisDirection: axisDirection,
+      devicePixelRatio: 1.0,
+    );
+
+/// A context to hang synthetic notifications off. [ScrollNotification] requires
+/// one; the state machine never reads it.
+Future<BuildContext> _pumpContext(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  return tester.element(find.byType(SizedBox));
+}
+
+/// Feeds the notifications one drag produces: the [UserScrollNotification]
+/// dispatched once as the gesture starts, then a run of updates.
+void _drag(
+  GlassTabBarMinimizeController c,
+  BuildContext context, {
+  required double from,
+  required double step,
+  required int count,
+  ScrollDirection direction = ScrollDirection.reverse,
+  AxisDirection axisDirection = AxisDirection.down,
+}) {
+  c.handleNotification(UserScrollNotification(
+    metrics: _metrics(from, axisDirection: axisDirection),
+    context: context,
+    direction: direction,
+  ));
+  for (var i = 1; i <= count; i++) {
+    c.handleNotification(ScrollUpdateNotification(
+      metrics: _metrics(from + i * step, axisDirection: axisDirection),
+      context: context,
+      scrollDelta: step,
+    ));
   }
 }
 
@@ -244,6 +306,125 @@ void main() {
 
       c.handleSample(_sample(2000));
       expect(c.minimized, isFalse, reason: 'the end is');
+    });
+  });
+
+  group('GlassTabBarMinimizeController — notification driving', () {
+    testWidgets('minimizes after the threshold of accumulated travel',
+        (tester) async {
+      final context = await _pumpContext(tester);
+      final c = _controller();
+      _drag(c, context, from: 100, step: 5, count: 3); // 15px — under 20
+      expect(c.minimized, isFalse);
+      _drag(c, context, from: 115, step: 5, count: 2); // 25px in total
+      expect(c.minimized, isTrue);
+    });
+
+    testWidgets('expands after the smaller threshold of upward travel',
+        (tester) async {
+      final context = await _pumpContext(tester);
+      final c = _controller()..minimize();
+      _drag(c, context,
+          from: 500, step: -4, count: 4, direction: ScrollDirection.forward);
+      expect(c.minimized, isFalse);
+    });
+
+    testWidgets('the direction survives the updates after it', (tester) async {
+      // UserScrollNotification is dispatched once per gesture, not once per
+      // update. A controller reading the direction off each update would see
+      // idle every time, rule 4 of handleSample would zero the accumulator on
+      // every sample, and the bar would never minimize — silently.
+      final context = await _pumpContext(tester);
+      final c = _controller();
+      c.handleNotification(UserScrollNotification(
+        metrics: _metrics(100),
+        context: context,
+        direction: ScrollDirection.reverse,
+      ));
+      for (final pixels in [104.0, 108.0, 112.0, 116.0, 121.0, 125.0]) {
+        c.handleNotification(ScrollUpdateNotification(
+          metrics: _metrics(pixels),
+          context: context,
+          scrollDelta: 4,
+        ));
+      }
+      expect(c.minimized, isTrue);
+    });
+
+    testWidgets('updates with no user scroll behind them decide nothing',
+        (tester) async {
+      final context = await _pumpContext(tester);
+      final c = _controller();
+      for (final pixels in [100.0, 120.0, 140.0, 160.0]) {
+        c.handleNotification(ScrollUpdateNotification(
+          metrics: _metrics(pixels),
+          context: context,
+          scrollDelta: 20,
+        ));
+      }
+      expect(c.minimized, isFalse,
+          reason: 'a jumpTo dispatches no UserScrollNotification');
+    });
+
+    testWidgets('horizontal notifications are ignored', (tester) async {
+      final context = await _pumpContext(tester);
+      final c = _controller();
+      _drag(c, context,
+          from: 100, step: 10, count: 5, axisDirection: AxisDirection.right);
+      expect(c.minimized, isFalse,
+          reason: 'a carousel in the body must not minimize the bar');
+    });
+
+    testWidgets('reaching the top expands, as through a ScrollController',
+        (tester) async {
+      final context = await _pumpContext(tester);
+      final c = _controller()..minimize();
+      c.handleNotification(ScrollUpdateNotification(
+        metrics: _metrics(0),
+        context: context,
+        scrollDelta: -10,
+      ));
+      expect(c.minimized, isFalse);
+    });
+
+    testWidgets('a real drag through a NotificationListener minimizes',
+        (tester) async {
+      // The synthetic tests above assume the order Flutter dispatches in; this
+      // one takes it from the framework.
+      final c = _controller();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            c.handleNotification(notification);
+            return false;
+          },
+          child: ListView.builder(
+            itemCount: 100,
+            itemBuilder: (context, i) => const SizedBox(height: 80),
+          ),
+        ),
+      ));
+
+      await tester.drag(find.byType(ListView), const Offset(0, -120));
+      await tester.pumpAndSettle();
+      expect(c.minimized, isTrue);
+
+      await tester.drag(find.byType(ListView), const Offset(0, 40));
+      await tester.pumpAndSettle();
+      expect(c.minimized, isFalse);
+    });
+
+    testWidgets('notifications after dispose() do not throw', (tester) async {
+      final context = await _pumpContext(tester);
+      final c = _controller();
+      _drag(c, context, from: 100, step: 5, count: 2);
+      c.dispose();
+      expect(() => _drag(c, context, from: 200, step: 5, count: 10),
+          returnsNormally);
+      expect(c.minimized, isFalse);
     });
   });
 

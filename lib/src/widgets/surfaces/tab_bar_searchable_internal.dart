@@ -117,6 +117,7 @@ class SearchableTabIndicator extends StatefulWidget {
     required this.magnification,
     required this.innerBlur,
     required this.maskingQuality,
+    this.passthroughOverPlatformView = false,
     required this.isSearchActive,
     required this.onDismissSearch,
     this.indicatorColor,
@@ -156,6 +157,18 @@ class SearchableTabIndicator extends StatefulWidget {
   final double magnification;
   final double innerBlur;
   final MaskingQuality maskingQuality;
+
+  /// The glass sits over a platform view whose pixels cannot be captured, so
+  /// its body is transparent rather than an invented fill colour.
+  ///
+  /// The indicator refracts the bar's own icon layer in that situation, and
+  /// that layer is also drawn on screen - with a see-through body the crisp
+  /// copy shows next to the refracted one, i.e. every label appears twice.
+  /// So when this is set the selected content is lifted OUT of the refracted
+  /// icon layer and drawn ABOVE the glass instead: the layer under the pill
+  /// holds nothing, the glass still refracts what surrounds it, and each
+  /// label exists exactly once.
+  final bool passthroughOverPlatformView;
   final GlobalKey? backgroundKey;
   final bool isSearchActive;
   final VoidCallback onDismissSearch;
@@ -617,24 +630,25 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                                     child: widget.childUnselected,
                                   ),
                                 ),
-                                ClipPath(
-                                  clipBehavior: Clip.antiAliasWithSaveLayer,
-                                  clipper: JellyClipper(
-                                    itemCount: widget.tabCount,
-                                    alignment: alignment,
-                                    thickness: thickness,
-                                    expansion: widget.indicatorExpansion
-                                        .resolve(Directionality.of(context)),
-                                    transform: jellyTransform,
-                                    borderRadius: effRadius * 2,
+                                if (!widget.passthroughOverPlatformView)
+                                  ClipPath(
+                                    clipBehavior: Clip.antiAliasWithSaveLayer,
+                                    clipper: JellyClipper(
+                                      itemCount: widget.tabCount,
+                                      alignment: alignment,
+                                      thickness: thickness,
+                                      expansion: widget.indicatorExpansion
+                                          .resolve(Directionality.of(context)),
+                                      transform: jellyTransform,
+                                      borderRadius: effRadius * 2,
+                                    ),
+                                    child: Container(
+                                      padding: widget.tabPadding,
+                                      height: widget.barHeight,
+                                      child: widget.selectedTabBuilder(
+                                          context, thickness, alignment),
+                                    ),
                                   ),
-                                  child: Container(
-                                    padding: widget.tabPadding,
-                                    height: widget.barHeight,
-                                    child: widget.selectedTabBuilder(
-                                        context, thickness, alignment),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -673,6 +687,33 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                 ? _iconLayerKey
                 : widget.backgroundKey,
           ),
+
+          // 4. The selected content, lifted above the glass. Only in
+          // passthrough: the pill's body is see-through there, so this copy
+          // cannot live under it (see [passthroughOverPlatformView]).
+          if (widget.passthroughOverPlatformView)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: ClipPath(
+                  clipBehavior: Clip.antiAliasWithSaveLayer,
+                  clipper: JellyClipper(
+                    itemCount: widget.tabCount,
+                    alignment: alignment,
+                    thickness: thickness,
+                    expansion: widget.indicatorExpansion
+                        .resolve(Directionality.of(context)),
+                    transform: jellyTransform,
+                    borderRadius: indicatorRadius * 2,
+                  ),
+                  child: Container(
+                    padding: widget.tabPadding,
+                    height: widget.barHeight,
+                    child: widget.selectedTabBuilder(
+                        context, thickness, alignment),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
