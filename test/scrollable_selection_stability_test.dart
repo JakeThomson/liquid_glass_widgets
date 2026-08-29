@@ -152,6 +152,50 @@ void main() {
     expect(tester.binding.transientCallbackCount, 0);
   });
 
+  testWidgets('pill position hands off seamlessly at morph end',
+      (tester) async {
+    var n = 8;
+    List<GlassSegment> segs() => [
+          for (var i = 0; i < n; i++) ...[
+            GlassSegment(label: 'T$i'),
+            if (n > 8 && i < 7) GlassSegment(label: 'N$i'),
+          ],
+        ];
+    Widget build() => harness(GlassSegmentedControl.scrollable(
+          segments: segs(),
+          selectedIndex: segs().indexWhere((t) => t.label == 'T4'),
+          onSegmentSelected: (_) {},
+          selectionAlignment: SegmentSelectionAlignment.center,
+        ));
+    await tester.pumpWidget(build());
+    await tester.pumpAndSettle();
+
+    double? pillLeft() {
+      final els = find
+          .byWidgetPredicate(
+              (w) => w.runtimeType.toString() == 'AnimatedGlassIndicator')
+          .evaluate();
+      if (els.isEmpty) return null;
+      return (els.first.widget as dynamic).exactOffset as double?;
+    }
+
+    n = 15;
+    await tester.pumpWidget(build());
+    // Pump beyond the 180ms morph in small steps, across the finish
+    // handoff: the rendered pill offset must never move visibly.
+    double? prev = pillLeft();
+    for (var i = 0; i < 24; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final now = pillLeft();
+      if (prev != null && now != null) {
+        expect((now - prev).abs(), lessThan(1.5),
+            reason: 'pill jumped between frames (frame $i)');
+      }
+      prev = now;
+    }
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('teleportEpoch snaps; unchanged epoch animates', (tester) async {
     double seen = -1;
     Widget build(double value, int epoch) => MaterialApp(
