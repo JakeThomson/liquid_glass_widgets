@@ -159,6 +159,13 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   /// frames.
   List<double>? _morphNaturalWidths;
 
+  /// True from the morph's end until the post-morph measure has epoch-
+  /// snapped the springs onto the final geometry. The pill keeps drawing
+  /// at the anchor through this gap — without it, one frame rendered from
+  /// the springs' STALE pre-morph coordinates before the snap landed,
+  /// which read as the highlight blinking after the morph.
+  bool _morphSettling = false;
+
   bool get _morphing => _morphTabs != null;
 
   /// The list currently RENDERED — the merged morph list while morphing.
@@ -275,8 +282,11 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
         _tabOffsets = offsets;
         // Snap indicator to the selected tab after (re)measure; the epoch
         // makes the rendered pill jump with the springs instead of
-        // animating in from stale geometry.
+        // animating in from stale geometry. This is also the handoff that
+        // releases a morph's anchor — by now spring-position minus scroll
+        // equals the anchor, so the switch is pixel-invisible.
         _indicatorEpoch++;
+        _morphSettling = false;
         _indOffsetSpring.setValue(offsets[selIdx]);
         _indWidthSpring.setValue(widths[selIdx]);
       });
@@ -560,6 +570,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
       _morphEntering = null;
       _morphExiting = null;
       _morphNaturalWidths = null;
+      _morphSettling = true; // anchor holds until the final measure snaps
       _xAlign = _computeXAlignmentForTab(widget.selectedIndex);
       _tabWidths = [];
       _tabOffsets = [];
@@ -927,7 +938,8 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
               final Alignment alignment = widget.isScrollable
                   ? Alignment.center
                   : Alignment(currentValue, 0);
-              final double screenLeft = _morphing
+              final double screenLeft = (_morphing || _morphSettling) &&
+                      _morphAnchorLocalX != null
                   ? _morphAnchorLocalX!
                   : widget.isScrollable &&
                           widget.scrollController.hasClients
@@ -950,6 +962,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                 // a remeasure gap the stale comparison read as motion and
                 // fired the bloom pulse on every list change.
                 isMoving = !_morphing &&
+                    !_morphSettling &&
                     measuredReady &&
                     (currentValue - targetOffset).abs() > 2.0;
                 // Width alone: zero only before the very first measure. A
