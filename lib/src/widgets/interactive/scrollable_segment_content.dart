@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/rendering.dart' show RenderPositionedBox;
 import '../../../constants/glass_defaults.dart';
 import '../../renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
@@ -145,9 +146,18 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   Set<int>? _morphExiting;
   AnimationController? _morphCtrl;
   CurvedAnimation? _morphAnim;
-  double? _morphAnchorGlobalX; // selected cell's global x, held per tick
-  double? _morphAnchorLocalX; // same, in the control's coordinates (pill)
+  double? _morphAnchorLocalX; // anchor in the control's coordinates
   int _morphSelectedIndex = 0; // selected cell's index in _morphTabs
+
+  /// Natural (unfactored) width of every merged cell — survivors and
+  /// leavers from the old list's measurements, entrants measured from
+  /// their INNER boxes at the t=0 frame (the Align sizes the outer box to
+  /// zero, but the child inside it is laid out at full natural width).
+  /// With these, the anchoring scroll offset is computed ANALYTICALLY per
+  /// tick — a correction chasing last frame's boxes lags one frame, which
+  /// is catastrophic when a debug build only paints a handful of morph
+  /// frames.
+  List<double>? _morphNaturalWidths;
 
   bool get _morphing => _morphTabs != null;
 
@@ -213,6 +223,10 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   }
 
   void _onScroll() {
+    // During a morph the pill is drawn at a fixed anchor and the per-tick
+    // correction drives the scroll — rebuilding here would double the
+    // per-frame cost for nothing.
+    if (_morphing) return;
     // Rebuild to update the screen-relative indicator position during scroll.
     if (mounted) setState(() {});
   }
@@ -326,7 +340,16 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
       _initKeys();
     }
 
-    if (oldWidget.selectedIndex != widget.selectedIndex && !_isDragging) {
+    // A length change owns the whole transition (morph or snap): its
+    // measure pass seats both the pill and the scroll. Letting this branch
+    // also run would spring the pill and ensure-visible against STALE
+    // offsets from the outgoing list — the two visibly fight (verified
+    // frame-by-frame: the scroll lunged toward the stale target while the
+    // morph anchor dragged it back).
+    final lengthChanged = oldWidget.tabs.length != widget.tabs.length;
+    if (!lengthChanged &&
+        oldWidget.selectedIndex != widget.selectedIndex &&
+        !_isDragging) {
       setState(() {
         _xAlign = _computeXAlignmentForTab(widget.selectedIndex);
       });
@@ -344,7 +367,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
         );
       }
     }
-    if (oldWidget.tabs.length != widget.tabs.length) {
+    if (lengthChanged) {
       if (_morphing) _finishMorph(jumpToEnd: true);
       final reduceMotion = GlassAccessibilityData.of(context).reduceMotion;
       if (widget.isScrollable &&
@@ -421,46 +444,103 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     // Anchor: where the selected cell sits RIGHT NOW.
     final anchorLocal =
         _tabOffsets[oldSel] - widget.scrollController.offset;
-    final box = context.findRenderObject();
-    if (box is! RenderBox) return false;
-    final anchorGlobal = box.localToGlobal(Offset(anchorLocal, 0)).dx;
+
+    // Natural widths: old-list cells are already measured; entrants are
+    // filled in from their inner boxes once the t=0 frame has laid out.
+    final oldWidthById = <Object, double>{
+      for (var i = 0; i < oldTabs.length; i++)
+        if (oldIds[i] != null) oldIds[i]!: _tabWidths[i],
+    };
+    final naturals = <double>[
+      for (var i = 0; i < merged.length; i++)
+        entering.contains(i)
+            ? 0.0
+            : oldWidthById[_identityOf(merged[i])] ?? 0.0,
+    ];
 
     _morphTabs = merged;
     _morphEntering = entering;
     _morphExiting = exiting;
     _morphSelectedIndex = merged.indexWhere((t) => _identityOf(t) == selId);
     _morphAnchorLocalX = anchorLocal;
-    _morphAnchorGlobalX = anchorGlobal;
+    _morphNaturalWidths = naturals;
     _morphCtrl?.dispose();
     _morphAnim?.dispose();
-    _morphCtrl = AnimationController(
+    final ctrl = AnimationController(
         vsync: this, duration: widget.regridDuration)
       ..addListener(_onMorphTick)
       ..addStatusListener((st) {
         if (st == AnimationStatus.completed) _finishMorph();
       });
-    _morphAnim =
-        CurvedAnimation(parent: _morphCtrl!, curve: Curves.easeOutCubic);
+    _morphCtrl = ctrl;
+    _morphAnim = CurvedAnimation(parent: ctrl, curve: Curves.easeOutCubic);
     setState(_initKeys); // keys for the merged list; survivors keep theirs
-    _morphCtrl!.forward();
+    // The clock starts only after the merged list's FIRST frame has been
+    // built and laid out. At t=0 that frame is pixel-identical to the old
+    // list (entrants at width 0, leavers at full), and it carries the whole
+    // re-parenting cost — on a debug build it can take longer than the
+    // entire morph, which previously let the clock expire inside it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _morphCtrl != ctrl) return;
+      if (!_measureEnteringNaturals()) {
+        // Can't anchor without real widths — degrade to the snap path.
+        _finishMorph();
+        return;
+      }
+      ctrl.forward();
+    });
     return true;
   }
 
-  /// Per-tick: after this frame lays the animating widths out, correct the
-  /// scroll so the selected cell stays exactly on its anchor.
+  /// Fills [_morphNaturalWidths] for entering cells from the t=0 frame.
+  bool _measureEnteringNaturals() {
+    final naturals = _morphNaturalWidths;
+    if (naturals == null) return false;
+    for (final i in _morphEntering!) {
+      if (i >= _tabKeys.length) return false;
+      var box = _tabKeys[i].currentContext?.findRenderObject();
+      // Descend to the Align's child — the naturally-sized inner cell.
+      RenderBox? inner;
+      void visit(RenderObject o) {
+        if (o is RenderPositionedBox) {
+          final c = o.child;
+          if (c is RenderBox && c.hasSize) inner = c;
+          return;
+        }
+        o.visitChildren(visit);
+      }
+
+      if (box is RenderBox) visit(box);
+      if (inner == null) return false;
+      naturals[i] = inner!.size.width;
+    }
+    return true;
+  }
+
+  /// Per-tick, BEFORE this frame builds: seat the scroll ANALYTICALLY so
+  /// the selected cell's left edge sits exactly on the anchor at this
+  /// frame's t. Computed from the known natural widths — never from boxes,
+  /// which describe last frame's t and lag catastrophically when a slow
+  /// build paints only a handful of morph frames.
   void _onMorphTick() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_morphing) return;
-      if (_morphSelectedIndex >= _tabKeys.length) return;
-      final cell = _tabKeys[_morphSelectedIndex].currentContext
-          ?.findRenderObject();
-      final ctl = widget.scrollController;
-      if (cell is! RenderBox || !cell.hasSize || !ctl.hasClients) return;
-      final drift = cell.localToGlobal(Offset.zero).dx - _morphAnchorGlobalX!;
-      if (drift.abs() < 0.1) return;
-      ctl.jumpTo((ctl.offset + drift)
-          .clamp(ctl.position.minScrollExtent, ctl.position.maxScrollExtent));
-    });
+    if (!mounted || !_morphing) return;
+    final naturals = _morphNaturalWidths;
+    final ctl = widget.scrollController;
+    if (naturals == null || !ctl.hasClients) return;
+    final t = _morphAnim!.value;
+    final dividerW = widget.dividerSettings?.thickness ?? 0.0;
+    double x = 0;
+    for (var i = 0; i < _morphSelectedIndex; i++) {
+      final w = naturals[i];
+      x += _morphEntering!.contains(i)
+          ? w * t
+          : _morphExiting!.contains(i)
+              ? w * (1 - t)
+              : w;
+      if (dividerW > 0) x += dividerW;
+    }
+    ctl.jumpTo((x - _morphAnchorLocalX!)
+        .clamp(ctl.position.minScrollExtent, ctl.position.maxScrollExtent));
   }
 
   /// Ends the morph: drops the exiting cells, remeasures the final list,
@@ -479,6 +559,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
       _morphTabs = null;
       _morphEntering = null;
       _morphExiting = null;
+      _morphNaturalWidths = null;
       _xAlign = _computeXAlignmentForTab(widget.selectedIndex);
       _tabWidths = [];
       _tabOffsets = [];
