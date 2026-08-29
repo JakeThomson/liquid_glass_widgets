@@ -428,6 +428,64 @@ void main() {
       expect(changes, [(GlassQuality.standard, GlassQuality.premium)]);
     });
 
+    test(
+        'a neutral window decays recovery progress rather than erasing it',
+        () {
+      // Regression: recovery requires `upgradeWindowCount` CONSECUTIVE
+      // under-budget windows, and a neutral window used to reset that
+      // counter to zero. Because the measure is P95 — a tail statistic — an
+      // ordinary scrolling list drifts into the neutral band often enough
+      // that the counter never reached the threshold, so a single transient
+      // cost demoted quality permanently with no path back.
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(allowStepUp: true, changes: changes);
+      _runWarmup(adapter, rasterUs: 5000);
+
+      // Degrade to standard.
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+      expect(adapter.currentQuality, GlassQuality.standard);
+      changes.clear();
+
+      // Nine under-budget windows: one short of the step-up threshold.
+      // Under-budget is 16 x 0.6 = 9.6 ms, so 2 ms qualifies.
+      for (int i = 0; i < 9; i++) {
+        adapter.simulateFrameTimings(_frames(5, 2000));
+      }
+      expect(adapter.currentQuality, GlassQuality.standard);
+
+      // One neutral window — 15 ms sits between 9.6 ms and 24 ms, so it is
+      // neither jank nor comfortably fast. This must not wipe the nine.
+      adapter.simulateFrameTimings(_frames(5, 15000));
+
+      // Nine more good windows. With the counter decayed to 8 rather than
+      // reset to 0, the threshold is crossed. Under the old behaviour this
+      // run would end at 9 and the adapter would stay demoted forever.
+      for (int i = 0; i < 9; i++) {
+        adapter.simulateFrameTimings(_frames(5, 2000));
+      }
+
+      expect(adapter.currentQuality, GlassQuality.premium);
+      expect(changes, [(GlassQuality.standard, GlassQuality.premium)]);
+    });
+
+    test('a sustained over-budget window still degrades immediately', () {
+      // Guard for the other side of the same branch: the decay must not make
+      // degradation any slower or any less certain.
+      final changes = <(GlassQuality, GlassQuality)>[];
+      final adapter = _makeAdapter(allowStepUp: true, changes: changes);
+      _runWarmup(adapter, rasterUs: 5000);
+      expect(adapter.currentQuality, GlassQuality.premium);
+
+      for (int i = 0; i < 3; i++) {
+        adapter.simulateFrameTimings(_frames(5, 30000));
+      }
+
+      expect(adapter.currentQuality, GlassQuality.standard);
+      expect(changes, [(GlassQuality.premium, GlassQuality.standard)]);
+    });
+
     test('step-up is blocked while cooldown is active', () {
       GlassQualityAdapter.cooldownDuration = const Duration(hours: 1);
       final changes = <(GlassQuality, GlassQuality)>[];

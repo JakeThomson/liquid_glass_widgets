@@ -44,6 +44,10 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   final GestureArena _gestureArena = GestureArena();
   final ScrollController _scrollController = ScrollController();
 
+  /// Latest vertical metrics seen from the content subtree, including content
+  /// scrolling on a [ScrollController] of its own.
+  ScrollMetrics? _contentMetrics;
+
   // ── Geometry & Metrics ────────────────────────────────────────────────────
   late SheetGeometry _geometry;
   Size _screenSize = Size.zero;
@@ -92,6 +96,14 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     if (widget.controller != oldWidget.controller) {
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
+    }
+
+    // Metrics outlive the scrollable that sent them. New content may have no
+    // scrollable at all, and stale metrics reporting it scrolled would hand
+    // downward drags to something that no longer exists, leaving the sheet
+    // unable to collapse.
+    if (widget.child != oldWidget.child) {
+      _contentMetrics = null;
     }
 
     final oldGeometry = _geometry;
@@ -334,6 +346,37 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     _frozenState = null;
   }
 
+  void _recordContentMetrics(ScrollMetrics metrics) {
+    if (axisDirectionToAxis(metrics.axisDirection) != Axis.vertical) return;
+    _contentMetrics = metrics;
+  }
+
+  /// Whether anything inside the sheet can scroll.
+  ///
+  /// Content is free to keep a controller of its own, which the sheet's
+  /// controller cannot see — without the observed metrics the sheet would read
+  /// that as "no scrollable" and claim every drag.
+  bool get _hasScrollClients =>
+      _scrollController.hasClients || _contentCanScroll;
+
+  /// Whether the observed content has somewhere to scroll to. Content that
+  /// fits its viewport must leave the drag with the sheet, which still has its
+  /// rubber-band to play.
+  bool get _contentCanScroll {
+    final ScrollMetrics? metrics = _contentMetrics;
+    return metrics != null && metrics.maxScrollExtent > metrics.minScrollExtent;
+  }
+
+  /// Whether the content is scrolled away from its top, so a downward drag
+  /// belongs to the content before it belongs to the sheet.
+  bool get _canScrollListUp {
+    if (_scrollController.hasClients && _scrollController.offset > 0) {
+      return true;
+    }
+    final ScrollMetrics? metrics = _contentMetrics;
+    return metrics != null && metrics.pixels > metrics.minScrollExtent;
+  }
+
   void _onPointerMove(PointerMoveEvent event) {
     if (_isInteractingWithChild) {
       return;
@@ -353,9 +396,9 @@ class _GlassModalSheetState extends State<GlassModalSheet>
       _currentState,
       _geometry.maxState,
       10.0,
-      hasScrollClients: _scrollController.hasClients,
-      canScrollListUp:
-          _scrollController.hasClients && _scrollController.offset > 0,
+      hasScrollClients: _hasScrollClients,
+      canScrollListUp: _canScrollListUp,
+      atTopDetent: _contentScrollProgress > _kTopDetentThreshold,
     );
 
     if (shouldClaim) {
@@ -939,6 +982,22 @@ class _GlassModalSheetState extends State<GlassModalSheet>
           onDismiss: () => _snapToState(GlassSheetState.hidden),
           suppressInteractionOnChildren: widget.suppressInteractionOnChildren,
           child: focusBridge,
+        );
+
+        // ScrollMetricsNotification covers content that has not been dragged
+        // yet, so the first drag already knows whether the content can scroll.
+        result = NotificationListener<ScrollMetricsNotification>(
+          onNotification: (notification) {
+            _recordContentMetrics(notification.metrics);
+            return false;
+          },
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              _recordContentMetrics(notification.metrics);
+              return false;
+            },
+            child: result,
+          ),
         );
 
         if (widget.suppressInteractionOnChildren) {
