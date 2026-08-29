@@ -8,7 +8,8 @@ import '../../theme/glass_theme_helpers.dart';
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../surfaces/shared/tab_bar_types.dart' show MaskingQuality;
-import '../surfaces/glass_tab_bar.dart' show DividerSettings, GlassSegment;
+import '../surfaces/glass_tab_bar.dart'
+    show DividerSettings, GlassSegment, SegmentSelectionAlignment;
 import '../../src/widgets/interactive/scrollable_segment_content.dart';
 import '../../src/widgets/interactive/segmented_control_internal.dart';
 
@@ -196,6 +197,8 @@ class GlassSegmentedControl extends StatefulWidget {
     this.quality,
     this.backgroundKey,
     this.scrollController,
+    this.selectionAlignment = SegmentSelectionAlignment.minimal,
+    this.regridDuration = const Duration(milliseconds: 180),
     this.direction = Axis.horizontal,
     this.segmentExtent,
     // ── iOS 26 interaction ──────────────────────────────────────────────────
@@ -267,6 +270,8 @@ class GlassSegmentedControl extends StatefulWidget {
     this.backgroundKey,
     // Scrollable-specific params
     this.scrollController,
+    this.selectionAlignment = SegmentSelectionAlignment.minimal,
+    this.regridDuration = const Duration(milliseconds: 180),
     this.iconSize = 24.0,
     this.labelPadding = const EdgeInsets.symmetric(horizontal: 16),
     this.selectedIconColor,
@@ -497,6 +502,22 @@ class GlassSegmentedControl extends StatefulWidget {
   /// supported.
   final ScrollController? scrollController;
 
+  /// Where the scrollable variant keeps its selected segment. Scrollable
+  /// mode only.
+  ///
+  /// [SegmentSelectionAlignment.minimal] (default) scrolls just enough for
+  /// the selection to be visible; [SegmentSelectionAlignment.center] keeps
+  /// it centered whenever the list allows — the picker behavior.
+  final SegmentSelectionAlignment selectionAlignment;
+
+  /// Duration of the re-grid morph when the segment LIST changes around a
+  /// surviving selection (scrollable mode only): entering segments grow in
+  /// (width, with a slight scale and fade riding it), leaving segments
+  /// shrink out, and the survivors glide — anchored so the selected
+  /// segment does not move on screen. [Duration.zero] disables the morph
+  /// (the list snaps); Reduce Motion always snaps.
+  final Duration regridDuration;
+
   /// Icon size in logical pixels. Used in scrollable mode only.
   /// Defaults to 24.0 — matching [GlassTabBar].
   final double iconSize;
@@ -582,6 +603,8 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
           onTabSelected: widget.onSegmentSelected,
           isScrollable: true,
           scrollController: _scrollController,
+          selectionAlignment: widget.selectionAlignment,
+          regridDuration: widget.regridDuration,
           indicatorColor: widget.indicatorColor,
           selectedLabelStyle: widget.selectedTextStyle,
           unselectedLabelStyle: widget.unselectedTextStyle,

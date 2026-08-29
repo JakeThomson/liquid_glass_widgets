@@ -14,8 +14,10 @@ import '../../../utils/glass_spring.dart';
 import '../../../widgets/shared/animated_glass_indicator.dart';
 import '../../../widgets/surfaces/shared/tab_bar_types.dart'
     show MaskingQuality;
+import '../../../widgets/shared/glass_accessibility_scope.dart'
+    show GlassAccessibilityData;
 import '../../../widgets/surfaces/glass_tab_bar.dart'
-    show GlassSegment, DividerSettings;
+    show GlassSegment, DividerSettings, SegmentSelectionAlignment;
 
 // =============================================================================
 // ScrollableSegmentContent — draggable indicator + segment layout
@@ -52,6 +54,8 @@ class ScrollableSegmentContent extends StatefulWidget {
     this.dividerSettings,
     this.indicatorShadow,
     this.tabBarBorderRadius,
+    this.selectionAlignment = SegmentSelectionAlignment.minimal,
+    this.regridDuration = const Duration(milliseconds: 180),
     super.key,
   });
 
@@ -89,6 +93,12 @@ class ScrollableSegmentContent extends StatefulWidget {
   /// (tab labels + background pill) to the same rounded shape.
   final BorderRadius? tabBarBorderRadius;
 
+  /// See [GlassSegmentedControl.selectionAlignment].
+  final SegmentSelectionAlignment selectionAlignment;
+
+  /// See [GlassSegmentedControl.regridDuration].
+  final Duration regridDuration;
+
   @override
   State<ScrollableSegmentContent> createState() =>
       ScrollableSegmentContentState();
@@ -117,6 +127,32 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   /// discontinuity, which showed as the pill travelling in from the track
   /// edge on every mount and list change.
   int _indicatorEpoch = 0;
+
+  // ── Re-grid morph (list-length changes, scrollable mode) ─────────────────
+  //
+  // When the segment list changes around a surviving selection, the old and
+  // new lists are MERGED by identity and rendered together for
+  // [ScrollableSegmentContent.regridDuration]: entering cells grow in
+  // (width 0→natural via Align.widthFactor, with scale 0.8→1 and fade
+  // riding the same curve), leaving cells shrink out, and the survivors
+  // glide as the Row re-flows around them. The SELECTED cell is anchored:
+  // a per-tick scroll correction holds it at the screen position it had
+  // when the morph began, and the pill is drawn at that anchor directly.
+  // Taps and indicator drags are ignored for the (sub-200 ms) morph; a
+  // second list change mid-morph completes the current one instantly.
+  List<GlassSegment>? _morphTabs; // merged render list, null = not morphing
+  Set<int>? _morphEntering; // indices into _morphTabs
+  Set<int>? _morphExiting;
+  AnimationController? _morphCtrl;
+  CurvedAnimation? _morphAnim;
+  double? _morphAnchorGlobalX; // selected cell's global x, held per tick
+  double? _morphAnchorLocalX; // same, in the control's coordinates (pill)
+  int _morphSelectedIndex = 0; // selected cell's index in _morphTabs
+
+  bool get _morphing => _morphTabs != null;
+
+  /// The list currently RENDERED — the merged morph list while morphing.
+  List<GlassSegment> get _renderTabs => _morphTabs ?? widget.tabs;
 
   /// Shadows are suppressed while the indicator is being dragged so they
   /// do not interact with the live BackdropFilter blur, then restored
@@ -187,9 +223,10 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     // surviving value keeps its element instead of remounting, so a
     // reconfigured list redraws only what actually changed. Segments with
     // no identity, or a duplicated one, get fresh cells.
+    final tabs = _renderTabs;
     final seen = <Object>{};
-    _tabKeys = List.generate(widget.tabs.length, (i) {
-      final Object? id = widget.tabs[i].id ?? widget.tabs[i].label;
+    _tabKeys = List.generate(tabs.length, (i) {
+      final Object? id = tabs[i].id ?? tabs[i].label;
       if (id == null || !seen.add(id)) return GlobalKey();
       return _cellKeysById.putIfAbsent(id, GlobalKey.new);
     });
@@ -197,7 +234,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   }
 
   void _measureTabs() {
-    if (!mounted) return;
+    if (!mounted || _morphing) return;
     double offset = 0;
     List<double> widths = [];
     List<double> offsets = [];
@@ -232,7 +269,9 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
       // A selection outside the viewport comes into view without animation:
       // at first measure there is no prior state the user has seen, and
       // after a list change the host may have positioned the scroll itself
-      // (ensure-visible no-ops when the selection is already on screen).
+      // (with [SegmentSelectionAlignment.minimal] this no-ops when the
+      // selection is already on screen; [SegmentSelectionAlignment.center]
+      // seats it centered).
       _scrollToEnsureVisible(selIdx, animated: false);
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) => _measureTabs());
@@ -241,6 +280,8 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
 
   @override
   void dispose() {
+    _morphAnim?.dispose();
+    _morphCtrl?.dispose();
     _indOffsetSpring.dispose();
     _indWidthSpring.dispose();
     _drag.dispose();
@@ -304,6 +345,14 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
       }
     }
     if (oldWidget.tabs.length != widget.tabs.length) {
+      if (_morphing) _finishMorph(jumpToEnd: true);
+      final reduceMotion = GlassAccessibilityData.of(context).reduceMotion;
+      if (widget.isScrollable &&
+          !reduceMotion &&
+          widget.regridDuration > Duration.zero &&
+          _tryStartMorph(oldWidget.tabs)) {
+        return;
+      }
       setState(() {
         _xAlign = _computeXAlignmentForTab(widget.selectedIndex);
         _tabWidths = [];
@@ -318,6 +367,125 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     }
   }
 
+  static Object? _identityOf(GlassSegment t) => t.id ?? t.label;
+
+  /// Begins the re-grid morph from [oldTabs] to `widget.tabs`. Returns
+  /// false (caller falls back to the snap path) when there is nothing to
+  /// anchor: no measured geometry yet, or the selected segment's identity
+  /// does not survive the change.
+  bool _tryStartMorph(List<GlassSegment> oldTabs) {
+    if (_tabWidths.length != oldTabs.length) return false;
+    if (!widget.scrollController.hasClients) return false;
+    final selId = _identityOf(widget.tabs[widget.selectedIndex]);
+    if (selId == null) return false;
+    final oldIds = [for (final t in oldTabs) _identityOf(t)];
+    final oldSel = oldIds.indexOf(selId);
+    if (oldSel < 0) return false;
+
+    // Merge: walk the NEW list, interleaving each exiting old segment
+    // after the surviving predecessor it followed in the old order.
+    final newIds = {
+      for (final t in widget.tabs)
+        if (_identityOf(t) != null) _identityOf(t)!,
+    };
+    final exitingAfter = <Object?, List<GlassSegment>>{};
+    Object? lastSurvivor;
+    for (var i = 0; i < oldTabs.length; i++) {
+      final id = oldIds[i];
+      if (id != null && newIds.contains(id)) {
+        lastSurvivor = id;
+      } else {
+        (exitingAfter[lastSurvivor] ??= []).add(oldTabs[i]);
+      }
+    }
+    final merged = <GlassSegment>[];
+    final entering = <int>{};
+    final exiting = <int>{};
+    void addExiting(Object? afterId) {
+      for (final t in exitingAfter[afterId] ?? const <GlassSegment>[]) {
+        exiting.add(merged.length);
+        merged.add(t);
+      }
+    }
+
+    addExiting(null); // old leaders with no surviving predecessor
+    for (final t in widget.tabs) {
+      final id = _identityOf(t);
+      final survives = id != null && oldIds.contains(id);
+      if (!survives) entering.add(merged.length);
+      merged.add(t);
+      if (survives) addExiting(id);
+    }
+    if (entering.isEmpty && exiting.isEmpty) return false;
+
+    // Anchor: where the selected cell sits RIGHT NOW.
+    final anchorLocal =
+        _tabOffsets[oldSel] - widget.scrollController.offset;
+    final box = context.findRenderObject();
+    if (box is! RenderBox) return false;
+    final anchorGlobal = box.localToGlobal(Offset(anchorLocal, 0)).dx;
+
+    _morphTabs = merged;
+    _morphEntering = entering;
+    _morphExiting = exiting;
+    _morphSelectedIndex = merged.indexWhere((t) => _identityOf(t) == selId);
+    _morphAnchorLocalX = anchorLocal;
+    _morphAnchorGlobalX = anchorGlobal;
+    _morphCtrl?.dispose();
+    _morphAnim?.dispose();
+    _morphCtrl = AnimationController(
+        vsync: this, duration: widget.regridDuration)
+      ..addListener(_onMorphTick)
+      ..addStatusListener((st) {
+        if (st == AnimationStatus.completed) _finishMorph();
+      });
+    _morphAnim =
+        CurvedAnimation(parent: _morphCtrl!, curve: Curves.easeOutCubic);
+    setState(_initKeys); // keys for the merged list; survivors keep theirs
+    _morphCtrl!.forward();
+    return true;
+  }
+
+  /// Per-tick: after this frame lays the animating widths out, correct the
+  /// scroll so the selected cell stays exactly on its anchor.
+  void _onMorphTick() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_morphing) return;
+      if (_morphSelectedIndex >= _tabKeys.length) return;
+      final cell = _tabKeys[_morphSelectedIndex].currentContext
+          ?.findRenderObject();
+      final ctl = widget.scrollController;
+      if (cell is! RenderBox || !cell.hasSize || !ctl.hasClients) return;
+      final drift = cell.localToGlobal(Offset.zero).dx - _morphAnchorGlobalX!;
+      if (drift.abs() < 0.1) return;
+      ctl.jumpTo((ctl.offset + drift)
+          .clamp(ctl.position.minScrollExtent, ctl.position.maxScrollExtent));
+    });
+  }
+
+  /// Ends the morph: drops the exiting cells, remeasures the final list,
+  /// epoch-snaps the pill onto it, and re-asserts the selection alignment.
+  void _finishMorph({bool jumpToEnd = false}) {
+    final ctrl = _morphCtrl;
+    _morphCtrl = null;
+    _morphAnim?.dispose();
+    _morphAnim = null;
+    ctrl?.dispose();
+    if (!mounted) {
+      _morphTabs = null;
+      return;
+    }
+    setState(() {
+      _morphTabs = null;
+      _morphEntering = null;
+      _morphExiting = null;
+      _xAlign = _computeXAlignmentForTab(widget.selectedIndex);
+      _tabWidths = [];
+      _tabOffsets = [];
+    });
+    _initKeys(); // final list; _measureTabs epoch-snaps + aligns
+  }
+
   double _computeXAlignmentForTab(int tabIndex) {
     return DraggableIndicatorPhysics.computeAlignment(
       tabIndex,
@@ -330,6 +498,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   // ===========================================================================
 
   void _handleTapUp(TapUpDetails details) {
+    if (_morphing) return; // sub-200ms; geometry is in flux
     final box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
 
@@ -358,6 +527,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   }
 
   void _handleDragDown(DragDownDetails details) {
+    if (_morphing) return;
     if (!widget.isScrollable) {
       setState(() => _isDown = true);
       return;
@@ -568,7 +738,12 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
 
     double targetOffset = currentOffset;
 
-    if (tabLeft - currentOffset < edgePadding) {
+    if (widget.selectionAlignment == SegmentSelectionAlignment.center) {
+      // Picker behavior: the selection lives at the center, clamped at the
+      // ends of the list.
+      targetOffset =
+          tabLeft - (viewportWidth - _tabWidths[tabIndex]) / 2;
+    } else if (tabLeft - currentOffset < edgePadding) {
       // Tab is partially or fully off-screen to the left.
       targetOffset = tabLeft - edgePadding;
     } else if (tabRight - currentOffset > viewportWidth - edgePadding) {
@@ -671,8 +846,10 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
               final Alignment alignment = widget.isScrollable
                   ? Alignment.center
                   : Alignment(currentValue, 0);
-              final double screenLeft =
-                  widget.isScrollable && widget.scrollController.hasClients
+              final double screenLeft = _morphing
+                  ? _morphAnchorLocalX!
+                  : widget.isScrollable &&
+                          widget.scrollController.hasClients
                       ? currentValue - widget.scrollController.offset
                       : 0.0;
 
@@ -691,8 +868,9 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                 // Only a measured target can say the pill is moving: during
                 // a remeasure gap the stale comparison read as motion and
                 // fired the bloom pulse on every list change.
-                isMoving =
-                    measuredReady && (currentValue - targetOffset).abs() > 2.0;
+                isMoving = !_morphing &&
+                    measuredReady &&
+                    (currentValue - targetOffset).abs() > 2.0;
                 // Width alone: zero only before the very first measure. A
                 // list-length remeasure keeps the previous geometry live,
                 // so the pill stays visible through it instead of blinking.
@@ -842,32 +1020,57 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     Color selectedIconColor,
     Color unselectedIconColor,
   ) {
+    final tabs = _renderTabs;
+    final selectedRenderIndex =
+        _morphing ? _morphSelectedIndex : widget.selectedIndex;
     final List<Widget> tabWidgets = List.generate(
-      widget.tabs.length,
+      tabs.length,
       (index) {
-        final tab = widget.tabs[index];
-        final isSelected = index == widget.selectedIndex;
-        return KeyedSubtree(
-          key: _tabKeys[index],
-          child: RepaintBoundary(
-            child: TabBarItem(
-              tab: tab,
-              isSelected: isSelected,
-              onTap: () => _onTabTap(index),
-              onTapDown: () {},
-              labelStyle: isSelected ? selectedStyle : unselectedStyle,
-              iconColor: isSelected ? selectedIconColor : unselectedIconColor,
-              iconSize: widget.iconSize,
-              padding: widget.labelPadding,
-            ),
+        final tab = tabs[index];
+        final isSelected = index == selectedRenderIndex;
+        Widget cell = RepaintBoundary(
+          child: TabBarItem(
+            tab: tab,
+            isSelected: isSelected,
+            onTap: () => _onTabTap(index),
+            onTapDown: () {},
+            labelStyle: isSelected ? selectedStyle : unselectedStyle,
+            iconColor: isSelected ? selectedIconColor : unselectedIconColor,
+            iconSize: widget.iconSize,
+            padding: widget.labelPadding,
           ),
         );
+        if (_morphing &&
+            (_morphEntering!.contains(index) ||
+                _morphExiting!.contains(index))) {
+          final entering = _morphEntering!.contains(index);
+          cell = AnimatedBuilder(
+            animation: _morphAnim!,
+            child: cell,
+            builder: (context, child) {
+              final t =
+                  entering ? _morphAnim!.value : 1.0 - _morphAnim!.value;
+              // Width 0→natural glides the survivors apart as the Row
+              // re-flows; the scale and fade ride the same curve.
+              return ClipRect(
+                child: Align(
+                  widthFactor: t,
+                  child: Transform.scale(
+                    scale: 0.8 + 0.2 * t,
+                    child: Opacity(opacity: t, child: child),
+                  ),
+                ),
+              );
+            },
+          );
+        }
+        return KeyedSubtree(key: _tabKeys[index], child: cell);
       },
     );
 
     if (widget.dividerSettings != null) {
       final d = widget.dividerSettings!;
-      for (int i = widget.tabs.length - 1; i > 0; i--) {
+      for (int i = tabs.length - 1; i > 0; i--) {
         final isVisible = !d.isHideAutomatically ||
             (i - 1 != widget.selectedIndex && i != widget.selectedIndex);
 
