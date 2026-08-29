@@ -109,6 +109,15 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   /// Specifically tracks if we are dragging the indicator in scrollable mode.
   bool _isDraggingIndicator = false;
 
+  /// Bumped whenever the indicator springs are snapped
+  /// ([SingleSpringController.setValue]) onto freshly measured geometry —
+  /// initial mount and list-length remeasures. Rides into
+  /// [VelocitySpringBuilder.teleportEpoch] so the rendered pill JUMPS with
+  /// the springs; without it the follower animated across the
+  /// discontinuity, which showed as the pill travelling in from the track
+  /// edge on every mount and list change.
+  int _indicatorEpoch = 0;
+
   /// Shadows are suppressed while the indicator is being dragged so they
   /// do not interact with the live BackdropFilter blur, then restored
   /// when the pill is idle.
@@ -126,6 +135,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   late Listenable _springListenable;
 
   late List<GlobalKey> _tabKeys;
+  final Map<Object, GlobalKey> _cellKeysById = {};
   List<double> _tabWidths = [];
   List<double> _tabOffsets = [];
 
@@ -172,7 +182,17 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   }
 
   void _initKeys() {
-    _tabKeys = List.generate(widget.tabs.length, (_) => GlobalKey());
+    // Cells keep their key across list changes when their segment carries
+    // the same identity ([GlassSegment.id], falling back to label): a
+    // surviving value keeps its element instead of remounting, so a
+    // reconfigured list redraws only what actually changed. Segments with
+    // no identity, or a duplicated one, get fresh cells.
+    final seen = <Object>{};
+    _tabKeys = List.generate(widget.tabs.length, (i) {
+      final Object? id = widget.tabs[i].id ?? widget.tabs[i].label;
+      if (id == null || !seen.add(id)) return GlobalKey();
+      return _cellKeysById.putIfAbsent(id, GlobalKey.new);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureTabs());
   }
 
@@ -202,10 +222,18 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
       setState(() {
         _tabWidths = widths;
         _tabOffsets = offsets;
-        // Snap indicator to selected tab after first measure (no animation).
+        // Snap indicator to the selected tab after (re)measure; the epoch
+        // makes the rendered pill jump with the springs instead of
+        // animating in from stale geometry.
+        _indicatorEpoch++;
         _indOffsetSpring.setValue(offsets[selIdx]);
         _indWidthSpring.setValue(widths[selIdx]);
       });
+      // A selection outside the viewport comes into view without animation:
+      // at first measure there is no prior state the user has seen, and
+      // after a list change the host may have positioned the scroll itself
+      // (ensure-visible no-ops when the selection is already on screen).
+      _scrollToEnsureVisible(selIdx, animated: false);
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) => _measureTabs());
     }
@@ -281,8 +309,11 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
         _tabWidths = [];
         _tabOffsets = [];
       });
-      _indOffsetSpring.setValue(0);
-      _indWidthSpring.setValue(0);
+      // The springs deliberately KEEP their last geometry: zeroing them
+      // hid the pill for the remeasure gap and then made it travel in
+      // from the track edge. The pill holds its stale position for the
+      // remeasure frame and the epoch-snap in [_measureTabs] lands it on
+      // the new geometry with no travel.
       _initKeys();
     }
   }
@@ -523,7 +554,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   ///
   /// Called on tap and on programmatic selection changes. Only fires when
   /// measurements are ready and the controller has an attached position.
-  void _scrollToEnsureVisible(int tabIndex) {
+  void _scrollToEnsureVisible(int tabIndex, {bool animated = true}) {
     if (!widget.scrollController.hasClients) return;
     if (tabIndex >= _tabOffsets.length || tabIndex >= _tabWidths.length) return;
 
@@ -551,11 +582,15 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     );
 
     if ((targetOffset - currentOffset).abs() > 0.5) {
-      widget.scrollController.animateTo(
-        targetOffset,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
+      if (animated) {
+        widget.scrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      } else {
+        widget.scrollController.jumpTo(targetOffset);
+      }
     }
   }
 
@@ -621,6 +656,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
           final safeTabLabels = stableTabLabels!;
           return VelocitySpringBuilder(
             value: widget.isScrollable ? _indOffsetSpring.value : _xAlign,
+            teleportEpoch: _indicatorEpoch,
             springWhenActive: GlassSpring.interactive(),
             springWhenReleased: GlassSpring.snappy(
               duration: const Duration(milliseconds: 350),
@@ -653,7 +689,10 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                         ? _tabOffsets[widget.selectedIndex]
                         : 0.0;
                 isMoving = (currentValue - targetOffset).abs() > 2.0;
-                canShowIndicator = measuredReady && _indWidthSpring.value > 0;
+                // Width alone: zero only before the very first measure. A
+                // list-length remeasure keeps the previous geometry live,
+                // so the pill stays visible through it instead of blinking.
+                canShowIndicator = _indWidthSpring.value > 0;
               } else {
                 final double targetAlignment =
                     _computeXAlignmentForTab(widget.selectedIndex);

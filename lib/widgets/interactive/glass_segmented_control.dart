@@ -195,6 +195,7 @@ class GlassSegmentedControl extends StatefulWidget {
     this.useOwnLayer = false,
     this.quality,
     this.backgroundKey,
+    this.scrollController,
     this.direction = Axis.horizontal,
     this.segmentExtent,
     // ── iOS 26 interaction ──────────────────────────────────────────────────
@@ -265,6 +266,7 @@ class GlassSegmentedControl extends StatefulWidget {
     this.quality,
     this.backgroundKey,
     // Scrollable-specific params
+    this.scrollController,
     this.iconSize = 24.0,
     this.labelPadding = const EdgeInsets.symmetric(horizontal: 16),
     this.selectedIconColor,
@@ -484,6 +486,17 @@ class GlassSegmentedControl extends StatefulWidget {
   // Scrollable-mode params (used only when isScrollable: true)
   // ===========================================================================
 
+  /// External scroll controller for the scrollable variant. Scrollable
+  /// mode only.
+  ///
+  /// Lets the host read and position the viewport — for example, keeping
+  /// the selected segment at an exact screen position while the segment
+  /// list is reconfigured around it (a picker changing its granularity).
+  /// When null the control manages its own. Provide it from the first
+  /// build; swapping between external and internal after mount is not
+  /// supported.
+  final ScrollController? scrollController;
+
   /// Icon size in logical pixels. Used in scrollable mode only.
   /// Defaults to 24.0 — matching [GlassTabBar].
   final double iconSize;
@@ -514,16 +527,18 @@ class GlassSegmentedControl extends StatefulWidget {
 
 class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
   late final ScrollController _scrollController;
+  late final bool _ownsController;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    _scrollController = widget.scrollController ?? ScrollController();
+    _ownsController = widget.scrollController == null;
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    if (_ownsController) _scrollController.dispose();
     super.dispose();
   }
 
