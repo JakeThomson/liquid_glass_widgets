@@ -9,7 +9,11 @@ import '../../types/glass_quality.dart';
 import '../shared/adaptive_liquid_glass_layer.dart';
 import '../surfaces/shared/tab_bar_types.dart' show MaskingQuality;
 import '../surfaces/glass_tab_bar.dart'
-    show DividerSettings, GlassSegment, SegmentSelectionAlignment;
+    show
+        DividerSettings,
+        GlassSegment,
+        SegmentDragBehavior,
+        SegmentSelectionAlignment;
 import '../../src/widgets/interactive/scrollable_segment_content.dart';
 import '../../src/widgets/interactive/segmented_control_internal.dart';
 
@@ -199,6 +203,7 @@ class GlassSegmentedControl extends StatefulWidget {
     this.scrollController,
     this.selectionAlignment = SegmentSelectionAlignment.minimal,
     this.regridDuration = const Duration(milliseconds: 180),
+    this.dragBehavior = SegmentDragBehavior.selectIndicator,
     this.direction = Axis.horizontal,
     this.segmentExtent,
     // ── iOS 26 interaction ──────────────────────────────────────────────────
@@ -272,6 +277,7 @@ class GlassSegmentedControl extends StatefulWidget {
     this.scrollController,
     this.selectionAlignment = SegmentSelectionAlignment.minimal,
     this.regridDuration = const Duration(milliseconds: 180),
+    this.dragBehavior = SegmentDragBehavior.selectIndicator,
     this.iconSize = 24.0,
     this.labelPadding = const EdgeInsets.symmetric(horizontal: 16),
     this.selectedIconColor,
@@ -518,6 +524,14 @@ class GlassSegmentedControl extends StatefulWidget {
   /// (the list snaps); Reduce Motion always snaps.
   final Duration regridDuration;
 
+  /// What a horizontal drag means. Scrollable mode only — the fixed
+  /// control always drags its indicator (`UISegmentedControl` parity).
+  ///
+  /// Defaults to [SegmentDragBehavior.selectIndicator] (unchanged
+  /// behavior). Use [SegmentDragBehavior.scroll] for picker-style strips
+  /// where a drag should navigate the list and selection is tap-only.
+  final SegmentDragBehavior dragBehavior;
+
   /// Icon size in logical pixels. Used in scrollable mode only.
   /// Defaults to 24.0 — matching [GlassTabBar].
   final double iconSize;
@@ -605,6 +619,7 @@ class _GlassSegmentedControlState extends State<GlassSegmentedControl> {
           scrollController: _scrollController,
           selectionAlignment: widget.selectionAlignment,
           regridDuration: widget.regridDuration,
+          dragBehavior: widget.dragBehavior,
           indicatorColor: widget.indicatorColor,
           selectedLabelStyle: widget.selectedTextStyle,
           unselectedLabelStyle: widget.unselectedTextStyle,

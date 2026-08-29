@@ -1516,6 +1516,22 @@ class GlassTabBarTrailingButton {
 // GlassSegment — configuration for a single segment in GlassSegmentedControl
 // =============================================================================
 
+/// What a horizontal drag means on a scrollable segmented control.
+enum SegmentDragBehavior {
+  /// A drag beginning on the selected segment drags the INDICATOR from
+  /// choice to choice (the `UISegmentedControl` gesture); drags elsewhere
+  /// scroll the list. The right feel when every choice is visible.
+  selectIndicator,
+
+  /// Every drag scrolls the list — the selected segment included;
+  /// selection changes by tap only. The picker behavior: with most
+  /// choices off-screen (and especially with
+  /// [SegmentSelectionAlignment.center], which parks the selection exactly
+  /// where a scrolling thumb naturally lands), navigation is what a drag
+  /// means.
+  scroll,
+}
+
 /// Where a scrollable segmented control keeps its selected segment.
 enum SegmentSelectionAlignment {
   /// Scroll only as far as needed for the selection to be fully visible,

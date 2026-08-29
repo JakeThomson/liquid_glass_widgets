@@ -18,7 +18,11 @@ import '../../../widgets/surfaces/shared/tab_bar_types.dart'
 import '../../../widgets/shared/glass_accessibility_scope.dart'
     show GlassAccessibilityData;
 import '../../../widgets/surfaces/glass_tab_bar.dart'
-    show GlassSegment, DividerSettings, SegmentSelectionAlignment;
+    show
+        GlassSegment,
+        DividerSettings,
+        SegmentDragBehavior,
+        SegmentSelectionAlignment;
 
 // =============================================================================
 // ScrollableSegmentContent — draggable indicator + segment layout
@@ -57,6 +61,7 @@ class ScrollableSegmentContent extends StatefulWidget {
     this.tabBarBorderRadius,
     this.selectionAlignment = SegmentSelectionAlignment.minimal,
     this.regridDuration = const Duration(milliseconds: 180),
+    this.dragBehavior = SegmentDragBehavior.selectIndicator,
     super.key,
   });
 
@@ -99,6 +104,9 @@ class ScrollableSegmentContent extends StatefulWidget {
 
   /// See [GlassSegmentedControl.regridDuration].
   final Duration regridDuration;
+
+  /// See [GlassSegmentedControl.dragBehavior].
+  final SegmentDragBehavior dragBehavior;
 
   @override
   State<ScrollableSegmentContent> createState() =>
@@ -624,6 +632,9 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
       setState(() => _isDown = true);
       return;
     }
+    // Picker strips: a drag NAVIGATES — never claim it for the indicator,
+    // so it falls through to the scroll view like any off-pill drag.
+    if (widget.dragBehavior == SegmentDragBehavior.scroll) return;
 
     final scrollOffset = widget.scrollController.hasClients
         ? widget.scrollController.offset

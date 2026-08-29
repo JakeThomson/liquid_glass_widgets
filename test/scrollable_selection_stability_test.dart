@@ -196,6 +196,50 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('dragBehavior.scroll: pill drags scroll the list, tap-only '
+      'selection', (tester) async {
+    int? tapped;
+    final ctl = ScrollController();
+    addTearDown(ctl.dispose);
+    await tester.pumpWidget(harness(GlassSegmentedControl.scrollable(
+      segments: segments(30),
+      selectedIndex: 15,
+      onSegmentSelected: (i) => tapped = i,
+      selectionAlignment: SegmentSelectionAlignment.center,
+      dragBehavior: SegmentDragBehavior.scroll,
+      scrollController: ctl,
+    )));
+    await tester.pumpAndSettle();
+    final before = ctl.offset;
+    await tester.drag(find.text('S15'), const Offset(-120, 0));
+    await tester.pumpAndSettle();
+    expect(tapped, isNull, reason: 'a drag must not change the selection');
+    expect((ctl.offset - before).abs(), greaterThan(60),
+        reason: 'a drag starting on the pill must scroll the list');
+  });
+
+  testWidgets('default dragBehavior keeps the indicator drag', (tester) async {
+    int? dragged;
+    final ctl = ScrollController();
+    addTearDown(ctl.dispose);
+    await tester.pumpWidget(harness(GlassSegmentedControl.scrollable(
+      segments: segments(30),
+      selectedIndex: 15,
+      onSegmentSelected: (i) => dragged = i,
+      selectionAlignment: SegmentSelectionAlignment.center,
+      scrollController: ctl,
+    )));
+    await tester.pumpAndSettle();
+    final before = ctl.offset;
+    await tester.timedDrag(
+        find.text('S15'), const Offset(-120, 0), const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(dragged, isNotNull,
+        reason: 'dragging the pill selects a neighboring segment');
+    expect((ctl.offset - before).abs(), lessThan(1),
+        reason: 'an indicator drag must not scroll the list');
+  });
+
   testWidgets('teleportEpoch snaps; unchanged epoch animates', (tester) async {
     double seen = -1;
     Widget build(double value, int epoch) => MaterialApp(
