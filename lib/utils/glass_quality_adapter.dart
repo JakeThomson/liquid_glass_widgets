@@ -602,9 +602,23 @@ class GlassQualityAdapter {
       _underBudgetWindowCount++;
       _overBudgetWindowCount = 0;
     } else {
-      // In the acceptable range — no change signal
+      // In the acceptable range — no change signal.
+      //
+      // A neutral window is not evidence of jank, so it must not erase
+      // progress toward recovery. Resetting here made the step-up
+      // unreachable in practice: recovery needs [upgradeWindowCount]
+      // CONSECUTIVE under-budget windows, and because the measure is P95 —
+      // a tail statistic — an ordinary scrolling list drifts into this band
+      // often enough to zero the counter before it ever gets there. The
+      // result was a one-way ratchet: a single transient cost (opening a
+      // map, a heavy platform view, a route with a big image) demoted
+      // quality for the rest of the session with no path back.
+      //
+      // Decaying leaves degradation exactly as responsive as before — an
+      // over-budget window still zeroes this counter on the branch above —
+      // while letting a mostly-good stretch accumulate toward recovery.
       _overBudgetWindowCount = 0;
-      _underBudgetWindowCount = 0;
+      if (_underBudgetWindowCount > 0) _underBudgetWindowCount--;
     }
 
     if (_overBudgetWindowCount >= degradeWindowCount) {
