@@ -688,7 +688,11 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                     measuredReady && widget.selectedIndex < _tabOffsets.length
                         ? _tabOffsets[widget.selectedIndex]
                         : 0.0;
-                isMoving = (currentValue - targetOffset).abs() > 2.0;
+                // Only a measured target can say the pill is moving: during
+                // a remeasure gap the stale comparison read as motion and
+                // fired the bloom pulse on every list change.
+                isMoving =
+                    measuredReady && (currentValue - targetOffset).abs() > 2.0;
                 // Width alone: zero only before the very first measure. A
                 // list-length remeasure keeps the previous geometry live,
                 // so the pill stays visible through it instead of blinking.
