@@ -51,7 +51,9 @@
 
 - **`blur: 0` no longer downgrades any tier to `_FrostedFallback` (#253):** Setting `blur: 0` on a premium or standard surface previously routed it silently to `_FrostedFallback`, stripping the rim, Fresnel, and specular along with the blur. The layer's own pass-1 guard (`effectiveBlur > 0`) already handles zero blur cleanly — it skips the blur pass and leaves refraction and lighting intact. **Visual change at standard:** a `blur: 0` surface previously resolving to `_FrostedFallback` now renders the lightweight shader instead. Use `GlassQuality.minimal` explicitly if the frost fallback was intentional.
 
-Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize transitions, pinned navigation chrome, leading API and per-item glass backgrounds, scroll-to-minimize controller improvements, bottom accessory inline behaviour, and metrics export (#240, #238, #236, #239, #233, #234).
+- **Presented routes now cover the pinned chrome (#259):** A route presented over a pinned screen — a dialog, an action sheet, a `GlassModalSheet`, or a `fullscreenDialog` — now covers the pinned chrome the way it covers the rest of the page. Previously the glass back button and actions capsule stayed painted above the presentation at full brightness while everything else dimmed. The shell detects a presentation via `_isPresentedOver` (not current and at rest — distinguishing it from a popping route, which is not current but is in flight) and hands the chrome back to the route; `GlassPinnedBarChrome` follows the shell's decision via a `chromeChanges` listener, snapshotting each answer so the bar and shell swap in the same frame. `GlassPinnedBarChromeData.hoisted` documents the new lifecycle.
+
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize transitions, pinned navigation chrome, leading API and per-item glass backgrounds, scroll-to-minimize controller improvements, bottom accessory inline behaviour, metrics export, and the presented-route chrome fix (#240, #238, #236, #239, #233, #234, #259).
 
 Thanks to [@marco242424](https://github.com/marco242424) for the native gel morph (#243).
 
