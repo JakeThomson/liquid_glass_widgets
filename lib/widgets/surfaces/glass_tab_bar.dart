@@ -1569,6 +1569,7 @@ class GlassSegment {
   const GlassSegment({
     this.icon,
     this.label,
+    this.id,
     this.tooltip,
     this.semanticLabel,
     this.enabled = true,
@@ -1588,6 +1589,15 @@ class GlassSegment {
   /// If null, [icon] is used alone. If both are provided, the icon is shown
   /// above the label (same layout as iOS `UISegmentedControl` with images).
   final String? label;
+
+  /// Stable identity for this segment across list changes.
+  ///
+  /// When the segment list is replaced (items inserted, removed, or the
+  /// list re-gridded around a surviving value), segments whose identity
+  /// survives keep their underlying elements instead of remounting — only
+  /// genuinely new cells build. Falls back to [label]; segments with
+  /// neither, or with duplicate identities, get fresh cells each time.
+  final Object? id;
 
   /// Tooltip shown on long-press (optional).
   ///
