@@ -49,11 +49,13 @@
 
 - **`GlassTabBarMinimizeController` drivable without a `ScrollController`:** The state machine's only controller-free entry point, `handleSample`, was annotated `@visibleForTesting`, so a host that observes scrolling with a `NotificationListener` — an app-level scaffold wrapping arbitrary screen bodies, which cannot reach whichever `ScrollController` the current screen owns — could not use the controller at all. The annotation is gone, and a new `handleNotification(ScrollNotification)` drives the minimize from notifications directly, carrying the `UserScrollNotification` direction across the updates that follow it. Leave `GlassTabBar.minimizable`'s `scrollController` off when driving it this way; the example app's minimizable bar demo switches between both sources.
 
+- **`blur: 0` no longer downgrades any tier to `_FrostedFallback` (#253):** Setting `blur: 0` on a premium or standard surface previously routed it silently to `_FrostedFallback`, stripping the rim, Fresnel, and specular along with the blur. The layer's own pass-1 guard (`effectiveBlur > 0`) already handles zero blur cleanly — it skips the blur pass and leaves refraction and lighting intact. **Visual change at standard:** a `blur: 0` surface previously resolving to `_FrostedFallback` now renders the lightweight shader instead. Use `GlassQuality.minimal` explicitly if the frost fallback was intentional.
+
 Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize transitions, pinned navigation chrome, leading API and per-item glass backgrounds, scroll-to-minimize controller improvements, bottom accessory inline behaviour, and metrics export (#240, #238, #236, #239, #233, #234).
 
 Thanks to [@marco242424](https://github.com/marco242424) for the native gel morph (#243).
 
-Thanks to [@Nixxx19](https://github.com/Nixxx19) for the platform-view glass passthrough mode and `GlassChip` backdrop parameter (#247, #250).
+Thanks to [@Nixxx19](https://github.com/Nixxx19) for the platform-view glass passthrough mode, `GlassChip` backdrop parameter, and the blur tier-downgrade fix (#247, #250, #253).
 
 ---
 
