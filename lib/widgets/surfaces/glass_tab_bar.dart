@@ -1516,6 +1516,18 @@ class GlassTabBarTrailingButton {
 // GlassSegment — configuration for a single segment in GlassSegmentedControl
 // =============================================================================
 
+/// Where a scrollable segmented control keeps its selected segment.
+enum SegmentSelectionAlignment {
+  /// Scroll only as far as needed for the selection to be fully visible,
+  /// with a little edge breathing room (the classic tab-bar behavior).
+  minimal,
+
+  /// Keep the selection centered in the viewport whenever possible —
+  /// clamped at the ends of the list. The picker behavior: selection lives
+  /// at the center and the choices arrange themselves around it.
+  center,
+}
+
 /// Configuration for a single segment in [GlassSegmentedControl].
 ///
 /// [GlassSegment] is the item type for [GlassSegmentedControl] — the iOS 26

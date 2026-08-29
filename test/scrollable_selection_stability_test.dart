@@ -45,11 +45,14 @@ void main() {
       (tester) async {
     final ctl = ScrollController();
     addTearDown(ctl.dispose);
+    // regridDuration zero: this test covers the SNAP path; the morph path
+    // has its own tests below.
     Widget build(int n) => harness(GlassSegmentedControl.scrollable(
           segments: segments(n),
           selectedIndex: 5,
           onSegmentSelected: (_) {},
           scrollController: ctl,
+          regridDuration: Duration.zero,
         ));
     await tester.pumpWidget(build(10));
     await tester.pumpAndSettle();
@@ -88,6 +91,65 @@ void main() {
     await tester.pumpAndSettle();
     expect(identical(before, tester.element(find.text('B'))), isTrue,
         reason: "segment 'B' survived the change and must keep its element");
+  });
+
+  testWidgets('center alignment seats the selection mid-viewport',
+      (tester) async {
+    await tester.pumpWidget(harness(GlassSegmentedControl.scrollable(
+      segments: segments(30),
+      selectedIndex: 15,
+      onSegmentSelected: (_) {},
+      selectionAlignment: SegmentSelectionAlignment.center,
+    )));
+    await tester.pumpAndSettle();
+    final viewport = tester.getRect(find.byType(GlassSegmentedControl));
+    final cell = tester.getRect(find.text('S15'));
+    expect((cell.center.dx - viewport.center.dx).abs(), lessThan(2.0),
+        reason: 'selection must sit at the viewport center');
+  });
+
+  testWidgets('re-grid morph: anchored selection, entrants grow, leavers '
+      'shrink out', (tester) async {
+    var selected = 4;
+    List<GlassSegment> coarse() =>
+        [for (var i = 0; i < 8; i++) GlassSegment(label: 'T$i')];
+    List<GlassSegment> fine() => [
+          for (var i = 0; i < 8; i++) ...[
+            GlassSegment(label: 'T$i'),
+            if (i < 7) GlassSegment(label: 'N$i'),
+          ],
+        ];
+    Widget build(List<GlassSegment> segs) =>
+        harness(GlassSegmentedControl.scrollable(
+          segments: segs,
+          selectedIndex:
+              segs.indexWhere((t) => t.label == 'T$selected'),
+          onSegmentSelected: (_) {},
+          selectionAlignment: SegmentSelectionAlignment.center,
+        ));
+    await tester.pumpWidget(build(coarse()));
+    await tester.pumpAndSettle();
+    final anchor = tester.getTopLeft(find.text('T$selected')).dx;
+
+    await tester.pumpWidget(build(fine()));
+    await tester.pump(const Duration(milliseconds: 90)); // mid-morph
+    expect(find.text('N3'), findsOneWidget,
+        reason: 'entrants must exist mid-morph');
+    expect(
+        (tester.getTopLeft(find.text('T$selected')).dx - anchor).abs(),
+        lessThan(3.0),
+        reason: 'the selection is anchored through the morph');
+    await tester.pumpAndSettle();
+    expect(tester.binding.transientCallbackCount, 0);
+
+    // Coarsen again: leavers must remain visible mid-morph, gone after.
+    await tester.pumpWidget(build(coarse()));
+    await tester.pump(const Duration(milliseconds: 90));
+    expect(find.text('N3'), findsOneWidget,
+        reason: 'leavers shrink out — still present mid-morph');
+    await tester.pumpAndSettle();
+    expect(find.text('N3'), findsNothing);
+    expect(tester.binding.transientCallbackCount, 0);
   });
 
   testWidgets('teleportEpoch snaps; unchanged epoch animates', (tester) async {
