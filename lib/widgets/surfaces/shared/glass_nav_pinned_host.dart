@@ -1,11 +1,13 @@
 import 'dart:math' as math;
-import 'dart:ui' show lerpDouble;
+import 'dart:ui' show ImageFilter, lerpDouble;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
+import '../../../utils/glass_spring.dart';
 import '../../effects/glass_materialize.dart';
 import '../../effects/shared/glass_materialize_effect.dart';
 import '../../interactive/glass_button.dart';
@@ -60,11 +62,88 @@ abstract final class GlassNavPinnedMetrics {
   /// slots, so a split cluster reads the same in-route and pinned.
   static const double groupGap = 8.0;
 
-  /// Window during which a matched item's icon cross-fades.
-  static const double crossFadeStart = 0.3;
+  /// Start of the cluster morph, as a fraction of the route transition.
+  ///
+  /// The cluster rides the whole transition: natively its spring settles in
+  /// the same breath the page lands, which is what keeps the bounce in sync
+  /// with the slide — the bar and the page are on the same clock. The tiny
+  /// lead-in keeps the first moving frame from reading as a jump.
+  static const double morphStart = 0.03;
+
+  /// End of the cluster morph, as a fraction of the route transition.
+  static const double morphEnd = 1.0;
+
+  /// Progress through the [morphStart]..[morphEnd] window at route [progress].
+  static double morphProgressAt(double progress) =>
+      ((progress - morphStart) / (morphEnd - morphStart)).clamp(0.0, 1.0);
+
+  /// Window during which a matched item's icon cross-fades, as a fraction of
+  /// the [morphStart]..[morphEnd] morph window.
+  static const double crossFadeStart = 0.25;
 
   /// End of the icon cross-fade window.
-  static const double crossFadeEnd = 0.7;
+  static const double crossFadeEnd = 0.6;
+
+  /// Peak of the gel swell, as a fraction of the shell's size.
+  ///
+  /// The swell is not a width effect: natively the entire capsule — height,
+  /// radius, glyphs — puffs up together while the cluster is already
+  /// travelling toward its new width, then relaxes. It scales the shell about
+  /// its own centre, so both edges move outward.
+  static const double swellAmount = 0.22;
+
+  /// Portion of the morph over which the swell rises and falls.
+  static const double swellWindow = 0.6;
+
+  /// How much of the spring's overshoot squeezes the whole shell.
+  ///
+  /// The spring lands through its overshoot; coupling that excursion into
+  /// the same uniform scale the swell uses is what makes the bounce read on
+  /// the whole shell — height included — rather than in width alone.
+  static const double squeezeScale = 0.35;
+
+  /// The gel swell at [morphT] through the morph window.
+  static double swellPulseAt(double morphT) {
+    final x = (morphT / swellWindow).clamp(0.0, 1.0);
+    return swellAmount * math.sin(math.pi * x);
+  }
+
+  /// Peak gaussian blur applied to a glyph on its way out.
+  ///
+  /// The native morph never shows a glyph plainly fading: an outgoing glyph
+  /// smears away under heavy blur as the cluster reshapes under it, which
+  /// reads as motion blur on the whole cluster.
+  static const double morphBlurSigma = 6.0;
+
+  /// Blur at which an incoming glyph arrives.
+  ///
+  /// Softer than the outgoing smear: natively the arriving glyph is soft but
+  /// its silhouette stays readable the whole way in.
+  static const double glyphArriveSigma = 3.5;
+
+  /// Window over which an incoming glyph sharpens, as a fraction of the
+  /// [morphStart]..[morphEnd] morph window like [crossFadeStart].
+  ///
+  /// Sharpening starts while the cluster is still bouncing and finishes just
+  /// ahead of the landing — natively the blur is the last thing to clear.
+  static const double glyphSharpenStart = 0.48;
+
+  /// End of the incoming glyph's sharpening window.
+  static const double glyphSharpenEnd = 0.9;
+
+  /// Blur of an outgoing glyph at [morphT] through the morph window.
+  ///
+  /// Ramps to full strength ahead of the fade, so a glyph is already soft
+  /// before its opacity starts moving — the native smear.
+  static double outgoingSigmaAt(double morphT) =>
+      morphBlurSigma * (morphT * 3.0).clamp(0.0, 1.0);
+
+  /// Blur of an incoming glyph at [morphT] through the morph window.
+  static double incomingSigmaAt(double morphT) =>
+      glyphArriveSigma *
+      (1.0 -
+          ((morphT - glyphSharpenStart) / (glyphSharpenEnd - glyphSharpenStart))
+              .clamp(0.0, 1.0));
 
   /// Point in the transition at which the chrome switches from showing the
   /// outgoing route's configuration to the incoming one.
@@ -123,6 +202,40 @@ abstract final class GlassNavPinnedMetrics {
   static bool showsIncomingAt(double progress) => progress >= swapAt;
 }
 
+/// The motion of a morphing cluster: the package's bouncy spring as a curve.
+///
+/// The cluster's width and item positions travel on this from the first
+/// frame of the transition to the last, overshooting the target and settling
+/// back exactly as the page lands — cluster and page share one clock. It
+/// samples [GlassSpring.bouncy] — the same profile the liquid morphs
+/// elsewhere in the package ride — as a curve rather than as a live
+/// simulation, because the pinned chrome is a pure interpolation of the
+/// route clock: a time-driven spring would detach the morph from back-swipe
+/// scrubbing.
+///
+/// Public for testing; held back from the barrel's `show` clause.
+@visibleForTesting
+class GlassNavMorphCurve extends Curve {
+  const GlassNavMorphCurve._();
+
+  /// The shared instance; the underlying simulation is stateless.
+  static const GlassNavMorphCurve instance = GlassNavMorphCurve._();
+
+  /// The perceptual settle duration [GlassSpring.bouncy] is specified with.
+  static const double _settleSeconds = 0.5;
+
+  static final SpringSimulation _simulation =
+      SpringSimulation(GlassSpring.bouncy(extraBounce: 0.1), 0.0, 1.0, 0.0);
+
+  /// The residual at the end of the sample window, divided out so the curve
+  /// honours the Curve contract of ending exactly at 1.
+  static final double _terminal = _simulation.x(_settleSeconds);
+
+  @override
+  double transformInternal(double t) =>
+      _simulation.x(t * _settleSeconds) / _terminal;
+}
+
 /// The chrome to render for the current frame.
 ///
 /// [progress] is the top route's own entrance animation: 1 at rest, running
@@ -139,6 +252,7 @@ class GlassNavPinnedState {
     required this.progress,
     required this.coverage,
     required this.settled,
+    this.popping = false,
     required this.topRoute,
     this.transition = GlassEffectTransition.materialize,
   });
@@ -166,6 +280,25 @@ class GlassNavPinnedState {
   /// can no longer see. [progress] cannot answer this on its own — a pop
   /// begins at 1.0 — so the shell derives it from the route instead.
   final bool settled;
+
+  /// Whether the transition is a pop — an animated pop, a back-swipe, or the
+  /// exit a committed swipe plays out.
+  ///
+  /// A pop plays the same forward choreography as a push, toward the other
+  /// target: [flowProgress] mirrors the clock and [flowFrom]/[flowTo] swap
+  /// the roles, so the swell leads and the bounce lands with the page in
+  /// both directions. Rendering the push in reverse instead put all the
+  /// motion at the wrong end of a pop.
+  final bool popping;
+
+  /// [progress] along the forward choreography — mirrored on a pop.
+  double get flowProgress => popping ? 1.0 - progress : progress;
+
+  /// The chrome the forward choreography leaves, honouring [popping].
+  GlassNavBarRegistration get flowFrom => popping ? to : from;
+
+  /// The chrome the forward choreography arrives at, honouring [popping].
+  GlassNavBarRegistration get flowTo => popping ? from : to;
 
   /// The topmost registered route, used for the default back action.
   final ModalRoute<dynamic> topRoute;
@@ -213,13 +346,13 @@ class GlassNavPinnedHost extends StatelessWidget {
       if (inFrom && inTo) return 1.0;
       if (!inFrom && !inTo) return 0.0;
       final showsIncoming =
-          GlassNavPinnedMetrics.showsIncomingAt(state.progress);
+          GlassNavPinnedMetrics.showsIncomingAt(state.flowProgress);
       return (inTo ? showsIncoming : !showsIncoming) ? 1.0 : 0.0;
     }
     return GlassNavPinnedMetrics.clusterPhaseAt(
       inFrom: inFrom,
       inTo: inTo,
-      progress: state.progress,
+      progress: state.flowProgress,
     );
   }
 
@@ -386,7 +519,7 @@ bool _groupShowsAt(
   GlassNavBarGroup? from,
   GlassNavBarGroup? to,
 ) {
-  final sides = _resolveGroupSides(from, to, state.progress);
+  final sides = _resolveGroupSides(from, to, state.flowProgress);
   if (sides.from == null && sides.to == null) return false;
   return GlassNavPinnedHost.phaseFor(
         context,
@@ -470,8 +603,11 @@ class _PinnedSide extends StatelessWidget {
   Widget build(BuildContext context) {
     if (coverageScale <= 0.01) return const SizedBox.shrink();
 
-    final fromGroups = groupGlassNavBarItems(_itemsFor(context, state.from));
-    final toGroups = groupGlassNavBarItems(_itemsFor(context, state.to));
+    // Groups follow the forward choreography: on a pop the roles swap, so
+    // the same forward morph plays toward the destination's clusters.
+    final fromGroups =
+        groupGlassNavBarItems(_itemsFor(context, state.flowFrom));
+    final toGroups = groupGlassNavBarItems(_itemsFor(context, state.flowTo));
     final count = math.max(fromGroups.length, toGroups.length);
     if (count == 0) return const SizedBox.shrink();
 
@@ -543,7 +679,27 @@ class GlassNavActionSlot {
   bool get crossFades {
     final from = fromItem;
     final to = toItem;
-    return from != null && to != null && from.content != to.content;
+    return from != null &&
+        to != null &&
+        !_sameContent(from.content, to.content);
+  }
+
+  /// Whether two content widgets draw the same thing.
+  ///
+  /// Reference identity first — but identical `const Icon(...)` expressions
+  /// are not reliably canonicalised into one instance, so the overwhelmingly
+  /// common case of an icon is compared by value: two icons drawing the same
+  /// glyph are the same content. Anything else stays conservative on
+  /// identity; a spurious cross-fade of identical pixels is invisible, but
+  /// the morph gel keying off it is not.
+  static bool _sameContent(Widget a, Widget b) {
+    if (identical(a, b)) return true;
+    return a is Icon &&
+        b is Icon &&
+        a.icon == b.icon &&
+        a.size == b.size &&
+        a.color == b.color &&
+        a.key == b.key;
   }
 }
 
@@ -633,6 +789,18 @@ class _ClusterParentData extends ContainerBoxParentData<RenderBox> {
   int slot = 0;
   bool isFrom = false;
   double opacity = 1.0;
+  double blurSigma = 0.0;
+
+  /// Reused across frames so a blurring glyph does not allocate a fresh
+  /// layer per paint. A [LayerHandle] keeps it alive between frames.
+  final LayerHandle<ImageFilterLayer> blurLayer =
+      LayerHandle<ImageFilterLayer>();
+
+  @override
+  void detach() {
+    blurLayer.layer = null;
+    super.detach();
+  }
 }
 
 /// Lays out both routes' clusters and interpolates between them.
@@ -646,6 +814,7 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
     required this.orders,
     required this.widthT,
     required this.positionT,
+    required this.morphScale,
     required this.height,
     required this.anchoredAtStart,
     required super.children,
@@ -660,7 +829,10 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
   /// Interpolation for per-item positions and widths.
   final double positionT;
 
-  /// Fixed cluster height.
+  /// Uniform gel scale applied to the cluster's real geometry.
+  final double morphScale;
+
+  /// Fixed cluster height, before the gel scale.
   final double height;
 
   /// Whether items are placed relative to the box's left edge.
@@ -675,6 +847,7 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
         orders: orders,
         widthT: widthT,
         positionT: positionT,
+        morphScale: morphScale,
         clusterHeight: height,
         anchoredAtStart: anchoredAtStart,
       );
@@ -688,6 +861,7 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
       ..orders = orders
       ..widthT = widthT
       ..positionT = positionT
+      ..morphScale = morphScale
       ..clusterHeight = height
       ..anchoredAtStart = anchoredAtStart;
   }
@@ -701,11 +875,13 @@ class _RenderPinnedCluster extends RenderBox
     required List<_SlotOrder> orders,
     required double widthT,
     required double positionT,
+    required double morphScale,
     required double clusterHeight,
     required bool anchoredAtStart,
   })  : _orders = orders,
         _widthT = widthT,
         _positionT = positionT,
+        _morphScale = morphScale,
         _clusterHeight = clusterHeight,
         _anchoredAtStart = anchoredAtStart;
 
@@ -729,6 +905,23 @@ class _RenderPinnedCluster extends RenderBox
     _positionT = value;
     markNeedsLayout();
   }
+
+  double _morphScale;
+  set morphScale(double value) {
+    if (_morphScale == value) return;
+    final wasScaled = _morphScale != 1.0;
+    _morphScale = value;
+    if (wasScaled != (value != 1.0)) markNeedsCompositingBitsUpdate();
+    markNeedsLayout();
+  }
+
+  /// Compositing is required while the gel scales: the blurring glyphs paint
+  /// into their own layers, and only a transform *layer* carries those with
+  /// the scale — a canvas transform leaves them pinned at their unscaled
+  /// positions while the shell inflates around them. At rest this is false
+  /// and the cluster paints directly.
+  @override
+  bool get alwaysNeedsCompositing => _morphScale != 1.0;
 
   double _clusterHeight;
   set clusterHeight(double value) {
@@ -820,10 +1013,26 @@ class _RenderPinnedCluster extends RenderBox
     final fromTotal = layoutSide(from: true);
     final toTotal = layoutSide(from: false);
 
+    // The gel scales the box itself: the glass shell wrapping this cluster
+    // re-renders at the true inflated size, and paint scales the children to
+    // fill it, so shell and glyphs stretch as one body.
     final width = lerpDouble(fromTotal, toTotal, _widthT)!;
-    size = constraints.constrain(Size(width, _clusterHeight));
+    final scaled = Size(width * _morphScale, _clusterHeight * _morphScale);
+    size = constraints.constrain(scaled);
+    // The bar hosts this cluster in an unbounded row, so the constraint never
+    // bites there; anywhere it did, paint would scale past the box (the
+    // shell's ClipRect contains it, but the layout would be lying).
+    assert(
+      size == constraints.constrain(Size(scaled.width, scaled.height)) &&
+          (constraints.biggest.width.isInfinite ||
+              scaled.width <= constraints.maxWidth + 0.001),
+      'The gel scale needs an unbounded main axis: a clamped box would paint '
+      'outside itself.',
+    );
 
-    // Position every child by its interpolated distance from the anchored edge.
+    // Position every child by its interpolated distance from the anchored
+    // edge — in the pre-scale space, because paint scales the lot into the
+    // inflated box.
     child = firstChild;
     while (child != null) {
       final data = child.parentData! as _ClusterParentData;
@@ -838,10 +1047,10 @@ class _RenderPinnedCluster extends RenderBox
         widthOf(slot, from: false),
         _positionT,
       )!;
-      final x = _anchoredAtStart ? edge : size.width - edge - slotWidth;
+      final x = _anchoredAtStart ? edge : width - edge - slotWidth;
       data.offset = Offset(
         x + (slotWidth - child.size.width) / 2.0,
-        (size.height - child.size.height) / 2.0,
+        (_clusterHeight - child.size.height) / 2.0,
       );
       child = data.nextSibling;
     }
@@ -885,24 +1094,67 @@ class _RenderPinnedCluster extends RenderBox
       totalFor(from: false),
       _widthT,
     )!;
-    return constraints.constrain(Size(width, _clusterHeight));
+    return constraints
+        .constrain(Size(width * _morphScale, _clusterHeight * _morphScale));
   }
+
+  /// The paint transform of the gel: a uniform scale about the box origin.
+  Matrix4 get _gelTransform =>
+      Matrix4.diagonal3Values(_morphScale, _morphScale, 1.0);
 
   @override
   void paint(PaintingContext context, Offset offset) {
+    if (_morphScale != 1.0) {
+      // Children are laid out at their natural size and scaled into the
+      // inflated box, glyphs and all — the stretch carries the contents.
+      // See [alwaysNeedsCompositing] for why this is a layer, and
+      // [applyPaintTransform] for the matching hit-test/semantics mirror.
+      layer = context.pushTransform(
+        true,
+        offset,
+        _gelTransform,
+        _paintChildren,
+        oldLayer: layer as TransformLayer?,
+      );
+      return;
+    }
+    layer = null;
+    _paintChildren(context, offset);
+  }
+
+  void _paintChildren(PaintingContext context, Offset offset) {
     var child = firstChild;
     while (child != null) {
       final data = child.parentData! as _ClusterParentData;
       final childOffset = offset + data.offset;
+      final current = child;
+
+      // Item contents are not glass, so fading and filtering them here is
+      // safe — the shell's own glass dissolves through the shader instead.
+      // The blur sits inside the opacity so a glyph fades as one soft image;
+      // the layer is kept on the parent data and reused across frames.
+      void paintContent(PaintingContext ctx, Offset off) {
+        if (data.blurSigma > 0.01) {
+          final blurLayer = data.blurLayer.layer ??= ImageFilterLayer();
+          blurLayer.imageFilter = ImageFilter.blur(
+            sigmaX: data.blurSigma,
+            sigmaY: data.blurSigma,
+            tileMode: TileMode.decal,
+          );
+          ctx.pushLayer(blurLayer, (c, o) => c.paintChild(current, o), off);
+        } else {
+          data.blurLayer.layer = null;
+          ctx.paintChild(current, off);
+        }
+      }
+
       if (data.opacity >= 1.0) {
-        context.paintChild(child, childOffset);
+        paintContent(context, childOffset);
       } else if (data.opacity > 0.0) {
-        // Item contents are not glass, so fading them here is safe — the
-        // capsule's own shell dissolves through the shader instead.
         context.pushOpacity(
           childOffset,
           (data.opacity * 255).round(),
-          (ctx, off) => ctx.paintChild(child!, off),
+          paintContent,
         );
       }
       child = data.nextSibling;
@@ -910,23 +1162,42 @@ class _RenderPinnedCluster extends RenderBox
   }
 
   @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    // Mirror paint exactly: the gel scale about the box origin, then the
+    // child's offset inside the scaled space — so semantics rects,
+    // localToGlobal and hit-testing agree with what is painted mid-gel.
+    if (_morphScale != 1.0) transform.multiply(_gelTransform);
+    super.applyPaintTransform(child, transform);
+  }
+
+  @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    return defaultHitTestChildren(result, position: position);
+    if (_morphScale == 1.0) {
+      return defaultHitTestChildren(result, position: position);
+    }
+    return result.addWithPaintTransform(
+      transform: _gelTransform,
+      position: position,
+      hitTest: (result, position) =>
+          defaultHitTestChildren(result, position: position),
+    );
   }
 }
 
-/// Applies a per-child opacity through the cluster's parent data.
+/// Applies a per-child opacity and blur through the cluster's parent data.
 class _ClusterChild extends ParentDataWidget<_ClusterParentData> {
   const _ClusterChild({
     required this.slot,
     required this.isFrom,
     required this.opacity,
+    required this.blurSigma,
     required super.child,
   });
 
   final int slot;
   final bool isFrom;
   final double opacity;
+  final double blurSigma;
 
   @override
   void applyParentData(RenderObject renderObject) {
@@ -943,6 +1214,10 @@ class _ClusterChild extends ParentDataWidget<_ClusterParentData> {
     }
     if (data.opacity != opacity) {
       data.opacity = opacity;
+      needsPaint = true;
+    }
+    if (data.blurSigma != blurSigma) {
+      data.blurSigma = blurSigma;
       needsPaint = true;
     }
     final parent = renderObject.parent;
@@ -1013,7 +1288,9 @@ class _PinnedGroupState extends State<_PinnedGroup> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final p = state.progress;
+    // The forward-choreography clock: mirrored on a pop, with the group's
+    // sides already swapped to match by the side above.
+    final p = state.flowProgress;
     final showsIncoming = GlassNavPinnedMetrics.showsIncomingAt(p);
 
     final sides = _resolveGroupSides(widget.from, widget.to, p);
@@ -1024,10 +1301,37 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     final fromItems = from?.items ?? const <GlassBarActionItem>[];
     final toItems = to?.items ?? const <GlassBarActionItem>[];
 
-    // A symmetric curve, because this same interpolation is walked forwards on
-    // a push and backwards on a pop. A directional ease reads correctly one way
-    // and snaps the other — an easeIn exit becomes an instant entrance on pop.
-    final eased = Curves.easeInOut.transform(p);
+    // The cluster and the page share one clock: width and item positions ride
+    // the morph spring for the full length of the route transition and settle
+    // with it. The spring's excursions are not walked in width — the
+    // overshoot becomes the gel squeeze below, so layout takes the clamp.
+    final morphT = GlassNavPinnedMetrics.morphProgressAt(p);
+    final springT = GlassNavMorphCurve.instance.transform(morphT);
+    final clampedT = springT.clamp(0.0, 1.0);
+
+    final slots = matchGlassNavActions(
+      fromItems,
+      toItems,
+      anchoredAtStart: widget.anchoredAtStart,
+    );
+
+    // The gel: a swell pulse inflates the whole shell early — height, radius
+    // and glyphs together, as real geometry, the way stretching any glass in
+    // this package carries its contents with it — and the spring's landing
+    // overshoot squeezes it back. Never a paint transform: the glass texture
+    // has no headroom for one. Groups only one route has materialize instead,
+    // and a group the two routes agree on — the usual lone back button — sits
+    // perfectly still, exactly as the native bar keeps an unchanged cluster
+    // frozen while its neighbours morph.
+    final overshoot = (springT - 1.0).clamp(0.0, 1.0);
+    final morphing = fromItems.isNotEmpty && toItems.isNotEmpty;
+    final changes = fromItems.length != toItems.length ||
+        slots.any((s) => s.isEnter || s.isExit || s.crossFades);
+    final morphScale = !morphing || !changes || state.settled
+        ? 1.0
+        : 1.0 +
+            GlassNavPinnedMetrics.swellPulseAt(morphT) -
+            GlassNavPinnedMetrics.squeezeScale * overshoot;
 
     // With one side empty the shell holds the width it has: collapsing the
     // width would leave a degenerate glass shape on the way out.
@@ -1035,7 +1339,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
         ? 1.0
         : toItems.isEmpty
             ? 0.0
-            : eased;
+            : clampedT;
 
     // Drives the materialize window for a group that only one route has. The
     // side has already dropped groups whose phase is zero, so this is only
@@ -1051,12 +1355,6 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // so an entering or exiting group holds its shape rather than resizing.
     final fromGroup = from ?? to!;
     final toGroup = to ?? from!;
-
-    final slots = matchGlassNavActions(
-      fromItems,
-      toItems,
-      anchoredAtStart: widget.anchoredAtStart,
-    );
 
     // Whichever side is showing owns the menu. A menu can only be opened at
     // rest, where that is always the incoming side, but the trigger is rebuilt
@@ -1090,12 +1388,19 @@ class _PinnedGroupState extends State<_PinnedGroup> {
 
     // Cross-fade window for a matched item whose content changed, and
     // entering / exiting items during a morph.
-    final q = ((p - GlassNavPinnedMetrics.crossFadeStart) /
+    final q = ((morphT - GlassNavPinnedMetrics.crossFadeStart) /
             (GlassNavPinnedMetrics.crossFadeEnd -
                 GlassNavPinnedMetrics.crossFadeStart))
         .clamp(0.0, 1.0);
 
-    final morphing = fromItems.isNotEmpty && toItems.isNotEmpty;
+    // Glyph blur, the other half of the native read. An outgoing glyph blurs
+    // away as it fades; an incoming one arrives soft and sharpens last. Item
+    // contents are not glass, so filtering them is safe — the shell itself
+    // never animates opacity.
+    final outSigma =
+        state.settled ? 0.0 : GlassNavPinnedMetrics.outgoingSigmaAt(morphT);
+    final inSigma =
+        state.settled ? 0.0 : GlassNavPinnedMetrics.incomingSigmaAt(morphT);
 
     final children = <Widget>[];
     for (var i = 0; i < slots.length; i++) {
@@ -1115,6 +1420,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
               slot: i,
               isFrom: true,
               opacity: state.settled ? 1.0 : (1.0 - q),
+              blurSigma: outSigma,
               child: _ClusterItem(
                 item: fromItem,
                 enabled: false,
@@ -1128,6 +1434,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
             slot: i,
             isFrom: true,
             opacity: state.settled ? 1.0 : (1.0 - q),
+            blurSigma: outSigma,
             child: _ClusterItem(
               item: fromItem,
               enabled: false,
@@ -1147,6 +1454,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
               slot: i,
               isFrom: false,
               opacity: state.settled ? 1.0 : q,
+              blurSigma: inSigma,
               child: _ClusterItem(
                 item: toItem,
                 enabled: state.settled,
@@ -1161,6 +1469,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
             slot: i,
             isFrom: false,
             opacity: crossFades ? (state.settled ? 1.0 : q) : 1.0,
+            blurSigma: crossFades ? inSigma : 0.0,
             child: _ClusterItem(
               item: toItem,
               enabled: state.settled,
@@ -1177,8 +1486,9 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     final cluster = _PinnedCluster(
       orders: orders,
       widthT: widthT,
-      positionT: eased,
-      height: lerpDouble(fromGroup.height, toGroup.height, eased)!,
+      positionT: clampedT,
+      morphScale: morphScale,
+      height: lerpDouble(fromGroup.height, toGroup.height, clampedT)!,
       anchoredAtStart: widget.anchoredAtStart,
       children: children,
     );
@@ -1188,6 +1498,11 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // and a glass shell that remounts mid-morph pops its backdrop. At a phase
     // of 1.0 the effect is paint-neutral, and a closed GlassMenu adds only
     // inert wrappers and mounts no overlay, so the resting case costs nothing.
+    // The gel is real geometry — the cluster lays out at scale and the glass
+    // re-renders its true shape — so all that remains is recentring: the
+    // shell is anchored top-edge at its bar corner, and natively the swell
+    // moves both edges outward, so half of any growth is walked back.
+    final f = morphScale <= 0.01 ? 0.0 : (1.0 - 1.0 / morphScale) / 2.0;
     return GlassMaterializeEffect(
       progress: phase,
       // The window this group traverses is the incoming one exactly when it is
@@ -1200,19 +1515,24 @@ class _PinnedGroupState extends State<_PinnedGroup> {
       alignment:
           widget.anchoredAtStart ? Alignment.centerLeft : Alignment.centerRight,
       scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
-      child: GlassMenu(
-        controller: _menu,
-        items: menuItem?.menuItems ?? const <Widget>[],
-        menuAlignment: menuItem?.menuAlignment,
-        // The fallback is never read: with no menu item there is no trigger
-        // to open one. It matches GlassMenu's own default.
-        menuWidth: menuItem?.menuWidth ?? 200,
-        triggerBuilder: (context, _) => toGroup.glass
-            ? _buildShell(
-                cluster: cluster,
-                stretch: lerpDouble(fromGroup.stretch, toGroup.stretch, eased)!,
-              )
-            : cluster,
+      child: FractionalTranslation(
+        translation: Offset(widget.anchoredAtStart ? -f : f, -f),
+        child: GlassMenu(
+          controller: _menu,
+          items: menuItem?.menuItems ?? const <Widget>[],
+          menuAlignment: menuItem?.menuAlignment,
+          // The fallback is never read: with no menu item there is no trigger
+          // to open one. It matches GlassMenu's own default.
+          menuWidth: menuItem?.menuWidth ?? 200,
+          triggerBuilder: (context, _) => toGroup.glass
+              ? _buildShell(
+                  cluster: cluster,
+                  stretch:
+                      lerpDouble(fromGroup.stretch, toGroup.stretch, clampedT)!,
+                  morphScale: morphScale,
+                )
+              : cluster,
+        ),
       ),
     );
   }
@@ -1226,11 +1546,17 @@ class _PinnedGroupState extends State<_PinnedGroup> {
   /// The radius is the capsule's in every case: clamped to half the box, it is
   /// a capsule at the shared-cluster height and exactly a circle at the height
   /// a group that shares with nothing uses.
-  Widget _buildShell({required Widget cluster, required double stretch}) {
+  Widget _buildShell({
+    required Widget cluster,
+    required double stretch,
+    required double morphScale,
+  }) {
     return GlassButton.custom(
       onTap: () {},
-      shape: const LiquidRoundedRectangle(
-        borderRadius: GlassNavPinnedMetrics.capsuleRadius,
+      // The radius scales with the gel so the shape stays a true scaled
+      // capsule rather than squaring off as it inflates.
+      shape: LiquidRoundedRectangle(
+        borderRadius: GlassNavPinnedMetrics.capsuleRadius * morphScale,
       ),
       // Sized by the measured cluster, exactly as GlassButtonGroup.icons
       // sizes to its content.
