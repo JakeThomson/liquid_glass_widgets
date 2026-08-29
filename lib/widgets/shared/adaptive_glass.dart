@@ -201,10 +201,6 @@ class AdaptiveGlass extends StatelessWidget {
     // the "live BackdropFilter path" the canUsePremiumShader comment promises.
     // --------------------------------------------------------------------------
     if (quality == GlassQuality.minimal ||
-        // Deliberately the *configured* blur, not the effective one: this
-        // path is for surfaces asking for no frost, not for surfaces on
-        // their way out.
-        baseSettings.blur == 0 ||
         platformViewBackdrop) {
       return _wrapWithDecorations(
         context,
