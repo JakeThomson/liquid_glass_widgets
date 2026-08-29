@@ -213,7 +213,7 @@ enabled: ModalRoute.of(context)?.impliesAppBarDismissal ?? false,
 
 | Situation | Behaviour |
 |---|---|
-| Push/pop between participating routes | Chrome pinned; capsule width and item positions interpolate; changed icons cross-fade |
+| Push/pop between participating routes | Chrome pinned; a surviving cluster morphs — a gel swell past its resting size, a spring to the target that overshoots and settles, item positions riding the same spring — while glyphs blur out and arrive soft, sharpening last |
 | Interactive back-swipe | The page and its title track the finger, but the pinned chrome holds still until the gesture commits — then plays its whole transition over the travel that is left. An abandoned swipe leaves the chrome untouched, with nothing to rebound |
 | Destination has no actions (or no back button) | The cluster materializes or dematerializes — a fade and gaussian blur with a subtle scale, mirroring SwiftUI's `glassEffectTransition(.materialize)` — over a window straddling the transition midpoint |
 | Leading changes between a glass item and a bare one | The same materialize window, not a cross-fade: glass cannot cross-fade into something that is not glass |
@@ -221,6 +221,14 @@ enabled: ModalRoute.of(context)?.impliesAppBarDismissal ?? false,
 | Navigation starts with a menu open | The menu is dismissed; the capsule outlives the route, so nothing else would |
 | Non-participating route or modal sheet on top | Chrome retreats with the covering route's transition and returns on pop |
 | No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: the same leading and trailing groups, drawn inside the bar |
+
+A surviving cluster's morph rides the package's bouncy spring profile for the
+full length of the route transition — cluster and page share one clock, so
+the bounce settles in the same breath the page lands, and a pop plays the
+same forward choreography toward the other cluster rather than the push in
+reverse. The gel swell is real geometry: the cluster lays out at scale and
+the glass re-renders its true shape, carrying the glyphs with it. Timing and
+blur constants live together in `GlassNavPinnedMetrics`.
 
 A glass surface's backdrop pass still renders fully or not at all, so glass is
 never faded with an ancestor `Opacity`. A cluster that appears or disappears
