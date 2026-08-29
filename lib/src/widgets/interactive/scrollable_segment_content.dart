@@ -179,10 +179,12 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
   /// Guards the two-beat centering against rapid re-selection.
   int _seatGen = 0;
 
-  /// Delay between the pill's travel starting and the centering scroll:
-  /// the pill's released spring visually lands around 300 ms, and starting
-  /// the glide just before keeps the beats connected without mushing them.
-  static const Duration _kCenterAfterSelectDelay = Duration(milliseconds: 250);
+  /// Delay between the pill's travel starting and the centering scroll.
+  /// The pill's snappy spring covers most of its distance by ~150 ms, so
+  /// starting the glide there keeps the select-then-settle ORDER legible
+  /// while the two motions blend (250 ms read as too separated on device
+  /// — Joe, 2026-08-29).
+  static const Duration _kCenterAfterSelectDelay = Duration(milliseconds: 150);
 
   /// Seats a newly selected segment per the alignment policy.
   ///
