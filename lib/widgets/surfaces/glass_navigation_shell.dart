@@ -3,8 +3,6 @@ import 'package:flutter/widgets.dart';
 
 import '../../constants/glass_defaults.dart';
 import '../../src/renderer/liquid_glass_settings.dart';
-import '../../theme/glass_theme_helpers.dart';
-import '../../types/glass_quality.dart';
 import '../effects/glass_materialize.dart';
 import 'glass_bar_item.dart';
 import 'shared/glass_nav_pinned_host.dart';
@@ -228,13 +226,29 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Mirrors the gate used by the modal sheet morph: the effect needs real
-    // glass, so minimal quality falls back to in-route rendering.
-    final quality = GlassThemeHelpers.resolveQuality(
-      context,
-      fallback: GlassQuality.premium,
-    );
-    final supported = debugPinningSupported ?? quality != GlassQuality.minimal;
+    // Pinning is chrome GEOMETRY: it hoists the registered bar out of the
+    // route into the shell so it survives the transition. It costs no shader
+    // of its own, and the pinned bar still renders through the normal glass
+    // path — GlassNavPinnedHost resolves its own quality — so at `minimal` it
+    // is simply a BackdropFilter-only bar that stays put across routes, which
+    // is the correct degraded behaviour rather than a reason to switch the
+    // feature off.
+    //
+    // This used to mirror the modal sheet morph's gate
+    // (`quality != GlassQuality.minimal`). That borrowed the blur's
+    // capability floor for something that does not depend on it: the sheet
+    // morph asks whether real glass can be drawn, and pinning never needed an
+    // answer to that.
+    //
+    // It also meant an adaptive decision about blur cost silently changed an
+    // unrelated layout behaviour. `minimal` is not only a developer opt-in —
+    // GlassQualityAdapter steps down to it on its own when frame times
+    // regress, which a debug build reaches routinely just by being a debug
+    // build — so pinning switched itself off during ordinary local
+    // development, and on any app deliberately shipping `minimal` for low-end
+    // devices, which are exactly the devices where a per-route bar rebuild is
+    // most visible.
+    final supported = debugPinningSupported ?? true;
     if (supported != _pinningSupported) {
       _pinningSupported = supported;
     }
