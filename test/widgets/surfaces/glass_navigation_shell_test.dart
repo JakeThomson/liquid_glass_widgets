@@ -1163,6 +1163,57 @@ void main() {
       expect(tester.takeException(), isAssertionError);
     });
 
+    testWidgets('pinning stays active at GlassQuality.minimal',
+        (tester) async {
+      // Regression: the gate borrowed the modal sheet morph's quality floor,
+      // so a step down to `minimal` switched pinning off entirely. That is not
+      // only a developer opt-in — GlassQualityAdapter steps down on its own
+      // when frame times regress, so an adaptive decision about blur cost was
+      // silently changing an unrelated layout behaviour.
+      //
+      // Pinning costs no shader; the pinned bar resolves its own quality, so
+      // at `minimal` it should simply be a BackdropFilter-only bar that stays
+      // put across routes.
+      GlassNavigationShellState.debugPinningSupported = null;
+      GlassNavigationShellState? found;
+      await tester.pumpWidget(
+        GlassTheme(
+          data: GlassThemeData.simple(quality: GlassQuality.minimal),
+          child: CupertinoApp(
+            builder: (context, child) => GlassNavigationShell(child: child!),
+            home: Builder(
+              builder: (context) {
+                found = GlassNavigationShell.maybeOf(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+      expect(found, isNotNull);
+      expect(found!.isActive, isTrue);
+    });
+
+    testWidgets('an explicitly disabled shell is still inactive',
+        (tester) async {
+      // Guard for the other direction: dropping the quality gate must not
+      // make `enabled: false` stop being honoured.
+      GlassNavigationShellState.debugPinningSupported = null;
+      GlassNavigationShellState? found;
+      await tester.pumpWidget(CupertinoApp(
+        builder: (context, child) =>
+            GlassNavigationShell(enabled: false, child: child!),
+        home: Builder(
+          builder: (context) {
+            found = GlassNavigationShell.maybeOf(context);
+            return const SizedBox();
+          },
+        ),
+      ));
+      expect(found, isNotNull);
+      expect(found!.isActive, isFalse);
+    });
+
     testWidgets('maybeOf finds the shell from a route subtree', (tester) async {
       GlassNavigationShellState? found;
       await tester.pumpWidget(CupertinoApp(
