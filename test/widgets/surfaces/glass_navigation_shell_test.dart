@@ -740,6 +740,206 @@ void main() {
     });
   });
 
+  group('presented routes', () {
+    /// The back button drawn by the route's own bar, as opposed to the shell's.
+    Finder inRouteBack() => find.descendant(
+          of: find.byType(GlassAppBar),
+          matching: find.byIcon(CupertinoIcons.back),
+        );
+
+    /// Pushes a screen that shows a pinned back button.
+    Future<void> pushDetail(WidgetTester tester) async {
+      await _push(tester, const _Screen(title: 'Detail', actions: []));
+      await settle(tester);
+    }
+
+    /// Exactly one copy of the back button is on screen, never two or none.
+    void expectOneCopy(String when) {
+      final copies =
+          pinnedBack().evaluate().length + inRouteBack().evaluate().length;
+      expect(copies, 1, reason: 'copies of the back button $when');
+    }
+
+    testWidgets('a modal popup takes the chrome back into the route',
+        (tester) async {
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await pushDetail(tester);
+      expect(pinnedBack(), findsOneWidget);
+
+      showCupertinoModalPopup<void>(
+        context: tester.element(find.text('Detail body')),
+        builder: (_) => const SizedBox(height: 400),
+      );
+      await settle(tester);
+
+      // The shell draws above the navigator, so it cannot draw beneath a route
+      // pushed into it. The route renders its own buttons instead.
+      expect(pinnedBack(), findsNothing);
+      expect(inRouteBack(), findsOneWidget);
+    });
+
+    testWidgets('so does a dialog', (tester) async {
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await pushDetail(tester);
+
+      showCupertinoDialog<void>(
+        context: tester.element(find.text('Detail body')),
+        builder: (_) => const CupertinoAlertDialog(title: Text('Alert')),
+      );
+      await settle(tester);
+
+      expect(pinnedBack(), findsNothing);
+      expect(inRouteBack(), findsOneWidget);
+    });
+
+    testWidgets('and a fullscreen dialog, which drives no exit transition',
+        (tester) async {
+      // `CupertinoRouteTransitionMixin.canTransitionTo` refuses one, so the
+      // covered route's `secondaryAnimation` never runs and the retreat that
+      // handles an ordinary push never starts.
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await pushDetail(tester);
+
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(CupertinoPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => const CupertinoPageScaffold(
+          child: Center(child: Text('Compose')),
+        ),
+      ));
+      await settle(tester);
+
+      expect(find.text('Compose'), findsOneWidget);
+      expect(pinnedBack(), findsNothing);
+    });
+
+    testWidgets('the chrome is pinned again once the presentation is gone',
+        (tester) async {
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await pushDetail(tester);
+
+      final context = tester.element(find.text('Detail body'));
+      showCupertinoDialog<void>(
+        context: context,
+        builder: (_) => const CupertinoAlertDialog(title: Text('Alert')),
+      );
+      await settle(tester);
+      Navigator.of(context, rootNavigator: true).pop();
+      await settle(tester);
+
+      expect(pinnedBack(), findsOneWidget);
+      expect(inRouteBack(), findsNothing);
+
+      // ...and it is live again, not just drawn.
+      await tester.tap(pinnedBack());
+      await settle(tester);
+      expect(find.text('Detail body'), findsNothing);
+    });
+
+    testWidgets('a committed swipe onto a non-pinned root keeps one copy',
+        (tester) async {
+      // Where the hand-back meets the commit-exit path. A committed swipe
+      // plays from a frozen snapshot while the outgoing route is popped but
+      // not yet unregistered, and the destination here contributes no chrome
+      // of its own — so this is the thinnest the registry ever gets with the
+      // shell still drawing.
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root')), // null actions: not pinned
+      );
+      await settle(tester);
+      await _push(tester, const _Screen(title: 'Detail', actions: []));
+      await settle(tester);
+      expectOneCopy('at rest before the swipe');
+
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final gesture = await tester.startGesture(const Offset(2, 300));
+      await gesture.moveTo(Offset(width * 0.9, 300));
+      await gesture.up();
+
+      for (var frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final copies =
+            pinnedBack().evaluate().length + inRouteBack().evaluate().length;
+        expect(copies, lessThanOrEqualTo(1),
+            reason: 'copies of the back button at commit frame $frame');
+      }
+
+      await settle(tester);
+      // Root shows no back button at all, from either side.
+      expect(find.byIcon(CupertinoIcons.back), findsNothing);
+    });
+
+    testWidgets('exactly one copy is on screen for every frame of the swap',
+        (tester) async {
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await pushDetail(tester);
+      expectOneCopy('at rest');
+
+      final context = tester.element(find.text('Detail body'));
+      showCupertinoDialog<void>(
+        context: context,
+        builder: (_) => const CupertinoAlertDialog(title: Text('Alert')),
+      );
+      for (var frame = 0; frame < 30; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expectOneCopy('at presentation frame $frame');
+      }
+
+      Navigator.of(context, rootNavigator: true).pop();
+      for (var frame = 0; frame < 30; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expectOneCopy('at dismissal frame $frame');
+      }
+    });
+
+    testWidgets('and for every frame of a push and pop between two routes',
+        (tester) async {
+      // The outgoing route has to keep its placeholder for the whole
+      // transition: the shell is drawing a blend of both routes' items, and a
+      // bar that took its own chrome back would slide a second copy out from
+      // underneath the pinned one.
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      await pushDetail(tester);
+
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(CupertinoPageRoute<void>(
+        builder: (_) => const _Screen(title: 'Third', actions: []),
+      ));
+      // The first frame is Flutter's offstage build of the incoming route,
+      // where neither copy is on stage yet.
+      await tester.pump(const Duration(milliseconds: 16));
+      for (var frame = 1; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expectOneCopy('at push frame $frame');
+      }
+
+      navigator.pop();
+      for (var frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expectOneCopy('at pop frame $frame');
+      }
+    });
+  });
+
   group('pull-down menus', () {
     List<GlassBarItem> menuActions({String label = 'Copy'}) => [
           GlassBarItem.menu(
