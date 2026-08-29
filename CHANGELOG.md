@@ -44,6 +44,8 @@
 
 ## Bug Fixes
 
+- **Sheet ↔ content scroll handover (#256):** A multi-detent `GlassModalSheet` now grows and then scrolls its content on one unbroken drag, and reverses the same way. The physics below the top detent refuse the movement rather than the gesture so the `Scrollable` stays live, the sheet installs them on its vertical scrollables itself rather than only publishing them, and the gesture arena re-evaluates ownership on every move instead of latching it for the whole pointer. Content scrolling on a `ScrollController` of its own is now observed too.
+
 - **`GlassNavPinnedMetrics.crossFadeStart`/`crossFadeEnd` changed meaning:** they are now fractions of the `morphStart`..`morphEnd` morph window rather than of raw route progress (and the sharpen window `glyphSharpenStart`/`glyphSharpenEnd` is specified the same way). Anything aligning custom chrome against these constants should read them through `GlassNavPinnedMetrics.morphProgressAt`.
 - **Matched icons no longer spuriously cross-fade:** Cross-fade detection compared item content by reference, on the documented assumption that identical `const Icon(...)` expressions share one canonical instance — which does not reliably hold, so an icon matched across a push was quietly cross-faded with itself on every transition. Invisible while the pixels were identical, but the new morph keys its gel and glyph blur off the same signal, which turned the phantom change into a visible bounce on clusters that had not changed at all. Icons are now compared by value (glyph, size, colour, key); other content stays on reference identity.
 
@@ -59,7 +61,7 @@ Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize tra
 
 Thanks to [@marco242424](https://github.com/marco242424) for the native gel morph (#243).
 
-Thanks to [@Nixxx19](https://github.com/Nixxx19) for the platform-view glass passthrough mode, `GlassChip` backdrop parameter, and the blur tier-downgrade fix (#247, #250, #253).
+Thanks to [@Nixxx19](https://github.com/Nixxx19) for the platform-view glass passthrough mode, `GlassChip` backdrop parameter, the blur tier-downgrade fix, and the form sheet content scroll issue (#247, #250, #253, #258).
 
 ---
 
