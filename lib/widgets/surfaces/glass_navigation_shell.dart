@@ -418,6 +418,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
         progress: _commitExitStart * (1.0 - _commitExit.value),
         coverage: exiting.coverage,
         settled: false,
+        // A committed swipe is a pop by definition.
+        popping: true,
         topRoute: exiting.topRoute,
         transition: exiting.transition,
       );
@@ -496,6 +498,16 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     final committing = _gestureActive && !gesturing && !top.key.isActive;
     final heldAtCommit = _gestureHeldProgress ?? progress;
 
+    // A pop plays the same forward choreography toward the other target, not
+    // the push in reverse — the host mirrors the clock and swaps the roles.
+    // The gesture flag matters as much as the status: a back-swipe holds the
+    // controller at whatever value the finger dictates without ever entering
+    // AnimationStatus.reverse.
+    final popping = !settled &&
+        ((top.key.animation?.status ?? AnimationStatus.completed) ==
+                AnimationStatus.reverse ||
+            userGesture);
+
     final state = GlassNavPinnedState(
       from: below?.value ??
           const GlassNavBarRegistration(
@@ -508,6 +520,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
           : _holdForGesture(progress, gesturing).clamp(0.0, 1.0),
       coverage: coverage.clamp(0.0, 1.0),
       settled: settled,
+      popping: popping,
       topRoute: top.key,
       transition: widget.effectTransition,
     );
