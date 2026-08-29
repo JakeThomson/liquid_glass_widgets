@@ -51,6 +51,8 @@
 
 Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize transitions, pinned navigation chrome, leading API and per-item glass backgrounds, scroll-to-minimize controller improvements, bottom accessory inline behaviour, and metrics export (#240, #238, #236, #239, #233, #234).
 
+Thanks to [@marco242424](https://github.com/marco242424) for the native gel morph (#243).
+
 Thanks to [@Nixxx19](https://github.com/Nixxx19) for the platform-view glass passthrough mode and `GlassChip` backdrop parameter (#247, #250).
 
 ---
