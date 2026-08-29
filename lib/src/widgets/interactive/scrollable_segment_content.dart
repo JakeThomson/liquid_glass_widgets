@@ -176,6 +176,36 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
 
   bool get _morphing => _morphTabs != null;
 
+  /// Guards the two-beat centering against rapid re-selection.
+  int _seatGen = 0;
+
+  /// Delay between the pill's travel starting and the centering scroll:
+  /// the pill's released spring visually lands around 300 ms, and starting
+  /// the glide just before keeps the beats connected without mushing them.
+  static const Duration _kCenterAfterSelectDelay = Duration(milliseconds: 250);
+
+  /// Seats a newly selected segment per the alignment policy.
+  ///
+  /// [SegmentSelectionAlignment.minimal] ensure-visibles immediately.
+  /// [SegmentSelectionAlignment.center] plays TWO BEATS, picker-style:
+  /// the pill travels to the chosen segment FIRST while the scroll holds
+  /// (selection feedback happens where the finger is), then the strip
+  /// glides the choice to center with the pill riding its cell. Centering
+  /// simultaneously with the pill's travel made both land in the same
+  /// instant — nothing ever visibly arrived at the tapped spot.
+  void _seatSelection(int index) {
+    if (widget.selectionAlignment != SegmentSelectionAlignment.center) {
+      _scrollToEnsureVisible(index);
+      return;
+    }
+    final gen = ++_seatGen;
+    Future.delayed(_kCenterAfterSelectDelay, () {
+      if (!mounted || gen != _seatGen || _morphing || _isDragging) return;
+      if (widget.selectedIndex != index) return; // superseded
+      _scrollToEnsureVisible(index);
+    });
+  }
+
   /// The list currently RENDERED — the merged morph list while morphing.
   List<GlassSegment> get _renderTabs => _morphTabs ?? widget.tabs;
 
@@ -378,10 +408,11 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
         _indOffsetSpring.setValue(_tabOffsets[widget.selectedIndex]);
         _indWidthSpring.animateTo(_tabWidths[widget.selectedIndex]);
       }
-      // Programmatic selection change — ensure the new tab scrolls into view.
+      // Programmatic selection change — seat the new tab (immediately, or
+      // in the centering second beat).
       if (widget.isScrollable) {
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _scrollToEnsureVisible(widget.selectedIndex),
+          (_) => _seatSelection(widget.selectedIndex),
         );
       }
     }
@@ -816,9 +847,9 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     if (index != widget.selectedIndex) {
       widget.onTabSelected(index);
     }
-    // Scroll the tapped tab fully into view in case it was partially visible.
+    // Seat the tapped tab (immediately, or in the centering second beat).
     if (widget.isScrollable) {
-      _scrollToEnsureVisible(index);
+      _seatSelection(index);
     }
   }
 

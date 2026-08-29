@@ -240,6 +240,43 @@ void main() {
         reason: 'an indicator drag must not scroll the list');
   });
 
+  testWidgets('center tap: pill beat first, centering glide second',
+      (tester) async {
+    var selected = 15;
+    final ctl = ScrollController();
+    addTearDown(ctl.dispose);
+    late StateSetter setSel;
+    await tester.pumpWidget(harness(StatefulBuilder(
+      builder: (context, setState) {
+        setSel = setState;
+        return GlassSegmentedControl.scrollable(
+          segments: segments(30),
+          selectedIndex: selected,
+          onSegmentSelected: (i) => setState(() => selected = i),
+          selectionAlignment: SegmentSelectionAlignment.center,
+          dragBehavior: SegmentDragBehavior.scroll,
+          scrollController: ctl,
+        );
+      },
+    )));
+    await tester.pumpAndSettle();
+    final before = ctl.offset;
+
+    await tester.tap(find.text('S16'), warnIfMissed: true);
+    // Beat one: the pill travels, the scroll HOLDS.
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(selected, 16);
+    expect((ctl.offset - before).abs(), lessThan(1),
+        reason: 'the scroll must hold while the pill travels');
+    // Beat two: the centering glide, after the delay.
+    await tester.pumpAndSettle();
+    final viewport = tester.getRect(find.byType(GlassSegmentedControl));
+    final cell = tester.getRect(find.text('S16'));
+    expect((cell.center.dx - viewport.center.dx).abs(), lessThan(2.0),
+        reason: 'the choice ends centered');
+    setSel(() {}); // silence unused warning paths
+  });
+
   testWidgets('teleportEpoch snaps; unchanged epoch animates', (tester) async {
     double seen = -1;
     Widget build(double value, int epoch) => MaterialApp(
