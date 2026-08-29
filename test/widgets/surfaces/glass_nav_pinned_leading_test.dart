@@ -229,13 +229,16 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
 
-      // Mid-morph both dimensions are between the two shells, which is the
-      // whole point: one element, geometry animating, no remount.
+      // Mid-morph both dimensions are in flight, which is the whole point:
+      // one element, geometry animating, no remount. The gel swell can carry
+      // them past both endpoints while the shell puffs, so the upper bound is
+      // the swollen size, not the destination's.
+      const swollen = 1.0 + GlassNavPinnedMetrics.swellAmount;
       final mid = shell();
       expect(mid.height, greaterThan(GlassNavPinnedMetrics.backDiameter));
-      expect(mid.height, lessThan(GlassNavPinnedMetrics.slot));
+      expect(mid.height, lessThan(GlassNavPinnedMetrics.slot * swollen));
       expect(mid.width, greaterThan(GlassNavPinnedMetrics.backDiameter));
-      expect(mid.width, lessThan(GlassNavPinnedMetrics.slot * 2));
+      expect(mid.width, lessThan(GlassNavPinnedMetrics.slot * 2 * swollen));
 
       await settle(tester);
       expect(

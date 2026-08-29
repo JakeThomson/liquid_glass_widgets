@@ -29,6 +29,7 @@ For historical version notes (0.14 → 1.0), see [`CHANGELOG.md`](../CHANGELOG.m
 | Materialize transitions | ✅ Done (1.2.0) | `GlassMaterialize` + `GlassMaterializeTransition`; pinned chrome materializes (#240) |
 | Custom bar pinning | ✅ Done (1.2.0) | `GlassPinnedBarChrome` public registration API (#236) |
 | Pinned leading API | ✅ Done (1.2.0) | `GlassAppBar.pinned(leading:)` + `GlassBarItemBackground` (#238) |
+| Native gel morph | ✅ Done (1.2.0) | Capsule reshapes natively on push/pop; swell, bounce, glyph blur (#243) |
 | Platform view glass passthrough | ✅ Done (1.2.0) | `PlatformViewGlassMode.passthrough` + `passthroughOverPlatformView` (#247) |
 | Example app covers all widgets | ⚠️ Partial | Not verified against current widget catalogue |
 | Platform testing matrix complete | ⚠️ Partial | iOS + Android confirmed; Web, Windows, macOS need QA |
