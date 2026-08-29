@@ -100,7 +100,7 @@ class _SheetLayout extends StatelessWidget {
 
     final contentZone = _SheetContent(
       scrollController: scrollController,
-      isFullScreen: contentScrollProgress > 0.95,
+      isFullScreen: contentScrollProgress > _kTopDetentThreshold,
       padding: padding,
       child: child,
     );
@@ -429,14 +429,25 @@ class _SheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ScrollPhysics physics = isFullScreen
+        ? const _ClampingTopScrollPhysics()
+        : const _ExpandFirstScrollPhysics();
+
     return ScrollControllerProvider(
       controller: scrollController,
-      physics: isFullScreen
-          ? const _ClampingTopScrollPhysics()
-          : const NeverScrollableScrollPhysics(),
-      child: Padding(
-        padding: padding ?? EdgeInsets.zero,
-        child: child,
+      physics: physics,
+      // Publishing the physics is not enough on its own: content that never
+      // reads the provider would keep the platform default and lose both the
+      // expand-first gate and the handover, silently.
+      child: ScrollConfiguration(
+        behavior: _SheetScrollBehavior(
+          parent: ScrollConfiguration.of(context),
+          physics: physics,
+        ),
+        child: Padding(
+          padding: padding ?? EdgeInsets.zero,
+          child: child,
+        ),
       ),
     );
   }
@@ -445,6 +456,108 @@ class _SheetContent extends StatelessWidget {
 // ===========================================================================
 // Custom Scroll Physics
 // ===========================================================================
+
+/// Physics for a sheet below its topmost detent: the drag is accepted and only
+/// its forward movement is refused.
+///
+/// [NeverScrollableScrollPhysics] refuses the gesture itself, and a [Scrollable]
+/// that never started a drag has nothing to continue with when the sheet tops
+/// out mid-swipe — the finger has to lift and swipe again. Staying in the drag
+/// and zeroing the forward offset keeps the [Scrollable] live, so reaching the
+/// top detent hands the same gesture over instead of ending it.
+class _ExpandFirstScrollPhysics extends ClampingScrollPhysics {
+  const _ExpandFirstScrollPhysics({super.parent});
+
+  @override
+  _ExpandFirstScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _ExpandFirstScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    // A negative offset drives `pixels` forward — the finger travelling up,
+    // which below the top detent belongs to the sheet. Backward offsets pass
+    // through untouched so content left scrolled by an earlier expansion can be
+    // pulled back to its top before the drag becomes the collapse.
+    if (offset < 0.0) return 0.0;
+    return super.applyPhysicsToUserOffset(position, offset);
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+      ScrollMetrics position, double velocity) {
+    // The release velocity reaches the list as well as the sheet. Without this
+    // a flick the sheet answered by expanding also flings the list the moment
+    // the finger lifts.
+    if (velocity > 0.0 &&
+        !position.outOfRange &&
+        position.pixels <= position.minScrollExtent) {
+      return null;
+    }
+    return super.createBallisticSimulation(position, velocity);
+  }
+}
+
+/// Applies the sheet's physics to the vertical scrollables inside it, and
+/// delegates every other concern to the ambient behavior.
+///
+/// Only vertical drags are ambiguous between scrolling the content and moving
+/// the sheet, so a horizontal scrollable keeps the ambient physics and a
+/// carousel inside a sheet still feels native.
+class _SheetScrollBehavior extends ScrollBehavior {
+  const _SheetScrollBehavior({required this.parent, required this.physics});
+
+  /// The ambient behavior; everything except vertical physics defers to it.
+  final ScrollBehavior parent;
+
+  /// The physics applied to vertical scrollables at the sheet's current detent.
+  final ScrollPhysics physics;
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    // Physics are resolved from the Scrollable's own element, so the widget at
+    // this context is the Scrollable being configured.
+    final Widget scrollable = context.widget;
+    if (scrollable is Scrollable &&
+        axisDirectionToAxis(scrollable.axisDirection) != Axis.vertical) {
+      return parent.getScrollPhysics(context);
+    }
+    return physics.applyTo(parent.getScrollPhysics(context));
+  }
+
+  @override
+  TargetPlatform getPlatform(BuildContext context) =>
+      parent.getPlatform(context);
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => parent.dragDevices;
+
+  @override
+  MultitouchDragStrategy getMultitouchDragStrategy(BuildContext context) =>
+      parent.getMultitouchDragStrategy(context);
+
+  @override
+  Set<LogicalKeyboardKey> get pointerAxisModifiers =>
+      parent.pointerAxisModifiers;
+
+  @override
+  Widget buildScrollbar(
+          BuildContext context, Widget child, ScrollableDetails details) =>
+      parent.buildScrollbar(context, child, details);
+
+  @override
+  Widget buildOverscrollIndicator(
+          BuildContext context, Widget child, ScrollableDetails details) =>
+      parent.buildOverscrollIndicator(context, child, details);
+
+  @override
+  GestureVelocityTrackerBuilder velocityTrackerBuilder(BuildContext context) =>
+      parent.velocityTrackerBuilder(context);
+
+  @override
+  bool shouldNotify(covariant _SheetScrollBehavior oldDelegate) =>
+      oldDelegate.parent != parent || oldDelegate.physics != physics;
+}
 
 class _ClampingTopScrollPhysics extends BouncingScrollPhysics {
   const _ClampingTopScrollPhysics({super.parent});
@@ -475,10 +588,11 @@ class _ClampingTopScrollPhysics extends BouncingScrollPhysics {
 /// [InheritedWidget] that propagates a [ScrollController] and [ScrollPhysics]
 /// to descendant widgets inside a [GlassModalSheet].
 ///
-/// The sheet's internal scrollable content uses this to coordinate scroll
-/// physics with the sheet's own drag-to-dismiss gesture. When the sheet is
-/// not fully expanded, [NeverScrollableScrollPhysics] is injected so drags
-/// move the sheet rather than the list inside it.
+/// The sheet installs [physics] on its vertical scrollables itself, so content
+/// need not read this provider to behave correctly; it remains the way to reach
+/// the shared [controller], and to opt a scrollable in explicitly. Below the
+/// topmost detent the published physics hold the content still so drags grow
+/// the sheet instead of scrolling the list inside it.
 class ScrollControllerProvider extends InheritedWidget {
   /// The [ScrollController] shared with descendant scrollable widgets.
   final ScrollController controller;
