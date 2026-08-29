@@ -219,7 +219,8 @@ enabled: ModalRoute.of(context)?.impliesAppBarDismissal ?? false,
 | Leading changes between a glass item and a bare one | The same materialize window, not a cross-fade: glass cannot cross-fade into something that is not glass |
 | Tap while a transition runs | Ignored. The chrome is showing a blend of two routes' items, so a tap would fire an action the user can no longer see |
 | Navigation starts with a menu open | The menu is dismissed; the capsule outlives the route, so nothing else would |
-| Non-participating route or modal sheet on top | Chrome retreats with the covering route's transition and returns on pop |
+| Non-participating route **pushed** on top | Chrome retreats with the covering route's transition and returns on pop |
+| Dialog, action sheet, modal sheet or fullscreen dialog **presented** | Chrome returns to the route, so the presentation and its barrier cover it as they cover the rest of the page; pinned again on dismissal |
 | No shell installed, or `GlassQuality.minimal` | `GlassAppBar.pinned` renders in-route: the same leading and trailing groups, drawn inside the bar |
 
 A surviving cluster's morph rides the package's bouncy spring profile for the
@@ -299,7 +300,10 @@ that future.
   that appears or disappears. The effect is driven by route progress, and at
   rest there is none to drive it.
 - One navigator per shell; nested navigators (for example go_router's
-  `StatefulShellRoute` branches) are not yet supported.
+  `StatefulShellRoute` branches) are not yet supported. A presentation made on
+  a *different* navigator from the route that owns the chrome — a
+  `useRootNavigator: true` dialog raised from inside a nested stack — is not
+  seen as covering it, for the same reason.
 - RTL layouts are untested. The clusters themselves are now placed with
   `Positioned.directional` and anchored to the logical edge, but item order
   within a cluster is not mirrored.

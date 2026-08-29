@@ -16,6 +16,8 @@
 ///  11. Custom bar pinning — a plain Material AppBar pinned via GlassPinnedBarChrome
 ///  12. Header actions morph — trailing capsule bounces and blurs between
 ///      clusters across pushes
+///  13. Presented sheets — a dialog, action sheet, modal sheet or fullscreen
+///      dialog covering the pinned chrome the way it covers the page (#259)
 ///
 /// Run standalone:
 ///   flutter run -t lib/demos/nav_bar_patterns_demo.dart
@@ -180,6 +182,14 @@ class NavBarPatternsDemo extends StatelessWidget {
                       'A plain Material AppBar that still pins — GlassPinnedBarChrome',
                   icon: CupertinoIcons.rectangle_stack_badge_plus,
                   onTap: () => _push(context, const _CustomBarPinningDemo()),
+                ),
+                SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Presented Sheets',
+                  subtitle: 'A sheet, dialog or fullscreen dialog covering the '
+                      'pinned chrome the way it covers the page',
+                  icon: CupertinoIcons.rectangle_stack,
+                  onTap: () => _push(context, const _PresentedSheetsDemo()),
                 ),
                 SizedBox(height: 16),
                 _PatternTile(
@@ -2089,6 +2099,268 @@ class _HeaderMorphDestination extends StatelessWidget {
           _buildDummyContent(),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 13. Presented Sheets — what a modal presentation covers, and what it doesn't
+// =============================================================================
+
+/// A pinned screen that presents each kind of modal route over itself.
+///
+/// Pushing and presenting need opposite treatment, and this is the presenting
+/// half. A pushed route slides the covered bar away with its page, so the
+/// chrome retreats with it; a presented one comes up over the whole navigation
+/// stack with the bar inside it, so the chrome has to be *under* it — still on
+/// screen behind a sheet, dimming with the barrier like the rest of the page.
+///
+/// The shell cannot draw it there, because it draws above the `Navigator` the
+/// presentation was pushed into, so each of these hands the chrome back to the
+/// route for as long as it is up (#259).
+///
+/// The full-height sheet reads clearest: it goes opaque at the `large` detent,
+/// so a back button still drawn on top would be left floating on a solid
+/// surface with nothing behind it to refract.
+class _PresentedSheetsDemo extends StatelessWidget {
+  const _PresentedSheetsDemo();
+
+  void _showSheet(BuildContext context) {
+    GlassModalSheet.show<void>(
+      context: context,
+      initialState: GlassSheetState.full,
+      builder: (_) => const _PresentedSheetBody(
+        title: 'Full-height sheet',
+        body: 'This surface is opaque at the large detent, and nothing is '
+            'drawn on top of it — the back button and actions capsule are '
+            'behind it, with the rest of the page.',
+      ),
+    );
+  }
+
+  void _showActionSheet(BuildContext context) {
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (sheetContext) => CupertinoActionSheet(
+        title: const Text('Share'),
+        message: const Text(
+          'The barrier dims the page behind this sheet, the pinned back '
+          'button and actions capsule included.',
+        ),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(sheetContext).pop(),
+            child: const Text('Copy Link'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(sheetContext).pop(),
+            child: const Text('Add to Reading List'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(sheetContext).pop(),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+  }
+
+  void _showDialog(BuildContext context) {
+    showCupertinoDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: const Text('Discard draft?'),
+        content: const Text(
+          'An alert dims the whole screen. Look at the bar: the back button '
+          'and the capsule dim with everything else.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFullscreenDialog(BuildContext context) {
+    Navigator.of(context).push(
+      CupertinoPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => const _ComposeScreen(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+
+    return GlassScaffold(
+      background: const ShowcaseBackground(),
+      settings: RecommendedGlassSettings.standard,
+      statusBarStyle: GlassStatusBarStyle.auto,
+      appBar: GlassAppBar.pinned(
+        title: Text(
+          'Presented Sheets',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: CupertinoColors.label.resolveFrom(context),
+          ),
+        ),
+        actions: [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.share),
+            label: 'Share',
+            onTap: () => _showActionSheet(context),
+          ),
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.ellipsis),
+            label: 'More',
+            onTap: () {},
+          ),
+        ],
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: SizedBox(height: topPad + 44 + 16)),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverList.list(
+              children: [
+                Text(
+                  'Each of these is presented over this screen, and each '
+                  'covers the pinned chrome along with the rest of the page. '
+                  'Watch the back button and the capsule dim with the barrier: '
+                  'presenting hands them back to the route, where a '
+                  'presentation can reach them.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _PatternTile(
+                  title: 'Full-Height Sheet',
+                  subtitle: 'Opaque at the large detent — the clearest read',
+                  icon: CupertinoIcons.rectangle_expand_vertical,
+                  onTap: () => _showSheet(context),
+                ),
+                const SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Action Sheet',
+                  subtitle:
+                      'showCupertinoModalPopup — barrier dims the bar too',
+                  icon: CupertinoIcons.share,
+                  onTap: () => _showActionSheet(context),
+                ),
+                const SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Alert Dialog',
+                  subtitle:
+                      'showCupertinoDialog — full-screen dim, bar included',
+                  icon: CupertinoIcons.exclamationmark_bubble,
+                  onTap: () => _showDialog(context),
+                ),
+                const SizedBox(height: 16),
+                _PatternTile(
+                  title: 'Fullscreen Dialog',
+                  subtitle: 'An opaque page, presented rather than pushed',
+                  icon: CupertinoIcons.square_arrow_up,
+                  onTap: () => _showFullscreenDialog(context),
+                ),
+              ],
+            ),
+          ),
+          _buildDummyContent(),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Content for the presented sheet — deliberately plain, so the only glass in
+/// frame is the pinned chrome sitting on top of it.
+class _PresentedSheetBody extends StatelessWidget {
+  const _PresentedSheetBody({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
+              color: CupertinoColors.label.resolveFrom(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            body,
+            style: TextStyle(
+              fontSize: 16,
+              height: 1.4,
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The destination behind [_PresentedSheetsDemo]'s fullscreen dialog.
+class _ComposeScreen extends StatelessWidget {
+  const _ComposeScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.systemBackground.resolveFrom(context),
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('New Message'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Done'),
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            'A fullscreen dialog covers the page completely — the pinned back '
+            'button and capsule from the screen behind included, with nothing '
+            'left showing through.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              height: 1.4,
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+            ),
+          ),
+        ),
       ),
     );
   }
