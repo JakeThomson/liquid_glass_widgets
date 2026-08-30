@@ -202,7 +202,7 @@ class GlassSegmentedControl extends StatefulWidget {
     this.backgroundKey,
     this.scrollController,
     this.selectionAlignment = SegmentSelectionAlignment.minimal,
-    this.regridDuration = const Duration(milliseconds: 180),
+    this.regridDuration = Duration.zero,
     this.dragBehavior = SegmentDragBehavior.selectIndicator,
     this.direction = Axis.horizontal,
     this.segmentExtent,
@@ -276,7 +276,7 @@ class GlassSegmentedControl extends StatefulWidget {
     // Scrollable-specific params
     this.scrollController,
     this.selectionAlignment = SegmentSelectionAlignment.minimal,
-    this.regridDuration = const Duration(milliseconds: 180),
+    this.regridDuration = Duration.zero,
     this.dragBehavior = SegmentDragBehavior.selectIndicator,
     this.iconSize = 24.0,
     this.labelPadding = const EdgeInsets.symmetric(horizontal: 16),
@@ -520,8 +520,13 @@ class GlassSegmentedControl extends StatefulWidget {
   /// surviving selection (scrollable mode only): entering segments grow in
   /// (width, with a slight scale and fade riding it), leaving segments
   /// shrink out, and the survivors glide — anchored so the selected
-  /// segment does not move on screen. [Duration.zero] disables the morph
-  /// (the list snaps); Reduce Motion always snaps.
+  /// segment does not move on screen.
+  ///
+  /// Defaults to [Duration.zero] — the list snaps, and the morph is
+  /// opt-in. There is no platform behavior to mirror here (native
+  /// segmented controls do not scroll), so a host's control should not
+  /// start animating just because the package was upgraded.
+  /// Reduce Motion always snaps.
   final Duration regridDuration;
 
   /// What a horizontal drag means. Scrollable mode only — the fixed

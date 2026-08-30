@@ -125,6 +125,9 @@ void main() {
               segs.indexWhere((t) => t.label == 'T$selected'),
           onSegmentSelected: (_) {},
           selectionAlignment: SegmentSelectionAlignment.center,
+          // The morph is opt-in (the default snaps), and this test is
+          // about the morph — so it has to ask for it.
+          regridDuration: const Duration(milliseconds: 180),
         ));
     await tester.pumpWidget(build(coarse()));
     await tester.pumpAndSettle();
@@ -165,6 +168,9 @@ void main() {
           selectedIndex: segs().indexWhere((t) => t.label == 'T4'),
           onSegmentSelected: (_) {},
           selectionAlignment: SegmentSelectionAlignment.center,
+          // Opt in: without a morph there is no handoff to test, and this
+          // would pass vacuously.
+          regridDuration: const Duration(milliseconds: 180),
         ));
     await tester.pumpWidget(build());
     await tester.pumpAndSettle();
