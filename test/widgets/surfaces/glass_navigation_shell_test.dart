@@ -1163,8 +1163,7 @@ void main() {
       expect(tester.takeException(), isAssertionError);
     });
 
-    testWidgets('pinning stays active at GlassQuality.minimal',
-        (tester) async {
+    testWidgets('pinning stays active at GlassQuality.minimal', (tester) async {
       // Regression: the gate borrowed the modal sheet morph's quality floor,
       // so a step down to `minimal` switched pinning off entirely. That is not
       // only a developer opt-in — GlassQualityAdapter steps down on its own
