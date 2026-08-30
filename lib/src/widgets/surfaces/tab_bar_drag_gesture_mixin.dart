@@ -474,6 +474,11 @@ mixin TabDragGestureMixin<T extends StatefulWidget> on State<T> {
   /// press point and would snap the user back to where they started. The lift
   /// point is the only trustworthy signal for where they actually intended to
   /// go.
+  ///
+  /// After notifying the host, [reconcileWithHost] is called so that a host
+  /// that declines the recovered selection (e.g. a navigation guard, an action
+  /// tab) springs the indicator back to its actual tab rather than leaving it
+  /// parked on the tab under the lift point.
   void recoverIfGestureStuck(Offset upPosition) {
     if (!_gestureActive) return;
     final int capturedId = _gestureId;
@@ -491,6 +496,7 @@ mixin TabDragGestureMixin<T extends StatefulWidget> on State<T> {
         gestureEpoch++; // dispose the wedged recognizer
       });
       notifyTabChanged(target);
+      reconcileWithHost(target);
     });
   }
 }
