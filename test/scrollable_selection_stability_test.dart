@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-import 'package:liquid_glass_widgets/utils/glass_spring.dart';
 
 /// Selection stability for [GlassSegmentedControl.scrollable]:
 ///  1. the initial selection mounts scrolled into view, with no residual
