@@ -60,7 +60,7 @@ class ScrollableSegmentContent extends StatefulWidget {
     this.indicatorShadow,
     this.tabBarBorderRadius,
     this.selectionAlignment = SegmentSelectionAlignment.minimal,
-    this.regridDuration = const Duration(milliseconds: 180),
+    this.regridDuration = Duration.zero,
     this.dragBehavior = SegmentDragBehavior.selectIndicator,
     super.key,
   });
