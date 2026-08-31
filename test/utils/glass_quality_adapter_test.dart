@@ -428,8 +428,7 @@ void main() {
       expect(changes, [(GlassQuality.standard, GlassQuality.premium)]);
     });
 
-    test(
-        'a neutral window decays recovery progress rather than erasing it',
+    test('a neutral window decays recovery progress rather than erasing it',
         () {
       // Regression: recovery requires `upgradeWindowCount` CONSECUTIVE
       // under-budget windows, and a neutral window used to reset that
