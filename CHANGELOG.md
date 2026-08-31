@@ -1,3 +1,13 @@
+# 1.2.2
+
+## New Features
+
+- **Scrollable segmented control — selection stability and picker behaviors (#263):** The pill no longer slides in from the track edge on mount or blinks out on list changes (`VelocitySpringBuilder.teleportEpoch`). `GlassSegment.id` keeps surviving cells mounted across list changes. New opt-in picker behaviors: `SegmentSelectionAlignment.center`, `SegmentDragBehavior.scroll`, `regridDuration` (anchored re-grid morph, default `Duration.zero`), and an externally injectable `scrollController`.
+
+Thanks to [@jfhair](https://github.com/jfhair) for the full implementation, tests, and example demo (#263).
+
+---
+
 # 1.2.1
 
 ## Bug Fixes

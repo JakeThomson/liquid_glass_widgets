@@ -493,8 +493,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     if (entering.isEmpty && exiting.isEmpty) return false;
 
     // Anchor: where the selected cell sits RIGHT NOW.
-    final anchorLocal =
-        _tabOffsets[oldSel] - widget.scrollController.offset;
+    final anchorLocal = _tabOffsets[oldSel] - widget.scrollController.offset;
 
     // Natural widths: old-list cells are already measured; entrants are
     // filled in from their inner boxes once the t=0 frame has laid out.
@@ -517,12 +516,12 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     _morphNaturalWidths = naturals;
     _morphCtrl?.dispose();
     _morphAnim?.dispose();
-    final ctrl = AnimationController(
-        vsync: this, duration: widget.regridDuration)
-      ..addListener(_onMorphTick)
-      ..addStatusListener((st) {
-        if (st == AnimationStatus.completed) _finishMorph();
-      });
+    final ctrl =
+        AnimationController(vsync: this, duration: widget.regridDuration)
+          ..addListener(_onMorphTick)
+          ..addStatusListener((st) {
+            if (st == AnimationStatus.completed) _finishMorph();
+          });
     _morphCtrl = ctrl;
     _morphAnim = CurvedAnimation(parent: ctrl, curve: Curves.easeOutCubic);
     setState(_initKeys); // keys for the merged list; survivors keep theirs
@@ -877,8 +876,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     if (widget.selectionAlignment == SegmentSelectionAlignment.center) {
       // Picker behavior: the selection lives at the center, clamped at the
       // ends of the list.
-      targetOffset =
-          tabLeft - (viewportWidth - _tabWidths[tabIndex]) / 2;
+      targetOffset = tabLeft - (viewportWidth - _tabWidths[tabIndex]) / 2;
     } else if (tabLeft - currentOffset < edgePadding) {
       // Tab is partially or fully off-screen to the left.
       targetOffset = tabLeft - edgePadding;
@@ -985,8 +983,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
               final double screenLeft = (_morphing || _morphSettling) &&
                       _morphAnchorLocalX != null
                   ? _morphAnchorLocalX!
-                  : widget.isScrollable &&
-                          widget.scrollController.hasClients
+                  : widget.isScrollable && widget.scrollController.hasClients
                       ? currentValue - widget.scrollController.offset
                       : 0.0;
 
@@ -1186,8 +1183,7 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
             animation: _morphAnim!,
             child: cell,
             builder: (context, child) {
-              final t =
-                  entering ? _morphAnim!.value : 1.0 - _morphAnim!.value;
+              final t = entering ? _morphAnim!.value : 1.0 - _morphAnim!.value;
               // Width 0→natural glides the survivors apart as the Row
               // re-flows; the scale and fade ride the same curve.
               return ClipRect(
