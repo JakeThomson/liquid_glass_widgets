@@ -1516,6 +1516,34 @@ class GlassTabBarTrailingButton {
 // GlassSegment — configuration for a single segment in GlassSegmentedControl
 // =============================================================================
 
+/// What a horizontal drag means on a scrollable segmented control.
+enum SegmentDragBehavior {
+  /// A drag beginning on the selected segment drags the INDICATOR from
+  /// choice to choice (the `UISegmentedControl` gesture); drags elsewhere
+  /// scroll the list. The right feel when every choice is visible.
+  selectIndicator,
+
+  /// Every drag scrolls the list — the selected segment included;
+  /// selection changes by tap only. The picker behavior: with most
+  /// choices off-screen (and especially with
+  /// [SegmentSelectionAlignment.center], which parks the selection exactly
+  /// where a scrolling thumb naturally lands), navigation is what a drag
+  /// means.
+  scroll,
+}
+
+/// Where a scrollable segmented control keeps its selected segment.
+enum SegmentSelectionAlignment {
+  /// Scroll only as far as needed for the selection to be fully visible,
+  /// with a little edge breathing room (the classic tab-bar behavior).
+  minimal,
+
+  /// Keep the selection centered in the viewport whenever possible —
+  /// clamped at the ends of the list. The picker behavior: selection lives
+  /// at the center and the choices arrange themselves around it.
+  center,
+}
+
 /// Configuration for a single segment in [GlassSegmentedControl].
 ///
 /// [GlassSegment] is the item type for [GlassSegmentedControl] — the iOS 26
@@ -1569,6 +1597,7 @@ class GlassSegment {
   const GlassSegment({
     this.icon,
     this.label,
+    this.id,
     this.tooltip,
     this.semanticLabel,
     this.enabled = true,
@@ -1588,6 +1617,15 @@ class GlassSegment {
   /// If null, [icon] is used alone. If both are provided, the icon is shown
   /// above the label (same layout as iOS `UISegmentedControl` with images).
   final String? label;
+
+  /// Stable identity for this segment across list changes.
+  ///
+  /// When the segment list is replaced (items inserted, removed, or the
+  /// list re-gridded around a surviving value), segments whose identity
+  /// survives keep their underlying elements instead of remounting — only
+  /// genuinely new cells build. Falls back to [label]; segments with
+  /// neither, or with duplicate identities, get fresh cells each time.
+  final Object? id;
 
   /// Tooltip shown on long-press (optional).
   ///
