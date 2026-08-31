@@ -889,9 +889,19 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
       final inlineAccessoryLeft = widget.horizontalPadding +
           collapsedTabW +
           widget.bottomAccessorySpacing;
-      final inlineAccessoryRight = widget.horizontalPadding +
-          widget.searchBarHeight +
-          widget.bottomAccessorySpacing;
+      // Only reserve the trailing capsule's slot when there is one to reserve.
+      // `GlassTabBar.minimizable` sets `showPill: trailingButton != null`, so a
+      // bar with no trailing action has nothing on that edge — holding its
+      // width back leaves a dead gap the accessory cannot reach, and neither
+      // side is reachable from the public API (`minimizable` does not expose
+      // `searchConfig`, and `minimizedBarHeight` drives the pill height as well
+      // as this width). The leading side is already overridable through
+      // `collapsedTabWidth`; this gives the trailing side the same honesty.
+      final inlineAccessoryRight = widget.searchConfig.showPill
+          ? widget.horizontalPadding +
+              widget.searchBarHeight +
+              widget.bottomAccessorySpacing
+          : widget.horizontalPadding;
 
       // Total height of the combined widget.
       // Jumps instantly with `searching` to match `preferredSize` changes.
