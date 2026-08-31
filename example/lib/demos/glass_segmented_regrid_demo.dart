@@ -75,7 +75,6 @@ class _SegmentedRegridHomeState extends State<SegmentedRegridHome> {
 
   void _setStep(int step) => setState(() => _stepMin = step);
 
-
   @override
   Widget build(BuildContext context) {
     final values = _values;
@@ -116,8 +115,9 @@ class _SegmentedRegridHomeState extends State<SegmentedRegridHome> {
                       setState(() => _selectedMin = values[i]),
                   selectionAlignment: SegmentSelectionAlignment.center,
                   dragBehavior: SegmentDragBehavior.scroll,
-                  regridDuration:
-                      _morph ? const Duration(milliseconds: 180) : Duration.zero,
+                  regridDuration: _morph
+                      ? const Duration(milliseconds: 180)
+                      : Duration.zero,
                   segments: [
                     for (final m in values)
                       // id is what lets a surviving cell keep its element

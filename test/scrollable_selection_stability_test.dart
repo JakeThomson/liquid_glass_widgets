@@ -107,7 +107,8 @@ void main() {
         reason: 'selection must sit at the viewport center');
   });
 
-  testWidgets('re-grid morph: anchored selection, entrants grow, leavers '
+  testWidgets(
+      're-grid morph: anchored selection, entrants grow, leavers '
       'shrink out', (tester) async {
     var selected = 4;
     List<GlassSegment> coarse() =>
@@ -121,8 +122,7 @@ void main() {
     Widget build(List<GlassSegment> segs) =>
         harness(GlassSegmentedControl.scrollable(
           segments: segs,
-          selectedIndex:
-              segs.indexWhere((t) => t.label == 'T$selected'),
+          selectedIndex: segs.indexWhere((t) => t.label == 'T$selected'),
           onSegmentSelected: (_) {},
           selectionAlignment: SegmentSelectionAlignment.center,
           // The morph is opt-in (the default snaps), and this test is
@@ -137,8 +137,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 90)); // mid-morph
     expect(find.text('N3'), findsOneWidget,
         reason: 'entrants must exist mid-morph');
-    expect(
-        (tester.getTopLeft(find.text('T$selected')).dx - anchor).abs(),
+    expect((tester.getTopLeft(find.text('T$selected')).dx - anchor).abs(),
         lessThan(3.0),
         reason: 'the selection is anchored through the morph');
     await tester.pumpAndSettle();
@@ -201,7 +200,8 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('dragBehavior.scroll: pill drags scroll the list, tap-only '
+  testWidgets(
+      'dragBehavior.scroll: pill drags scroll the list, tap-only '
       'selection', (tester) async {
     int? tapped;
     final ctl = ScrollController();
@@ -236,8 +236,8 @@ void main() {
     )));
     await tester.pumpAndSettle();
     final before = ctl.offset;
-    await tester.timedDrag(
-        find.text('S15'), const Offset(-120, 0), const Duration(milliseconds: 300));
+    await tester.timedDrag(find.text('S15'), const Offset(-120, 0),
+        const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
     expect(dragged, isNotNull,
         reason: 'dragging the pill selects a neighboring segment');
