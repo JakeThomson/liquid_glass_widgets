@@ -246,4 +246,36 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+      'a fast fling below the top detent does not fling the content list',
+      (tester) async {
+    // Covers _ExpandFirstScrollPhysics.createBallisticSimulation: when the
+    // finger lifts with positive velocity while the content is still at pixel 0
+    // (sheet not yet past the top-detent threshold), the guard returns null so
+    // the list does not scroll. The sheet's own ballistic continues independently.
+    final controller = GlassModalSheetController();
+    await tester.pumpWidget(buildSheet(controller: controller));
+    await tester.pumpAndSettle();
+
+    // Short fling: the finger travels only 60 px upward at high velocity.
+    // The sheet starts at `medium` and cannot cross _kTopDetentThreshold in
+    // 60 px, so _ExpandFirstScrollPhysics is still installed when the finger
+    // lifts and createBallisticSimulation is called with velocity > 0,
+    // pixels == 0 → it returns null and the list stays still.
+    await tester.fling(
+      find.byType(GlassModalSheet),
+      const Offset(0, -60),
+      800,
+    );
+    // Pump just a few frames — enough for the ballistic to fire but not enough
+    // for the sheet to finish settling, so we can assert the content mid-flight.
+    await tester.pump(const Duration(milliseconds: 32));
+
+    expect(contentPixels(tester), 0.0,
+        reason: 'the fling must not scroll the content while the sheet is '
+            'still expanding below the top detent');
+
+    await tester.pumpAndSettle();
+  });
 }

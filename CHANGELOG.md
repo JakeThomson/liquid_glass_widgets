@@ -1,3 +1,21 @@
+# 1.2.1
+
+## Bug Fixes
+
+- **Quality recovery is reachable again (#261):** Glass quality demoted by a transient cost spike (a map, large images, a native view) now recovers after a sustained run of under-budget frames. Previously, frames landing in the neutral band between the upgrade and downgrade thresholds reset the recovery counter, making recovery essentially unreachable in practice.
+
+- **Tab indicator settles back when host declines selection (#255):** Dragging or tapping to a new tab when the host declines the selection (action tab, navigation guard, failed route push) previously left the indicator parked on the wrong tab. It now springs back to the host's current tab on the next frame across all gesture paths.
+
+- **Sheet ↔ content scroll handover (#258):** A multi-detent `GlassModalSheet` now grows and then scrolls its content on one unbroken drag, and reverses the same way. Content on a `ScrollController` of its own is now observed too — no call-site changes required.
+
+- **`GlassNavigationShell` pinning no longer gated on blur quality (#262):** Pinning is chrome geometry, not a shader effect — it costs no render pass of its own. The `minimal` quality gate that previously switched pinning off has been removed. `GlassQualityAdapter` steps down to `minimal` automatically under frame pressure, so pinning was silently disabling itself in debug builds and on low-end devices that need it most.
+
+Thanks to [@Nixxx19](https://github.com/Nixxx19) for the quality recovery, tab indicator, and pinning gate fixes (#255, #261, #262).
+
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the sheet ↔ content scroll handover (#258).
+
+---
+
 # 1.2.0
 
 ## New Features
@@ -44,24 +62,17 @@
 
 ## Bug Fixes
 
-- **Sheet ↔ content scroll handover (#256):** A multi-detent `GlassModalSheet` now grows and then scrolls its content on one unbroken drag, and reverses the same way. The physics below the top detent refuse the movement rather than the gesture so the `Scrollable` stays live, the sheet installs them on its vertical scrollables itself rather than only publishing them, and the gesture arena re-evaluates ownership on every move instead of latching it for the whole pointer. Content scrolling on a `ScrollController` of its own is now observed too.
-
-- **`GlassNavPinnedMetrics.crossFadeStart`/`crossFadeEnd` changed meaning:** they are now fractions of the `morphStart`..`morphEnd` morph window rather than of raw route progress (and the sharpen window `glyphSharpenStart`/`glyphSharpenEnd` is specified the same way). Anything aligning custom chrome against these constants should read them through `GlassNavPinnedMetrics.morphProgressAt`.
-- **Matched icons no longer spuriously cross-fade:** Cross-fade detection compared item content by reference, on the documented assumption that identical `const Icon(...)` expressions share one canonical instance — which does not reliably hold, so an icon matched across a push was quietly cross-faded with itself on every transition. Invisible while the pixels were identical, but the new morph keys its gel and glyph blur off the same signal, which turned the phantom change into a visible bounce on clusters that had not changed at all. Icons are now compared by value (glyph, size, colour, key); other content stays on reference identity.
-
-- **`GlassTabBarMinimizeController` drivable without a `ScrollController`:** The state machine's only controller-free entry point, `handleSample`, was annotated `@visibleForTesting`, so a host that observes scrolling with a `NotificationListener` — an app-level scaffold wrapping arbitrary screen bodies, which cannot reach whichever `ScrollController` the current screen owns — could not use the controller at all. The annotation is gone, and a new `handleNotification(ScrollNotification)` drives the minimize from notifications directly, carrying the `UserScrollNotification` direction across the updates that follow it. Leave `GlassTabBar.minimizable`'s `scrollController` off when driving it this way; the example app's minimizable bar demo switches between both sources.
-
-- **Quality recovery is reachable again (#261):** `GlassQualityAdapter` stepped down readily and, in a real app, effectively never stepped back up — a single transient cost (a map or other native platform view, a route with large images) demoted the whole app's glass for the rest of the session. Recovery needs `upgradeWindowCount` *consecutive* under-budget windows, and a window landing between the two thresholds reset that counter to zero. Because the measure is P95, a tail statistic, an ordinary scrolling list drifts into that neutral band often enough that the counter never reached the threshold. A neutral window now decays the counter by one instead of clearing it, so a mostly-good stretch accumulates toward recovery. Degradation is unaffected: an over-budget window still zeroes the counter as before, and a genuinely marginal device still hovers without recovering.
-
-- **`blur: 0` no longer downgrades any tier to `_FrostedFallback` (#253):** Setting `blur: 0` on a premium or standard surface previously routed it silently to `_FrostedFallback`, stripping the rim, Fresnel, and specular along with the blur. The layer's own pass-1 guard (`effectiveBlur > 0`) already handles zero blur cleanly — it skips the blur pass and leaves refraction and lighting intact. **Visual change at standard:** a `blur: 0` surface previously resolving to `_FrostedFallback` now renders the lightweight shader instead. Use `GlassQuality.minimal` explicitly if the frost fallback was intentional.
-
-- **Presented routes now cover the pinned chrome (#259):** A route presented over a pinned screen — a dialog, an action sheet, a `GlassModalSheet`, or a `fullscreenDialog` — now covers the pinned chrome the way it covers the rest of the page. Previously the glass back button and actions capsule stayed painted above the presentation at full brightness while everything else dimmed. The shell detects a presentation via `_isPresentedOver` (not current and at rest — distinguishing it from a popping route, which is not current but is in flight) and hands the chrome back to the route; `GlassPinnedBarChrome` follows the shell's decision via a `chromeChanges` listener, snapshotting each answer so the bar and shell swap in the same frame. `GlassPinnedBarChromeData.hoisted` documents the new lifecycle.
+- **`GlassNavPinnedMetrics.crossFadeStart`/`crossFadeEnd` changed meaning:** These are now fractions of the morph window (`morphStart`..`morphEnd`) rather than raw route progress; `glyphSharpenStart`/`glyphSharpenEnd` follow the same convention. Read them through `GlassNavPinnedMetrics.morphProgressAt` to align custom chrome.
+- **Matched icons no longer spuriously cross-fade:** Icons were compared by reference rather than value, so two identical `Icon(Icons.x)` literals on different routes cross-faded with themselves on every push. Icons are now compared by value (glyph, size, colour, key).
+- **`GlassTabBarMinimizeController` drivable without a `ScrollController`:** `handleSample` is no longer `@visibleForTesting`, and a new `handleNotification(ScrollNotification)` method drives the bar directly from a `NotificationListener`. Leave `GlassTabBar.minimizable`'s `scrollController` unset when using this path.
+- **`blur: 0` no longer downgrades any tier to `_FrostedFallback` (#253):** A `blur: 0` surface now keeps its rim, Fresnel, and specular — the shader's own guard already handles the zero-blur pass cleanly. **Visual change at standard:** surfaces that previously resolved to `_FrostedFallback` now render the lightweight shader. Use `GlassQuality.minimal` explicitly if frost fallback was intentional.
+- **Presented routes now cover the pinned chrome (#259):** A dialog, action sheet, `GlassModalSheet`, or `fullscreenDialog` previously left the pinned glass back button and actions capsule painted above the presentation at full brightness. The shell now hands the chrome back to the presented route so it dims with everything else.
 
 Thanks to [@JakeThomson](https://github.com/JakeThomson) for the materialize transitions, pinned navigation chrome, leading API and per-item glass backgrounds, scroll-to-minimize controller improvements, bottom accessory inline behaviour, metrics export, and the presented-route chrome fix (#240, #238, #236, #239, #233, #234, #259).
 
 Thanks to [@marco242424](https://github.com/marco242424) for the native gel morph (#243).
 
-Thanks to [@Nixxx19](https://github.com/Nixxx19) for the platform-view glass passthrough mode, `GlassChip` backdrop parameter, the blur tier-downgrade fix, and the form sheet content scroll issue (#247, #250, #253, #258).
+Thanks to [@Nixxx19](https://github.com/Nixxx19) for the platform-view glass passthrough mode, `GlassChip` backdrop parameter, and the blur tier-downgrade fix (#247, #250, #253).
 
 ---
 

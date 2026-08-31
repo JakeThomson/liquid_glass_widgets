@@ -508,4 +508,172 @@ void main() {
           reason: 'Tap at 88% should select tab 3 (last equal slice)');
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Reconcile with host when selection is declined (PR #255)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('TabDragGestureMixin — reconcileWithHost on declined selection (#255)',
+      () {
+    testWidgets('drag end settles indicator back when host declines selection',
+        (tester) async {
+      int? reportedTarget;
+      await tester.pumpWidget(_wrap(
+        SizedBox(
+          height: 100,
+          child: GlassTabBar.bottom(
+            tabs: [_tab('A'), _tab('B'), _tab('C')],
+            selectedIndex: 0,
+            onTabSelected: (i) => reportedTarget = i,
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final barFinder = find.byType(GlassTabBar);
+      final barCenter = tester.getCenter(barFinder);
+      final gesture = await tester.startGesture(barCenter);
+      await gesture.moveBy(const Offset(200, 0));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Host never adopted the selection (no StatefulBuilder), so the
+      // indicator must spring back to tab 0.
+      expect(reportedTarget, greaterThan(0),
+          reason: 'notifyTabChanged must have fired for a non-zero tab');
+      final state = tester.state<TabIndicatorState>(find.byType(TabIndicator));
+      expect(state.tabXAlign, closeTo(state.computeTabAlignment(0), 0.001),
+          reason:
+              'reconcileWithHost must have settled the indicator back to tab 0');
+    });
+
+    testWidgets(
+        'drag cancel while dragging settles indicator back when host declines selection',
+        (tester) async {
+      int? reportedTarget;
+      await tester.pumpWidget(_wrap(
+        SizedBox(
+          height: 100,
+          child: GlassTabBar.bottom(
+            tabs: [_tab('A'), _tab('B'), _tab('C')],
+            selectedIndex: 0,
+            onTabSelected: (i) => reportedTarget = i,
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final state = tester.state<TabIndicatorState>(find.byType(TabIndicator));
+      final indicatorRect = tester.getRect(find.byType(TabIndicator));
+
+      state.onBarDragStart(DragStartDetails(
+        globalPosition:
+            Offset(indicatorRect.right - 20, indicatorRect.center.dy),
+      ));
+      expect(state.tabIsDragging, isTrue);
+
+      state.onBarDragCancel();
+      await tester.pumpAndSettle();
+
+      expect(reportedTarget, greaterThan(0),
+          reason: 'notifyTabChanged must have fired for a non-zero tab');
+      expect(state.tabXAlign, closeTo(state.computeTabAlignment(0), 0.001),
+          reason:
+              'reconcileWithHost must have settled the indicator back to tab 0');
+    });
+
+    testWidgets(
+        'hybrid tap up settles indicator back when host declines selection',
+        (tester) async {
+      int? reportedTarget;
+      await tester.pumpWidget(_wrap(
+        SizedBox(
+          height: 100,
+          child: GlassTabBar.bottom(
+            tabs: [_tab('A'), _tab('B'), _tab('C')],
+            selectedIndex: 0,
+            platformViewBackdrop: true,
+            onTabSelected: (i) => reportedTarget = i,
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final indicatorFinder = find.byType(TabIndicator);
+      final indicatorRect = tester.getRect(indicatorFinder);
+      await tester
+          .tapAt(Offset(indicatorRect.right - 20, indicatorRect.center.dy));
+      await tester.pumpAndSettle();
+
+      expect(reportedTarget, 2);
+      final state = tester.state<TabIndicatorState>(find.byType(TabIndicator));
+      expect(state.tabXAlign, closeTo(state.computeTabAlignment(0), 0.001));
+    });
+
+    testWidgets(
+        'recoverIfGestureStuck settles indicator back when host declines selection',
+        (tester) async {
+      int? reportedTarget;
+      await tester.pumpWidget(_wrap(
+        SizedBox(
+          height: 100,
+          child: GlassTabBar.bottom(
+            tabs: [_tab('A'), _tab('B'), _tab('C')],
+            selectedIndex: 0,
+            platformViewBackdrop: true,
+            onTabSelected: (i) => reportedTarget = i,
+            maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final state = tester.state<TabIndicatorState>(find.byType(TabIndicator));
+      final barFinder = find.byType(GlassTabBar);
+      final barRect = tester.getRect(barFinder);
+
+      // Simulate wedged gesture on PlatformView
+      state.onBarPointerDown(barRect.center);
+      state
+          .recoverIfGestureStuck(Offset(barRect.right - 20, barRect.center.dy));
+      await tester.pumpAndSettle();
+
+      expect(reportedTarget, 2);
+      expect(state.tabXAlign, closeTo(state.computeTabAlignment(0), 0.001));
+    });
+
+    testWidgets('reconcileWithHost is a no-op when host adopts selection',
+        (tester) async {
+      int selectedTab = 0;
+      await tester.pumpWidget(_wrap(
+        StatefulBuilder(builder: (ctx, setState) {
+          return SizedBox(
+            height: 100,
+            child: GlassTabBar.bottom(
+              tabs: [_tab('A'), _tab('B'), _tab('C')],
+              selectedIndex: selectedTab,
+              onTabSelected: (i) => setState(() => selectedTab = i),
+              maskingQuality: MaskingQuality.off,
+            ),
+          );
+        }),
+      ));
+      await tester.pump();
+
+      final barFinder = find.byType(GlassTabBar);
+      final barCenter = tester.getCenter(barFinder);
+      final gesture = await tester.startGesture(barCenter);
+      await gesture.moveBy(const Offset(200, 0));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(selectedTab, greaterThan(0));
+      final state = tester.state<TabIndicatorState>(find.byType(TabIndicator));
+      expect(state.tabXAlign,
+          closeTo(state.computeTabAlignment(selectedTab), 0.001));
+    });
+  });
 }
