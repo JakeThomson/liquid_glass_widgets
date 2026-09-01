@@ -167,4 +167,60 @@ void main() {
       expect(find.byType(GlassScaffold), findsOneWidget);
     });
   });
+
+  group('minimizable inline accessory trailing slot', () {
+    // Regression for #264. The inline geometry was written against the
+    // searchable placement, where a trailing capsule always exists. On
+    // `minimizable` the capsule is optional (`showPill: trailingButton != null`),
+    // so reserving its width unconditionally left a gap nothing could fill —
+    // and nothing in the public API could recover it.
+    Widget host({GlassTabBarTrailingButton? trailingButton}) => MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: GlassTabBar.minimizable(
+                tabs: const [GlassTab(label: '1'), GlassTab(label: '2')],
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                minimized: true,
+                trailingButton: trailingButton,
+                bottomAccessoryPlacement:
+                    GlassTabBarAccessoryPlacement.inline,
+                bottomAccessory:
+                    const SizedBox(key: Key('acc'), height: 50),
+                bottomAccessoryHeight: 50,
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('reaches the trailing edge when there is no trailing button',
+        (tester) async {
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+
+      final bar = tester.getRect(find.byType(GlassTabBar));
+      final accessory = tester.getRect(find.byKey(const Key('acc')));
+
+      // Symmetric with the leading inset the bar already applies.
+      expect(bar.right - accessory.right, closeTo(20.0, 0.5));
+    });
+
+    testWidgets('still clears the trailing button when one is present',
+        (tester) async {
+      await tester.pumpWidget(host(
+        trailingButton: GlassTabBarTrailingButton(
+          icon: const Icon(Icons.add),
+          onTap: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final bar = tester.getRect(find.byType(GlassTabBar));
+      final accessory = tester.getRect(find.byKey(const Key('acc')));
+
+      // horizontalPadding(20) + searchBarHeight(50) + spacing(6)
+      expect(bar.right - accessory.right, closeTo(76.0, 0.5));
+    });
+  });
 }
