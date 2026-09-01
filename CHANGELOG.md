@@ -1,3 +1,11 @@
+# Unreleased
+
+## Bug Fixes
+
+- **Inline bottom accessory reaches the trailing edge without a trailing button (#264):** On `GlassTabBar.minimizable`, the inline accessory reserved the trailing capsule's width even when there was no capsule — `_buildMinimizable` sets `showPill: trailingButton != null`, but the inline geometry did not consult it. A minimized bar with a mini-player and no trailing action left a dead `searchBarHeight + bottomAccessorySpacing` gap on that edge, unreachable from the public API: `minimizable` does not expose `searchConfig` (so `collapsedTabWidth` has no trailing counterpart), and `minimizedBarHeight` drives the minimized pill height as well as this width. The accessory now extends to `horizontalPadding` when the pill is absent, and still clears it when present.
+
+---
+
 # 1.2.2
 
 ## New Features
