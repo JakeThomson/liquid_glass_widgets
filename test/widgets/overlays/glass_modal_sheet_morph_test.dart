@@ -1567,12 +1567,17 @@ void main() {
       await present(tester, anchor);
       await tester.pumpAndSettle();
 
+      // The sheet's LiquidStretch declares a scope of its own for the press
+      // scale, and the glass resolves only the innermost — so the presenter's
+      // declaration has to reach it through the stretch.
       bool selfScaled() => tester
           .widget<LiquidGlassSelfScaleScope>(
-            find.descendant(
-              of: find.byType(GlassSheetMorphPresenter),
-              matching: find.byType(LiquidGlassSelfScaleScope),
-            ),
+            find
+                .descendant(
+                  of: find.byType(GlassSheetMorphPresenter),
+                  matching: find.byType(LiquidGlassSelfScaleScope),
+                )
+                .last,
           )
           .selfScaled;
 

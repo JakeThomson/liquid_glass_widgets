@@ -114,17 +114,10 @@ void main() {
         ),
       );
 
-      final sizedBox = tester.widget<SizedBox>(
-        find
-            .descendant(
-              of: find.byType(GlassIconButton),
-              matching: find.byType(SizedBox),
-            )
-            .first,
-      );
+      final size = tester.getSize(find.byType(GlassIconButton));
 
-      expect(sizedBox.width, equals(customSize));
-      expect(sizedBox.height, equals(customSize));
+      expect(size.width, equals(customSize));
+      expect(size.height, equals(customSize));
     });
 
     testWidgets('has proper semantics', (tester) async {
