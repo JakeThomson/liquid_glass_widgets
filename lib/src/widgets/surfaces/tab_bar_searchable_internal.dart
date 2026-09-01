@@ -1155,3 +1155,104 @@ class _InverseSearchBarClipper extends CustomClipper<Path> {
   bool shouldReclip(_InverseSearchBarClipper oldClipper) =>
       oldClipper.shape != shape;
 }
+
+/// A lightweight trailing action pill for [GlassTabBar.minimizable].
+///
+/// Renders the action button's icon and handles taps without allocating the
+/// search text field, focus node, or clear-button machinery that [SearchPill]
+/// requires.
+class MinimizableTrailingPill extends StatelessWidget {
+  const MinimizableTrailingPill({
+    super.key,
+    required this.icon,
+    required this.onTap,
+    required this.quality,
+    required this.barBorderRadius,
+    required this.enableBackgroundAnimation,
+    required this.backgroundPressScale,
+    this.interactionGlowColor,
+    this.interactionGlowRadius = 1.5,
+    this.interactionGlowBlurRadius = 0,
+    this.interactionGlowSpreadRadius = 0,
+    this.interactionGlowOpacity = 1,
+    this.platformViewBackdrop = false,
+    this.iconColor,
+  });
+
+  final Widget? icon;
+  final VoidCallback? onTap;
+  final double barBorderRadius;
+  final GlassQuality quality;
+  final bool enableBackgroundAnimation;
+  final double backgroundPressScale;
+  final Color? iconColor;
+  final bool platformViewBackdrop;
+  final Color? interactionGlowColor;
+  final double interactionGlowRadius;
+  final double interactionGlowBlurRadius;
+  final double interactionGlowSpreadRadius;
+  final double interactionGlowOpacity;
+
+  Widget _wrapWithGlow({required Widget child}) {
+    final effectiveColor = interactionGlowColor ?? const Color(0x1FFFFFFF);
+    if (effectiveColor.a == 0) return child;
+    return GlassGlow(
+      glowColor: effectiveColor,
+      glowRadius: interactionGlowRadius,
+      glowBlurRadius: interactionGlowBlurRadius,
+      glowSpreadRadius: interactionGlowSpreadRadius,
+      glowOpacity: interactionGlowOpacity,
+      child: child,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = GlassTheme.brightnessOf(context);
+    Color resolveIconColor(Color c) {
+      if (c is CupertinoDynamicColor) {
+        return brightness == Brightness.dark ? c.darkColor : c.color;
+      }
+      return c;
+    }
+
+    final rawIconColor = iconColor ?? CupertinoColors.label;
+    final resolvedIconColor = resolveIconColor(rawIconColor);
+    final shape = LiquidRoundedRectangle(borderRadius: barBorderRadius);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final isOval = (w - constraints.maxHeight).abs() < 2;
+        final currentShape =
+            isOval ? LiquidRoundedRectangle(borderRadius: w / 2) : shape;
+
+        return LiquidStretch(
+          interactionScale:
+              enableBackgroundAnimation ? backgroundPressScale : 1.0,
+          stretch: platformViewBackdrop ? 0.0 : 0.5,
+          resistance: 0.01,
+          anchorStretch: true,
+          child: GestureDetector(
+            key: const ValueKey('pill-collapsed'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: AdaptiveGlass.grouped(
+              shape: currentShape,
+              quality: quality,
+              platformViewBackdrop: platformViewBackdrop,
+              child: _wrapWithGlow(
+                child: Center(
+                  child: IconTheme(
+                    data: IconThemeData(color: resolvedIconColor),
+                    child: icon ?? const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

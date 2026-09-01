@@ -1,8 +1,14 @@
-# Unreleased
+# 1.2.3
 
 ## Bug Fixes
 
-- **Inline bottom accessory reaches the trailing edge without a trailing button (#264):** On `GlassTabBar.minimizable`, the inline accessory reserved the trailing capsule's width even when there was no capsule — `_buildMinimizable` sets `showPill: trailingButton != null`, but the inline geometry did not consult it. A minimized bar with a mini-player and no trailing action left a dead `searchBarHeight + bottomAccessorySpacing` gap on that edge, unreachable from the public API: `minimizable` does not expose `searchConfig` (so `collapsedTabWidth` has no trailing counterpart), and `minimizedBarHeight` drives the minimized pill height as well as this width. The accessory now extends to `horizontalPadding` when the pill is absent, and still clears it when present.
+- **Inline bottom accessory reaches the trailing edge without a trailing button (#264):** On `GlassTabBar.minimizable`, a minimized bar with a bottom accessory and no trailing button left a dead gap on the trailing edge — the accessory geometry reserved space for the trailing pill regardless of whether one was present. The accessory now extends flush to the horizontal padding when no trailing button is configured, and still clears the pill when one is.
+
+Thanks to [@eomgerm](https://github.com/eomgerm) for the fix (#265).
+
+## Internal
+
+- **`MinimizableTrailingPill` — dedicated stateless pill for the trailing slot:** The trailing-button pill was previously synthesised by re-using `GlassSearchBarConfig` with a dummy search config, creating a double-source-of-truth between `_buildMinimizable` and the layout engine. It is now a dedicated `MinimizableTrailingPill` widget sharing the same `LayoutBuilder`/oval-detection morph pattern as `SearchPill` — identical pill physics, single authoritative gate. A debug-mode assert now fires if `searchConfig` and `trailingButton` are both non-null; these are mutually exclusive rendering slots.
 
 ---
 

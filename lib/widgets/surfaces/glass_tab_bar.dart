@@ -1204,13 +1204,6 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
 }
 
 class _GlassTabBarState extends State<GlassTabBar> {
-  /// The most recent non-null [GlassTabBar.trailingButton] (minimizable
-  /// only). A button removed between builds must keep rendering ITSELF while
-  /// the pill scales away — deriving the icon from the now-null button would
-  /// swap the outgoing pill to the config's default search glyph for its
-  /// last few frames.
-  GlassTabBarTrailingButton? _lastTrailingButton;
-
   @override
   void initState() {
     super.initState();
@@ -1372,50 +1365,31 @@ class _GlassTabBarState extends State<GlassTabBar> {
   }
 
   /// Dispatches to [TabBarSearchableLayout] — the iOS 26-style searchable placement engine.
-  Widget _buildSearchable(BuildContext context) =>
-      _buildSearchableEngine(context, widget.searchConfig!);
+  Widget _buildSearchable(BuildContext context) => _buildSearchableEngine(
+        context,
+        searchConfig: widget.searchConfig,
+      );
 
-  /// Dispatches to the same engine as [_buildSearchable], with a
-  /// [GlassSearchBarConfig] assembled from the minimizable placement's
-  /// navigation vocabulary: nothing search-shaped remains (the field never
-  /// expands, there is no cancel pill, no keyboard involvement), and the
-  /// search pill's slot carries the plain [GlassTabBarTrailingButton] — or,
-  /// with no button, nothing at all.
-  Widget _buildMinimizable(BuildContext context) {
-    final trailing = widget.trailingButton;
-    if (trailing != null) _lastTrailingButton = trailing;
-    // The ICON comes from the last known button, so a button removed this
-    // build still renders itself while the pill scales away. Existence and
-    // the tap stay on the live value — a removed button must not fire (and
-    // the disappearing pill is already IgnorePointered by the engine).
-    final rendered = trailing ?? _lastTrailingButton;
-    return _buildSearchableEngine(
-      context,
-      GlassSearchBarConfig(
-        // The engine's single callback carries both taps: `true` is the
-        // trailing pill, `false` is the minimized tab circle.
-        onSearchToggle: (activate) {
-          if (activate) {
-            widget.trailingButton?.onTap();
-          } else {
-            widget.onMinimizedTabTap?.call();
-          }
-        },
-        expandWhenActive: false,
-        showsCancelButton: false,
-        searchIcon: rendered?.icon,
-        showPill: trailing != null,
-      ),
-    );
-  }
+  /// Dispatches to [TabBarSearchableLayout] configured for minimizable placement.
+  Widget _buildMinimizable(BuildContext context) => _buildSearchableEngine(
+        context,
+        trailingButton: widget.trailingButton,
+        onMinimizedTabTap: widget.onMinimizedTabTap,
+      );
 
   Widget _buildSearchableEngine(
-      BuildContext context, GlassSearchBarConfig config) {
+    BuildContext context, {
+    GlassSearchBarConfig? searchConfig,
+    GlassTabBarTrailingButton? trailingButton,
+    VoidCallback? onMinimizedTabTap,
+  }) {
     return TabBarSearchableLayout(
       tabs: widget.tabs,
       selectedIndex: widget.selectedIndex,
       onTabSelected: widget.onTabSelected,
-      searchConfig: config,
+      searchConfig: searchConfig,
+      trailingButton: trailingButton,
+      onMinimizedTabTap: onMinimizedTabTap,
       controller: widget.controller,
       isSearchActive: widget._effectiveMinimized,
       minimizeController: widget.minimizeController,

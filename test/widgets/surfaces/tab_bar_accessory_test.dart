@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_searchable_layout.dart';
 
 void main() {
   group('GlassTabBar Accessory iOS 26 Layout', () {
@@ -184,10 +186,8 @@ void main() {
                 onTabSelected: (_) {},
                 minimized: true,
                 trailingButton: trailingButton,
-                bottomAccessoryPlacement:
-                    GlassTabBarAccessoryPlacement.inline,
-                bottomAccessory:
-                    const SizedBox(key: Key('acc'), height: 50),
+                bottomAccessoryPlacement: GlassTabBarAccessoryPlacement.inline,
+                bottomAccessory: const SizedBox(key: Key('acc'), height: 50),
                 bottomAccessoryHeight: 50,
               ),
             ),
@@ -221,6 +221,170 @@ void main() {
 
       // horizontalPadding(20) + searchBarHeight(50) + spacing(6)
       expect(bar.right - accessory.right, closeTo(76.0, 0.5));
+    });
+
+    testWidgets(
+        'trailing button and minimized tab taps invoke correct callbacks',
+        (tester) async {
+      bool trailingTapped = false;
+      bool tabTapped = false;
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: GlassTabBar.minimizable(
+            tabs: const [
+              GlassTab(label: '1', icon: Icon(Icons.home)),
+              GlassTab(label: '2', icon: Icon(Icons.star)),
+            ],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            minimized: true,
+            onMinimizedTabTap: () => tabTapped = true,
+            trailingButton: GlassTabBarTrailingButton(
+              icon: const Icon(Icons.add),
+              onTap: () => trailingTapped = true,
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Tap the trailing button
+      expect(find.byIcon(Icons.add), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      expect(trailingTapped, isTrue);
+
+      // Tap the minimized tab pill
+      expect(find.byIcon(Icons.home), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.home));
+      await tester.pumpAndSettle();
+      expect(tabTapped, isTrue);
+    });
+
+    testWidgets('dynamic trailingButton toggle mounts and unmounts cleanly',
+        (tester) async {
+      bool showButton = false;
+
+      await tester.pumpWidget(StatefulBuilder(
+        builder: (context, setState) {
+          return MaterialApp(
+            home: Scaffold(
+              body: Column(
+                children: [
+                  ElevatedButton(
+                    onPressed: () => setState(() => showButton = !showButton),
+                    child: const Text('toggle'),
+                  ),
+                  GlassTabBar.minimizable(
+                    tabs: const [GlassTab(label: '1'), GlassTab(label: '2')],
+                    selectedIndex: 0,
+                    onTabSelected: (_) {},
+                    minimized: true,
+                    trailingButton: showButton
+                        ? GlassTabBarTrailingButton(
+                            icon: const Icon(Icons.add),
+                            onTap: () {},
+                          )
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.add), findsNothing);
+
+      // Toggle ON
+      await tester.tap(find.text('toggle'));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.add), findsOneWidget);
+
+      // Toggle OFF
+      await tester.tap(find.text('toggle'));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.add), findsNothing);
+    });
+
+    testWidgets(
+        'MinimizableTrailingPill resolves CupertinoDynamicColor in dark mode',
+        (tester) async {
+      await tester.pumpWidget(
+        CupertinoApp(
+          theme: const CupertinoThemeData(brightness: Brightness.dark),
+          home: CupertinoPageScaffold(
+            child: GlassTabBar.minimizable(
+              tabs: const [GlassTab(label: '1'), GlassTab(label: '2')],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              minimized: true,
+              unselectedIconColor: CupertinoColors.label,
+              trailingButton: GlassTabBarTrailingButton(
+                icon: const Icon(CupertinoIcons.square_pencil),
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(CupertinoIcons.square_pencil), findsOneWidget);
+    });
+
+    testWidgets(
+        'TabBarSearchableLayout asserts when both searchConfig and trailingButton are provided',
+        (tester) async {
+      expect(
+        () => TabBarSearchableLayout(
+          tabs: const [GlassTab(label: '1')],
+          selectedIndex: 0,
+          onTabSelected: (_) {},
+          searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+          trailingButton: GlassTabBarTrailingButton(
+            icon: const Icon(Icons.add),
+            onTap: () {},
+          ),
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    testWidgets(
+        'searchConfig.onSearchFocusChanged is triggered on focus change',
+        (tester) async {
+      bool? lastFocus;
+      final focusNode = FocusNode();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GlassTabBar.searchable(
+              tabs: const [GlassTab(label: 'A'), GlassTab(label: 'B')],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              isSearchActive: true,
+              searchConfig: GlassSearchBarConfig(
+                focusNode: focusNode,
+                onSearchToggle: (_) {},
+                onSearchFocusChanged: (f) => lastFocus = f,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(lastFocus, isTrue);
+
+      focusNode.unfocus();
+      await tester.pumpAndSettle();
+      expect(lastFocus, isFalse);
+
+      focusNode.dispose();
     });
   });
 }
