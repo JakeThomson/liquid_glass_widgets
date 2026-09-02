@@ -53,20 +53,6 @@ import '../src/renderer/liquid_glass_renderer.dart';
 ///   onTap: () {},
 /// )
 /// ```
-///
-/// ### Restoring the pre-1.2.4 press feel:
-///
-/// From 1.2.4 the default [GlassButton] press is native-sized (~17 pt growth),
-/// with a bright even lift ([GlassButton.ambientBaseLight] 0.3) and no
-/// directional glow ([GlassButton.glowRadius] 0). Set these via the theme to
-/// restore the previous feel app-wide:
-/// ```dart
-/// GlassInteractionSettings(
-///   interactionScale: 1.05,   // fixed 5% factor
-///   anchorStretchSettings: AnchorStretchSettings(), // looser jelly defaults
-/// )
-/// // Also set per-button: glowRadius: 1.0, ambientBaseLight: 0.08
-/// ```
 @immutable
 class GlassInteractionSettings {
   /// Creates interaction settings for glass widgets.

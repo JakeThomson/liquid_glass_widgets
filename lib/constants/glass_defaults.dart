@@ -34,6 +34,24 @@ class GlassDefaults {
   static const double lightAngle = 0.75 * 3.14159265358979; // 0.75 * pi
 
   // ============================================================================
+  // Press Interaction
+  // ============================================================================
+
+  /// Even surface brightening of a pressed button in light mode — measured at
+  /// about +15 luma against a native iOS 26 press (0.3)
+  static const double ambientBaseLight = 0.3;
+
+  /// Dark-mode counterpart: the darker resting surface needs half the overlay
+  /// for the same read. Estimated pending a native dark-mode capture (0.14)
+  static const double ambientBaseLightDark = 0.14;
+
+  /// The pressed lift ramps over the press inflation (150 ms)
+  static const Duration ambientLiftDuration = Duration(milliseconds: 150);
+
+  /// ...and collapses on release (60 ms)
+  static const Duration ambientLiftReverseDuration = Duration(milliseconds: 60);
+
+  // ============================================================================
   // Border Radius
   // ============================================================================
 

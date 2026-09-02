@@ -1,9 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
+import '../../constants/glass_defaults.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
-import '../../utils/glass_brightness.dart';
 
+import '../../theme/glass_theme.dart';
 import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
 import '../../types/glass_button_style.dart';
@@ -160,7 +161,7 @@ class GlassButton extends StatefulWidget {
     this.anchorStretch = true,
     this.anchorStretchSettings,
     this.alignment = Alignment.center,
-    this.ambientBaseLight = 0.3,
+    this.ambientBaseLight,
     this.platformViewBackdrop = false,
     this.canRequestFocus = true,
     this.excludeFromSemantics = false,
@@ -219,7 +220,7 @@ class GlassButton extends StatefulWidget {
     this.anchorStretch = true,
     this.anchorStretchSettings,
     this.alignment = Alignment.center,
-    this.ambientBaseLight = 0.3,
+    this.ambientBaseLight,
     this.platformViewBackdrop = false,
     this.canRequestFocus = true,
     this.excludeFromSemantics = false,
@@ -528,13 +529,15 @@ class GlassButton extends StatefulWidget {
   /// wherever the finger goes. This is that brightening — the whole pressed
   /// highlight, since [glowRadius] defaults to `0`.
   ///
+  /// - null (default): [GlassDefaults.ambientBaseLight] — the even lift of a
+  ///   pressed iOS 26 surface, measured at about +15 luma with the refraction
+  ///   still showing through — halved to [GlassDefaults.ambientBaseLightDark]
+  ///   in dark mode, where the same overlay reads as a flash
   /// - 0.0: No ambient base light
-  /// - 0.3 (default): the even lift of a pressed iOS 26 surface, measured at
-  ///   about +15 luma, with the refraction still showing through
   /// - 0.6: Near-white, closer to a frosted highlight
   ///
-  /// Set to 0.0 to disable.
-  final double ambientBaseLight;
+  /// An explicit value is honoured unchanged in both brightness modes.
+  final double? ambientBaseLight;
 
   /// When true (typically for iOS PlatformViews), forces the BackdropFilter
   /// fallback render path instead of the Impeller-native shader. Forwarded to
@@ -603,8 +606,8 @@ class _GlassButtonState extends State<GlassButton>
     _saturationController = AnimationController(
       // Brightens over the press inflation and collapses on release, as the
       // native highlight does (~150 ms up, gone within ~60 ms of lift-off).
-      duration: const Duration(milliseconds: 150),
-      reverseDuration: const Duration(milliseconds: 60),
+      duration: GlassDefaults.ambientLiftDuration,
+      reverseDuration: GlassDefaults.ambientLiftReverseDuration,
       vsync: this,
     );
     _saturationAnimation = CurvedAnimation(
@@ -690,26 +693,12 @@ class _GlassButtonState extends State<GlassButton>
     _saturationController.reverse();
   }
 
-  /// The press growth a native button shows: ~17 pt along its longest side,
-  /// measured on a 56 pt circle (1.3×) and a 132 pt pill (1.13×).
-  static const double _nativePressGrowth = 17.0;
-
-  /// The stretch a native button shows on a long drag: ≤5 % of elongation
-  /// with matching squash, a few points of travel, and no rebound of its own.
-  static const AnchorStretchSettings _nativeAnchorStretchSettings =
-      AnchorStretchSettings(
-    intensity: 0.1,
-    squashFactor: 0.1,
-    translationDamping: 0.1,
-    bounciness: 0.0,
-  );
-
   /// Texture headroom for the press inflation: half the growth of the longest
   /// side, plus room for the overshoot and the drag stretch. A fixed factor on
   /// an unsized button is budgeted for one up to 480 px wide.
   double _pressHeadroom(double? interactionScale) {
     final growth = interactionScale == null
-        ? _nativePressGrowth
+        ? LiquidStretch.nativePressGrowth
         : math.max(widget.width ?? 480, widget.height ?? 480) *
             (interactionScale - 1.0);
     return (growth / 2 + 8).ceilToDouble();
@@ -777,37 +766,19 @@ class _GlassButtonState extends State<GlassButton>
     // button keeps for as long as the finger is down, wherever it goes. A
     // directional glow would hotspot the centre — a pill's glow radius is its
     // short side — so it is off by default and this carries the highlight.
-    //
-    // Brightness adaptation: the default 0.3 was measured in light mode
-    // (Jake — PR #271). In dark mode the resting glass surface is visually
-    // dark, so a 0.3 white overlay reads as a harsh flash rather than a lift.
-    // Apple's native behaviour in dark mode is a material thinning (the glass
-    // becomes more luminous) which produces a proportionally smaller absolute
-    // brightness shift from the darker baseline.
-    //
-    // TODO(dark-mode-parity): 0.14 is an estimated dark-mode value based on
-    // relative material shift from dark baseline. Jake — please do a dark-mode
-    // frame capture of `.buttonStyle(.glass)` pressed vs resting (same
-    // methodology as the light-mode measurement that produced 0.3) and update
-    // this constant. The _kAmbientBaseLightDark constant is defined below so
-    // it can be found and adjusted in one place.
-    //
-    // Only the *default* is scaled — any explicit caller value is honoured
-    // unchanged, giving full opt-out via `ambientBaseLight: 0.3`.
-    const double kAmbientBaseLightDark = 0.14;
-    final bool isDarkMode =
-        resolveGlassBrightness(context) == Brightness.dark;
-    final double effectiveAmbientBaseLight =
-        widget.ambientBaseLight == 0.3 && isDarkMode
-            ? kAmbientBaseLightDark
-            : widget.ambientBaseLight;
+    // The default lift is halved in dark mode, where the resting surface is
+    // darker and the same overlay reads as a flash; an explicit value is
+    // honoured unchanged.
+    final double effectiveAmbientBaseLight = widget.ambientBaseLight ??
+        (GlassTheme.brightnessOf(context) == Brightness.dark
+            ? GlassDefaults.ambientBaseLightDark
+            : GlassDefaults.ambientBaseLight);
 
     final ambientOverlay = AnimatedBuilder(
       animation:
           Listenable.merge([_saturationAnimation, _isHovered, _isFocused]),
       builder: (context, _) {
-        double opacity =
-            _saturationAnimation.value * effectiveAmbientBaseLight;
+        double opacity = _saturationAnimation.value * effectiveAmbientBaseLight;
         if (_isFocused.value) {
           opacity += 0.15;
         } else if (_isHovered.value) {
@@ -942,8 +913,9 @@ class _GlassButtonState extends State<GlassButton>
     final stretchContent = LiquidStretch(
       // A fixed factor when one is given; otherwise the native sizing.
       interactionScale: effectiveInteractionScale ?? 1.0,
-      pressGrowth:
-          effectiveInteractionScale == null ? _nativePressGrowth : null,
+      pressGrowth: effectiveInteractionScale == null
+          ? LiquidStretch.nativePressGrowth
+          : null,
       stretch: widget.stretch != 0.5
           ? widget.stretch
           : themeInteraction.stretch ?? widget.stretch,
@@ -956,7 +928,7 @@ class _GlassButtonState extends State<GlassButton>
           : themeInteraction.anchorStretch ?? widget.anchorStretch,
       anchorStretchSettings: widget.anchorStretchSettings ??
           themeInteraction.anchorStretchSettings ??
-          _nativeAnchorStretchSettings,
+          AnchorStretchSettings.nativeTremor,
       child: glassWidget,
     );
 

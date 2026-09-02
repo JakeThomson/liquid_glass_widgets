@@ -103,7 +103,7 @@ class TabBarSearchableLayout extends StatefulWidget {
     this.springDescription,
     this.tabPillAnchor = GlassTabPillAnchor.start,
     this.interactionBehavior = GlassInteractionBehavior.full,
-    this.pressScale = 1.04,
+    this.pressScale,
     this.tabWidth,
     this.indicatorBorderRadius,
     this.indicatorExpansion =
@@ -197,7 +197,7 @@ class TabBarSearchableLayout extends StatefulWidget {
   final SpringDescription? springDescription;
   final GlassTabPillAnchor tabPillAnchor;
   final GlassInteractionBehavior interactionBehavior;
-  final double pressScale;
+  final double? pressScale;
   final double? tabWidth;
   final double? indicatorBorderRadius;
   final EdgeInsetsGeometry indicatorExpansion;
@@ -646,9 +646,17 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                               .clamp(0.0, totalW);
 
                           final Widget pillChild;
+                          // The pills render the even GlassButton press lift
+                          // unless the glow was customised — per widget or
+                          // through the theme's glowColors.
+                          final nativePressHighlight =
+                              widget.interactionGlowColor == null &&
+                                  resolvedGlowColors.primary == null &&
+                                  widget.interactionBehavior.hasGlow;
                           if (widget.searchConfig != null) {
                             pillChild = SearchPill(
                               config: widget.searchConfig!,
+                              nativePressHighlight: nativePressHighlight,
                               isActive: searching,
                               barBorderRadius: widget.barBorderRadius,
                               quality: effectiveQuality,
@@ -683,6 +691,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                 widget.trailingButton ?? _lastTrailingButton;
                             pillChild = MinimizableTrailingPill(
                               icon: renderedTrailing?.icon,
+                              nativePressHighlight: nativePressHighlight,
                               onTap: widget.trailingButton?.onTap,
                               barBorderRadius: widget.barBorderRadius,
                               quality: effectiveQuality,

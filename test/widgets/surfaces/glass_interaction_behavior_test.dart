@@ -479,14 +479,14 @@ void main() {
       expect(bar.interactionBehavior, GlassInteractionBehavior.full);
     });
 
-    test('pressScale defaults to 1.04', () {
+    test('pressScale defaults to null — the native press', () {
       final bar = GlassTabBar.searchable(
         tabs: _tabs,
         selectedIndex: 0,
         onTabSelected: (_) {},
         searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
       );
-      expect(bar.pressScale, closeTo(1.04, 0.001));
+      expect(bar.pressScale, isNull);
     });
 
     test('interactionGlowColor defaults to null', () {
@@ -724,7 +724,8 @@ void main() {
       expect(bar.interactionBehavior, searchBar.interactionBehavior);
     });
 
-    test('both default to pressScale 1.04', () {
+    test('bottom defaults to 1.04; searchable defaults to the native press',
+        () {
       final bar = GlassTabBar.bottom(
         tabs: _tabs,
         selectedIndex: 0,
@@ -736,7 +737,8 @@ void main() {
         onTabSelected: (_) {},
         searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
       );
-      expect(bar.pressScale, closeTo(searchBar.pressScale, 0.001));
+      expect(bar.pressScale, closeTo(1.04, 0.001));
+      expect(searchBar.pressScale, isNull);
     });
 
     test('all four behaviors accepted by GlassTabBar.bottom without assertion',
