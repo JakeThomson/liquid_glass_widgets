@@ -9,6 +9,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/renderer/liquid_glass_renderer.dart';
 import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_searchable_internal.dart';
 
 // ---------------------------------------------------------------------------
@@ -831,6 +832,135 @@ void main() {
 
       // At least one event emitted
       expect(focusEvents, isNotEmpty);
+    });
+  });
+
+  group('SearchPill — native press (#272)', () {
+    Widget pill({
+      double? pressScale,
+      bool nativePressHighlight = true,
+      bool isActive = false,
+    }) {
+      return SearchPill(
+        config: _config(),
+        isActive: isActive,
+        barBorderRadius: 20,
+        quality: GlassQuality.minimal,
+        enableBackgroundAnimation: true,
+        backgroundPressScale: pressScale,
+        nativePressHighlight: nativePressHighlight,
+      );
+    }
+
+    LiquidStretch stretchOf(WidgetTester tester) => tester.widget(find
+        .descendant(
+            of: find.byType(SearchPill), matching: find.byType(LiquidStretch))
+        .first);
+
+    testWidgets('the default collapsed circle presses like a native button',
+        (tester) async {
+      await tester.pumpWidget(_wrap(pill(), width: 64, height: 64));
+      await tester.pump();
+      final stretch = stretchOf(tester);
+      expect(stretch.pressGrowth, LiquidStretch.nativePressGrowth);
+      expect(stretch.anchorStretchSettings, AnchorStretchSettings.nativeTremor);
+      expect(find.byType(PressAmbientLift), findsOneWidget);
+    });
+
+    testWidgets('a customised pressScale keeps the fixed factor and glow',
+        (tester) async {
+      await tester
+          .pumpWidget(_wrap(pill(pressScale: 1.06), width: 64, height: 64));
+      await tester.pump();
+      final stretch = stretchOf(tester);
+      expect(stretch.pressGrowth, isNull);
+      expect(stretch.interactionScale, 1.06);
+      expect(find.byType(PressAmbientLift), findsNothing);
+    });
+
+    testWidgets('an explicit 1.04 is a fixed factor, not the native sizing',
+        (tester) async {
+      await tester.pumpWidget(
+          _wrap(pill(pressScale: 1.04), width: 64, height: 64));
+      await tester.pump();
+      expect(stretchOf(tester).pressGrowth, isNull);
+    });
+
+    testWidgets('a customised glow colour keeps the directional glow',
+        (tester) async {
+      await tester.pumpWidget(
+          _wrap(pill(nativePressHighlight: false), width: 64, height: 64));
+      await tester.pump();
+      expect(find.byType(PressAmbientLift), findsNothing);
+    });
+
+    testWidgets('the expanded field stretches vertically only from its edge',
+        (tester) async {
+      await tester.pumpWidget(_wrap(pill(isActive: true)));
+      await tester.pump();
+      final stretches = tester
+          .widgetList<LiquidStretch>(find.descendant(
+              of: find.byType(SearchPill),
+              matching: find.byType(LiquidStretch)))
+          .toList();
+      expect(stretches, hasLength(2));
+      expect(stretches.first.axis, Axis.vertical);
+      expect(stretches.first.stretch, 0.09);
+      expect(stretches.last.allowPositiveY, isFalse);
+      expect(stretches.last.allowNegativeY, isFalse);
+      expect(stretches.last.stretch, 0.22);
+    });
+
+    testWidgets('a customised pressScale keeps the still expanded field',
+        (tester) async {
+      await tester.pumpWidget(_wrap(pill(isActive: true, pressScale: 1.06)));
+      await tester.pump();
+      final stretches = tester
+          .widgetList<LiquidStretch>(find.descendant(
+              of: find.byType(SearchPill),
+              matching: find.byType(LiquidStretch)))
+          .toList();
+      expect(stretches, hasLength(2));
+      expect(stretches.first.stretch, 0.0);
+      expect(stretches.last.stretch, 0.0);
+    });
+  });
+
+  group('MinimizableTrailingPill — native press (#272)', () {
+    Widget pill({double? pressScale, bool nativePressHighlight = true}) {
+      return MinimizableTrailingPill(
+        icon: const Icon(CupertinoIcons.square_pencil),
+        onTap: () {},
+        quality: GlassQuality.minimal,
+        barBorderRadius: 20,
+        enableBackgroundAnimation: true,
+        backgroundPressScale: pressScale,
+        nativePressHighlight: nativePressHighlight,
+      );
+    }
+
+    testWidgets('the default circle presses like a native button',
+        (tester) async {
+      await tester.pumpWidget(_wrap(pill(), width: 64, height: 64));
+      await tester.pump();
+      final stretch = tester.widget<LiquidStretch>(find.descendant(
+          of: find.byType(MinimizableTrailingPill),
+          matching: find.byType(LiquidStretch)));
+      expect(stretch.pressGrowth, LiquidStretch.nativePressGrowth);
+      expect(stretch.anchorStretchSettings, AnchorStretchSettings.nativeTremor);
+      expect(find.byType(PressAmbientLift), findsOneWidget);
+    });
+
+    testWidgets('a customised pressScale keeps the fixed factor and glow',
+        (tester) async {
+      await tester
+          .pumpWidget(_wrap(pill(pressScale: 1.06), width: 64, height: 64));
+      await tester.pump();
+      final stretch = tester.widget<LiquidStretch>(find.descendant(
+          of: find.byType(MinimizableTrailingPill),
+          matching: find.byType(LiquidStretch)));
+      expect(stretch.pressGrowth, isNull);
+      expect(find.byType(PressAmbientLift), findsNothing);
     });
   });
 }

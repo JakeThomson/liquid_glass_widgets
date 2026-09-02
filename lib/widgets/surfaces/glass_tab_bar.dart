@@ -479,7 +479,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
     double glowOpacity = 0.6,
     GlassInteractionBehavior interactionBehavior =
         GlassInteractionBehavior.full,
-    double pressScale = 1.04,
+    double? pressScale,
     Color? interactionGlowColor,
     double interactionGlowRadius = 1.5,
     GlassQuality? quality,
@@ -676,7 +676,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
     double glowOpacity = 0.6,
     GlassInteractionBehavior interactionBehavior =
         GlassInteractionBehavior.full,
-    double pressScale = 1.04,
+    double? pressScale,
     Color? interactionGlowColor,
     double interactionGlowRadius = 1.5,
     GlassQuality? quality,
@@ -815,7 +815,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
       this.indicatorBorderRadius,
       this.extraButton,
       this.interactionBehavior = GlassInteractionBehavior.full,
-      this.pressScale = 1.04,
+      this.pressScale,
       this.interactionGlowColor,
       this.interactionGlowRadius = 1.5,
       this.platformViewBackdrop = false,
@@ -1029,8 +1029,12 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   /// Which physical interaction effects are active. Defaults to [GlassInteractionBehavior.full].
   final GlassInteractionBehavior interactionBehavior;
 
-  /// Peak scale applied at maximum press depth. Defaults to 1.04.
-  final double pressScale;
+  /// Peak scale applied at maximum press depth.
+  ///
+  /// null (default): the search and trailing circles press like a native
+  /// button (~17 pt growth) and the bar surface keeps its subtle 1.04. A
+  /// number applies that fixed factor everywhere instead.
+  final double? pressScale;
 
   /// Directional glow color on press. Null = theme default.
   final Color? interactionGlowColor;
@@ -1296,7 +1300,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
       interactionGlowColor: widget.interactionGlowColor,
       interactionGlowRadius: widget.interactionGlowRadius,
       interactionBehavior: widget.interactionBehavior,
-      pressScale: widget.pressScale,
+      pressScale: widget.pressScale ?? 1.04,
       platformViewBackdrop: widget.platformViewBackdrop,
       adaptiveBrightness: widget.adaptiveBrightness,
       onBrightnessChanged: widget.onBrightnessChanged,
@@ -1354,7 +1358,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
       interactionGlowColor: widget.interactionGlowColor,
       interactionGlowRadius: widget.interactionGlowRadius,
       interactionBehavior: widget.interactionBehavior,
-      pressScale: widget.pressScale,
+      pressScale: widget.pressScale ?? 1.04,
       platformViewBackdrop: widget.platformViewBackdrop,
       adaptiveBrightness: widget.adaptiveBrightness,
       onBrightnessChanged: widget.onBrightnessChanged,
