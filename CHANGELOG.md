@@ -4,7 +4,12 @@
 
 - **`GlassButton` presses like a native button (behaviour change) (#267):** Beside a native `.glassEffect(.regular.interactive())` the press led with a 25–30 % jelly stretch over an invisible 5 % inflation, and its highlight walked off the shape with the finger. Measured at 120 fps on a 56 pt circle and a 132 pt pill, the press now grows the longest side by ~17 pt (`interactionScale: null`, the new default; a number is still a fixed factor) on a snappy spring with one undershoot on release, a drag stretches it no more than ~5 % (`anchorStretchSettings: null` — the theme's, else a gentler default), and the surface brightens evenly (`ambientBaseLight: 0.3`) instead of through a pointer-following glow (`glowRadius: 0`). `LiquidStretch` declares its scale through `LiquidGlassSelfScaleScope`, so the undershoot no longer freezes the premium refraction. Restore the previous sizing and highlight with `interactionScale: 1.05`, `glowRadius: 1.0`, `ambientBaseLight: 0.08` and `anchorStretchSettings: AnchorStretchSettings()`, or theme-wide via `GlassInteractionSettings`.
 
+## Internal
+
+- **Added `THIRD_PARTY_NOTICES` with complete MIT license texts (#273):** The published pub.dev archive now includes the full MIT copyright notices for both the vendored `liquid_glass_renderer` (whynotmake.it, 2025) and the adapted `motor` spring utilities (whynotmake.it, 2024). The README Dependencies section has been updated to accurately describe the vendored code and link to the notices file.
+
 ---
+
 
 # 1.2.3
 
