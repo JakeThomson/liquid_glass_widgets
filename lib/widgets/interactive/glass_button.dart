@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../utils/glass_brightness.dart';
 
 import '../../theme/glass_theme_data.dart';
 import '../../types/glass_quality.dart';
@@ -776,11 +777,37 @@ class _GlassButtonState extends State<GlassButton>
     // button keeps for as long as the finger is down, wherever it goes. A
     // directional glow would hotspot the centre — a pill's glow radius is its
     // short side — so it is off by default and this carries the highlight.
+    //
+    // Brightness adaptation: the default 0.3 was measured in light mode
+    // (Jake — PR #271). In dark mode the resting glass surface is visually
+    // dark, so a 0.3 white overlay reads as a harsh flash rather than a lift.
+    // Apple's native behaviour in dark mode is a material thinning (the glass
+    // becomes more luminous) which produces a proportionally smaller absolute
+    // brightness shift from the darker baseline.
+    //
+    // TODO(dark-mode-parity): 0.14 is an estimated dark-mode value based on
+    // relative material shift from dark baseline. Jake — please do a dark-mode
+    // frame capture of `.buttonStyle(.glass)` pressed vs resting (same
+    // methodology as the light-mode measurement that produced 0.3) and update
+    // this constant. The _kAmbientBaseLightDark constant is defined below so
+    // it can be found and adjusted in one place.
+    //
+    // Only the *default* is scaled — any explicit caller value is honoured
+    // unchanged, giving full opt-out via `ambientBaseLight: 0.3`.
+    const double kAmbientBaseLightDark = 0.14;
+    final bool isDarkMode =
+        resolveGlassBrightness(context) == Brightness.dark;
+    final double effectiveAmbientBaseLight =
+        widget.ambientBaseLight == 0.3 && isDarkMode
+            ? kAmbientBaseLightDark
+            : widget.ambientBaseLight;
+
     final ambientOverlay = AnimatedBuilder(
       animation:
           Listenable.merge([_saturationAnimation, _isHovered, _isFocused]),
       builder: (context, _) {
-        double opacity = _saturationAnimation.value * widget.ambientBaseLight;
+        double opacity =
+            _saturationAnimation.value * effectiveAmbientBaseLight;
         if (_isFocused.value) {
           opacity += 0.15;
         } else if (_isHovered.value) {
