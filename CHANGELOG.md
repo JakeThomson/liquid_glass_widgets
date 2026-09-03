@@ -6,6 +6,8 @@
 
 - **The search surfaces press like native buttons (#272):** The collapsed search circle and trailing pill now press with `GlassButton`'s ~17 pt growth, tremor stretch and even held lift, and stay round as they inflate; the expanded field gently follows a lengthwise drag (saturating near ~7 pt of travel) and stretches a couple of points on a vertical one, measured against the Photos search field. `pressScale` on `searchable`/`minimizable` is now nullable — null (the new default) means the native press, a number stays a fixed factor — and a glow customised per widget or through the theme keeps the directional glow. `GlassButton.ambientBaseLight` is nullable too: null resolves to `0.3`, halved in dark mode where it read as a flash; an explicit value is honoured in both modes.
 
+- **`GlassScrollEdgeStyle.blur` stays on its own route (#278):** The progressive blur is a backdrop filter, and left unclipped a backdrop filter frosts everything beneath it up to the nearest ancestor clip — under a Cupertino pop that included the route being revealed, which showed the outgoing screen's top and bottom bands until the transition settled. The shader path lost its `ClipRect` when the region moved to paint time in 0.30.1; it is back, so a `ProgressiveBlur` now frosts nothing outside its own rectangle wherever it sits.
+
 ## Internal
 
 - **Added `THIRD_PARTY_NOTICES` with complete MIT license texts (#273):** The published pub.dev archive now includes the full MIT copyright notices for both the vendored `liquid_glass_renderer` (whynotmake.it, 2025) and the adapted `motor` spring utilities (whynotmake.it, 2024). The README Dependencies section has been updated to accurately describe the vendored code and link to the notices file.
