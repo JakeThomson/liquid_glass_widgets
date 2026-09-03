@@ -87,7 +87,13 @@ class GeometryTransformTrackingLayer extends OffsetLayer {
 
   @override
   void addToScene(ui.SceneBuilder builder) {
-    final currentTransform = renderObject?.getTransformTo(null);
+    if (renderObject == null || !renderObject!.attached) return;
+    Matrix4? currentTransform;
+    try {
+      currentTransform = renderObject!.getTransformTo(null);
+    } catch (_) {
+      return;
+    }
     if (!MatrixUtils.matrixEquals(currentTransform, _lastTransform)) {
       // Don't trigger onTransformChanged on the very first frame (when _lastTransform is null).
       // The render object just painted itself, so it is already up to date. Triggering it

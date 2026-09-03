@@ -912,4 +912,40 @@ void main() {
       expect(adapter.lastFramesMeasured, GlassQualityAdapter.windowSize);
     });
   });
+
+  group('percentile math and Quickselect', () {
+    test('single element returns itself', () {
+      expect(GlassQualityAdapter.percentileForTesting([42], 50), 42);
+      expect(GlassQualityAdapter.percentileForTesting([42], 0), 42);
+      expect(GlassQualityAdapter.percentileForTesting([42], 100), 42);
+    });
+
+    test('matches full sort across all percentiles', () {
+      final samples = [28, 12, 45, 1, 99, 34, 56, 78, 12, 90, 3, 17, 65, 88, 23];
+      final sorted = List<int>.from(samples)..sort();
+
+      for (int p = 0; p <= 100; p += 5) {
+        final rank = ((p / 100.0) * samples.length).ceil();
+        final expectedIndex = (rank - 1).clamp(0, samples.length - 1);
+        final expected = sorted[expectedIndex];
+        final actual = GlassQualityAdapter.percentileForTesting(samples, p);
+        expect(actual, expected, reason: 'failed at percentile $p');
+      }
+    });
+
+    test('quickSelect handles already sorted, reverse, and identical arrays', () {
+      final sorted = [1, 2, 3, 4, 5, 6, 7];
+      expect(GlassQualityAdapter.quickSelectForTesting(List.of(sorted), 0), 1);
+      expect(GlassQualityAdapter.quickSelectForTesting(List.of(sorted), 3), 4);
+      expect(GlassQualityAdapter.quickSelectForTesting(List.of(sorted), 6), 7);
+
+      final reverse = [7, 6, 5, 4, 3, 2, 1];
+      expect(GlassQualityAdapter.quickSelectForTesting(List.of(reverse), 0), 1);
+      expect(GlassQualityAdapter.quickSelectForTesting(List.of(reverse), 3), 4);
+      expect(GlassQualityAdapter.quickSelectForTesting(List.of(reverse), 6), 7);
+
+      final identical = [5, 5, 5, 5, 5];
+      expect(GlassQualityAdapter.quickSelectForTesting(List.of(identical), 2), 5);
+    });
+  });
 }
