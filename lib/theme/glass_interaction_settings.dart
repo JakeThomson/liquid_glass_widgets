@@ -115,8 +115,9 @@ class GlassInteractionSettings {
   ///
   /// Controls intensity, squash, translation damping, and bounciness.
   ///
-  /// When `null`, each widget uses its own default
-  /// (`AnchorStretchSettings()` with iOS 26 defaults).
+  /// When `null`, [GlassButton] uses a native tremor default — very gentle
+  /// (intensity 0.1, squash 0.1, no bounce), matching the ≤5% elongation
+  /// measured on iOS 26 glass. Other widgets fall back to their own defaults.
   final AnchorStretchSettings? anchorStretchSettings;
 
   /// Creates a copy with overridden values.

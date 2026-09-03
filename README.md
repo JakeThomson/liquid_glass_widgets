@@ -140,7 +140,7 @@ Both parameters are optional — omit them and the library uses sensible default
 - **Real frosted glass** — native two-pass Gaussian blur + shader refraction on Impeller; lightweight shader on Skia/Web
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
 - **Adaptive quality** *(experimental)* — `GlassAdaptiveScope` benchmarks the device at startup and adjusts quality in real time: `minimal` on slow hardware, `standard` on mid-range, `premium` on fast devices. Degrades on thermal throttle, recovers when cool
-- **Zero external dependencies** — pure Flutter SDK with custom GLSL shaders, no third-party runtime dependencies
+- **Zero external `pubspec.yaml` dependencies** — pure Flutter SDK with custom GLSL shaders; rendering pipeline and spring utilities built on vendored open-source work (see [Dependencies](#dependencies))
 - **One-line setup** — `LiquidGlassWidgets.wrap(child: myApp)` handles accessibility bridging, adaptive quality, and global theming; use `GlassScaffold` per screen for automatic backdrop isolation, z-ordering, edge fading, and status bar styling
 - **Content-aware brightness** — glass bars automatically flip between light and dark icons/labels based on the content scrolling behind them. One flag on `GlassScaffold`, matches iOS 26 behaviour
 - **Gyroscope lighting** — `GlassMotionScope` drives specular highlights from any `Stream<double>`
@@ -939,9 +939,9 @@ If your deep-fade edge looks like a dark wash, set `backgroundColor` explicitly.
 
 ## Dependencies
 
-**Zero third-party runtime dependencies.** Built exclusively on the pure Flutter SDK (`flutter: sdk: flutter`).
+**Zero third-party `pubspec.yaml` dependencies.** Built exclusively on the pure Flutter SDK (`flutter: sdk: flutter`) with no additional pub packages at runtime.
 
-The glass rendering pipeline builds on the open-source work of [whynotmake-it](https://github.com/whynotmake-it). Their [`liquid_glass_renderer`](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) (MIT) has been vendored and extended with bug fixes, performance improvements, and shader optimisations.
+The glass rendering pipeline builds on the open-source work of [whynotmake-it](https://github.com/whynotmake-it). Their [`liquid_glass_renderer`](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) (MIT) has been vendored and extended with bug fixes, performance improvements, and shader optimisations. Spring animation utilities are adapted from their [`motor`](https://github.com/whynotmake-it/rivership/tree/main/packages/motor) package (MIT). Complete license texts for both are in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES).
 
 
 ## Showcase

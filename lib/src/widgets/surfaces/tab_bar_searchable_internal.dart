@@ -187,7 +187,7 @@ class SearchableTabIndicator extends StatefulWidget {
   final double interactionGlowSpreadRadius;
   final double interactionGlowOpacity;
   final bool enableBackgroundAnimation;
-  final double backgroundPressScale;
+  final double? backgroundPressScale;
 
   /// When true (bar over an iOS PlatformView): the bar background renders via
   /// live BackdropFilter, and the premium indicator refracts the bar's own icon
@@ -244,8 +244,10 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
           final currentShape = isSquare ? const LiquidOval() : _barShape;
 
           return LiquidStretch(
+            // A null pressScale means native pills; the bar surface itself
+            // keeps its subtle default factor.
             interactionScale: widget.enableBackgroundAnimation
-                ? widget.backgroundPressScale
+                ? (widget.backgroundPressScale ?? 1.04)
                 : 1.0,
             stretch: 0.5,
             resistance: 0.01,
@@ -311,7 +313,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
           offset: Offset(swayValue, 0),
           child: LiquidStretch(
             interactionScale: widget.enableBackgroundAnimation
-                ? widget.backgroundPressScale
+                ? (widget.backgroundPressScale ?? 1.04)
                 : 1.0,
             stretch:
                 0.0, // stretch disabled on platformViewBackdrop to prevent BackdropFilter pixel-snap jitter
@@ -727,6 +729,12 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
 /// The morphing search pill. Collapses to a square icon; expands to a
 /// real [TextField] with autofocus. Lives inside the parent
 /// [AdaptiveLiquidGlassLayer] so its glass rendering blends with the tab pill.
+/// Whether a surface presses with the native button sizing: background
+/// animation on and no customised press scale — null means native, a number
+/// a fixed factor, as on [GlassButton.interactionScale].
+bool _pressesNatively(bool enableBackgroundAnimation, double? pressScale) =>
+    enableBackgroundAnimation && pressScale == null;
+
 class SearchPill extends StatefulWidget {
   const SearchPill({
     super.key,
@@ -738,6 +746,7 @@ class SearchPill extends StatefulWidget {
     required this.backgroundPressScale,
     this.onFocusChanged,
     this.interactionGlowColor,
+    this.nativePressHighlight = false,
     this.interactionGlowRadius = 1.5,
     this.interactionGlowBlurRadius = 0,
     this.interactionGlowSpreadRadius = 0,
@@ -751,7 +760,7 @@ class SearchPill extends StatefulWidget {
   final double barBorderRadius;
   final GlassQuality quality;
   final bool enableBackgroundAnimation;
-  final double backgroundPressScale;
+  final double? backgroundPressScale;
   final Color? iconColor;
 
   /// Render the pill's glass via the live BackdropFilter path so it composites
@@ -764,6 +773,11 @@ class SearchPill extends StatefulWidget {
 
   /// The color of the directional glow effect when interacting with the pill.
   final Color? interactionGlowColor;
+
+  /// Whether a default-configured press renders the even GlassButton lift
+  /// instead of the directional glow — set by the layout when the app has
+  /// not customised the glow colour.
+  final bool nativePressHighlight;
 
   /// The radius spread of the directional glow effect when interacting with the pill.
   final double interactionGlowRadius;
@@ -880,6 +894,18 @@ class SearchPillState extends State<SearchPill> {
     );
   }
 
+  /// Whether the collapsed circle presses with the native button sizing.
+  bool get _nativePress => _pressesNatively(
+      widget.enableBackgroundAnimation, widget.backgroundPressScale);
+
+  /// The pressed highlight: a native press brightens the whole surface and
+  /// holds it wherever the finger goes, so the default renders the even lift
+  /// a [GlassButton] has; a customised glow colour keeps the directional glow.
+  Widget _pressHighlight({required Widget child}) =>
+      _nativePress && widget.nativePressHighlight
+          ? PressAmbientLift(child: child)
+          : _wrapWithGlow(child: child);
+
   /// Builds a standalone shadow widget for the search pill.
   ///
   /// Rendered as a SIBLING in the parent Stack, BELOW the glass pill,
@@ -943,19 +969,27 @@ class SearchPillState extends State<SearchPill> {
 
         if (!widget.isActive || w < kExpandThreshold) {
           final isOval = (w - constraints.maxHeight).abs() < 2;
-          final currentShape = isOval
-              ? (widget.platformViewBackdrop
-                  ? LiquidRoundedRectangle(borderRadius: w / 2)
-                  : LiquidRoundedRectangle(borderRadius: w / 2))
-              : shape;
+          // LiquidOval, not a rounded rectangle at w / 2: the press growth
+          // scales the painted rect, and a layout-time radius squares the
+          // corners off as it grows. An oval's radius rides the rect.
+          final currentShape = isOval ? const LiquidOval() : shape;
 
           return Stack(
             fit: StackFit.expand,
             children: [
               LiquidStretch(
                 interactionScale: widget.enableBackgroundAnimation
-                    ? widget.backgroundPressScale
+                    ? (widget.backgroundPressScale ?? 1.0)
                     : 1.0,
+                // The collapsed circle presses like a native button (#272):
+                // a null pressScale resolves to the ~17 pt growth with the
+                // tremor stretch on top; a number stays a fixed factor, as
+                // on GlassButton.
+                pressGrowth:
+                    _nativePress ? LiquidStretch.nativePressGrowth : null,
+                anchorStretchSettings: _nativePress
+                    ? AnchorStretchSettings.nativeTremor
+                    : const AnchorStretchSettings(),
                 stretch: widget.platformViewBackdrop ? 0.0 : 0.5,
                 resistance: 0.01,
                 anchorStretch:
@@ -973,7 +1007,7 @@ class SearchPillState extends State<SearchPill> {
                     // quality passes through unchanged here.
                     quality: widget.quality,
                     platformViewBackdrop: widget.platformViewBackdrop,
-                    child: _wrapWithGlow(
+                    child: _pressHighlight(
                       child: Center(
                         // IconTheme ensures custom searchIcon widgets inherit
                         // the resolved color. The fallback Icon also sets
@@ -1007,14 +1041,28 @@ class SearchPillState extends State<SearchPill> {
         // iOS 26: wrapped in GlassGlowLayer so GlassGlow inside can report
         // touch position and paint a soft directional highlight on the surface.
         // iOS 26: directional glow on press (GlassGlowLayer + GlassGlow).
-        // No scale animation here — the pill is spring-positioned alongside
-        // the dismiss button so any visual overflow causes overlap.
-        return LiquidStretch(
+        // The expanded field answers a drag per axis, measured off Photos:
+        // along its length a gentle jelly-follow that saturates near ~7 pt
+        // of travel however far the finger goes (stretch 0.22 / resistance
+        // 0.03), necking into the separate dismiss button; vertically no
+        // follow at all, just a couple of points of stretch from the far
+        // edge. The vertical part is a second, axis-constrained
+        // [LiquidStretch] because the jelly normalises each axis by its own
+        // dimension — sized off the field's height, its vertical response
+        // would dwarf the native one. A customised pressScale or a platform-
+        // view backdrop keeps the still field, like every stretch on these
+        // surfaces.
+        final fieldStretches = _nativePress && !widget.platformViewBackdrop;
+        final Widget field = LiquidStretch(
+          // The field keeps its subtle press inflation on a plain hold; only
+          // the collapsed circles trade the factor for the native growth.
           interactionScale: widget.enableBackgroundAnimation
-              ? widget.backgroundPressScale
+              ? (widget.backgroundPressScale ?? 1.04)
               : 1.0,
-          stretch: 0.0,
-          resistance: 0.08,
+          stretch: fieldStretches ? 0.22 : 0.0,
+          resistance: fieldStretches ? 0.03 : 0.08,
+          allowPositiveY: fieldStretches ? false : null,
+          allowNegativeY: fieldStretches ? false : null,
           anchorStretch: false, // Search pill uses jelly-follow, not anchored
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -1029,6 +1077,14 @@ class SearchPillState extends State<SearchPill> {
             ),
           ), // GestureDetector
         ); // LiquidStretch
+        return LiquidStretch(
+          interactionScale: 1.0, // the scale lives on the inner layer
+          stretch: fieldStretches ? 0.09 : 0.0,
+          resistance: 0.03,
+          axis: Axis.vertical,
+          anchorStretch: false,
+          child: field,
+        );
       },
     );
   }
@@ -1171,6 +1227,7 @@ class MinimizableTrailingPill extends StatelessWidget {
     required this.enableBackgroundAnimation,
     required this.backgroundPressScale,
     this.interactionGlowColor,
+    this.nativePressHighlight = false,
     this.interactionGlowRadius = 1.5,
     this.interactionGlowBlurRadius = 0,
     this.interactionGlowSpreadRadius = 0,
@@ -1184,10 +1241,13 @@ class MinimizableTrailingPill extends StatelessWidget {
   final double barBorderRadius;
   final GlassQuality quality;
   final bool enableBackgroundAnimation;
-  final double backgroundPressScale;
+  final double? backgroundPressScale;
   final Color? iconColor;
   final bool platformViewBackdrop;
   final Color? interactionGlowColor;
+
+  /// See [SearchPill.nativePressHighlight].
+  final bool nativePressHighlight;
   final double interactionGlowRadius;
   final double interactionGlowBlurRadius;
   final double interactionGlowSpreadRadius;
@@ -1224,12 +1284,25 @@ class MinimizableTrailingPill extends StatelessWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final isOval = (w - constraints.maxHeight).abs() < 2;
-        final currentShape =
-            isOval ? LiquidRoundedRectangle(borderRadius: w / 2) : shape;
+        // LiquidOval so the corners ride the press growth — see SearchPill.
+        final currentShape = isOval ? const LiquidOval() : shape;
 
+        final nativePress =
+            _pressesNatively(enableBackgroundAnimation, backgroundPressScale);
+        final content = Center(
+          child: IconTheme(
+            data: IconThemeData(color: resolvedIconColor),
+            child: icon ?? const SizedBox.shrink(),
+          ),
+        );
         return LiquidStretch(
           interactionScale:
-              enableBackgroundAnimation ? backgroundPressScale : 1.0,
+              enableBackgroundAnimation ? (backgroundPressScale ?? 1.0) : 1.0,
+          // Presses like a native button (#272), as the search circle does.
+          pressGrowth: nativePress ? LiquidStretch.nativePressGrowth : null,
+          anchorStretchSettings: nativePress
+              ? AnchorStretchSettings.nativeTremor
+              : const AnchorStretchSettings(),
           stretch: platformViewBackdrop ? 0.0 : 0.5,
           resistance: 0.01,
           anchorStretch: true,
@@ -1241,18 +1314,73 @@ class MinimizableTrailingPill extends StatelessWidget {
               shape: currentShape,
               quality: quality,
               platformViewBackdrop: platformViewBackdrop,
-              child: _wrapWithGlow(
-                child: Center(
-                  child: IconTheme(
-                    data: IconThemeData(color: resolvedIconColor),
-                    child: icon ?? const SizedBox.shrink(),
-                  ),
-                ),
-              ),
+              child: nativePress && nativePressHighlight
+                  ? PressAmbientLift(child: content)
+                  : _wrapWithGlow(child: content),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// The even, whole-surface brightening a pressed native button holds for as
+/// long as the finger is down, wherever it goes — [GlassButton]'s
+/// `ambientBaseLight` lift for circles that are not GlassButtons (the
+/// collapsed search and trailing pills). Drawn under [child] so the glyph
+/// stays crisp.
+class PressAmbientLift extends StatefulWidget {
+  /// Creates the lift around the pressed content.
+  const PressAmbientLift({required this.child, super.key});
+
+  /// The pill content the lift sits beneath.
+  final Widget child;
+
+  @override
+  State<PressAmbientLift> createState() => _PressAmbientLiftState();
+}
+
+class _PressAmbientLiftState extends State<PressAmbientLift>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    // Ramps over the press inflation, collapses on release, as the native
+    // highlight does — the timings GlassButton uses.
+    duration: GlassDefaults.ambientLiftDuration,
+    reverseDuration: GlassDefaults.ambientLiftReverseDuration,
+    vsync: this,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // GlassButton's ambientBaseLight defaults: measured against a native
+    // light-mode press, halved in dark mode.
+    final target = GlassTheme.brightnessOf(context) == Brightness.dark
+        ? GlassDefaults.ambientBaseLightDark
+        : GlassDefaults.ambientBaseLight;
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _controller.forward(),
+      onPointerUp: (_) => _controller.reverse(),
+      onPointerCancel: (_) => _controller.reverse(),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FadeTransition(
+            opacity: _controller.drive(Tween(begin: 0.0, end: target)),
+            child: const IgnorePointer(
+              child: ColoredBox(color: Color(0xFFFFFFFF)),
+            ),
+          ),
+          widget.child,
+        ],
+      ),
     );
   }
 }

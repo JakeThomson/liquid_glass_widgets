@@ -67,6 +67,16 @@ class AnchorStretchSettings {
   ///
   /// Defaults to `0.15` — a subtle overshoot matching native iOS 26 buttons.
   final double bounciness;
+
+  /// The stretch a native iOS 26 button shows on a long drag: no more than
+  /// ~5 % of elongation with matching squash, a few points of travel, and no
+  /// rebound of its own — the release bounce lives in the press scale.
+  static const AnchorStretchSettings nativeTremor = AnchorStretchSettings(
+    intensity: 0.1,
+    squashFactor: 0.1,
+    translationDamping: 0.1,
+    bounciness: 0.0,
+  );
 }
 
 /// A widget that provides a squash and stretch effect to its child based on
@@ -113,11 +123,17 @@ class LiquidStretch extends StatelessWidget {
   ///
   /// When set, the press scale is derived from the widget's size at layout
   /// and [interactionScale] is ignored. A native iOS 26 button grows by about
-  /// the same number of points whatever its size — measured at ~17 pt, so a
-  /// 56 pt circle inflates ~1.3× and a 132 pt pill ~1.13×.
+  /// the same number of points whatever its size — measured at ~17 pt
+  /// ([nativePressGrowth]), so a 56 pt circle inflates ~1.3× and a 132 pt
+  /// pill ~1.13×.
   ///
   /// Defaults to null (use [interactionScale]).
   final double? pressGrowth;
+
+  /// The [pressGrowth] a native iOS 26 button shows: ~17 pt along its longest
+  /// side, measured at 120 fps on a 56 pt circle (1.3×) and a 132 pt pill
+  /// (1.13×).
+  static const double nativePressGrowth = 17.0;
 
   /// The factor to multiply the drag offset by to determine the stretch
   /// amount in pixels.

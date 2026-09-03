@@ -13,6 +13,27 @@ import 'package:flutter/widgets.dart';
 /// strands the shader's shape at the size and position the surface had when the
 /// scale began. The two are indistinguishable from the matrix, so the widget
 /// applying the scale says which it is.
+///
+/// ## Consumer contract — ORing ancestor declarations
+///
+/// [of] resolves only the *nearest* scope in the tree. If you are adding a
+/// new scope in a widget that may itself sit inside another scope (e.g.
+/// [LiquidStretch] inside a swiped sheet), you **must** carry the ancestor's
+/// value through by ORing it into your own `selfScaled`:
+///
+/// ```dart
+/// LiquidGlassSelfScaleScope(
+///   selfScaled: LiquidGlassSelfScaleScope.of(context) || myOwnCondition,
+///   child: ...,
+/// )
+/// ```
+///
+/// Failing to do this shadows the ancestor's declaration — any glass widget
+/// below will lose its exemption while the ancestor is self-scaling, and the
+/// premium refraction will freeze during that window. Widgets that are
+/// guaranteed to be the outermost scope (e.g. [GlassMaterializeEffect] and
+/// the sheet morph presenter) may set `selfScaled` directly without ORing,
+/// since they are never nested inside another scope.
 class LiquidGlassSelfScaleScope extends InheritedWidget {
   /// Declares that an ancestor scale over [child] does not move its backdrop.
   const LiquidGlassSelfScaleScope({
