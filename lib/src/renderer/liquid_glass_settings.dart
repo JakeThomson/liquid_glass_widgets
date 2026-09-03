@@ -162,6 +162,29 @@ class LiquidGlassSettings {
   /// The color tint of the glass effect.
   ///
   /// Opacity defines the intensity of the tint.
+  ///
+  /// **How the color is applied (Standard & Premium quality):**
+  /// The shader uses a luminance-preserving tint (`applyGlassColorLW`): it takes
+  /// your color's hue but holds the background's perceived brightness, preventing
+  /// the glass from darkening or muddying the scene behind it. This means the
+  /// rendered color will differ from the raw [Color] value — the shift is
+  /// intentional optical glass behaviour, not a bug.
+  ///
+  /// **If you need a pixel-accurate, unmodified color overlay** with no luminance
+  /// normalization or shader processing, use [GlassQuality.minimal] with [blur]
+  /// set to `0`. That tier renders a plain [DecoratedBox] clipped to the glass
+  /// shape — exactly the color you pass, with no optical adjustments:
+  ///
+  /// ```dart
+  /// AdaptiveGlass(
+  ///   quality: GlassQuality.minimal,
+  ///   settings: LiquidGlassSettings(
+  ///     blur: 0,
+  ///     glassColor: Color(0xD9C3E0F5),
+  ///   ),
+  ///   child: ...,
+  /// )
+  /// ```
   final Color glassColor;
 
   /// The effective glass color taking visibility into account.
@@ -176,11 +199,20 @@ class LiquidGlassSettings {
   /// The effective thickness taking visibility into account.
   double get effectiveThickness => thickness * visibility;
 
-  /// The blur of the glass effect.
+  /// The blur (frost) radius of the glass effect.
   ///
   /// Higher values create a more frosted appearance.
   ///
   /// Defaults to 0.
+  ///
+  /// **`blur: 0` means clear optical glass, not a flat color fill.**
+  /// At `blur: 0` the blur pass is skipped, but the surface retains its glass
+  /// characteristics — specular rim highlight, Fresnel edge brightening, and
+  /// sub-pixel edge refraction. This matches iOS 26 clear glass where zero frost
+  /// still looks like a crystal pane, not a plain translucent container.
+  ///
+  /// To get a completely flat, shader-free color overlay (no optical effects at
+  /// all), use [GlassQuality.minimal] instead of relying on `blur: 0`.
   final double blur;
 
   /// The effective blur taking visibility into account.
