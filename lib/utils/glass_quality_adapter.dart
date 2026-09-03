@@ -751,7 +751,7 @@ class GlassQualityAdapter {
   // ── Percentile math ───────────────────────────────────────────────────────
 
   /// Computes the [percentile]-th percentile (0–100) from a list of integer
-  /// values. The list is not modified; a sorted copy is made internally.
+  /// values. The list is not modified.
   ///
   /// Uses the "nearest rank" definition — appropriate for frame timing data
   /// where we care about real observed samples, not interpolated values.
@@ -761,23 +761,63 @@ class GlassQualityAdapter {
     assert(data.isNotEmpty);
     assert(percentile >= 0 && percentile <= 100);
     if (data.length == 1) return data.first;
-    final sorted = List<int>.from(data)..sort();
-    // Nearest-rank formula: ceil(p/100 * n) − 1 (0-indexed)
-    final rank = ((percentile / 100.0) * sorted.length).ceil();
-    final index = (rank - 1).clamp(0, sorted.length - 1);
-    return sorted[index];
+    final rank = ((percentile / 100.0) * data.length).ceil();
+    final index = (rank - 1).clamp(0, data.length - 1);
+    final copy = List<int>.from(data, growable: false);
+    return _quickSelect(copy, index);
   }
 
-  /// In-place variant of [_percentile] — sorts [data] directly, avoiding a
-  /// heap allocation. Used by Phase 3 runtime with a pre-allocated sort buffer
+  /// In-place variant of [_percentile] — runs Quickselect on [data] directly in
+  /// O(N) average time, avoiding heap allocations and O(N log N) sorting.
+  /// Used by Phase 3 runtime with a pre-allocated sort buffer
   /// to eliminate GC pressure on the frame timing callback path.
   static int _percentileInPlace(List<int> data, int percentile) {
     assert(data.isNotEmpty);
     assert(percentile >= 0 && percentile <= 100);
     if (data.length == 1) return data.first;
-    data.sort();
     final rank = ((percentile / 100.0) * data.length).ceil();
     final index = (rank - 1).clamp(0, data.length - 1);
-    return data[index];
+    return _quickSelect(data, index);
   }
+
+  /// O(N) Quickselect algorithm to find the element that would be at [k] if sorted.
+  static int _quickSelect(List<int> a, int k) {
+    int left = 0, right = a.length - 1;
+    while (left < right) {
+      final pivot = a[(left + right) >> 1];
+      int i = left, j = right;
+      while (i <= j) {
+        while (a[i] < pivot) {
+          i++;
+        }
+        while (a[j] > pivot) {
+          j--;
+        }
+        if (i <= j) {
+          final tmp = a[i];
+          a[i] = a[j];
+          a[j] = tmp;
+          i++;
+          j--;
+        }
+      }
+      if (k <= j) {
+        right = j;
+      } else if (k >= i) {
+        left = i;
+      } else {
+        break;
+      }
+    }
+    return a[k];
+  }
+
+  /// Visible for testing only: computes percentile using Quickselect.
+  @visibleForTesting
+  static int percentileForTesting(List<int> data, int percentile) =>
+      _percentile(data, percentile);
+
+  /// Visible for testing only: finds k-th smallest element using Quickselect.
+  @visibleForTesting
+  static int quickSelectForTesting(List<int> a, int k) => _quickSelect(a, k);
 }
