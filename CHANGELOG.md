@@ -6,6 +6,8 @@
 
 - **The search surfaces press like native buttons (#272):** The collapsed search circle and trailing pill now press with `GlassButton`'s ~17 pt growth, tremor stretch and even held lift, and stay round as they inflate; the expanded field gently follows a lengthwise drag (saturating near ~7 pt of travel) and stretches a couple of points on a vertical one, measured against the Photos search field. `pressScale` on `searchable`/`minimizable` is now nullable — null (the new default) means the native press, a number stays a fixed factor — and a glow customised per widget or through the theme keeps the directional glow. `GlassButton.ambientBaseLight` is nullable too: null resolves to `0.3`, halved in dark mode where it read as a flash; an explicit value is honoured in both modes.
 
+- **Minimized bar keeps the selected tab's icon colour (#279):** On `GlassTabBar.minimizable`, the minimized pill drew the selected tab's icon in `unselectedIconColor`, so a custom `selectedIconColor` dropped out on minimize and returned on expand. The pill now uses `selectedIconColor`, as the native bar does — the tab is still selected, only the bar has shrunk. `GlassTabBar.searchable` is unchanged: its collapsed pill shows the tab search was opened from, which is no longer the selected one.
+
 ## Internal
 
 - **Added `THIRD_PARTY_NOTICES` with complete MIT license texts (#273):** The published pub.dev archive now includes the full MIT copyright notices for both the vendored `liquid_glass_renderer` (whynotmake.it, 2025) and the adapted `motor` spring utilities (whynotmake.it, 2024). The README Dependencies section has been updated to accurately describe the vendored code and link to the notices file.
