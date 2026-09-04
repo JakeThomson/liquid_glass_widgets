@@ -1,6 +1,6 @@
 # Roadmap: 1.x → 2.0
 
-> Last updated: 2026-08-28 (reflecting 1.2.0 in-progress state)
+> Last updated: 2026-09-03 (reflecting 1.3.0 state)
 
 This document tracks planned and future work for `liquid_glass_widgets` post-1.0.
 The guiding principle remains: **fewer, better widgets that map 1:1 to real iOS 26 components**.
@@ -106,6 +106,42 @@ Ideas under consideration. None committed.
 - [ ] **Scroll-driven glass materialisation** — app bar surface transitions from
   transparent to frosted on scroll. Closely related to the scroll edge fidelity
   fix above; the two may ship together when `GlassScrollEdgeStyle.blur` lands.
+- [ ] **Shader-Level Touch Specular (`uTouchPosition` uniform, target 1.4.0)** —
+  `GlassButton`'s touch-tracking specular sheen (shipped in 1.3.0) is implemented
+  as a 2D `Canvas.drawCircle` painted with `BlendMode.plus` and clipped by
+  `ShapeBorderClipper`. This is a good approximation but not physically correct:
+  the specular term should be computed *inside* the fragment shader as a bias on
+  the SDF surface normal, not as an additive overlay on top.
+
+  The correct implementation passes the pointer coordinate to the glass fragment
+  shader as a new uniform:
+  ```glsl
+  uniform vec2  uTouchPosition; // Layer-local logical px; (-1,-1) when inactive
+  uniform float uTouchActive;   // 0.0 at rest → 1.0 while finger down (spring)
+
+  // Bias the specular light direction toward the touch point
+  vec2  touchOff = (uTouchPosition / uLayerSize) * 2.0 - 1.0;
+  vec3  biasedLight = normalize(uLightDir + vec3(touchOff * 0.4, 0.0));
+  float spec = pow(max(dot(surfaceNormal, biasedLight), 0.0), shininess)
+             * uTouchActive;
+  ```
+  Benefits over the 1.3.0 overlay approach:
+  - Geometrically impossible to escape the glass SDF boundary (no clipper needed).
+  - Zero GPU cost at rest (`uTouchActive = 0.0` kills the `spec` term entirely).
+  - Physically correct: the specular is part of the glass reflection, not painted
+    over it.
+  - Enables a clean, deprecation-friendly API: `glowRadius`/`glowBlurRadius`/
+    `glowSpreadRadius` can be removed in a 2.0 breaking change, replaced by the
+    declarative `interactionBehavior` enum analogous to SwiftUI's `.interactive()`.
+  - **Natural geometry adaptation across aspect ratios:** Because the SDF surface
+    normal inherently reflects the widget's exact shape and corner radii, the specular
+    highlight naturally conforms to capsule/pill geometries (concentrating on curved
+    caps while moderating across flat label spans), eliminating the need for
+    shape-specific radius tuning between circular and pill buttons.
+
+  **Scope:** Requires the vendored `liquid_glass_renderer` shaders to accept two new
+  uniforms, pointer-event → shader UV coordinate mapping per `GlassGlowLayer`, and
+  Skia/Web fallback (the existing `GlassGlow` overlay can remain the Skia path).
 - [ ] **`GlassAppBar` Phase 3 compact search icon** — when `GlassLargeTitle.searchBar`
   and `GlassAppBar.largeTitleController` are in use and `searchBarCollapseProgress == 1.0`,
   show a compact search affordance that re-expands on tap. Blocked by: `GlassAppBar`
