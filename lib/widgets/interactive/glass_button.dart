@@ -150,7 +150,10 @@ class GlassButton extends StatefulWidget {
     this.stretchHitTestBehavior = HitTestBehavior.opaque,
     // GlassGlow properties
     this.glowColor,
-    this.glowRadius = 0.0,
+    this.glowRadius,
+    // null → native iOS 26 shape-clipped specular (wide 1.6 radius, sigma-16 blur, soft sheen).
+    // 0.0  → opt out; pure ambient lift only.
+    // > 0  → custom explicit radius.
     this.glowBlurRadius,
     this.glowSpreadRadius,
     this.glowOpacity,
@@ -209,7 +212,10 @@ class GlassButton extends StatefulWidget {
     this.stretchHitTestBehavior = HitTestBehavior.opaque,
     // GlassGlow properties
     this.glowColor,
-    this.glowRadius = 0.0,
+    this.glowRadius,
+    // null → native iOS 26 shape-clipped specular (wide 1.6 radius, sigma-16 blur, soft sheen).
+    // 0.0  → opt out; pure ambient lift only.
+    // > 0  → custom explicit radius.
     this.glowBlurRadius,
     this.glowSpreadRadius,
     this.glowOpacity,
@@ -438,17 +444,31 @@ class GlassButton extends StatefulWidget {
   /// Defaults to null (uses theme).
   final Color? glowColor;
 
-  /// The radius of the directional glow relative to the button's shortest
-  /// side, or `0` for none.
+  /// Radius of the directional specular sheen as a fraction of the button's
+  /// shortest side.
   ///
-  /// - 0.0 (default): No directional glow — the press brightens the whole
-  ///   surface evenly through [ambientBaseLight], as iOS 26 does
-  /// - 1.0: A glow the size of the shortest dimension that follows the finger,
-  ///   the way bars light up
-  /// - 2.0: Twice the shortest dimension, more diffuse
+  /// This controls the shape-clipped, touch-tracking highlight that follows
+  /// the finger across the glass surface — iOS 26's `.glassEffect(.interactive())`
+  /// behaviour applied at the button level.
   ///
-  /// Defaults to 0.0.
-  final double glowRadius;
+  /// - `null` (default): Native iOS 26 mode. Resolves to a wide, calibrated
+  ///   1.6 radius with a soft sigma-16 Gaussian blur and subtle specular alpha,
+  ///   clipped strictly to [shape] via [ShapeBorderClipper]. The light washes
+  ///   smoothly across the button surface without producing a concentrated,
+  ///   pointy hotspot, matching Apple's touch-reactive glass reflection.
+  /// - `0.0`: Opt out. No directional sheen — the press brightens the whole
+  ///   surface evenly through [ambientBaseLight] only.
+  /// - `> 0.0`: Custom explicit radius. The glow is still clipped to [shape]
+  ///   but uses the supplied radius instead of the native default.
+  ///
+  /// **Note:** The specular sheen is geometrically bounded by the button's
+  /// [shape] and can never escape the glass boundary. For grouped buttons,
+  /// use [GlassButtonGroup] — the whole platter shares one glow layer, so
+  /// dragging across buttons sweeps the highlight seamlessly from button to
+  /// button, matching iOS 26 `GlassEffectContainer` behaviour.
+  ///
+  /// Defaults to `null` (native iOS 26 specular).
+  final double? glowRadius;
 
   /// Additional Gaussian blur sigma applied to the glow halo.
   ///
@@ -719,13 +739,16 @@ class _GlassButtonState extends State<GlassButton>
 
     final resolvedGlowColors =
         GlassThemeData.of(context).glowColorsFor(context);
+    final isNativeGlow = widget.glowRadius == null;
+    final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
+    // Native specular sheen is subtle (~10% alpha in light mode, ~7% in dark mode)
+    // to provide a delicate specular highlight on top of ambientBaseLight
+    // without creating a dense, opaque white fog circle.
+    final nativeGlowColor =
+        isDark ? const Color(0x12FFFFFF) : const Color(0x1AFFFFFF);
+
     final effectiveGlowColor = widget.glowColor ??
-        resolvedGlowColors.primary ??
-        CupertinoTheme.of(context)
-            .textTheme
-            .textStyle
-            .color
-            ?.withValues(alpha: 0.24) ??
+        (isNativeGlow ? nativeGlowColor : resolvedGlowColors.primary) ??
         CupertinoColors.white.withValues(alpha: 0.24);
     final effectiveGlowBlurRadius =
         widget.glowBlurRadius ?? resolvedGlowColors.glowBlurRadius;
@@ -806,11 +829,29 @@ class _GlassButtonState extends State<GlassButton>
       ],
     );
 
-    // This part is static relative to the glass saturation pulse
+    // Resolve effective glow radius:
+    //   null → native iOS 26 calibrated 1.6 (wide spread spanning across the
+    //          button surface, giving a smooth, subtle gradient rather than a
+    //          concentrated flashlight hotspot; clipped safely by ShapeBorderClipper).
+    //   0.0  → explicitly disabled.
+    //   > 0  → caller's explicit override.
+    final effectiveGlowRadius = widget.glowRadius ?? 1.6;
+
+    // Resolve effective blur: null falls through to 16.0 for a creamy organic falloff.
+    final nativeGlowBlurRadius =
+        widget.glowRadius == null ? 16.0 : effectiveGlowBlurRadius;
+
+    // This part is static relative to the glass saturation pulse.
+    // clipper is passed directly to GlassGlow (not to AdaptiveGlass) so the
+    // spotlight is bounded by the button's shape geometry. This is the same
+    // pattern GlassTabBar uses — the 2D radial gradient is clipped inside
+    // GlassGlowLayer.paint(), leaving the Impeller shader and its texture
+    // headroom completely untouched.
     final glowContent = GlassGlow(
+      clipper: ShapeBorderClipper(shape: widget.shape),
       glowColor: effectiveGlowColor,
-      glowRadius: widget.glowRadius,
-      glowBlurRadius: effectiveGlowBlurRadius,
+      glowRadius: effectiveGlowRadius,
+      glowBlurRadius: nativeGlowBlurRadius,
       glowSpreadRadius: effectiveGlowSpreadRadius,
       glowOpacity: effectiveGlowOpacity,
       hitTestBehavior: widget.glowHitTestBehavior,

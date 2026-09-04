@@ -921,7 +921,23 @@ void main() {
     });
 
     test('matches full sort across all percentiles', () {
-      final samples = [28, 12, 45, 1, 99, 34, 56, 78, 12, 90, 3, 17, 65, 88, 23];
+      final samples = [
+        28,
+        12,
+        45,
+        1,
+        99,
+        34,
+        56,
+        78,
+        12,
+        90,
+        3,
+        17,
+        65,
+        88,
+        23
+      ];
       final sorted = List<int>.from(samples)..sort();
 
       for (int p = 0; p <= 100; p += 5) {
@@ -933,7 +949,8 @@ void main() {
       }
     });
 
-    test('quickSelect handles already sorted, reverse, and identical arrays', () {
+    test('quickSelect handles already sorted, reverse, and identical arrays',
+        () {
       final sorted = [1, 2, 3, 4, 5, 6, 7];
       expect(GlassQualityAdapter.quickSelectForTesting(List.of(sorted), 0), 1);
       expect(GlassQualityAdapter.quickSelectForTesting(List.of(sorted), 3), 4);
@@ -945,7 +962,8 @@ void main() {
       expect(GlassQualityAdapter.quickSelectForTesting(List.of(reverse), 6), 7);
 
       final identical = [5, 5, 5, 5, 5];
-      expect(GlassQualityAdapter.quickSelectForTesting(List.of(identical), 2), 5);
+      expect(
+          GlassQualityAdapter.quickSelectForTesting(List.of(identical), 2), 5);
     });
   });
 }
