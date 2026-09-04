@@ -856,23 +856,23 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                               enableBackgroundAnimation:
                                   widget.interactionBehavior.hasScale,
                               backgroundPressScale: widget.pressScale,
-                              collapsedLogoBuilder: widget
-                                      .searchConfig?.collapsedLogoBuilder ??
-                                  (context) {
-                                    final currentTab =
-                                        widget.tabs[widget.selectedIndex];
-                                    return Center(
-                                      child: IconTheme(
-                                        data: IconThemeData(
-                                          color: resolvedCollapsedIconColor,
-                                          size: widget.iconSize,
-                                        ),
-                                        child: currentTab.activeIcon ??
-                                            currentTab.icon ??
-                                            const SizedBox.shrink(),
-                                      ),
-                                    );
-                                  },
+                              collapsedLogoBuilder:
+                                  widget.searchConfig?.collapsedLogoBuilder ??
+                                      (context) {
+                                        final currentTab =
+                                            widget.tabs[widget.selectedIndex];
+                                        return Center(
+                                          child: IconTheme(
+                                            data: IconThemeData(
+                                              color: resolvedCollapsedIconColor,
+                                              size: widget.iconSize,
+                                            ),
+                                            child: currentTab.activeIcon ??
+                                                currentTab.icon ??
+                                                const SizedBox.shrink(),
+                                          ),
+                                        );
+                                      },
                               onDismissSearch: () {
                                 if (widget.onMinimizedTabTap != null) {
                                   widget.onMinimizedTabTap!();
