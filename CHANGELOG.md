@@ -10,6 +10,8 @@ Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#280).
 
 Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix and on-device integration tests (#281).
 
+- **Left-aligned title starts at the bar's padding (#282):** With `centerTitle: false` and nothing in the leading slot, `_ToolbarLayout` still added the 8 px leading gap, so a title under `padding: EdgeInsets.symmetric(horizontal: 16)` began at 24 px and sat out of line with page content on the same inset. The gap now applies only when a leading widget or back button actually occupies the logical-start side, in both LTR and RTL.
+
 ---
 
 # 1.3.0

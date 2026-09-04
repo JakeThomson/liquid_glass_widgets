@@ -493,8 +493,9 @@ enum _ToolbarSlot { leading, title, actions }
 ///   guarantees the title cannot overlap either button even when the sides
 ///   are asymmetric.
 /// * **Title (leading-aligned)** — constrained to the space between the
-///   leading widget and the actions widget (with an 8 px logical-start gap),
-///   then pinned to the logical-start edge of that space.
+///   leading widget and the actions widget (with an 8 px gap after the
+///   logical-start widget, if there is one), then pinned to the logical-start
+///   edge of that space.
 ///
 /// RTL is handled explicitly via [textDirection]; no assumptions are made
 /// about screen vs. logical coordinates.
@@ -577,16 +578,21 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
         ),
       );
     } else {
-      // Leading-aligned: title occupies the space between the two side widgets
-      // with an 8 px logical-start gap.
+      // Leading-aligned: title occupies the space between the two side widgets,
+      // separated from the logical-start one by an 8 px gap.
       //
       // Logical-start side = leadingWidth (LTR) or actionsWidth (RTL).
       // Logical-end side   = actionsWidth (LTR) or leadingWidth (RTL).
       final double startOccupied = _isLTR ? leadingWidth : actionsWidth;
       final double endOccupied = _isLTR ? actionsWidth : leadingWidth;
+
+      // The gap separates the title from a widget; with nothing on the
+      // logical-start side the title sits flush against the bar's padding, so
+      // it lines up with page content using the same horizontal inset.
+      final double startGap = startOccupied > 0.0 ? _titleGap : 0.0;
       final double maxWidth = math.max(
         0.0,
-        size.width - startOccupied - _titleGap - endOccupied,
+        size.width - startOccupied - startGap - endOccupied,
       );
 
       final Size ts = layoutChild(
@@ -596,8 +602,8 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
 
       // Pin to logical-start edge (left in LTR, right in RTL).
       final double titleX = _isLTR
-          ? startOccupied + _titleGap
-          : size.width - startOccupied - _titleGap - ts.width;
+          ? startOccupied + startGap
+          : size.width - startOccupied - startGap - ts.width;
 
       positionChild(
         _ToolbarSlot.title,

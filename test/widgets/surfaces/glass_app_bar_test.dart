@@ -549,5 +549,137 @@ void main() {
         reason: 'centerTitle: false should left-align the title',
       );
     });
+
+    testWidgets(
+        'left-aligned title starts at the content padding when there is no '
+        'leading widget (regression #282)', (tester) async {
+      const padding = EdgeInsets.symmetric(horizontal: 16);
+      await tester.pumpWidget(
+        createTestApp(
+          child: const Scaffold(
+            appBar: GlassAppBar(
+              centerTitle: false,
+              padding: padding,
+              title: Text('Activity Summary'),
+              actions: [SizedBox(width: 44, height: 44)],
+            ),
+          ),
+        ),
+      );
+
+      final titleBox =
+          tester.renderObject<RenderBox>(find.text('Activity Summary'));
+      final appBarBox =
+          tester.renderObject<RenderBox>(find.byType(GlassAppBar));
+
+      expect(
+        titleBox.localToGlobal(Offset.zero).dx -
+            appBarBox.localToGlobal(Offset.zero).dx,
+        closeTo(padding.left, 0.5),
+        reason: 'The leading gap separates the title from a leading widget, so '
+            'with nothing before it the title should sit flush against the '
+            "bar's padding and line up with page content (bug #282)",
+      );
+    });
+
+    testWidgets('left-aligned title is offset from a leading widget by 8 px',
+        (tester) async {
+      const padding = EdgeInsets.symmetric(horizontal: 16);
+      await tester.pumpWidget(
+        createTestApp(
+          child: const Scaffold(
+            appBar: GlassAppBar(
+              centerTitle: false,
+              padding: padding,
+              title: Text('Activity Summary'),
+              leading: SizedBox(width: 44, height: 44),
+            ),
+          ),
+        ),
+      );
+
+      final titleBox =
+          tester.renderObject<RenderBox>(find.text('Activity Summary'));
+      final appBarBox =
+          tester.renderObject<RenderBox>(find.byType(GlassAppBar));
+
+      expect(
+        titleBox.localToGlobal(Offset.zero).dx -
+            appBarBox.localToGlobal(Offset.zero).dx,
+        closeTo(padding.left + 44 + 8, 0.5),
+        reason: 'A leading widget still pushes the title clear of it by 8 px',
+      );
+    });
+
+    testWidgets(
+        'RTL: left-aligned title starts at the content padding when there is '
+        'no leading widget', (tester) async {
+      const padding = EdgeInsets.symmetric(horizontal: 16);
+      await tester.pumpWidget(
+        createTestApp(
+          child: const Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+              appBar: GlassAppBar(
+                centerTitle: false,
+                padding: padding,
+                title: Text('Activity Summary'),
+                actions: [SizedBox(width: 44, height: 44)],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final titleBox =
+          tester.renderObject<RenderBox>(find.text('Activity Summary'));
+      final appBarBox =
+          tester.renderObject<RenderBox>(find.byType(GlassAppBar));
+
+      // In RTL the logical start is the right edge, and `actions` occupy it.
+      expect(
+        appBarBox.localToGlobal(Offset.zero).dx +
+            appBarBox.size.width -
+            (titleBox.localToGlobal(Offset.zero).dx + titleBox.size.width),
+        closeTo(padding.right + 44 + 8, 0.5),
+        reason: 'RTL puts actions on the logical-start side, so the title '
+            'clears them by 8 px',
+      );
+    });
+
+    testWidgets('RTL: left-aligned title is offset from a leading widget by '
+        '8 px', (tester) async {
+      const padding = EdgeInsets.symmetric(horizontal: 16);
+      await tester.pumpWidget(
+        createTestApp(
+          child: const Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+              appBar: GlassAppBar(
+                centerTitle: false,
+                padding: padding,
+                title: Text('Activity Summary'),
+                leading: SizedBox(width: 44, height: 44),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final titleBox =
+          tester.renderObject<RenderBox>(find.text('Activity Summary'));
+      final appBarBox =
+          tester.renderObject<RenderBox>(find.byType(GlassAppBar));
+
+      // `leading` sits on the logical-end (left) side in RTL, so the title
+      // runs to the bar's start padding.
+      expect(
+        appBarBox.localToGlobal(Offset.zero).dx +
+            appBarBox.size.width -
+            (titleBox.localToGlobal(Offset.zero).dx + titleBox.size.width),
+        closeTo(padding.right, 0.5),
+        reason: 'Nothing occupies the logical-start side, so no gap applies',
+      );
+    });
   });
 }
