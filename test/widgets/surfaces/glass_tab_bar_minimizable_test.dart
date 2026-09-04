@@ -20,6 +20,8 @@ Widget _buildBar({
   ValueChanged<int>? onTabSelected,
   VoidCallback? onMinimizedTabTap,
   GlassTabBarTrailingButton? trailingButton,
+  Color? selectedIconColor,
+  Color? unselectedIconColor,
 }) {
   return createTestApp(
     child: GlassTabBar.minimizable(
@@ -29,6 +31,8 @@ Widget _buildBar({
       minimized: minimized,
       onMinimizedTabTap: onMinimizedTabTap,
       trailingButton: trailingButton,
+      selectedIconColor: selectedIconColor,
+      unselectedIconColor: unselectedIconColor,
       maskingQuality: MaskingQuality.off, // no dual-layer in tests
     ),
   );
@@ -69,6 +73,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(CupertinoIcons.bookmark), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('minimized circle draws the icon in selectedIconColor',
+        (tester) async {
+      await tester.pumpWidget(_buildBar(
+        minimized: true,
+        selectedIndex: 2,
+        selectedIconColor: const Color(0xFFFF0000),
+        unselectedIconColor: const Color(0xFF0000FF),
+      ));
+      await tester.pumpAndSettle();
+
+      final iconTheme = tester.widget<IconTheme>(
+        find
+            .ancestor(
+              of: find.byIcon(CupertinoIcons.bookmark),
+              matching: find.byType(IconTheme),
+            )
+            .first,
+      );
+      expect(iconTheme.data.color, const Color(0xFFFF0000));
     });
 
     // ── Trailing button: none (plain minimizing bar) ──────────────────────────

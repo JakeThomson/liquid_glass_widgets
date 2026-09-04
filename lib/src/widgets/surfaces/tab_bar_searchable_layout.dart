@@ -456,6 +456,11 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
         widget.selectedIconColor ?? dynamicLabelColor;
     final resolvedUnselectedIconColor =
         widget.unselectedIconColor ?? dynamicLabelColor;
+    // A minimized bar still shows its selected tab; a searching one shows the
+    // tab search was opened from, which the search has since replaced.
+    final resolvedCollapsedIconColor = widget.isMinimizablePlacement
+        ? resolvedSelectedIconColor
+        : resolvedUnselectedIconColor;
 
     final effectiveGlowBlurRadius = resolvedGlowColors.glowBlurRadius;
     final effectiveGlowSpreadRadius = resolvedGlowColors.glowSpreadRadius;
@@ -859,7 +864,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                     return Center(
                                       child: IconTheme(
                                         data: IconThemeData(
-                                          color: resolvedUnselectedIconColor,
+                                          color: resolvedCollapsedIconColor,
                                           size: widget.iconSize,
                                         ),
                                         child: currentTab.activeIcon ??
