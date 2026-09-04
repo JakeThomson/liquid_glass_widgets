@@ -211,7 +211,8 @@ void main() {
       // uniformly rather than inflating by a point-growth amount.
       expect(stretch.interactionScale, equals(0.95));
       expect(stretch.pressGrowth, isNull,
-          reason: 'GlassIconButton must never use the native point-sizing path');
+          reason:
+              'GlassIconButton must never use the native point-sizing path');
     });
 
     testWidgets('forwards explicit anchorStretchSettings to GlassButton',
