@@ -880,8 +880,8 @@ void main() {
 
     testWidgets('an explicit 1.04 is a fixed factor, not the native sizing',
         (tester) async {
-      await tester.pumpWidget(
-          _wrap(pill(pressScale: 1.04), width: 64, height: 64));
+      await tester
+          .pumpWidget(_wrap(pill(pressScale: 1.04), width: 64, height: 64));
       await tester.pump();
       expect(stretchOf(tester).pressGrowth, isNull);
     });
