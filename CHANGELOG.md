@@ -1,16 +1,32 @@
-# Unreleased
+# 1.3.0
 
 ## Bug Fixes
 
-- **`GlassButton` presses like a native button (behaviour change) (#267):** Beside a native `.glassEffect(.regular.interactive())` the press led with a 25–30 % jelly stretch over an invisible 5 % inflation, and its highlight walked off the shape with the finger. Measured at 120 fps on a 56 pt circle and a 132 pt pill, the press now grows the longest side by ~17 pt (`interactionScale: null`, the new default; a number is still a fixed factor) on a snappy spring with one undershoot on release, a drag stretches it no more than ~5 % (`anchorStretchSettings: null` — the theme's, else a gentler default), and the surface brightens evenly (`ambientBaseLight: 0.3`) instead of through a pointer-following glow (`glowRadius: 0`). `LiquidStretch` declares its scale through `LiquidGlassSelfScaleScope`, so the undershoot no longer freezes the premium refraction. Restore the previous sizing and highlight with `interactionScale: 1.05`, `glowRadius: 1.0`, `ambientBaseLight: 0.08` and `anchorStretchSettings: AnchorStretchSettings()`, or theme-wide via `GlassInteractionSettings`.
+- **`GlassButton` presses like a native button (behaviour change) (#267):** Measured at 120 fps, the press now grows by ~17 pt on a snappy spring (`interactionScale: null`), drags stretch no more than ~5 %, and the surface combines ambient lift (`ambientBaseLight: 0.3`) with a subtle shape-clipped specular sheen (`glowRadius: null`, resolving to a wide 1.6 radius with soft sigma-16 blur). The highlight is clipped strictly to `shape` via `ShapeBorderClipper`, staying bounded within the button geometry and sweeping across grouped buttons without creating a pointy hotspot. `LiquidStretch` declares its scale through `LiquidGlassSelfScaleScope` so the release undershoot no longer freezes refraction.
 
-- **The search surfaces press like native buttons (#272):** The collapsed search circle and trailing pill now press with `GlassButton`'s ~17 pt growth, tremor stretch and even held lift, and stay round as they inflate; the expanded field gently follows a lengthwise drag (saturating near ~7 pt of travel) and stretches a couple of points on a vertical one, measured against the Photos search field. `pressScale` on `searchable`/`minimizable` is now nullable — null (the new default) means the native press, a number stays a fixed factor — and a glow customised per widget or through the theme keeps the directional glow. `GlassButton.ambientBaseLight` is nullable too: null resolves to `0.3`, halved in dark mode where it read as a flash; an explicit value is honoured in both modes.
+  > **Migration:** Pass `glowRadius: 0.0` to disable the directional sheen (pure ambient lift). Pass `interactionScale: 1.05`, `ambientBaseLight: 0.08`, or use `GlassInteractionSettings` theme-wide to customize.
+
+- **Search circle and trailing pill press like native buttons (#272, #276):** The collapsed pills now use `GlassButton`'s ~17 pt growth, tremor stretch, and ambient lift, staying round through inflation. The expanded search field follows a lengthwise drag (≈7 pt saturation) and gives a couple of points of vertical stretch, measured against Photos. `pressScale` and `ambientBaseLight` are both nullable — null means the native behaviour, a number is a fixed override.
+
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the native press implementation, `LiquidOval` corner fix, and axis-constrained expanded field stretch (#276).
+
+- **Transform tracking crash on route pop fixed (#268):** `GeometryTransformTrackingLayer.addToScene` now checks `renderObject.attached` and wraps `getTransformTo(null)` in a try-catch, preventing the `StateError` that occurred while render objects were detaching during page transitions.
+
+Thanks to [@kdbhalala](https://github.com/kdbhalala) for the fix (#268).
+
+## Performance
+
+- **O(N) Quickselect for frame timing percentiles (#268):** The Phase 3 P95 hysteresis check now uses in-place Quickselect (Hoare partition, midpoint pivot) instead of a full sort, eliminating per-evaluation heap allocations on the frame callback path.
+
+Thanks to [@kdbhalala](https://github.com/kdbhalala) for the optimisation (#268).
+
+- **Zero-allocation glow paint path (`_RenderGlassGlowLayer`):** Eliminates per-frame `Path` allocations during gesture spring animations. `_RenderGlassGlowLayer` now follows the Flutter engine's `RenderCustomClip` pattern: clip paths are cached keyed on `size`, `shouldReclip` prevents re-clipping on value-equal rebuilds, and `canvas.translate` replaces `.shift()`. Drops native path heap churn from up to 240 allocations/s on 120 Hz ProMotion displays to zero steady-state allocations during drags.
 
 - **Minimized bar keeps the selected tab's icon colour (#279):** On `GlassTabBar.minimizable`, the minimized pill drew the selected tab's icon in `unselectedIconColor`, so a custom `selectedIconColor` dropped out on minimize and returned on expand. The pill now uses `selectedIconColor`, as the native bar does — the tab is still selected, only the bar has shrunk. `GlassTabBar.searchable` is unchanged: its collapsed pill shows the tab search was opened from, which is no longer the selected one.
 
 ## Internal
 
-- **Added `THIRD_PARTY_NOTICES` with complete MIT license texts (#273):** The published pub.dev archive now includes the full MIT copyright notices for both the vendored `liquid_glass_renderer` (whynotmake.it, 2025) and the adapted `motor` spring utilities (whynotmake.it, 2024). The README Dependencies section has been updated to accurately describe the vendored code and link to the notices file.
+- **`THIRD_PARTY_NOTICES` added (#273):** The pub.dev archive now includes full MIT copyright notices for the vendored `liquid_glass_renderer` and adapted `motor` spring utilities. README updated to link to the notices file.
 
 ---
 
