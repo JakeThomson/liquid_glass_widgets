@@ -74,6 +74,14 @@ Thanks to [@Vincen-dev](https://github.com/Vincen-dev) for the bug report and re
 
 Thanks to [@Vincen-dev](https://github.com/Vincen-dev) for the bug report (#274).
 
+- **`GlassModalSheet` finishes its travel when a drag hands over to the content (#284):** An upward content drag hands the pointer to the scroll view once the sheet is within 5% of its top detent, and that pointer's release is a scroll, not a drag — so the sheet parked up to 5% short of the top with no `onStateChanged`, the host still believed it sat at the lower detent, and the next collapse skipped its scroll-to-top. The sheet now snaps the remainder at the moment of handover: it arrives, reports `full` and gives its haptic as the content starts to scroll, not when the finger eventually lifts.
+
+Thanks to [@jfhair](https://github.com/jfhair) for the fix (#284).
+
+- **`GlassModalSheetController.progress` and `value` are current inside `progressListenable` (#285):** Both reported the position the sheet had last *built* at, and the listener fires before that build — a frame behind, so the final tick of any drag never showed where the sheet stopped. They now refresh on every controller tick, before listeners run.
+
+Thanks to [@jfhair](https://github.com/jfhair) for the fix (#285).
+
 ---
 
 # 1.3.0
