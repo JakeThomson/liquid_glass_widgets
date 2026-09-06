@@ -50,7 +50,19 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
   // ── Geometry & Metrics ────────────────────────────────────────────────────
   late SheetGeometry _geometry;
-  Size _screenSize = Size.zero;
+
+  /// The view size the drag math divides by, cached because pointer moves
+  /// arrive faster than an inherited lookup is worth. Read it through
+  /// [_screenSize], which refreshes a cache still holding the zero it was
+  /// born with: a sheet built before the window has a size — an app the
+  /// system launched in the background for a push, a test on a zero-size
+  /// view — would otherwise keep that zero for life and divide every drag
+  /// by it.
+  Size _cachedScreenSize = Size.zero;
+  Size get _screenSize {
+    if (_cachedScreenSize.isEmpty && mounted) _updateScreenSize();
+    return _cachedScreenSize;
+  }
 
   @override
   void initState() {
@@ -139,10 +151,15 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     if (!mounted) return;
 
     final view = View.of(context);
-    // Filter system call spam: the spring only jitters if the window size actually changes
+    // Filter system call spam: the spring only jitters if the window size
+    // actually changes.
     if (_lastPhysicalSize != view.physicalSize) {
+      _updateScreenSize();
+      // A window that had no size is being sized for the first time (an app
+      // launched in the background, coming to the foreground), not resized:
+      // there is nothing to re-settle, and the size cache above is all that
+      // first size has to update.
       if (_lastPhysicalSize != Size.zero) {
-        _updateScreenSize();
         _snapToState(_currentState, animate: true);
       }
       _lastPhysicalSize = view.physicalSize;
@@ -186,7 +203,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
 
   void _updateScreenSize() {
     final view = View.of(context);
-    _screenSize = view.physicalSize / view.devicePixelRatio;
+    _cachedScreenSize = view.physicalSize / view.devicePixelRatio;
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -490,11 +507,15 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   // ════════════════════════════════════════════════════════════════════════
 
   void _applyDrag(double currentY) {
+    final screenHeight = _screenSize.height;
+    // No sized window means nothing visible is being dragged; dividing by
+    // zero here would park the sheet at infinity for good.
+    if (screenHeight <= 0) return;
     final delta = currentY - _gestureArena.dragStartY;
     double newPosition =
-        _gestureArena.dragStartSheetPosition - delta / _screenSize.height;
+        _gestureArena.dragStartSheetPosition - delta / screenHeight;
 
-    newPosition = _geometry.applyResistance(newPosition, _screenSize.height,
+    newPosition = _geometry.applyResistance(newPosition, screenHeight,
         resistance: widget.resistance);
     _animationController.value = newPosition;
 
