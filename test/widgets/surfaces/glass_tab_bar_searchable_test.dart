@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_bottom_internal.dart';
+import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_searchable_internal.dart';
 
 import '../../shared/test_helpers.dart';
 
@@ -34,6 +36,7 @@ Widget _buildBar({
   ValueChanged<String>? onChanged,
   GlassTabBarExtraButton? extraButton,
   GlassQuality? quality,
+  GlassQuality? backgroundQuality,
   bool showPill = true,
 }) {
   return createTestApp(
@@ -44,6 +47,7 @@ Widget _buildBar({
       isSearchActive: isSearchActive,
       maskingQuality: MaskingQuality.off, // no dual-layer in tests
       quality: quality,
+      backgroundQuality: backgroundQuality,
       extraButton: extraButton,
       searchConfig: GlassSearchBarConfig(
         onSearchToggle: onSearchToggle ?? (_) {},
@@ -1231,6 +1235,92 @@ void main() {
       // Fully disappeared pills leave the tree entirely — a zero-scale glass
       // shape would still fuse with the tab pill on the blend layer.
       expect(find.byIcon(CupertinoIcons.search), findsNothing);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GlassTabBar.searchable backgroundQuality
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('GlassTabBar.searchable backgroundQuality', () {
+    testWidgets(
+        'propagates backgroundQuality to SearchPill and BottomBarExtraBtn',
+        (tester) async {
+      await tester.pumpWidget(_buildBar(
+        quality: GlassQuality.premium,
+        backgroundQuality: GlassQuality.minimal,
+        extraButton: GlassTabBarExtraButton(
+          icon: const Icon(CupertinoIcons.add),
+          onTap: () {},
+          label: 'Add',
+        ),
+      ));
+      await tester.pump();
+
+      final searchPill = tester.widget<SearchPill>(find.byType(SearchPill));
+      expect(searchPill.quality, equals(GlassQuality.minimal));
+
+      final extraBtn =
+          tester.widget<BottomBarExtraBtn>(find.byType(BottomBarExtraBtn));
+      expect(extraBtn.quality, equals(GlassQuality.minimal));
+    });
+
+    testWidgets(
+        'propagates backgroundQuality to DismissPill when search is active with keyboard',
+        (tester) async {
+      final searchCtrl = SearchableBottomBarController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MediaQuery(
+              data: const MediaQueryData(
+                viewInsets: EdgeInsets.only(bottom: 200),
+              ),
+              child: GlassTabBar.searchable(
+                tabs: _testTabs,
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                controller: searchCtrl,
+                isSearchActive: true,
+                quality: GlassQuality.premium,
+                backgroundQuality: GlassQuality.minimal,
+                maskingQuality: MaskingQuality.off,
+                searchConfig: GlassSearchBarConfig(
+                  showsCancelButton: true,
+                  onSearchToggle: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      searchCtrl.onFocusChanged(true);
+      await tester.pumpAndSettle();
+
+      final dismissPill = tester.widget<DismissPill>(find.byType(DismissPill));
+      expect(dismissPill.quality, equals(GlassQuality.minimal));
+    });
+
+    testWidgets('inherits from quality when backgroundQuality is null',
+        (tester) async {
+      await tester.pumpWidget(_buildBar(
+        quality: GlassQuality.standard,
+        extraButton: GlassTabBarExtraButton(
+          icon: const Icon(CupertinoIcons.add),
+          onTap: () {},
+          label: 'Add',
+        ),
+      ));
+      await tester.pump();
+
+      final searchPill = tester.widget<SearchPill>(find.byType(SearchPill));
+      expect(searchPill.quality, equals(GlassQuality.standard));
+
+      final extraBtn =
+          tester.widget<BottomBarExtraBtn>(find.byType(BottomBarExtraBtn));
+      expect(extraBtn.quality, equals(GlassQuality.standard));
     });
   });
 }

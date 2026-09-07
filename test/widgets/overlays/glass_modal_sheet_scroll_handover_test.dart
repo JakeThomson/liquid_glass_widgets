@@ -116,7 +116,8 @@ void main() {
     expect(controller.currentState, GlassSheetState.full);
   });
 
-  testWidgets('the handover finishes the sheet\'s travel before the finger lifts',
+  testWidgets(
+      'the handover finishes the sheet\'s travel before the finger lifts',
       (tester) async {
     final states = <GlassSheetState>[];
     final controller = GlassModalSheetController();
