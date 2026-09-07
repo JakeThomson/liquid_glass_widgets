@@ -52,6 +52,10 @@
 
   Thanks to [@JoetineY](https://github.com/JoetineY) for the feature request (#275).
 
+- **`GlassModalSheet` drag indicator geometry (#288):** `dragIndicatorHeight` (default 4) and `dragIndicatorTopPadding` (default 8) join `dragIndicatorWidth`, so a sheet can match a host's own pill. Apple's own apps vary the pill's thickness, width and inset from sheet to sheet, and sit it higher where a control row follows (Maps), so there is no one right value to bake in; the defaults are unchanged.
+
+  Thanks to [@jfhair](https://github.com/jfhair) for the feature (#288).
+
 ## Bug Fixes
 
 - **Color configuration is uncertain when blur=0 (#269):** When developers configured custom tint colors with `blur: 0`, the surface previously suffered from unexpected luminance and saturation drift because the shader applied adaptive ambient and light calculations intended for blurred glass. Developers can now set `bodyMode: GlassBodyMode.clear` on `LiquidGlassSettings` to bypass adaptive tinting and composite the exact designer hex color while maintaining specular highlights, Fresnel sheen, and 3D meniscus edge refraction.
@@ -81,6 +85,10 @@ Thanks to [@jfhair](https://github.com/jfhair) for the fix (#284).
 - **`GlassModalSheetController.progress` and `value` are current inside `progressListenable` (#285):** Both reported the position the sheet had last *built* at, and the listener fires before that build — a frame behind, so the final tick of any drag never showed where the sheet stopped. They now refresh on every controller tick, before listeners run.
 
 Thanks to [@jfhair](https://github.com/jfhair) for the fix (#285).
+
+- **`GlassModalSheet` drags after a background launch (#290):** The sheet read the window size once, in its first post-frame callback, and re-read it only on a change *from* a non-zero size. An app the system launches in the background for a push builds against a 0×0 window, so a sheet created then kept the zero for life: when the app came to the foreground, its first drag divided by that zero and parked the sheet at infinity — nothing painted, no `onStateChanged`, and every later `snapToState` starting from infinity — until the process was killed. The size is now taken from the view whenever the cache still holds that zero and refreshed on every window-size change, and a drag on a window with no size is ignored.
+
+Thanks to [@jfhair](https://github.com/jfhair) for the fix (#290).
 
 ---
 
