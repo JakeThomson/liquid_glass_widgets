@@ -303,7 +303,11 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     animation.removeStatusListener(_onAnimationStatus);
   }
 
-  void _onAnimationTick() => _tick.notify();
+  // A route wiring its secondary animation (`ProxyAnimation.parent=` inside
+  // `didChangeNext`) notifies value listeners synchronously, and for a
+  // page-based Navigator that runs inside `didUpdateWidget` — the build
+  // phase — so the tick has to defer exactly as a status change does.
+  void _onAnimationTick() => _scheduleNotify();
 
   void _onAnimationStatus(AnimationStatus status) {
     // Not while a finger is down: several routes' animations are listened to
