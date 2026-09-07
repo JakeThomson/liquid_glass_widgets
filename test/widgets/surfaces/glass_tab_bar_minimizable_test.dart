@@ -287,6 +287,7 @@ void main() {
       expect(button.menuWidth, 240);
       expect(button.menuAlignment, GlassMenuAlignment.topLeft);
       expect(button.menuItems?.length, 1);
+      expect(() => button.onTap(), returnsNormally);
     });
 
     testWidgets('tapping trailing button in menu mode opens GlassMenu',

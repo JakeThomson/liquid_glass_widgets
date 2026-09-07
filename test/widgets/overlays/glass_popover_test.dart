@@ -758,6 +758,47 @@ void main() {
   });
 
   testWidgets(
+      'GlassPopover dismisses instantly when route with zero duration is pushed while open',
+      (tester) async {
+    late BuildContext homeContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            homeContext = context;
+            return Scaffold(
+              body: Center(
+                child: GlassPopover(
+                  trigger: const Text('Open Popover'),
+                  contentBuilder: (context, close) =>
+                      const Text('Popover Body'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open Popover'));
+    await tester.pumpAndSettle();
+    expect(find.text('Popover Body'), findsOneWidget);
+
+    Navigator.of(homeContext).push(
+      PageRouteBuilder(
+        transitionDuration: Duration.zero,
+        pageBuilder: (_, __, ___) => const Scaffold(
+          body: Center(child: Text('Zero Duration Route')),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    expect(find.text('Popover Body'), findsNothing);
+    expect(find.text('Zero Duration Route'), findsOneWidget);
+  });
+
+  testWidgets(
       'GlassPopover dismisses instantly when containing route is popped while open',
       (tester) async {
     await tester.pumpWidget(

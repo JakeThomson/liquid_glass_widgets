@@ -919,6 +919,51 @@ void main() {
   });
 
   testWidgets(
+      'GlassMenu dismisses instantly when route with zero duration is pushed while open',
+      (tester) async {
+    late BuildContext homeContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            homeContext = context;
+            return Scaffold(
+              body: Center(
+                child: GlassMenu(
+                  trigger: const Text('Open Menu'),
+                  items: [
+                    GlassMenuItem(
+                      title: 'Option',
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open Menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Option'), findsOneWidget);
+
+    Navigator.of(homeContext).push(
+      PageRouteBuilder(
+        transitionDuration: Duration.zero,
+        pageBuilder: (_, __, ___) => const Scaffold(
+          body: Center(child: Text('Zero Duration Route')),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    expect(find.text('Option'), findsNothing);
+    expect(find.text('Zero Duration Route'), findsOneWidget);
+  });
+
+  testWidgets(
       'GlassMenu dismisses instantly when containing route is popped while open',
       (tester) async {
     await tester.pumpWidget(
