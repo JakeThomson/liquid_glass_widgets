@@ -18,6 +18,8 @@ Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix and on-devi
 
 - **`GlassModalSheetController.progress` and `value` are current inside `progressListenable` (#285):** Both reported the position the sheet had last *built* at, and the listener fires before that build — a frame behind, so the final tick of any drag never showed where the sheet stopped. They now refresh on every controller tick, before listeners run.
 
+- **`GlassModalSheet` drags after a background launch (#290):** The sheet read the window size once, in its first post-frame callback, and re-read it only on a change *from* a non-zero size. An app the system launches in the background for a push builds against a 0×0 window, so a sheet created then kept the zero for life: when the app came to the foreground, its first drag divided by that zero and parked the sheet at infinity — nothing painted, no `onStateChanged`, and every later `snapToState` starting from infinity — until the process was killed. The size is now taken from the view whenever the cache still holds that zero and refreshed on every window-size change, and a drag on a window with no size is ignored.
+
 ---
 
 # 1.3.0
