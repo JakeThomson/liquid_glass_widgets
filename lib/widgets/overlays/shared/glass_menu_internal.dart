@@ -109,8 +109,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     widget.controller?._attach(this);
   }
 
+  ModalRoute<dynamic>? _route;
+
   @override
   void dispose() {
+    _removeRouteListeners();
+    _route = null;
     widget.controller?._detach(this);
     _morphController.dispose();
     _scrollController.dispose();
@@ -128,6 +132,69 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     _morphController.setDisableAnimations(
       MediaQuery.of(context).disableAnimations,
     );
+    _updateRouteListener();
+  }
+
+  void _updateRouteListener() {
+    final currentRoute = ModalRoute.of(context);
+    if (_route != currentRoute) {
+      _removeRouteListeners();
+      _route = currentRoute;
+      _addRouteListeners();
+    }
+  }
+
+  void _addRouteListeners() {
+    final route = _route;
+    if (route == null) return;
+    route.secondaryAnimation
+        ?.addStatusListener(_handleSecondaryAnimationStatus);
+    route.animation?.addStatusListener(_handlePrimaryAnimationStatus);
+  }
+
+  void _removeRouteListeners() {
+    final route = _route;
+    if (route == null) return;
+    route.secondaryAnimation
+        ?.removeStatusListener(_handleSecondaryAnimationStatus);
+    route.animation?.removeStatusListener(_handlePrimaryAnimationStatus);
+  }
+
+  void _handleSecondaryAnimationStatus(AnimationStatus status) {
+    if (!_overlayController.isShowing) return;
+    if (status == AnimationStatus.forward) {
+      _dismissImmediately();
+    }
+  }
+
+  void _handlePrimaryAnimationStatus(AnimationStatus status) {
+    if (!_overlayController.isShowing) return;
+    if (status == AnimationStatus.reverse) {
+      _dismissImmediately();
+    }
+  }
+
+  void _dismissImmediately() {
+    if (!_overlayController.isShowing && _morphController.value == 0.0) {
+      return;
+    }
+    final wasClosing = _morphController.isClosing;
+    _overlayController.hide();
+    _morphController.reset();
+    _horizontalOffset = 0.0;
+    _verticalOffset = 0.0;
+    _hoveredIndex = null;
+    _hoveredIndexNotifier.value = null;
+    _isDragging = false;
+    _isDraggingNotifier.value = false;
+    _hasStretched = false;
+    _followOffset = Offset.zero;
+    if (!wasClosing) {
+      widget.onClose?.call();
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -140,11 +207,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         // Block trigger taps while menu is significantly open.
         final isMenuBlocking = _overlayController.isShowing && rawValue > 0.8;
 
-        // Early handoff during close:
-        // When closing and the liquid morph is almost finished, we latch the handoff.
-        // We instantly hide the empty glass overlay and reveal the REAL trigger.
-        // The latch ensures that even if the underdamped spring bounces back up
-        // past 0.15, we don't hide the icon again!
         final isHandoff =
             _morphController.isClosing && _morphController.hasHandedOff;
         final triggerOpacity =
@@ -168,6 +230,13 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         final double pushDy =
             isHandoff ? (finalDy + _verticalOffset) * rawValue : 0.0;
 
+        final Widget triggerChild = widget.triggerBuilder != null
+            ? widget.triggerBuilder!(context, _toggleMenu)
+            : GestureDetector(
+                onTap: _toggleMenu,
+                child: widget.trigger,
+              );
+
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -176,14 +245,14 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               offset: Offset(pushDx, pushDy),
               child: Opacity(
                 opacity: triggerOpacity,
-                child: IgnorePointer(
-                  ignoring: isMenuBlocking,
-                  child: widget.triggerBuilder != null
-                      ? widget.triggerBuilder!(context, _toggleMenu)
-                      : GestureDetector(
-                          onTap: _toggleMenu,
-                          child: widget.trigger,
-                        ),
+                child: GlassMaterializeScope(
+                  glassProgress: triggerOpacity,
+                  contentOpacity: triggerOpacity,
+                  contentSigma: 0.0,
+                  child: IgnorePointer(
+                    ignoring: isMenuBlocking,
+                    child: triggerChild,
+                  ),
                 ),
               ),
             ),
@@ -330,6 +399,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _closeMenu() {
+    if (!_overlayController.isShowing) return;
     setState(() {
       _hoveredIndex = null;
       _isDragging = false;

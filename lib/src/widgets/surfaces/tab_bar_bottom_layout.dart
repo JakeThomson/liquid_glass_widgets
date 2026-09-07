@@ -72,6 +72,7 @@ class TabBarBottomLayout extends StatefulWidget {
     this.glowSpreadRadius = 8,
     this.glowOpacity = 0.6,
     this.quality,
+    this.backgroundQuality,
     this.magnification = 1.15,
     this.innerBlur = 0.0,
     this.maskingQuality = MaskingQuality.high,
@@ -129,6 +130,7 @@ class TabBarBottomLayout extends StatefulWidget {
   final double glowSpreadRadius;
   final double glowOpacity;
   final GlassQuality? quality;
+  final GlassQuality? backgroundQuality;
   final double magnification;
   final double innerBlur;
   final MaskingQuality maskingQuality;
@@ -207,6 +209,11 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
     final effectiveQuality = GlassThemeHelpers.resolveQuality(
       context,
       widgetQuality: widget.quality,
+      fallback: GlassQuality.premium,
+    );
+    final effectiveBackgroundQuality = GlassThemeHelpers.resolveQuality(
+      context,
+      widgetQuality: widget.backgroundQuality ?? widget.quality,
       fallback: GlassQuality.premium,
     );
 
@@ -310,7 +317,9 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
                             height: widget.barHeight,
                             child: BottomBarExtraBtn(
                               config: resolvedExtraButton,
-                              quality: effectiveQuality,
+                              // Chrome-plane peer: matches the track background,
+                              // not the indicator pill (effectiveQuality).
+                              quality: effectiveBackgroundQuality,
                               iconColor: resolvedExtraButton.iconColor ??
                                   resolvedUnselectedIconColor,
                               enableBlend: widget.enableBlend,
@@ -337,6 +346,7 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
                       height: widget.barHeight,
                       child: TabIndicator(
                         quality: effectiveQuality,
+                        backgroundQuality: effectiveBackgroundQuality,
                         springDescription: widget.springDescription,
                         visible: widget.showIndicator,
                         tabIndex: selectedIndex,
