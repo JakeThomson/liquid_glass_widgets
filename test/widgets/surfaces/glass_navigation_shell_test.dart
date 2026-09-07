@@ -1065,6 +1065,55 @@ void main() {
     });
   });
 
+  group('page-based navigators', () {
+    testWidgets(
+        'a pages update that drives a route animation does not mark '
+        'the chrome dirty mid-build', (tester) async {
+      // A declarative Navigator applies its pages inside didUpdateWidget —
+      // the build phase. Wiring a secondary animation there
+      // (ProxyAnimation.parent=) and starting a pop's reverse both notify
+      // value listeners synchronously, so the shell's tick has to defer or
+      // the chrome's ListenableBuilder is marked dirty mid-build.
+      final key = GlobalKey<_PagesNavigatorState>();
+      await tester.pumpWidget(_PagesApp(navigatorKey: key));
+      await settle(tester);
+
+      key.currentState!.push(const _Screen(title: 'Detail', actions: []));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await settle(tester);
+      expect(find.text('Detail'), findsOneWidget);
+
+      key.currentState!.pop();
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await settle(tester);
+      expect(find.text('Detail'), findsNothing);
+    });
+
+    testWidgets('and neither does a route with no transition', (tester) async {
+      // A zero-duration route completes its animation synchronously inside
+      // the same didUpdateWidget, which is the case that notifies value
+      // listeners rather than only status listeners.
+      final key = GlobalKey<_PagesNavigatorState>();
+      await tester.pumpWidget(_PagesApp(navigatorKey: key));
+      await settle(tester);
+
+      key.currentState!
+          .push(const _Screen(title: 'Instant', actions: []), instant: true);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await settle(tester);
+      expect(find.text('Instant'), findsOneWidget);
+
+      key.currentState!.pop();
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await settle(tester);
+      expect(find.text('Instant'), findsNothing);
+    });
+  });
+
   group('fallback rendering', () {
     Finder inRouteCapsule() => find.descendant(
           of: find.byType(GlassAppBar),
@@ -1296,4 +1345,73 @@ class _TogglingScreenState extends State<_TogglingScreen> {
       ),
     );
   }
+}
+
+/// A root-level page-based Navigator under the shell whose pages change
+/// with setState BELOW the shell — the way go_router's Router sits inside
+/// an app's builder-installed shell. The rebuild that applies the pages then
+/// starts beneath the chrome, not above it.
+class _PagesApp extends StatelessWidget {
+  const _PagesApp({required this.navigatorKey});
+
+  final GlobalKey<_PagesNavigatorState> navigatorKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoApp(
+      builder: (context, _) => GlassNavigationShell(
+        child: _PagesNavigator(key: navigatorKey),
+      ),
+    );
+  }
+}
+
+class _PagesNavigator extends StatefulWidget {
+  const _PagesNavigator({super.key});
+
+  @override
+  State<_PagesNavigator> createState() => _PagesNavigatorState();
+}
+
+class _PagesNavigatorState extends State<_PagesNavigator> {
+  final _pages = <Page<void>>[
+    const CupertinoPage<void>(
+      key: ValueKey('root'),
+      child: _Screen(title: 'Root', actions: []),
+    ),
+  ];
+
+  void push(Widget screen, {bool instant = false}) => setState(() {
+        final key = ValueKey(_pages.length);
+        _pages.add(
+          instant
+              ? _InstantPage(key: key, child: screen)
+              : CupertinoPage<void>(key: key, child: screen),
+        );
+      });
+
+  void pop() => setState(() => _pages.removeLast());
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      pages: List.of(_pages),
+      onDidRemovePage: (page) => _pages.remove(page),
+    );
+  }
+}
+
+/// A page whose route has no transition, like a `NoTransitionPage`.
+class _InstantPage extends Page<void> {
+  const _InstantPage({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Route<void> createRoute(BuildContext context) => PageRouteBuilder<void>(
+        settings: this,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (_, __, ___) => child,
+      );
 }
