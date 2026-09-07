@@ -62,7 +62,8 @@ void main() {
       double? seen;
       void listener() => seen = controller.progress;
       controller.progressListenable!.addListener(listener);
-      addTearDown(() => controller.progressListenable?.removeListener(listener));
+      addTearDown(
+          () => controller.progressListenable?.removeListener(listener));
 
       controller.snapToState(GlassSheetState.full, animate: false);
       expect(seen, 1.0, reason: 'the jump to full should read as 1.0 at once');

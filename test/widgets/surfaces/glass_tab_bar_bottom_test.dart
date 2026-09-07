@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_bottom_internal.dart';
 
 import '../../shared/test_helpers.dart';
 
@@ -296,7 +297,8 @@ void main() {
       expect(button.iconColor, Colors.red);
     });
 
-    test('GlassTabBarExtraButton.menu constructor sets properties correctly', () {
+    test('GlassTabBarExtraButton.menu constructor sets properties correctly',
+        () {
       final button = GlassTabBarExtraButton.menu(
         icon: const Icon(CupertinoIcons.ellipsis),
         label: 'More',
@@ -1298,8 +1300,8 @@ void main() {
 
         final adaptiveGlasses =
             tester.widgetList<AdaptiveGlass>(find.byType(AdaptiveGlass));
-        expect(
-            adaptiveGlasses.any((g) => g.quality == GlassQuality.minimal), isTrue);
+        expect(adaptiveGlasses.any((g) => g.quality == GlassQuality.minimal),
+            isTrue);
       });
 
       testWidgets('inherits from quality when backgroundQuality is null',
@@ -1328,9 +1330,35 @@ void main() {
 
         final adaptiveGlasses =
             tester.widgetList<AdaptiveGlass>(find.byType(AdaptiveGlass));
-        expect(
-            adaptiveGlasses.every((g) => g.quality == GlassQuality.standard),
+        expect(adaptiveGlasses.every((g) => g.quality == GlassQuality.standard),
             isTrue);
+      });
+
+      testWidgets('propagates backgroundQuality to BottomBarExtraBtn',
+          (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: GlassTabBar.bottom(
+              tabs: const [
+                GlassTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+                GlassTab(label: 'B', icon: Icon(CupertinoIcons.search)),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              quality: GlassQuality.premium,
+              backgroundQuality: GlassQuality.minimal,
+              extraButton: GlassTabBarExtraButton(
+                icon: const Icon(CupertinoIcons.add),
+                onTap: () {},
+                label: 'Add',
+              ),
+            ),
+          ),
+        );
+
+        final extraBtn =
+            tester.widget<BottomBarExtraBtn>(find.byType(BottomBarExtraBtn));
+        expect(extraBtn.quality, equals(GlassQuality.minimal));
       });
     });
   });

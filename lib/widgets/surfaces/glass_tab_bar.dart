@@ -1535,7 +1535,7 @@ class GlassTabBarTrailingButton {
     this.enabled = true,
     this.menuAlignment,
     this.menuWidth = 200,
-  })  : onTap = _noOp;
+  }) : onTap = _noOp;
 
   /// The glyph centered on the pill.
   final Widget icon;

@@ -128,19 +128,23 @@ class _GlassBottomBarDemoPageState extends State<GlassBottomBarDemoPage> {
                         children: const {
                           0: Padding(
                             padding: EdgeInsets.symmetric(horizontal: 6),
-                            child: Text('Inherit', style: TextStyle(fontSize: 12)),
+                            child:
+                                Text('Inherit', style: TextStyle(fontSize: 12)),
                           ),
                           1: Padding(
                             padding: EdgeInsets.symmetric(horizontal: 6),
-                            child: Text('Minimal', style: TextStyle(fontSize: 12)),
+                            child:
+                                Text('Minimal', style: TextStyle(fontSize: 12)),
                           ),
                           2: Padding(
                             padding: EdgeInsets.symmetric(horizontal: 6),
-                            child: Text('Standard', style: TextStyle(fontSize: 12)),
+                            child: Text('Standard',
+                                style: TextStyle(fontSize: 12)),
                           ),
                           3: Padding(
                             padding: EdgeInsets.symmetric(horizontal: 6),
-                            child: Text('Premium', style: TextStyle(fontSize: 12)),
+                            child:
+                                Text('Premium', style: TextStyle(fontSize: 12)),
                           ),
                         },
                         onValueChanged: (v) {

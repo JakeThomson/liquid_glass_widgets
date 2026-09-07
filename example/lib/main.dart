@@ -29,6 +29,8 @@ import 'package:liquid_glass_widgets_example/demos/quality_comparison_demo.dart'
     show GlassQualityComparisonDemo;
 import 'package:liquid_glass_widgets_example/demos/color_fidelity_demo.dart'
     show ColorFidelityDemoPage;
+import 'package:liquid_glass_widgets_example/demos/tab_bar_menu_demo.dart'
+    show TabBarMenuDemoPage;
 import 'package:liquid_glass_widgets_example/pages/containers_page.dart';
 import 'package:liquid_glass_widgets_example/pages/feedback_page.dart';
 import 'package:liquid_glass_widgets_example/pages/input_page.dart';
@@ -733,6 +735,20 @@ class _ExamplesTab extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  SizedBox(height: 14),
+
+                  // Large card: Tab Bar Menus
+                  _LargeDemoCard(
+                    title: 'Tab Bar Menus',
+                    subtitle:
+                        'Pull-down menus on bottom, minimizable & searchable bars (#275)',
+                    icon: CupertinoIcons.ellipsis_vertical_circle_fill,
+                    gradient: const [
+                      Color(0xFF2E0854),
+                      Color(0xFF8E2DE2),
+                    ],
+                    destination: const TabBarMenuDemoPage(),
                   ),
                   SizedBox(height: 14),
 

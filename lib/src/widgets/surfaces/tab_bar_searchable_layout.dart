@@ -672,7 +672,9 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                               nativePressHighlight: nativePressHighlight,
                               isActive: searching,
                               barBorderRadius: widget.barBorderRadius,
-                              quality: effectiveQuality,
+                              // Chrome-plane peer: matches the track background,
+                              // not the indicator pill (effectiveQuality).
+                              quality: effectiveBackgroundQuality,
                               platformViewBackdrop: widget.platformViewBackdrop,
                               enableBackgroundAnimation:
                                   widget.interactionBehavior.hasScale,
@@ -710,7 +712,9 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                 onTap: onTap,
                                 label: renderedTrailing?.label,
                                 barBorderRadius: widget.barBorderRadius,
-                                quality: effectiveQuality,
+                                // Chrome-plane peer: matches the track background,
+                                // not the indicator pill (effectiveQuality).
+                                quality: effectiveBackgroundQuality,
                                 platformViewBackdrop:
                                     widget.platformViewBackdrop,
                                 enableBackgroundAnimation:
@@ -807,7 +811,9 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                     alignment: Alignment.center,
                                     child: BottomBarExtraBtn(
                                       config: widget.extraButton!,
-                                      quality: effectiveQuality,
+                                      // Chrome-plane peer: matches the track background,
+                                      // not the indicator pill (effectiveQuality).
+                                      quality: effectiveBackgroundQuality,
                                       iconColor:
                                           widget.extraButton!.iconColor ??
                                               resolvedUnselectedIconColor,
@@ -947,7 +953,9 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                             },
                             pillSize: animH,
                             barBorderRadius: widget.barBorderRadius,
-                            quality: effectiveQuality,
+                            // Chrome-plane peer: matches the track background,
+                            // not the indicator pill (effectiveQuality).
+                            quality: effectiveBackgroundQuality,
                             indicatorColor: widget.indicatorColor,
                             settings: widget.settings,
                             cancelButtonColor:

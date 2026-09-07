@@ -342,7 +342,8 @@ void main() {
   });
 
   group('AdaptiveGlass bodyMode (GlassBodyMode.clear)', () {
-    testWidgets('renders cleanly with bodyMode: GlassBodyMode.clear in all quality tiers',
+    testWidgets(
+        'renders cleanly with bodyMode: GlassBodyMode.clear in all quality tiers',
         (tester) async {
       const clearSettings = LiquidGlassSettings(
         bodyMode: GlassBodyMode.clear,

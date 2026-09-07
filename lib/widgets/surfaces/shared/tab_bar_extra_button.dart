@@ -84,7 +84,7 @@ class GlassTabBarExtraButton {
     this.enabled = true,
     this.menuAlignment,
     this.menuWidth = 200,
-  })  : onTap = _noOp;
+  }) : onTap = _noOp;
 
   /// Icon widget displayed in the button.
   final Widget icon;
@@ -161,4 +161,3 @@ class GlassTabBarExtraButton {
   /// Whether this button opens a menu rather than firing a tap callback.
   bool get isMenu => menuItems != null;
 }
-

@@ -148,7 +148,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final route = _route;
     if (route == null) return;
     route.secondaryAnimation?.addListener(_handleSecondaryAnimation);
-    route.secondaryAnimation?.addStatusListener(_handleSecondaryAnimationStatus);
+    route.secondaryAnimation
+        ?.addStatusListener(_handleSecondaryAnimationStatus);
     route.animation?.addStatusListener(_handlePrimaryAnimationStatus);
   }
 
@@ -156,7 +157,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final route = _route;
     if (route == null) return;
     route.secondaryAnimation?.removeListener(_handleSecondaryAnimation);
-    route.secondaryAnimation?.removeStatusListener(_handleSecondaryAnimationStatus);
+    route.secondaryAnimation
+        ?.removeStatusListener(_handleSecondaryAnimationStatus);
     route.animation?.removeStatusListener(_handlePrimaryAnimationStatus);
   }
 
@@ -219,11 +221,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         // Block trigger taps while menu is significantly open.
         final isMenuBlocking = _overlayController.isShowing && rawValue > 0.8;
 
-        // Early handoff during close:
-        // When closing and the liquid morph is almost finished, we latch the handoff.
-        // We instantly hide the empty glass overlay and reveal the REAL trigger.
-        // The latch ensures that even if the underdamped spring bounces back up
-        // past 0.15, we don't hide the icon again!
         final isHandoff =
             _morphController.isClosing && _morphController.hasHandedOff;
         final triggerOpacity =
@@ -247,6 +244,13 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         final double pushDy =
             isHandoff ? (finalDy + _verticalOffset) * rawValue : 0.0;
 
+        final Widget triggerChild = widget.triggerBuilder != null
+            ? widget.triggerBuilder!(context, _toggleMenu)
+            : GestureDetector(
+                onTap: _toggleMenu,
+                child: widget.trigger,
+              );
+
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -255,14 +259,14 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               offset: Offset(pushDx, pushDy),
               child: Opacity(
                 opacity: triggerOpacity,
-                child: IgnorePointer(
-                  ignoring: isMenuBlocking,
-                  child: widget.triggerBuilder != null
-                      ? widget.triggerBuilder!(context, _toggleMenu)
-                      : GestureDetector(
-                          onTap: _toggleMenu,
-                          child: widget.trigger,
-                        ),
+                child: GlassMaterializeScope(
+                  glassProgress: triggerOpacity,
+                  contentOpacity: triggerOpacity,
+                  contentSigma: 0.0,
+                  child: IgnorePointer(
+                    ignoring: isMenuBlocking,
+                    child: triggerChild,
+                  ),
                 ),
               ),
             ),

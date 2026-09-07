@@ -26,7 +26,7 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^1.3.1
+  liquid_glass_widgets: ^1.4.0
 ```
 
 ```bash
@@ -992,6 +992,7 @@ Focused, self-contained demos — one widget, one file, runnable standalone:
 | `content_aware_brightness_demo.dart` — light/dark bar adaptation | `cd example && flutter run -t lib/demos/content_aware_brightness_demo.dart` |
 | `indicator_parity_demo.dart` — all four pill widgets side-by-side | `cd example && flutter run -t lib/demos/indicator_parity_demo.dart` |
 | `color_fidelity_demo.dart` — `Glass.clear` vs `Glass.regular` + decoupled track quality | `cd example && flutter run -t lib/demos/color_fidelity_demo.dart` |
+| `tab_bar_menu_demo.dart` — native pull-down menus on tab bars (`.menu`) | `cd example && flutter run -t lib/demos/tab_bar_menu_demo.dart` |
 
 
 ## Documentation
