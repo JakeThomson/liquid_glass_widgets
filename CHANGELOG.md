@@ -1,3 +1,9 @@
+# 1.4.1
+
+## Bug Fixes
+
+- **`GlassNavigationShell` no longer marks its chrome dirty mid-build:** The shell listens to every registered route's animations and re-resolved the pinned chrome synchronously on each tick. A page-based `Navigator` applies its pages inside `didUpdateWidget` — the build phase — and a route with no transition completes its animation right there, so the tick landed as `setState() or markNeedsBuild() called during build` on the chrome's `ListenableBuilder` for every such push and pop, and the chrome missed that frame. Ticks now defer past build the way status changes already did.
+
 # 1.4.0
 
 ## Features
