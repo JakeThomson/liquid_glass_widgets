@@ -725,7 +725,8 @@ void main() {
               body: Center(
                 child: GlassPopover(
                   trigger: const Text('Open Popover'),
-                  contentBuilder: (context, close) => const Text('Popover Body'),
+                  contentBuilder: (context, close) =>
+                      const Text('Popover Body'),
                 ),
               ),
             );

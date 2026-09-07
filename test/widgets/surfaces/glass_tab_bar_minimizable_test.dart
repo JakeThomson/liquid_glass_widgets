@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_searchable_internal.dart';
 import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_searchable_layout.dart';
 
 import '../../shared/test_helpers.dart';
@@ -59,7 +60,8 @@ void main() {
       expect(find.byType(GlassTabBar), findsOneWidget);
     });
 
-    testWidgets('forwards backgroundQuality to underlying TabBarSearchableLayout',
+    testWidgets(
+        'forwards backgroundQuality to underlying TabBarSearchableLayout',
         (tester) async {
       await tester.pumpWidget(createTestApp(
         child: GlassTabBar.minimizable(
@@ -76,6 +78,26 @@ void main() {
         find.byType(TabBarSearchableLayout),
       );
       expect(layout.backgroundQuality, equals(GlassQuality.minimal));
+    });
+
+    testWidgets('propagates backgroundQuality to MinimizableTrailingPill',
+        (tester) async {
+      await tester.pumpWidget(createTestApp(
+        child: GlassTabBar.minimizable(
+          tabs: _testTabs,
+          selectedIndex: 0,
+          onTabSelected: (_) {},
+          quality: GlassQuality.premium,
+          backgroundQuality: GlassQuality.minimal,
+          trailingButton: _trailingButton(),
+        ),
+      ));
+      await tester.pump();
+
+      final pill = tester.widget<MinimizableTrailingPill>(
+        find.byType(MinimizableTrailingPill),
+      );
+      expect(pill.quality, equals(GlassQuality.minimal));
     });
 
     testWidgets('displays tab labels while expanded', (tester) async {
@@ -243,7 +265,8 @@ void main() {
 
     // ── Trailing button: menu mode (Issue #275) ──────────────────────────────
 
-    test('GlassTabBarTrailingButton.menu constructor sets properties correctly', () {
+    test('GlassTabBarTrailingButton.menu constructor sets properties correctly',
+        () {
       final button = GlassTabBarTrailingButton.menu(
         icon: const Icon(CupertinoIcons.ellipsis),
         label: 'Actions',

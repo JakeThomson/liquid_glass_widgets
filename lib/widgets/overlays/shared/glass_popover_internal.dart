@@ -177,7 +177,8 @@ class _GlassPopoverState extends State<GlassPopover>
     final route = _route;
     if (route == null) return;
     route.secondaryAnimation?.addListener(_handleSecondaryAnimation);
-    route.secondaryAnimation?.addStatusListener(_handleSecondaryAnimationStatus);
+    route.secondaryAnimation
+        ?.addStatusListener(_handleSecondaryAnimationStatus);
     route.animation?.addStatusListener(_handlePrimaryAnimationStatus);
   }
 
@@ -185,7 +186,8 @@ class _GlassPopoverState extends State<GlassPopover>
     final route = _route;
     if (route == null) return;
     route.secondaryAnimation?.removeListener(_handleSecondaryAnimation);
-    route.secondaryAnimation?.removeStatusListener(_handleSecondaryAnimationStatus);
+    route.secondaryAnimation
+        ?.removeStatusListener(_handleSecondaryAnimationStatus);
     route.animation?.removeStatusListener(_handlePrimaryAnimationStatus);
   }
 
@@ -337,18 +339,28 @@ class _GlassPopoverState extends State<GlassPopover>
                     offset: Offset(pushDx, pushDy),
                     child: Opacity(
                       opacity: triggerOpacity,
-                      child: IgnorePointer(
-                        ignoring: isPopoverBlocking,
-                        child: child, // triggerContent
+                      child: GlassMaterializeScope(
+                        glassProgress: triggerOpacity,
+                        contentOpacity: triggerOpacity,
+                        contentSigma: 0.0,
+                        child: IgnorePointer(
+                          ignoring: isPopoverBlocking,
+                          child: child, // triggerContent
+                        ),
                       ),
                     ),
                   )
                 : triggerOpacity < 1.0
                     ? Opacity(
                         opacity: triggerOpacity,
-                        child: IgnorePointer(
-                          ignoring: isPopoverBlocking,
-                          child: child,
+                        child: GlassMaterializeScope(
+                          glassProgress: triggerOpacity,
+                          contentOpacity: triggerOpacity,
+                          contentSigma: 0.0,
+                          child: IgnorePointer(
+                            ignoring: isPopoverBlocking,
+                            child: child,
+                          ),
                         ),
                       )
                     : isPopoverBlocking

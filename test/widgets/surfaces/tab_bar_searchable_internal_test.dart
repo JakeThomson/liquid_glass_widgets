@@ -260,8 +260,8 @@ void main() {
       ));
       await tester.pump();
 
-      final indicator = tester.widget<SearchableTabIndicator>(
-          find.byType(SearchableTabIndicator));
+      final indicator = tester
+          .widget<SearchableTabIndicator>(find.byType(SearchableTabIndicator));
       expect(indicator.quality, equals(GlassQuality.standard));
       expect(indicator.backgroundQuality, equals(GlassQuality.minimal));
 

@@ -317,7 +317,9 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
                             height: widget.barHeight,
                             child: BottomBarExtraBtn(
                               config: resolvedExtraButton,
-                              quality: effectiveQuality,
+                              // Chrome-plane peer: matches the track background,
+                              // not the indicator pill (effectiveQuality).
+                              quality: effectiveBackgroundQuality,
                               iconColor: resolvedExtraButton.iconColor ??
                                   resolvedUnselectedIconColor,
                               enableBlend: widget.enableBlend,
