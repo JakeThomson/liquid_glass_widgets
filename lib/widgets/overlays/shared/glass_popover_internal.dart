@@ -176,7 +176,6 @@ class _GlassPopoverState extends State<GlassPopover>
   void _addRouteListeners() {
     final route = _route;
     if (route == null) return;
-    route.secondaryAnimation?.addListener(_handleSecondaryAnimation);
     route.secondaryAnimation
         ?.addStatusListener(_handleSecondaryAnimationStatus);
     route.animation?.addStatusListener(_handlePrimaryAnimationStatus);
@@ -185,27 +184,14 @@ class _GlassPopoverState extends State<GlassPopover>
   void _removeRouteListeners() {
     final route = _route;
     if (route == null) return;
-    route.secondaryAnimation?.removeListener(_handleSecondaryAnimation);
     route.secondaryAnimation
         ?.removeStatusListener(_handleSecondaryAnimationStatus);
     route.animation?.removeStatusListener(_handlePrimaryAnimationStatus);
   }
 
-  void _handleSecondaryAnimation() {
-    if (!_overlayController.isShowing) return;
-    final anim = _route?.secondaryAnimation;
-    if (anim == null) return;
-    if (anim.status == AnimationStatus.forward ||
-        anim.status == AnimationStatus.completed ||
-        (anim.value > 0.0 && anim.status != AnimationStatus.reverse)) {
-      _dismissImmediately();
-    }
-  }
-
   void _handleSecondaryAnimationStatus(AnimationStatus status) {
     if (!_overlayController.isShowing) return;
-    if (status == AnimationStatus.forward ||
-        status == AnimationStatus.completed) {
+    if (status == AnimationStatus.forward) {
       _dismissImmediately();
     }
   }

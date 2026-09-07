@@ -323,6 +323,7 @@ void main() {
       expect(button.menuWidth, 220);
       expect(button.menuAlignment, GlassMenuAlignment.topRight);
       expect(button.menuItems?.length, 1);
+      expect(() => button.onTap(), returnsNormally);
     });
 
     testWidgets(
@@ -480,6 +481,23 @@ void main() {
             onTabSelected: (_) {},
             showIndicator: false,
             maskingQuality: MaskingQuality.off,
+          ),
+        ),
+      );
+      expect(find.byType(GlassTabBar), findsOneWidget);
+    });
+
+    testWidgets(
+        'showIndicator=false with backgroundQuality and default maskingQuality renders',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassTabBar.bottom(
+            tabs: testTabs3,
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            showIndicator: false,
+            backgroundQuality: GlassQuality.minimal,
           ),
         ),
       );
