@@ -417,14 +417,16 @@ class SheetMorphGeometry {
   /// The detent a swipe-to-dismiss drag falls away from.
   ///
   /// Mirrors the pivot `_calculateMetrics` drags from: the peek floor when
-  /// there is one, the half detent otherwise.
+  /// there is one, otherwise the lowest enabled visible detent.
   ///
   /// Deliberately *not* [SheetGeometry.minState], which is
   /// [GlassSheetState.hidden] for the common dismissible peek-less sheet —
   /// hidden is the position a swipe drags the sheet *to*, and measuring travel
   /// from it would read every drag as zero.
   static GlassSheetState dismissPivotState(SheetGeometry geometry) =>
-      geometry.enablePeek ? GlassSheetState.peek : GlassSheetState.half;
+      geometry.orderedStates.firstWhere(
+        (state) => state != GlassSheetState.hidden,
+      );
 
   /// How far the sheet has been dragged below its lowest detent, as a fraction
   /// of screen height.

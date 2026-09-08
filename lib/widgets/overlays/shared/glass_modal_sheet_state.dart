@@ -590,6 +590,23 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     required double bottomRadiusFull,
     required double fullPos,
   }) {
+    // Without a peek detent, dismissal translates the lowest enabled frame.
+    // Do not interpolate through disabled half/peek geometry on the way out:
+    // peekWidth and peek margins may describe a completely different surface.
+    double dismissOffset = 0.0;
+    if (widget.mode == GlassSheetMode.dismissible && !_geometry.enablePeek) {
+      final pivotPos = _geometry.positionForState(
+        SheetMorphGeometry.dismissPivotState(_geometry), mqHeight);
+      if (pos < pivotPos) {
+        dismissOffset = (pivotPos - pos) * mqHeight;
+        pos = pivotPos;
+        final expansionRange = fullPos - halfPos;
+        t = expansionRange > 0.0001
+            ? ((pos - halfPos) / expansionRange).clamp(0.0, 1.0)
+            : 1.0;
+      }
+    }
+
     late LiquidGlassSettings effectiveSettings;
     // Disable scaling in full state by lerping effective interactionScale to 1.0
     // Also disable scaling if we are interacting with a child (Smart Silence)
@@ -864,7 +881,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     return _RenderMetrics(
       stretchT: stretchT,
       effectiveHeight: effectiveHeight,
-      effectiveBottom: effectiveBottom,
+      effectiveBottom: effectiveBottom - dismissOffset,
       topRadius: topRadius,
       bottomRadius: bottomRadius,
       hPad: hPad,

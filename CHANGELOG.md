@@ -1,3 +1,9 @@
+# Unreleased
+
+## Bug Fixes
+
+- **Dismissible modal sheets retain their frame below the lowest enabled detent:** Sheets without a small detent no longer jump to peek width, margins, or corners during dismissal. Large-only sheets slide away with their full frame; medium+large sheets preserve the medium frame below that detent.
+
 # 1.4.1
 
 ## Bug Fixes
@@ -3751,5 +3757,4 @@ The four optional stretch-axis override parameters introduced in 0.10.3 have bee
 | `allowNegativeYStretch` | `allowNegativeY` |
 
 All four remain optional with `null` defaults (auto-inferred from menu position). Only code explicitly passing the old names needs updating.
-
 
