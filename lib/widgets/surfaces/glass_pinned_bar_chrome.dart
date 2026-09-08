@@ -333,7 +333,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   /// One group of items, drawn as the shell it asked for.
   Widget _buildGroup(GlassNavBarGroup group) {
     if (_handedOver) return _measuringGroup(group);
-    if (group.background == GlassBarItemBackground.none) {
+    if (!group.glass) {
       final item = group.items.single;
       return Semantics(
         button: true,

@@ -1,3 +1,9 @@
+# 1.4.2
+
+## Bug Fixes
+
+- **Custom bar items that draw their own glass no longer flash across a push or pop:** The pinned chrome fades and blurs item content by painting it under opacity and image-filter layers, and a glass surface painted under either has no backdrop to sample — a `GlassBarItem.custom` carrying its own `GlassButton.custom` capsule rendered as its opaque backer for the whole transition and snapped to glass on the last frame. `GlassBarItemBackground.own` marks such an item, and the cluster dissolves it through the surface's own visibility instead.
+
 # 1.4.1
 
 ## Bug Fixes
