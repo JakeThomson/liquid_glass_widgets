@@ -1,3 +1,9 @@
+# 1.4.3
+
+## Bug Fixes
+
+- **Pinned chrome morphs over a sprung route's full duration:** The shell timed its choreography against the route's animation value, which a duration-driven route reports linearly in time. A route running a spring — a zoom transition — covers most of its travel in the first hundred milliseconds and then creeps, so the whole morph landed in a handful of frames while the page was still flying. A route that answers `createSimulation` now plays its chrome on the shell's own controller over the route's declared `transitionDuration`, starting from wherever the chrome already is when a pop interrupts a push; duration-driven routes read exactly as before.
+
 # 1.4.2
 
 ## Bug Fixes
