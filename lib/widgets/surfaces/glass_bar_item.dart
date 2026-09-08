@@ -7,7 +7,8 @@ import '../overlays/glass_menu.dart';
 /// Mirrors the two booleans iOS 26 added to `UIBarButtonItem`:
 /// `sharesBackground` (default `YES`) and `hidesSharedBackground` (default
 /// `NO`). Their four combinations describe three distinct results, which are
-/// the three values here.
+/// the first three values here; [own] is [none] for content that is itself
+/// glass.
 ///
 /// Both are documented as being ignored for an item inside an explicit group
 /// of more than one; the equivalent here is that [GlassBarItemBackground.shared]
@@ -33,18 +34,12 @@ enum GlassBarItemBackground {
 
   /// The item's content is itself a glass surface.
   ///
-  /// Like [none], nothing is drawn behind it. The difference is how it
-  /// dissolves across a push or pop: the pinned chrome fades and blurs
-  /// ordinary content by painting it under opacity and image-filter layers,
-  /// and a glass surface painted under either has no backdrop to sample —
-  /// it renders as its opaque backer until the layer is gone, then snaps to
-  /// glass on the last frame. An [own] item is dissolved through the
-  /// surface's own visibility instead, the same channel `GlassMaterialize`
-  /// uses, which every package surface honours.
-  ///
-  /// For a custom capsule built from `GlassButton.custom` or another package
-  /// surface. Plain content should stay [none], where the cluster's own fade
-  /// still applies.
+  /// `hidesSharedBackground = YES`, as [none] — but the pinned chrome fades
+  /// and blurs ordinary content under opacity and image-filter layers, and a
+  /// glass surface painted under either has no backdrop to sample. An [own]
+  /// item dissolves through its surface's own visibility instead, the channel
+  /// `GlassMaterialize` uses. For a capsule built from `GlassButton.custom`;
+  /// plain content stays [none].
   own,
 }
 
