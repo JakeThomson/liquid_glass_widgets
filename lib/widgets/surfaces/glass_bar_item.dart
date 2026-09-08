@@ -30,6 +30,22 @@ enum GlassBarItemBackground {
   /// a profile photo, a coloured badge — where a capsule behind it would read
   /// as a second, competing surface.
   none,
+
+  /// The item's content is itself a glass surface.
+  ///
+  /// Like [none], nothing is drawn behind it. The difference is how it
+  /// dissolves across a push or pop: the pinned chrome fades and blurs
+  /// ordinary content by painting it under opacity and image-filter layers,
+  /// and a glass surface painted under either has no backdrop to sample —
+  /// it renders as its opaque backer until the layer is gone, then snaps to
+  /// glass on the last frame. An [own] item is dissolved through the
+  /// surface's own visibility instead, the same channel `GlassMaterialize`
+  /// uses, which every package surface honours.
+  ///
+  /// For a custom capsule built from `GlassButton.custom` or another package
+  /// surface. Plain content should stay [none], where the cluster's own fade
+  /// still applies.
+  own,
 }
 
 /// A single item in a pinned navigation-bar cluster.
