@@ -45,14 +45,15 @@ void main() {
         matching: matching,
       );
 
+  /// Every [GlassMaterializeScope] above [finder], nearest first.
+  Iterable<GlassMaterializeScope> scopesAbove(Finder finder) => find
+      .ancestor(of: finder, matching: find.byType(GlassMaterializeScope))
+      .evaluate()
+      .map((e) => e.widget as GlassMaterializeScope);
+
   /// The [GlassMaterializeScope] closest above [finder].
   GlassMaterializeScope nearestScope(WidgetTester tester, Finder finder) =>
-      tester
-          .widgetList<GlassMaterializeScope>(find.ancestor(
-            of: finder,
-            matching: find.byType(GlassMaterializeScope),
-          ))
-          .first;
+      scopesAbove(finder).first;
 
   group('the automatic back button', () {
     testWidgets('a back-only cluster is still the 44pt circle', (tester) async {
@@ -205,22 +206,41 @@ void main() {
       await settle(tester);
       await _push(
           tester,
-          const _Screen(
+          _Screen(
             title: 'Detail',
             leading: [
-              GlassBarItem.custom(
+              const GlassBarItem.custom(
                 child: SizedBox(width: 44, height: 44, child: Text('avatar')),
                 background: GlassBarItemBackground.none,
               ),
+              _ownCapsule(),
             ],
           ));
       await tester.pump(const Duration(milliseconds: 250));
 
-      // Only the menu wrapper's resting scope: the item is faded at paint.
-      expect(
-        nearestScope(tester, inHost(find.text('avatar'))).glassProgress,
-        1.0,
-      );
+      // Both sit under the group's own materialize; only the glass item gets
+      // the cluster's fade as a scope of its own. The avatar is faded at
+      // paint, as before.
+      final avatarScopes = scopesAbove(inHost(find.text('avatar')));
+      final capsuleScopes = scopesAbove(inHost(find.text('capsule')));
+      expect(capsuleScopes.length, avatarScopes.length + 1);
+    });
+
+    testWidgets(
+        'a cluster only one route has dissolves through the materialize',
+        (tester) async {
+      await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
+      await settle(tester);
+      await _push(tester, _Screen(title: 'Detail', leading: [_cancel()]));
+
+      // Inside the materialize window. The menu wrapper around every group
+      // used to install a resting scope of its own here, so the group's
+      // shell never saw this fade and popped in solid at the window's start.
+      await tester.pump(const Duration(milliseconds: 350));
+      final scope =
+          nearestScope(tester, inHost(find.byIcon(CupertinoIcons.xmark)));
+      expect(scope.glassProgress, lessThan(1.0));
+      expect(scope.glassProgress, greaterThan(0.0));
     });
 
     testWidgets('a separate item is its own shell beside a shared capsule',
