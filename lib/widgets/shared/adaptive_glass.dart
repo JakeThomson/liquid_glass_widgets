@@ -707,10 +707,13 @@ class _FrostedFallback extends StatelessWidget {
   /// saturation = 0  → grayscale
   /// saturation = 1  → unchanged
   /// saturation > 1  → over-saturated (default glass is 1.5)
+  ///
+  /// Uses ITU-R BT.709 luma weights (corrected from BT.601 in v1.4.2).
   static List<double> _saturationMatrix(double saturation) {
-    const lumR = 0.299;
-    const lumG = 0.587;
-    const lumB = 0.114;
+    // ITU-R BT.709 / IEC 61966-2-1 (sRGB) luminance coefficients.
+    const lumR = 0.2126;
+    const lumG = 0.7152;
+    const lumB = 0.0722;
     final s = saturation;
     final inv = 1.0 - s;
     return [

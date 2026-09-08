@@ -381,7 +381,7 @@ void main() {
     // the already-sampled background at the refracted UV.  Zero extra texture
     // reads; the sample is already in the register file.
     //
-    // LUMA_WEIGHTS = vec3(0.299, 0.587, 0.114) (BT.601, defined in render.glsl)
+    // LUMA_WEIGHTS = vec3(0.2126, 0.7152, 0.0722) (ITU-R Rec.709, defined in render.glsl)
     //
     // adaptiveStrength range [0.8, 1.2]:
     //   • backdropLuma = 0.0 (black)  → strength 1.2 (richer glass)

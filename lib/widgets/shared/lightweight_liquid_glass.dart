@@ -977,7 +977,7 @@ class _RenderLightweightGlass extends RenderProxyBox
     // This only affects the Skia/Web lightweight shader path.
     // Impeller uses a different physical model and is completely unaffected.
     final gc = _settings.effectiveGlassColor;
-    final glassLuminance = 0.299 * gc.r + 0.587 * gc.g + 0.114 * gc.b;
+    final glassLuminance = 0.2126 * gc.r + 0.7152 * gc.g + 0.0722 * gc.b; // ITU-R Rec.709
     final brightnessIntent = gc.a * glassLuminance * 0.6;
     final effectiveAmbient = math.max(
       _settings.effectiveAmbientStrength,
