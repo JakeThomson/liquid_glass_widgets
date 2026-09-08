@@ -1018,4 +1018,60 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Go to Second'), findsOneWidget);
   });
+
+  testWidgets(
+      'GlassMenu dismisses instantly when route is pushed on ancestor Navigator (#274 nested navigator)',
+      (tester) async {
+    final shellNavigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Navigator(
+          key: shellNavigatorKey,
+          onGenerateRoute: (_) => MaterialPageRoute<void>(
+            builder: (_) => Navigator(
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (context) => Scaffold(
+                  body: Center(
+                    child: GlassMenu(
+                      trigger: const Text('Open Menu'),
+                      items: [
+                        GlassMenuItem(
+                          title: 'Start Activity',
+                          onTap: () {
+                            shellNavigatorKey.currentState!.push<void>(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const Scaffold(
+                                  body: Center(child: Text('Destination page')),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start Activity'), findsOneWidget);
+
+    await tester.tap(find.text('Start Activity'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Mid-transition into Destination page on the ancestor navigator,
+    // the menu should already be dismissed and not lingering in root overlay.
+    expect(find.text('Destination page'), findsOneWidget);
+    expect(find.text('Start Activity'), findsNothing);
+
+    await tester.pumpAndSettle();
+  });
 }

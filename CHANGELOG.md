@@ -4,6 +4,14 @@
 
 - **`GlassNavigationShell` no longer marks its chrome dirty mid-build (#293):** The shell listens to every registered route's animations and re-resolved the pinned chrome synchronously on each tick. A page-based `Navigator` applies its pages inside `didUpdateWidget` — the build phase — and a route with no transition completes its animation right there, so the tick landed as `setState() or markNeedsBuild() called during build` on the chrome's `ListenableBuilder` for every such push and pop, and the chrome missed that frame. Ticks now defer past build the way status changes already did.
 
+Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#294).
+
+- **`GlassScaffold` dark mode stuck white in `MaterialApp` (#289):** `GlassScaffold` now scopes its internal `CupertinoTheme` and `GlassStatusBarStyle.auto` icon style through `GlassTheme.brightnessOf`. This correctly honours `ThemeMode.dark` / `.light` even when the device OS brightness differs from the app theme.
+
+- **Menu and popover dismissal across nested Navigators (#274):** `GlassMenu` and `GlassPopover` now listen to transitions across all ancestor `ModalRoute`s up to the root. When navigation occurs on an enclosing shell or root `Navigator`, the overlay dismisses immediately instead of lingering over the incoming destination page.
+
+Thanks to [@Vincen-dev](https://github.com/Vincen-dev) for the reproduction and test (#274).
+
 # 1.4.0
 
 ## Features
