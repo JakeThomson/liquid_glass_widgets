@@ -47,10 +47,12 @@ void main() {
 
   /// The [GlassMaterializeScope] closest above [finder].
   GlassMaterializeScope nearestScope(WidgetTester tester, Finder finder) =>
-      tester.widgetList<GlassMaterializeScope>(find.ancestor(
-        of: finder,
-        matching: find.byType(GlassMaterializeScope),
-      )).first;
+      tester
+          .widgetList<GlassMaterializeScope>(find.ancestor(
+            of: finder,
+            matching: find.byType(GlassMaterializeScope),
+          ))
+          .first;
 
   group('the automatic back button', () {
     testWidgets('a back-only cluster is still the 44pt circle', (tester) async {
@@ -201,15 +203,17 @@ void main() {
         (tester) async {
       await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
       await settle(tester);
-      await _push(tester, const _Screen(
-        title: 'Detail',
-        leading: [
-          GlassBarItem.custom(
-            child: SizedBox(width: 44, height: 44, child: Text('avatar')),
-            background: GlassBarItemBackground.none,
-          ),
-        ],
-      ));
+      await _push(
+          tester,
+          const _Screen(
+            title: 'Detail',
+            leading: [
+              GlassBarItem.custom(
+                child: SizedBox(width: 44, height: 44, child: Text('avatar')),
+                background: GlassBarItemBackground.none,
+              ),
+            ],
+          ));
       await tester.pump(const Duration(milliseconds: 250));
 
       // Only the menu wrapper's resting scope: the item is faded at paint.
