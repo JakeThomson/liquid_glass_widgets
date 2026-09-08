@@ -109,12 +109,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     widget.controller?._attach(this);
   }
 
-  ModalRoute<dynamic>? _route;
+  List<ModalRoute<dynamic>> _routes = const <ModalRoute<dynamic>>[];
 
   @override
   void dispose() {
     _removeRouteListeners();
-    _route = null;
+    _routes = const [];
     widget.controller?._detach(this);
     _morphController.dispose();
     _scrollController.dispose();
@@ -135,29 +135,54 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     _updateRouteListener();
   }
 
+  List<ModalRoute<dynamic>> _findAncestorRoutes() {
+    final routes = <ModalRoute<dynamic>>[];
+    final visited = <ModalRoute<dynamic>>{};
+    ModalRoute<dynamic>? route = ModalRoute.of(context);
+    while (route != null && visited.add(route)) {
+      routes.add(route);
+      final nav = route.navigator;
+      if (nav == null || !nav.mounted) break;
+      route = ModalRoute.of(nav.context);
+    }
+    return routes;
+  }
+
   void _updateRouteListener() {
-    final currentRoute = ModalRoute.of(context);
-    if (_route != currentRoute) {
+    final currentRoutes = _findAncestorRoutes();
+    if (!_routesEqual(_routes, currentRoutes)) {
       _removeRouteListeners();
-      _route = currentRoute;
+      _routes = currentRoutes;
       _addRouteListeners();
     }
   }
 
+  static bool _routesEqual(
+    List<ModalRoute<dynamic>> a,
+    List<ModalRoute<dynamic>> b,
+  ) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
   void _addRouteListeners() {
-    final route = _route;
-    if (route == null) return;
-    route.secondaryAnimation
-        ?.addStatusListener(_handleSecondaryAnimationStatus);
-    route.animation?.addStatusListener(_handlePrimaryAnimationStatus);
+    for (final route in _routes) {
+      route.secondaryAnimation
+          ?.addStatusListener(_handleSecondaryAnimationStatus);
+      route.animation?.addStatusListener(_handlePrimaryAnimationStatus);
+    }
   }
 
   void _removeRouteListeners() {
-    final route = _route;
-    if (route == null) return;
-    route.secondaryAnimation
-        ?.removeStatusListener(_handleSecondaryAnimationStatus);
-    route.animation?.removeStatusListener(_handlePrimaryAnimationStatus);
+    for (final route in _routes) {
+      route.secondaryAnimation
+          ?.removeStatusListener(_handleSecondaryAnimationStatus);
+      route.animation?.removeStatusListener(_handlePrimaryAnimationStatus);
+    }
   }
 
   void _handleSecondaryAnimationStatus(AnimationStatus status) {
@@ -297,6 +322,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _openMenu() {
+    _updateRouteListener();
     // Capture geometry and screen position for morphing
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.hasSize) {
