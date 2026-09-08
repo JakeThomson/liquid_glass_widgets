@@ -262,6 +262,13 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                 child: widget.trigger,
               );
 
+        // Composed with any enclosing scope rather than replacing it. The
+        // scope is unconditional so the trigger's element survives a menu
+        // open, but on its own it shadowed a materialize running above —
+        // a pinned cluster dissolving across a route transition sits inside
+        // this wrapper and never saw its fade.
+        final outer = GlassMaterializeScope.maybeOf(context);
+
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -271,9 +278,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               child: Opacity(
                 opacity: triggerOpacity,
                 child: GlassMaterializeScope(
-                  glassProgress: triggerOpacity,
-                  contentOpacity: triggerOpacity,
-                  contentSigma: 0.0,
+                  glassProgress:
+                      triggerOpacity * (outer?.glassProgress ?? 1.0),
+                  contentOpacity:
+                      triggerOpacity * (outer?.contentOpacity ?? 1.0),
+                  contentSigma: outer?.contentSigma ?? 0.0,
                   child: IgnorePointer(
                     ignoring: isMenuBlocking,
                     child: triggerChild,
