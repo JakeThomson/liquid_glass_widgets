@@ -96,7 +96,8 @@ const float kThicknessRimBoost    = 0.15;  // Rim opacity boost per unit thickne
 //
 // NOTE: In this shader "liquidColor" = the synthesised glass body (finalColor),
 // not a background-texture sample.  The luminance-shift still applies correctly.
-const vec3 LUMA_WEIGHTS = vec3(0.299, 0.587, 0.114);
+// ITU-R BT.709 / IEC 61966-2-1 (sRGB) luminance weights — corrected from BT.601 in 1.4.2.
+const vec3 LUMA_WEIGHTS = vec3(0.2126, 0.7152, 0.0722);
 
 vec3 applyGlassColorLW(vec3 liquidColor, vec4 glassColor) {
     float backdropLuminance = dot(liquidColor, LUMA_WEIGHTS);
