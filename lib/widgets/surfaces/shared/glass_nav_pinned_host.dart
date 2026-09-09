@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
 
+import '../../../src/renderer/internal/glass_materialize_scope.dart';
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/glass_spring.dart';
@@ -435,7 +436,9 @@ class GlassNavBarGroup {
   final GlassBarItemBackground background;
 
   /// Whether a glass shell is drawn behind [items].
-  bool get glass => background != GlassBarItemBackground.none;
+  bool get glass =>
+      background != GlassBarItemBackground.none &&
+      background != GlassBarItemBackground.own;
 
   /// Height of the shell, and of an icon slot inside it.
   ///
@@ -1402,6 +1405,44 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     final inSigma =
         state.settled ? 0.0 : GlassNavPinnedMetrics.incomingSigmaAt(morphT);
 
+    // An item whose content is itself glass cannot be faded or blurred from
+    // outside: painted under an opacity or image-filter layer it has no
+    // backdrop to sample, and renders as its backer until the layer is gone.
+    // Those items dissolve through GlassMaterializeScope instead, which every
+    // package surface honours, and the cluster paints them plain. The scope
+    // sits here, below the GlassMenu wrapper, so it is the nearest one; it
+    // still composes with any enclosing scope, so a menu morph can fade the
+    // trigger.
+    Widget clusterChild({
+      required int slot,
+      required bool isFrom,
+      required double opacity,
+      required double blurSigma,
+      required GlassBarActionItem item,
+      required Widget child,
+    }) {
+      if (item.background != GlassBarItemBackground.own) {
+        return _ClusterChild(
+          slot: slot,
+          isFrom: isFrom,
+          opacity: opacity,
+          blurSigma: blurSigma,
+          child: child,
+        );
+      }
+      return _ClusterChild(
+        slot: slot,
+        isFrom: isFrom,
+        opacity: 1.0,
+        blurSigma: 0.0,
+        child: _OwnGlassDissolve(
+          opacity: opacity,
+          sigma: blurSigma,
+          child: child,
+        ),
+      );
+    }
+
     final children = <Widget>[];
     for (var i = 0; i < slots.length; i++) {
       final slot = slots[i];
@@ -1416,11 +1457,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           final visible =
               state.settled ? !showsIncoming : (morphing || q < 1.0);
           if (visible) {
-            children.add(_ClusterChild(
+            children.add(clusterChild(
               slot: i,
               isFrom: true,
               opacity: state.settled ? 1.0 : (1.0 - q),
               blurSigma: outSigma,
+              item: fromItem,
               child: _ClusterItem(
                 item: fromItem,
                 enabled: false,
@@ -1430,11 +1472,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           }
         } else if (crossFades && (!state.settled ? q < 1.0 : !showsIncoming)) {
           // Cross-fading outgoing side.
-          children.add(_ClusterChild(
+          children.add(clusterChild(
             slot: i,
             isFrom: true,
             opacity: state.settled ? 1.0 : (1.0 - q),
             blurSigma: outSigma,
+            item: fromItem,
             child: _ClusterItem(
               item: fromItem,
               enabled: false,
@@ -1450,11 +1493,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
           final visible = state.settled ? showsIncoming : (morphing || q > 0.0);
           if (visible) {
-            children.add(_ClusterChild(
+            children.add(clusterChild(
               slot: i,
               isFrom: false,
               opacity: state.settled ? 1.0 : q,
               blurSigma: inSigma,
+              item: toItem,
               child: _ClusterItem(
                 item: toItem,
                 enabled: state.settled,
@@ -1465,11 +1509,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           }
         } else if (!crossFades || (!state.settled ? q > 0.0 : showsIncoming)) {
           // Matched persistent item or cross-fading incoming side.
-          children.add(_ClusterChild(
+          children.add(clusterChild(
             slot: i,
             isFrom: false,
             opacity: crossFades ? (state.settled ? 1.0 : q) : 1.0,
             blurSigma: crossFades ? inSigma : 0.0,
+            item: toItem,
             child: _ClusterItem(
               item: toItem,
               enabled: state.settled,
@@ -1567,6 +1612,36 @@ class _PinnedGroupState extends State<_PinnedGroup> {
       canRequestFocus: false,
       excludeFromSemantics: true,
       child: ClipRect(child: cluster),
+    );
+  }
+}
+
+/// Dissolves a [GlassBarItemBackground.own] item through its own glass.
+///
+/// The cluster's fade and blur are handed to the item's surface as a
+/// [GlassMaterializeScope] — visibility for the glass, opacity and blur for
+/// the content inside it — in place of the paint-time layers ordinary items
+/// get. Composed with any enclosing scope rather than replacing it, so a
+/// menu fading its trigger still reaches the surface.
+class _OwnGlassDissolve extends StatelessWidget {
+  const _OwnGlassDissolve({
+    required this.opacity,
+    required this.sigma,
+    required this.child,
+  });
+
+  final double opacity;
+  final double sigma;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final outer = GlassMaterializeScope.maybeOf(context);
+    return GlassMaterializeScope(
+      glassProgress: opacity * (outer?.glassProgress ?? 1.0),
+      contentOpacity: opacity * (outer?.contentOpacity ?? 1.0),
+      contentSigma: math.max(sigma, outer?.contentSigma ?? 0.0),
+      child: child,
     );
   }
 }
