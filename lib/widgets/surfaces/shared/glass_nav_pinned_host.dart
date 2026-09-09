@@ -1504,6 +1504,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                 enabled: state.settled,
                 slotWidth: toGroup.slotWidth,
                 onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
+                onSheetTap: state.to.presentSheet,
               ),
             ));
           }
@@ -1520,6 +1521,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
               enabled: state.settled,
               slotWidth: toGroup.slotWidth,
               onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
+              onSheetTap: state.to.presentSheet,
             ),
           ));
         }
@@ -1656,6 +1658,7 @@ class _ClusterItem extends StatelessWidget {
     required this.enabled,
     required this.slotWidth,
     this.onMenuTap,
+    this.onSheetTap,
   });
 
   final GlassBarActionItem item;
@@ -1671,8 +1674,16 @@ class _ClusterItem extends StatelessWidget {
   /// its way out.
   final VoidCallback? onMenuTap;
 
+  /// Presents a [GlassBarItem.sheet]'s sheet, through the route's own capsule
+  /// rather than this one. Supplied on the same terms as [onMenuTap]; a bar
+  /// that offers none leaves the item to present without a morph.
+  final void Function(GlassBarSheetItem item)? onSheetTap;
+
   @override
   Widget build(BuildContext context) {
+    // Promoted to a local so the switch below and the sheet branch further
+    // down can both narrow it.
+    final item = this.item;
     final interactive = enabled && item.enabled;
 
     Widget content = switch (item) {
@@ -1681,6 +1692,10 @@ class _ClusterItem extends StatelessWidget {
           child: Center(child: icon),
         ),
       GlassBarMenuItem(:final icon) => SizedBox(
+          width: slotWidth,
+          child: Center(child: icon),
+        ),
+      GlassBarSheetItem(:final icon) => SizedBox(
           width: slotWidth,
           child: Center(child: icon),
         ),
@@ -1699,12 +1714,20 @@ class _ClusterItem extends StatelessWidget {
       content = Opacity(opacity: 0.5, child: content);
     }
 
+    // A sheet item is presented by the bar that registered it, which owns a
+    // capsule the sheet can cover; this one is drawn above the Navigator,
+    // where no route reaches it.
+    final present = onSheetTap;
+    final onTap = item is GlassBarSheetItem
+        ? () => present == null ? item.onPresent(null) : present(item)
+        : (onMenuTap ?? item.onTap);
+
     return Semantics(
       button: true,
       label: item.label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: interactive ? (onMenuTap ?? item.onTap) : null,
+        onTap: interactive ? onTap : null,
         child: content,
       ),
     );

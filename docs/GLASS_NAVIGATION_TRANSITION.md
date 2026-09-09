@@ -159,6 +159,14 @@ bar.
   transition is running, and one already open is dismissed if navigation
   starts — the capsule outlives the route that owns the menu, so nothing else
   would take it down.
+- **`GlassBarItem.sheet` morphs the capsule into a `GlassModalSheet`.** Its
+  tap is handed a `GlassMorphAnchor` for `GlassModalSheet.show(morphFrom:)`,
+  and the whole capsule empties for it, for the same reason `menu` morphs the
+  whole capsule. The anchor is always the route's own capsule rather than the
+  hoisted copy: presenting hands the chrome back to the route, so that is the
+  one still on screen under the sheet — and the only one a sheet can cover,
+  since the hoisted chrome is drawn above the `Navigator`. A hoisted tap is
+  routed back to the bar that registered it.
 - **Participation is the constructor.** A `GlassAppBar.pinned` screen keeps
   the chrome pinned even with no actions; a plain `GlassAppBar` screen does
   not participate, and the pinned chrome retreats while it covers the bar.
