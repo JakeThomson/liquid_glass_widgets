@@ -12,6 +12,11 @@ Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#297).
 
 Thanks to [@hank205](https://github.com/hank205) for the fix (#299).
 
+- **Menu & Popover dismissal during page transitions and declarative navigation (#274):**
+  - **Zero Transition Overlap**: Replaced `OverlayChildLocation.rootOverlay` with `OverlayChildLocation.nearestOverlay` in both `GlassMenu` and `GlassPopover`. In addition, trigger position is now calculated locally relative to `nearestOverlay` (`renderBox.localToGlobal(Offset.zero, ancestor: overlayBox)`), preventing menu positioning drift in nested layouts while ensuring the menu lives in the same overlay stack as its route. As a result, incoming pushed routes render in front of closing menus instead of allowing the menu and its glass blur to float above the incoming page.
+  - **Declarative Navigation Safety (`go_router` / `Navigator.pages`)**: Immediate route dismissal calls that fire during Flutter's persistent callbacks phase (`SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks`) are now deferred to post-frame callbacks via `SchedulerBinding.instance.addPostFrameCallback`. This completely eliminates the `SchedulerBinding.instance.schedulerPhase != SchedulerPhase.persistentCallbacks` assertion crash when updating pages in declarative routers.
+  - **Standalone Navigation Demo**: Added `GlassMenuNavigationDemoPage` (`example/lib/demos/glass_menu_navigation_demo.dart`) providing an interactive demonstration of clean overlay dismissal across imperative, declarative (`go_router`), and nested tab navigator setups with slow-motion transition controls.
+
 ## Calibration
 
 - **Corrected luminance weights to ITU-R Rec.709 across all rendering paths:** All

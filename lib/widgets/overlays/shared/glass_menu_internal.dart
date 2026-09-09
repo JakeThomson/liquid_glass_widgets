@@ -9,6 +9,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   Size? _triggerSize;
   double? _triggerBorderRadius;
   Offset _triggerGlobalPosition = Offset.zero; // captured in _openMenu
+  Offset _triggerOverlayPosition =
+      Offset.zero; // captured in _openMenu (overlay-relative)
   int? _hoveredIndex;
   bool _isDragging = false;
   bool _hasStretched =
@@ -96,11 +98,22 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
           _morphController.value <= 0.001 &&
           _morphController.velocity.abs() < 0.5 &&
           _morphController.status != AnimationStatus.forward) {
-        _overlayController.hide();
-        // Reset screen-edge clamping offsets so stale values from a previous
-        // open position don't bleed into the next open cycle.
-        _horizontalOffset = 0.0;
-        _verticalOffset = 0.0;
+        if (SchedulerBinding.instance.schedulerPhase ==
+            SchedulerPhase.persistentCallbacks) {
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _overlayController.isShowing) {
+              _overlayController.hide();
+              _horizontalOffset = 0.0;
+              _verticalOffset = 0.0;
+            }
+          });
+        } else {
+          _overlayController.hide();
+          // Reset screen-edge clamping offsets so stale values from a previous
+          // open position don't bleed into the next open cycle.
+          _horizontalOffset = 0.0;
+          _verticalOffset = 0.0;
+        }
       }
     });
     _scrollController = ScrollController();
@@ -203,8 +216,21 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     if (!_overlayController.isShowing && _morphController.value == 0.0) {
       return;
     }
+    // Never call hide(), reset(), or setState() synchronously during
+    // persistent callbacks (e.g. declarative Navigator.pages / go_router updates).
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _dismissImmediately();
+        }
+      });
+      return;
+    }
     final wasClosing = _morphController.isClosing;
-    _overlayController.hide();
+    if (_overlayController.isShowing) {
+      _overlayController.hide();
+    }
     _morphController.reset();
     _horizontalOffset = 0.0;
     _verticalOffset = 0.0;
@@ -278,8 +304,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               child: Opacity(
                 opacity: triggerOpacity,
                 child: GlassMaterializeScope(
-                  glassProgress:
-                      triggerOpacity * (outer?.glassProgress ?? 1.0),
+                  glassProgress: triggerOpacity * (outer?.glassProgress ?? 1.0),
                   contentOpacity:
                       triggerOpacity * (outer?.contentOpacity ?? 1.0),
                   contentSigma: outer?.contentSigma ?? 0.0,
@@ -294,18 +319,16 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
             // Overlay portal for morphing animation.
             // The overlay contents fade out during the handoff so the real button shows instead.
             //
-            // Target the ROOT overlay: the morph is placed with absolute,
-            // root-relative coordinates (the trigger's localToGlobal(Offset.zero)),
-            // so it must render in the overlay that shares that coordinate space.
-            // Rendering into a *nested* overlay (e.g. a ShellRoute / nested-Navigator
-            // content area offset by a side rail) shifts the menu by that overlay's
-            // origin — the trigger's global position gets double-counted. The root
-            // overlay always coincides with the global coordinate space, so the menu
-            // lands exactly on its trigger in every embedding.
+            // Target the NEAREST overlay so the menu stays confined to the page/route
+            // where it was opened (#274). When a new route is pushed onto this or an
+            // ancestor Navigator, the destination route renders above this overlay,
+            // so the closing animation naturally remains on the outgoing page behind
+            // the transition. The trigger position is mapped into the nearest overlay's
+            // coordinate space in _openMenu to avoid drift in nested embeddings.
             OverlayPortal(
               controller: _overlayController,
               overlayChildBuilder: _buildMorphingOverlay,
-              overlayLocation: OverlayChildLocation.rootOverlay,
+              overlayLocation: OverlayChildLocation.nearestOverlay,
             ),
           ],
         );
@@ -342,7 +365,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     _triggerSize = renderBox.size;
     _triggerBorderRadius = _triggerSize!.height / 2;
     _triggerGlobalPosition =
-        renderBox.localToGlobal(Offset.zero); // store for overlay
+        renderBox.localToGlobal(Offset.zero); // store for screen bounds
+    final overlay = Overlay.maybeOf(context);
+    final overlayBox = overlay?.context.findRenderObject() as RenderBox?;
+    _triggerOverlayPosition = overlayBox != null
+        ? renderBox.localToGlobal(Offset.zero, ancestor: overlayBox)
+        : _triggerGlobalPosition;
     // A fresh open must never inherit a previous open's live anchor nudge.
     _followOffset = Offset.zero;
     final position = _triggerGlobalPosition;
@@ -528,14 +556,14 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final currentRadius =
         lerpDouble(maxRadius, widget.menuBorderRadius, radiusT)!;
 
-    final blobBLeft = _triggerGlobalPosition.dx +
+    final blobBLeft = _triggerOverlayPosition.dx +
         _followOffset.dx +
         tw / 2.0 +
         state.currentDx -
         currentWidth / 2.0 +
         (_horizontalOffset * clampedValue);
 
-    final blobBTop = _triggerGlobalPosition.dy +
+    final blobBTop = _triggerOverlayPosition.dy +
         _followOffset.dy +
         th / 2.0 +
         state.currentDy -
@@ -583,10 +611,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                       // Blob A is the spawn blob; under morphFromZero there is no trigger to ghost.
                       if (!widget.morphFromZero)
                         Positioned(
-                          left: _triggerGlobalPosition.dx +
+                          left: _triggerOverlayPosition.dx +
                               _followOffset.dx +
                               state.pushDx,
-                          top: _triggerGlobalPosition.dy +
+                          top: _triggerOverlayPosition.dy +
                               _followOffset.dy +
                               state.pushDy,
                           child: Transform.scale(
