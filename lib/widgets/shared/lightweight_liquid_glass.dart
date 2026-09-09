@@ -759,7 +759,7 @@ class _RenderLightweightGlass extends RenderProxyBox
       return _cachedBlurFilter!;
     }
 
-    // Standard saturation ColorFilter matrix (ITU-R BT.601 luminance weights).
+    // Standard saturation ColorFilter matrix (ITU-R BT.709 luminance weights).
     const double rw = 0.2126, gw = 0.7152, bw = 0.0722;
     final ui.ColorFilter satFilter = ui.ColorFilter.matrix(<double>[
       rw + (1 - rw) * sat,
@@ -977,7 +977,8 @@ class _RenderLightweightGlass extends RenderProxyBox
     // This only affects the Skia/Web lightweight shader path.
     // Impeller uses a different physical model and is completely unaffected.
     final gc = _settings.effectiveGlassColor;
-    final glassLuminance = 0.2126 * gc.r + 0.7152 * gc.g + 0.0722 * gc.b; // ITU-R Rec.709
+    final glassLuminance =
+        0.2126 * gc.r + 0.7152 * gc.g + 0.0722 * gc.b; // ITU-R Rec.709
     final brightnessIntent = gc.a * glassLuminance * 0.6;
     final effectiveAmbient = math.max(
       _settings.effectiveAmbientStrength,

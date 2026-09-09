@@ -596,7 +596,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     double dismissOffset = 0.0;
     if (widget.mode == GlassSheetMode.dismissible && !_geometry.enablePeek) {
       final pivotPos = _geometry.positionForState(
-        SheetMorphGeometry.dismissPivotState(_geometry), mqHeight);
+          SheetMorphGeometry.dismissPivotState(_geometry), mqHeight);
       if (pos < pivotPos) {
         dismissOffset = (pivotPos - pos) * mqHeight;
         pos = pivotPos;
