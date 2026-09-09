@@ -38,8 +38,10 @@ enum GlassBarItemBackground {
   /// and blurs ordinary content under opacity and image-filter layers, and a
   /// glass surface painted under either has no backdrop to sample. An [own]
   /// item dissolves through its surface's own visibility instead, the channel
-  /// `GlassMaterialize` uses. For a capsule built from `GlassButton.custom`;
-  /// plain content stays [none].
+  /// `GlassMaterialize` uses. Two such items matched across a route change
+  /// take turns rather than cross-fading, since each would sample the other.
+  /// For a capsule built from `GlassButton.custom`; plain content stays
+  /// [none].
   own,
 }
 
