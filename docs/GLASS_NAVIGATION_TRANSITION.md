@@ -136,7 +136,10 @@ bar.
   `separate` (`sharesBackground: NO` — its own shell, which at a lone icon's
   size is the circular button the back button already is), and `none`
   (`hidesSharedBackground` — no glass, for content that carries its own shape,
-  such as a profile photo).
+  such as a profile photo). A fourth, `own`, is `none` for content that is
+  itself a glass surface: the shell dissolves it through the surface's own
+  visibility instead of fading it under a layer, which a glass surface cannot
+  survive.
 - **`id` mirrors `UIBarButtonItem.identifier`.** Items sharing an `id` across
   two routes are treated as the same item and hold their position while
   everything around them morphs. Without an `id`, items are matched

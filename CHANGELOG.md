@@ -1,8 +1,13 @@
-# Unreleased
+# 1.4.2
 
 ## Bug Fixes
 
+- **Custom bar items that draw their own glass no longer flash across a push or pop:** The pinned chrome fades and blurs item content by painting it under opacity and image-filter layers, and a glass surface painted under either has no backdrop to sample — a `GlassBarItem.custom` carrying its own `GlassButton.custom` capsule rendered as its opaque backer for the whole transition and snapped to glass on the last frame. `GlassBarItemBackground.own` marks such an item, and the cluster dissolves it through the surface's own visibility instead.
+
+- **Pinned clusters now dissolve across a push or pop instead of popping in and out:** `GlassMenu` wraps its trigger in a resting `GlassMaterializeScope` so the trigger can fade under an open menu, and every pinned cluster sits inside that wrapper — so the materialize the shell runs around a cluster only one route has never reached the glass. The outgoing shell stayed solid until it was dropped, the incoming one appeared solid, and for a few frames both were drawn. The menu's scope now composes with an enclosing one.
+
 - **Dismissible modal sheets retain their frame below the lowest enabled detent:** Sheets without a small detent no longer jump to peek width, margins, or corners during dismissal. Large-only sheets slide away with their full frame; medium+large sheets preserve the medium frame below that detent.
+
 
 # 1.4.1
 
