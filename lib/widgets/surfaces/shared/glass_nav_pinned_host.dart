@@ -1554,7 +1554,6 @@ class _PinnedGroupState extends State<_PinnedGroup> {
 
     if (children.isEmpty) return const SizedBox.shrink();
 
-
     final cluster = _PinnedCluster(
       orders: orders,
       widthT: widthT,
