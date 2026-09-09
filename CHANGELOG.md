@@ -1,3 +1,24 @@
+# 1.4.3
+
+## Features
+
+- **`GlassBarItem.sheet` — a bar item whose sheet morphs out of the capsule (#303):** Nothing reached the capsule a pinned bar draws, so an app wanting the liquid morph had to hoist its cluster as one `GlassBarItemBackground.own` item and give up the cross-route morph. The new item hands its tap a `GlassMorphAnchor` for `GlassModalSheet.show(morphFrom:)` — the route's own capsule, which is the one still on screen once the sheet has handed the chrome back, and the only one a sheet can cover.
+
+  ```dart
+  GlassAppBar.pinned(
+    actions: [
+      GlassBarItem.sheet(
+        icon: const Icon(CupertinoIcons.add),
+        onPresent: (anchor) => GlassModalSheet.show<void>(
+          context: context,
+          morphFrom: anchor,
+          builder: (context) => const AddSheet(),
+        ),
+      ),
+    ],
+  )
+  ```
+
 # 1.4.2
 
 ## Bug Fixes

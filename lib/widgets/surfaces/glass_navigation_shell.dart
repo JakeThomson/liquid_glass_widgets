@@ -20,6 +20,7 @@ class GlassNavBarRegistration {
     required this.showsBackButton,
     this.onBack,
     this.buttonSettings,
+    this.presentSheet,
   });
 
   /// The trailing cluster items for this route.
@@ -40,6 +41,19 @@ class GlassNavBarRegistration {
 
   /// Glass settings applied to this route's pinned chrome.
   final LiquidGlassSettings? buttonSettings;
+
+  /// Presents [GlassBarItem.sheet]'s sheet out of the route's own capsule.
+  ///
+  /// The morph has to come out of a capsule the sheet can then cover, and the
+  /// hoisted one is drawn above the [Navigator] where no route reaches it — so
+  /// the shell hands the tap back to the bar that registered it, which owns a
+  /// capsule inside the route and empties that. By the frame the droplet is
+  /// drawn the chrome is in-route anyway: a presentation hands it back.
+  ///
+  /// Null for a registrant that offers no capsule of its own — one that draws
+  /// the items itself. The item is then presented with a null anchor, which
+  /// costs the morph and nothing else.
+  final void Function(GlassBarSheetItem item)? presentSheet;
 
   /// The tappable items in [actions], with spacers removed.
   List<GlassBarActionItem> get actionItems =>
