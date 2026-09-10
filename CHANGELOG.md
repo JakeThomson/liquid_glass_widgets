@@ -1,5 +1,11 @@
 # 1.4.3
 
+## Bug Fixes
+
+- **Pinned chrome morphs over a sprung route's full duration:** The shell timed its choreography against the route's animation value, which is only linear in time for a duration-driven route. A route running a spring — a zoom transition — covers most of its travel in the first hundred milliseconds and then creeps, so the whole morph landed in a handful of frames while the page was still flying. A route that answers `createSimulation` now plays its chrome on the shell's own controller over the route's declared `transitionDuration`; duration-driven routes read exactly as before.
+
+- **Two custom items that draw their own glass no longer overlap mid-morph:** A matched pair of `GlassBarItemBackground.own` items — one route's capsule replacing another's under the same id — cross-faded like plain content, so both surfaces were drawn stacked for the middle of the transition, each sampling the other, and the overlap read as a brighter pad inside the incoming capsule. They now take turns on the windows a cluster only one route has already uses: the outgoing surface dissolves, then the incoming one materializes.
+
 ## Features
 
 - **`GlassBarItem.sheet` — a bar item whose sheet morphs out of the capsule (#303):** Nothing reached the capsule a pinned bar draws, so an app wanting the liquid morph had to hoist its cluster as one `GlassBarItemBackground.own` item and give up the cross-route morph. The new item hands its tap a `GlassMorphAnchor` for `GlassModalSheet.show(morphFrom:)` — the route's own capsule, which is the one still on screen once the sheet has handed the chrome back, and the only one a sheet can cover.
