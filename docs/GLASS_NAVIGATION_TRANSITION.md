@@ -139,7 +139,8 @@ bar.
   such as a profile photo). A fourth, `own`, is `none` for content that is
   itself a glass surface: the shell dissolves it through the surface's own
   visibility instead of fading it under a layer, which a glass surface cannot
-  survive.
+  survive. Two `own` items matched across a route change take turns rather
+  than cross-fading, since each would sample the other.
 - **`id` mirrors `UIBarButtonItem.identifier`.** Items sharing an `id` across
   two routes are treated as the same item and hold their position while
   everything around them morphs. Without an `id`, items are matched
