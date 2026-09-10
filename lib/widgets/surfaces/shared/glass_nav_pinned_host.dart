@@ -1450,6 +1450,24 @@ class _PinnedGroupState extends State<_PinnedGroup> {
       final fromItem = slot.fromItem;
       final toItem = slot.toItem;
 
+      // Two surfaces of an item's own cannot cross-fade any more than a
+      // shell and a bare item can: stacked, each samples the other, and the
+      // overlap reads as a brighter pad inside the incoming capsule. They
+      // take turns instead, on the same windows a group only one route has.
+      final sequenced = crossFades &&
+          fromItem?.background == GlassBarItemBackground.own &&
+          toItem?.background == GlassBarItemBackground.own;
+      double sequencedPhase({required bool inFrom}) => state.settled
+          ? 1.0
+          : showsIncoming == inFrom
+              ? 0.0
+              : GlassNavPinnedHost.phaseFor(
+                  context,
+                  state,
+                  inFrom: inFrom,
+                  inTo: !inFrom,
+                );
+
       if (fromItem != null) {
         if (toItem == null) {
           // Exiting item: smoothly fade out with (1 - q) across the transition window.
@@ -1475,7 +1493,11 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           children.add(clusterChild(
             slot: i,
             isFrom: true,
-            opacity: state.settled ? 1.0 : (1.0 - q),
+            opacity: sequenced
+                ? sequencedPhase(inFrom: true)
+                : state.settled
+                    ? 1.0
+                    : (1.0 - q),
             blurSigma: outSigma,
             item: fromItem,
             child: _ClusterItem(
@@ -1512,7 +1534,11 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           children.add(clusterChild(
             slot: i,
             isFrom: false,
-            opacity: crossFades ? (state.settled ? 1.0 : q) : 1.0,
+            opacity: sequenced
+                ? sequencedPhase(inFrom: false)
+                : crossFades
+                    ? (state.settled ? 1.0 : q)
+                    : 1.0,
             blurSigma: crossFades ? inSigma : 0.0,
             item: toItem,
             child: _ClusterItem(
