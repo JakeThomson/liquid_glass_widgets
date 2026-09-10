@@ -146,6 +146,46 @@ void main() {
       expect(presented, 1);
       expect(seen, isNull);
     });
+
+    testWidgets(
+        'dismissing the sheet restores the capsule and re-hoists chrome',
+        (tester) async {
+      await tester.pumpWidget(shellApp(const _Screen()));
+      await settle(tester);
+      final route = ModalRoute.of(tester.element(find.text('body')))!;
+      final shell = tester.state<GlassNavigationShellState>(
+        find.byType(GlassNavigationShell),
+      );
+
+      await tester.tap(inHost(find.byIcon(CupertinoIcons.add)));
+      await tester.pump();
+      await tester.pump();
+
+      expect(barCapsuleOpacity(tester), 0.0);
+      expect(shell.isHoisting(route), isFalse);
+
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.pop();
+      await settle(tester);
+
+      expect(barCapsuleOpacity(tester), 1.0);
+      expect(shell.isHoisting(route), isTrue);
+      expect(inHost(find.byIcon(CupertinoIcons.add)), findsOneWidget);
+    });
+
+    testWidgets('presents through the leading capsule when declared in leading',
+        (tester) async {
+      await tester.pumpWidget(shellApp(const _LeadingScreen()));
+      await settle(tester);
+      expect(inHost(find.byIcon(CupertinoIcons.add)), findsOneWidget);
+      expect(barCapsuleOpacity(tester), 1.0);
+
+      await tester.tap(inHost(find.byIcon(CupertinoIcons.add)));
+      await tester.pump();
+      await tester.pump();
+
+      expect(barCapsuleOpacity(tester), 0.0);
+    });
   });
 
   group('a sheet item drawn in-route', () {
@@ -240,4 +280,30 @@ class _OwnBarScreenState extends State<_OwnBarScreen> {
   @override
   Widget build(BuildContext context) =>
       const CupertinoPageScaffold(child: Center(child: Text('body')));
+}
+
+/// A screen whose one leading group presents a sheet out of its capsule.
+class _LeadingScreen extends StatelessWidget {
+  const _LeadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassScaffold(
+      appBar: GlassAppBar.pinned(
+        title: const Text('Leading'),
+        backButton: false,
+        leading: [
+          GlassBarItem.sheet(
+            icon: const Icon(CupertinoIcons.add),
+            onPresent: (anchor) => GlassModalSheet.show<void>(
+              context: context,
+              morphFrom: anchor,
+              builder: (_) => const SizedBox(height: 200),
+            ),
+          ),
+        ],
+      ),
+      body: const Center(child: Text('body')),
+    );
+  }
 }

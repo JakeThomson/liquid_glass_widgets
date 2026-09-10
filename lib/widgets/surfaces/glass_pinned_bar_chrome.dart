@@ -357,7 +357,9 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         entry.$2.whereType<GlassBarActionItem>().toList(),
       );
       for (var i = 0; i < groups.length; i++) {
-        if (!groups[i].items.any((candidate) => identical(candidate, item))) {
+        if (!groups[i].items.any((candidate) =>
+            identical(candidate, item) ||
+            (item.id != null && candidate.id == item.id))) {
           continue;
         }
         item.onPresent(_groupAnchors[(entry.$1, i)]);
@@ -380,10 +382,9 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         _groupAnchors[(slot, index)] = anchor;
         if (_handedOver) return _measuringGroup(group);
 
-        VoidCallback tapOf(GlassBarActionItem item) =>
-            item is GlassBarSheetItem
-                ? () => item.onPresent(anchor)
-                : item.onTap;
+        VoidCallback tapOf(GlassBarActionItem item) => item is GlassBarSheetItem
+            ? () => item.onPresent(anchor)
+            : item.onTap;
 
         if (!group.glass) {
           final item = group.items.single;

@@ -840,6 +840,35 @@ void main() {
       await settle(tester);
       expect(settled(tester), isTrue);
     });
+
+    testWidgets(
+        'an interactive back-swipe on a sprung route does not run the clock',
+        (tester) async {
+      await tester.pumpWidget(
+        shellApp(const _Screen(title: 'Root', actions: [])),
+      );
+      await settle(tester);
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(
+        _SpringRoute<void>(const _Screen(title: 'Detail', actions: [])),
+      );
+      await settle(tester);
+
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final gesture = await tester.startGesture(const Offset(2, 300));
+      await gesture.moveTo(Offset(width * 0.5, 300));
+      await tester.pump();
+
+      // Holds still under gesture, not running on the clock.
+      expect(progress(tester), 1.0);
+      expect(settled(tester), isFalse);
+
+      await gesture.up();
+      await settle(tester);
+      expect(progress(tester), 1.0);
+      expect(settled(tester), isTrue);
+    });
   });
 
   group('presented routes', () {
@@ -1214,6 +1243,26 @@ void main() {
       await settle(tester);
       expect(find.text('Instant'), findsNothing);
     });
+
+    testWidgets(
+        'a sprung route pushed mid-build does not mark the chrome dirty',
+        (tester) async {
+      final key = GlobalKey<_PagesNavigatorState>();
+      await tester.pumpWidget(_PagesApp(navigatorKey: key));
+      await settle(tester);
+
+      key.currentState!.pushSpring(const _Screen(title: 'Detail', actions: []));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await settle(tester);
+      expect(find.text('Detail'), findsOneWidget);
+
+      key.currentState!.pop();
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await settle(tester);
+      expect(find.text('Detail'), findsNothing);
+    });
   });
 
   group('fallback rendering', () {
@@ -1386,8 +1435,11 @@ void main() {
 /// milliseconds and the rest creeps in.
 class _SpringRoute<T> extends PageRoute<T>
     with CupertinoRouteTransitionMixin<T> {
-  _SpringRoute(this.screen,
-      {this.duration = const Duration(milliseconds: 500)});
+  _SpringRoute(
+    this.screen, {
+    this.duration = const Duration(milliseconds: 500),
+    super.settings,
+  });
 
   final Widget screen;
   final Duration duration;
@@ -1524,6 +1576,15 @@ class _PagesNavigatorState extends State<_PagesNavigator> {
         );
       });
 
+  void pushSpring(Widget screen,
+          {Duration duration = const Duration(milliseconds: 500)}) =>
+      setState(() {
+        final key = ValueKey(_pages.length);
+        _pages.add(
+          _SpringPage(key: key, child: screen, duration: duration),
+        );
+      });
+
   void pop() => setState(() => _pages.removeLast());
 
   @override
@@ -1547,5 +1608,24 @@ class _InstantPage extends Page<void> {
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
         pageBuilder: (_, __, ___) => child,
+      );
+}
+
+/// A page whose route runs on a spring simulation.
+class _SpringPage extends Page<void> {
+  const _SpringPage({
+    required this.child,
+    this.duration = const Duration(milliseconds: 500),
+    super.key,
+  });
+
+  final Widget child;
+  final Duration duration;
+
+  @override
+  Route<void> createRoute(BuildContext context) => _SpringRoute<void>(
+        child,
+        duration: duration,
+        settings: this,
       );
 }
