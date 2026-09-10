@@ -221,7 +221,8 @@ void main() {
       final outgoing = nearestScope(tester, inHost(find.text('capsule')));
       expect(outgoing.glassProgress, lessThan(1.0));
       expect(outgoing.glassProgress, greaterThan(0.0));
-      expect(nearestScope(tester, inHost(find.text('pill'))).glassProgress, 0.0);
+      expect(
+          nearestScope(tester, inHost(find.text('pill'))).glassProgress, 0.0);
 
       await tester.pump(const Duration(milliseconds: 100));
       expect(
