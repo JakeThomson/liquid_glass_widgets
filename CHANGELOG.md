@@ -1,3 +1,9 @@
+# 1.4.4
+
+## Features
+
+- **`GlassPinnedBarChrome.platformViewBackdrop` — pinned chrome over a platform view (#310):** The shell drew a hoisted capsule with its own `GlassButton` on the shader path, whose captured backdrop excludes a platform view — so over a map the capsule had nothing to refract and rendered clear with a rim, whatever `buttonSettings` said, while the bar's own capsule blurred through a live `BackdropFilter`. The registration carries the flag now and the host forwards it to the capsule and menu it draws, resolved to the route being entered so a pop back over the view is on the backdrop from its first frame.
+
 # 1.4.3
 
 ## Features

@@ -21,6 +21,7 @@ class GlassNavBarRegistration {
     this.onBack,
     this.buttonSettings,
     this.presentSheet,
+    this.platformViewBackdrop = false,
   });
 
   /// The trailing cluster items for this route.
@@ -54,6 +55,17 @@ class GlassNavBarRegistration {
   /// the items itself. The item is then presented with a null anchor, which
   /// costs the morph and nothing else.
   final void Function(GlassBarSheetItem item)? presentSheet;
+
+  /// Whether the pinned chrome floats over a native platform view.
+  ///
+  /// The shell draws a hoisted cluster with its own [GlassButton], and the
+  /// shader that button uses reads a captured backdrop the platform view is
+  /// never part of — so over a map or a video the capsule has nothing to
+  /// refract and renders inert, whatever [buttonSettings] asks for. Only a
+  /// live `BackdropFilter` samples the composited view, and this is what
+  /// routes the shell's copy there, exactly as [GlassButton.platformViewBackdrop]
+  /// does for the bar's own.
+  final bool platformViewBackdrop;
 
   /// The tappable items in [actions], with spacers removed.
   List<GlassBarActionItem> get actionItems =>
