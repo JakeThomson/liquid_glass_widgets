@@ -209,6 +209,13 @@ its own, and there is nothing to keep in sync with the item data.
 `chrome.hoisted` is there for a bar that wants to substitute *its own* chrome
 rather than the package's; reading it is not needed for the common case.
 
+`platformViewBackdrop` is for a bar floating over a native platform view — a
+map, a video. `buttonSettings` cannot cover this on its own: the shader reads a
+captured backdrop the platform view is never part of, so the shell's capsule
+has nothing to refract there. The flag routes it to a live `BackdropFilter`
+instead, as `GlassButton.platformViewBackdrop` does for the bar's own, and is
+applied in-route as well so the two agree across the hand-over.
+
 `leading`, `backButton`, `leadingItemsSupplementBackButton`, `onBack` and
 `buttonSettings` mean exactly what they do on `GlassAppBar.pinned` — a
 non-empty `leading` replaces the back button in `chrome.leading` unless

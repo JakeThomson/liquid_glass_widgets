@@ -114,6 +114,7 @@ class GlassPinnedBarChrome extends StatefulWidget {
     this.leadingItemsSupplementBackButton = false,
     this.onBack,
     this.buttonSettings,
+    this.platformViewBackdrop = false,
     this.enabled = true,
   });
 
@@ -159,6 +160,15 @@ class GlassPinnedBarChrome extends StatefulWidget {
   /// Applied to the in-route buttons as well as the pinned ones, so the two
   /// look identical across the hand-over.
   final LiquidGlassSettings? buttonSettings;
+
+  /// Whether the bar floats over a native platform view — an iOS map, say.
+  ///
+  /// Forwarded to every capsule this bar draws, in-route and pinned alike, so
+  /// the two look identical across the hand-over. The glass shader reads a
+  /// captured backdrop the platform view is never part of, so without this a
+  /// capsule over one has nothing to refract; the flag routes it to the live
+  /// `BackdropFilter` instead, as [GlassButton.platformViewBackdrop] does.
+  final bool platformViewBackdrop;
 
   /// Whether this bar participates in pinning at all.
   ///
@@ -251,6 +261,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         onBack: widget.onBack,
         buttonSettings: widget.buttonSettings,
         presentSheet: _presentSheet,
+        platformViewBackdrop: widget.platformViewBackdrop,
       ),
     );
   }
@@ -319,6 +330,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       width: backSize,
       height: backSize,
       iconSize: GlassNavPinnedMetrics.iconSize,
+      platformViewBackdrop: widget.platformViewBackdrop,
       label: Localizations.of<CupertinoLocalizations>(
             context,
             CupertinoLocalizations,
@@ -399,6 +411,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
           );
         }
         return GlassButtonGroup.icons(
+          platformViewBackdrop: widget.platformViewBackdrop,
           items: [
             for (final item in group.items)
               if (item is GlassBarMenuItem)
