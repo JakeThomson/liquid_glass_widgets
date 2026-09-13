@@ -23,6 +23,13 @@
   a `UIVibrancyEffect` nested inside a `UIVisualEffectView` never issues a second backdrop read.
   `AdaptiveGlass.vibrancy()` static factory added as the public entry-point.
 
+- **Continuous menu pointer tracking (`GlassMenu.glowOnTapOnly` default: `false`):**
+  Changed the default value of `glowOnTapOnly` from `true` to `false` in `GlassMenu`.
+  Because `GlassMenu` operates within a modal dismiss barrier without nested scroll rows,
+  pointer tracking now continuously moves the specular glow across menu items during touch drag,
+  matching native iOS 26 context menu optics. Menus containing scrollable content can still explicitly
+  set `glowOnTapOnly: true` to prevent persistent glow during scrolling.
+
 - **Official AI Agent Skill for vibecoding & pair programming (#306):** Added a
   comprehensive agent skill (`skills/liquid-glass-widgets/SKILL.md`) and onboarding guide
   (`skills/README.md`) that teaches AI assistants (Antigravity, Cursor, Claude Code, GitHub Copilot)

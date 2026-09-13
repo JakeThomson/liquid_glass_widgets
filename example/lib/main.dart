@@ -228,17 +228,17 @@ class _ExploreTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Liquid Glass',
+                    'Liquid Glass Widgets',
                     style: TextStyle(
-                      fontSize: 34,
+                      fontSize: 30,
                       fontWeight: FontWeight.w700,
                       color: CupertinoColors.label.resolveFrom(context),
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  SizedBox(height: 10),
                   Text(
-                    'iOS 26 Widget Toolkit',
+                    'iOS 26 Flutter Widget Toolkit',
                     style: TextStyle(
                       fontSize: 17,
                       color:
