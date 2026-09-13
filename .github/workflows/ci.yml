@@ -84,7 +84,9 @@ jobs:
 
           lcov --remove coverage/lcov.info \
             'lib/src/engine/*' \
+            'lib/src/engine/*/*' \
             'lib/src/renderer/*' \
+            'lib/src/renderer/*/*' \
             $IGNORE_FLAGS \
             -o coverage/lcov_effective.info
 
