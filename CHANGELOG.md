@@ -1,3 +1,18 @@
+# 1.5.1
+
+## Bug Fixes
+
+- **Slow drags over glass inside a scroll view no longer freeze:** `GeometryTransformTrackingLayer`
+  noticed a moved glass from `addToScene` — i.e. while the frame was being composited — and called
+  `onTransformChanged` (→ `markNeedsPaint`) right there. Inside a frame that sets `_needsPaint` up to
+  the nearest repaint boundary without a frame being scheduled, so the next scroll step returned early
+  from `markNeedsPaint` and nothing was drawn until something unrelated requested a frame (the pointer
+  lifting, a fling's ticker, a semantics update). On Android, a page with `GlassCard` /
+  `GlassGroupedSection` content followed a slow finger drag for one step, froze, and jumped on release.
+  The callback now runs from a post-frame callback when `addToScene` is inside a frame, where
+  `markNeedsPaint` does schedule one; a `toImage` snapshot outside a frame still calls it directly.
+  Regression test: `test/transform_tracking_frame_request_test.dart`.
+
 # 1.5.0
 
 ## Features
