@@ -1,4 +1,40 @@
+# 1.6.0
+
+## Features
+
+- Added `tintColor` to `GlassBarItem` — floods the entire glass capsule with the colour;
+  foreground flips to white or black automatically. Separate-background items only.
+
+## Bug Fixes
+
+- Fixed `AdaptiveGlass` ignoring explicit `settings` when inside a glass container
+  (`useOwnLayer: false`). Broke `GlassBodyMode.clear` tinting at standard quality.
+
+- **Fixed UV freeze jitter with `responsive_framework` (#292):** `RenderLiquidGlassLayer._hasScale`
+  previously froze UV coordinates whenever *any* uniform scale-down was detected above the layer —
+  including persistent app-level scales from `responsive_framework`, `FittedBox`, and
+  `InteractiveViewer`. This caused constant shimmer/jitter on every premium glass widget at rest.
+  The fix inverts the gate: UV freezing now requires a positive signal (`LiquidGlassPushBackScope`,
+  an internal `InheritedWidget`) that is only emitted by `GlassPage` when a real CupertinoSheet
+  push-back `secondaryAnimation` is in progress. Static app-level scales no longer trigger the
+  freeze. **Zero user code changes required.**
+
+## Internal / Developer
+
+- Added `LiquidGlassPushBackScope` internal `InheritedWidget` — positive signal used exclusively
+  by `GlassPage` to gate UV freezing during real push-back transitions. Not part of the public API.
+
+- Added `example/lib/harnesses/uv_freeze_harness.dart` — visual regression harness for #292.
+  Simulates a `responsive_framework`-style `Transform.scale(0.90×)` on `GlassTabBar` with a
+  scrollable list of 25 cards passing behind it. Includes A/B toggle to reproduce the pre-fix jitter
+  and confirm the fix. Run with:
+  `flutter run -t example/lib/harnesses/uv_freeze_harness.dart`
+
+---
+
+
 # 1.5.0
+
 
 ## Features
 

@@ -182,10 +182,30 @@ class AdaptiveGlass extends StatelessWidget {
     // Premium tiers pass the raw `settings` field into a [LiquidGlassLayer],
     // which resolves the same scope itself — the two never overlap, so the
     // transform is never applied twice.
+    // When the caller explicitly overrides the body rendering mode (e.g.
+    // GlassBodyMode.clear for tintColor flooding) or provides an opaque
+    // glassColor, their settings MUST take precedence over the inherited
+    // ancestor's settings, regardless of useOwnLayer.
+    //
+    // The inherited path exists for the batch-blur optimisation: buttons
+    // inside a shared glass container blend into the parent surface and
+    // don't apply an independent glass layer. That optimisation is
+    // correct for default/adaptive surfaces, but MUST be bypassed when
+    // the caller has intentionally requested a different body mode —
+    // otherwise GlassBodyMode.clear tintColor requests are silently
+    // discarded and the capsule stays neutral grey.
+    final bool hasExplicitBodyMode =
+        settings.bodyMode != GlassBodyMode.adaptive;
+    final bool hasExplicitTint = settings.glassColor.a > 0;
+    final bool useExplicitSettings =
+        useOwnLayer || hasExplicitBodyMode || hasExplicitTint;
     final baseSettings = GlassMaterializeScope.resolveSettings(
       context,
-      (!useOwnLayer && inherited != null) ? inherited.settings : settings,
+      (!useExplicitSettings && inherited != null)
+          ? inherited.settings
+          : settings,
     );
+
     // The content channel fades and blurs the child on the tiers that render
     // it as plain paint. Premium/grouped children flow through [LiquidGlass],
     // which applies the same wrap internally.

@@ -486,6 +486,14 @@ List<GlassNavBarGroup> groupGlassNavBarItems(List<GlassBarActionItem> items) {
   }
 
   for (final item in items) {
+    assert(
+      item.tintColor == null ||
+          item.background != GlassBarItemBackground.shared,
+      'GlassBarItem.tintColor is only supported for '
+      'GlassBarItemBackground.separate items. A shared capsule is a single '
+      'glass mesh and cannot tint individual slots. Set background: '
+      'GlassBarItemBackground.separate to use tintColor.',
+    );
     if (item.background == GlassBarItemBackground.shared) {
       run.add(item);
       continue;
@@ -1498,6 +1506,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                 item: fromItem,
                 enabled: false,
                 slotWidth: fromGroup.slotWidth,
+                tintColor: fromItem.tintColor,
               ),
             ));
           }
@@ -1517,6 +1526,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
               item: fromItem,
               enabled: false,
               slotWidth: fromGroup.slotWidth,
+              tintColor: fromItem.tintColor,
             ),
           ));
         }
@@ -1538,6 +1548,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                 item: toItem,
                 enabled: state.settled,
                 slotWidth: toGroup.slotWidth,
+                tintColor: toItem.tintColor,
                 onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
                 onSheetTap: state.to.presentSheet,
               ),
@@ -1559,6 +1570,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
               item: toItem,
               enabled: state.settled,
               slotWidth: toGroup.slotWidth,
+              tintColor: toItem.tintColor,
               onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
               onSheetTap: state.to.presentSheet,
             ),
@@ -1618,6 +1630,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                       lerpDouble(fromGroup.stretch, toGroup.stretch, clampedT)!,
                   morphScale: morphScale,
                   platformViewBackdrop: platformViewBackdrop,
+                  // Forward tintColor from a single-item separate group.
+                  // Multi-item shared groups never have tintColor (asserted in
+                  // groupGlassNavBarItems), so items.first is always the only item.
+                  tintColor: toGroup.items.length == 1
+                      ? toGroup.items.first.tintColor
+                      : null,
                 )
               : cluster,
         ),
@@ -1639,7 +1657,16 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     required double stretch,
     required double morphScale,
     required bool platformViewBackdrop,
+    Color? tintColor,
   }) {
+    // Build LiquidGlassSettings only when a tint is requested.
+    // GlassBodyMode.clear performs direct alpha-composite tinting, preserving
+    // the exact design-token hex value while retaining specular and Fresnel
+    // rim physics — matching iOS 26's Metal path for coloured bar buttons.
+    final settings = tintColor != null
+        ? LiquidGlassSettings(
+            glassColor: tintColor, bodyMode: GlassBodyMode.clear)
+        : null;
     return GlassButton.custom(
       onTap: () {},
       platformViewBackdrop: platformViewBackdrop,
@@ -1656,6 +1683,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
       useOwnLayer: true,
       canRequestFocus: false,
       excludeFromSemantics: true,
+      settings: settings,
       child: ClipRect(child: cluster),
     );
   }
@@ -1700,12 +1728,19 @@ class _ClusterItem extends StatelessWidget {
     required this.item,
     required this.enabled,
     required this.slotWidth,
+    this.tintColor,
     this.onMenuTap,
     this.onSheetTap,
   });
 
   final GlassBarActionItem item;
   final bool enabled;
+
+  /// Tint colour forwarded from [GlassBarActionItem.tintColor].
+  ///
+  /// When non-null, the icon/label foreground is set to high-contrast white
+  /// or black so content remains readable over the coloured glass capsule.
+  final Color? tintColor;
 
   /// Width an icon is padded to, matching the height of the group it sits in.
   final double slotWidth;
@@ -1748,7 +1783,14 @@ class _ClusterItem extends StatelessWidget {
     content = IconTheme.merge(
       data: IconThemeData(
         size: GlassNavPinnedMetrics.iconSize,
-        color: CupertinoColors.label.resolveFrom(context),
+        // When a tint colour is active, flip the foreground to high-contrast
+        // white or black so it remains readable over the coloured capsule.
+        // Falls back to the standard CupertinoColors.label when untinted.
+        color: tintColor != null
+            ? (tintColor!.computeLuminance() > 0.35
+                ? const Color(0xFF000000)
+                : const Color(0xFFFFFFFF))
+            : CupertinoColors.label.resolveFrom(context),
       ),
       child: content,
     );
