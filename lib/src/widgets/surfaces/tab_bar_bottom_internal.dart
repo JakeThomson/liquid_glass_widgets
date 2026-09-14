@@ -153,6 +153,7 @@ class BottomBarTabItem extends StatelessWidget {
     required this.glowSpreadRadius,
     required this.glowOpacity,
     required this.onTap,
+    this.semanticOnTap,
     super.key,
   });
 
@@ -188,6 +189,20 @@ class BottomBarTabItem extends StatelessWidget {
   // Pass null in contexts where the outer TabIndicator owns selection via
   // onTapDown, and accessibility is handled by the indicator's own Semantics.
   final VoidCallback? onTap;
+
+  /// Activation for assistive technology and the keyboard, independent of the
+  /// pointer path.
+  ///
+  /// The bottom and searchable bars own selection on the indicator's own
+  /// `onTapDown`, so every tab is built with a null [onTap] and the
+  /// [GestureDetector] here is excluded from semantics. Without this the tab's
+  /// node is a button with a selected state and no [SemanticsAction.tap]:
+  /// TalkBack and VoiceOver read every destination and can activate none, and
+  /// a focused tab does not answer Enter or Space either.
+  ///
+  /// The layout passes `() => onTabSelected(i)`. It never takes pointer input,
+  /// so the bar's own drag gesture is untouched.
+  final VoidCallback? semanticOnTap;
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +243,10 @@ class BottomBarTabItem extends StatelessWidget {
       tracksSelection: true,
       isSelected: semanticsSelected ?? selected,
       semanticLabel: tab.semanticLabel ?? tab.label ?? 'Tab',
-      onKeyboardActivate: onTap,
+      onKeyboardActivate: onTap ?? semanticOnTap,
+      // The GestureDetector below is excluded from semantics, so the tap
+      // action has to be declared here or the node carries none at all.
+      semanticOnTap: onTap ?? semanticOnTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: GestureDetector(
         // onTap may be null when selection is owned by the outer TabIndicator

@@ -1,3 +1,18 @@
+# Unreleased
+
+## Bug Fixes
+
+- **`GlassTabBar` tabs expose a semantics tap action (#314):** Every tab in `GlassTabBar.bottom`
+  and `GlassTabBar.searchable` is built with a null `onTap` — selection is owned by the indicator's
+  own `onTapDown` — and the `GestureDetector` under each tab is excluded from semantics, so a tab's
+  node was a button with a selected state and **no** `SemanticsAction.tap`: TalkBack and VoiceOver
+  could read every destination and activate none of them, and a focused tab answered neither Enter
+  nor Space. `BottomBarTabItem` now takes a `semanticOnTap` and forwards it to the
+  `GlassFocusRegion` it already builds (which had the parameter all along); both layouts pass
+  `() => onTabSelected(i)`. It handles no pointer input, so the bar's own drag gesture is
+  unchanged, the selected overlay row stays inside `ExcludeSemantics` so a tab still yields exactly
+  one node, and under RTL the bottom bar's mirrored callback keeps the reported index logical.
+
 # 1.5.0
 
 ## Features
