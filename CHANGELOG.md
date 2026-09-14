@@ -1,3 +1,17 @@
+# Unreleased
+
+## Bug Fixes
+
+- **`GlassTabBar.bottom` no longer drags backwards under RTL (#313):** Follow-up to #142, which
+  normalised the ordering and the tap path but left the drag physics mirroring the pointer a second
+  time — so a press landed on the correct tab and the slide out of it ran the wrong way, with the
+  release reporting the mirror-image tab.
+  `DraggableIndicatorPhysics.getAlignmentFromGlobalPosition` now takes a `mirrorForRtl` flag
+  (default `true`, so the `AlignmentDirectional`-positioned segmented controls keep their existing
+  behaviour) and `TabDragGestureMixin` passes `false` — matching the physical `Alignment` both bars
+  paint the indicator with, and agreeing with the never-mirrored `tabIndexFromGlobalPosition` that
+  the tap path already used.
+
 # 1.5.0
 
 ## Features
