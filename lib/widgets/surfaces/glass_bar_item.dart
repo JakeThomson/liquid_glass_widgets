@@ -85,6 +85,7 @@ sealed class GlassBarItem {
     String? label,
     bool enabled,
     GlassBarItemBackground background,
+    Color? tintColor,
   }) = GlassBarIconItem;
 
   /// An arbitrary widget inside the pinned cluster.
@@ -107,6 +108,7 @@ sealed class GlassBarItem {
     String? label,
     bool enabled,
     GlassBarItemBackground background,
+    Color? tintColor,
   }) = GlassBarCustomItem;
 
   /// An icon that opens a [GlassMenu] pull-down, mirroring
@@ -128,6 +130,7 @@ sealed class GlassBarItem {
     Object? id,
     String? label,
     GlassBarItemBackground background,
+    Color? tintColor,
   }) = GlassBarMenuItem;
 
   /// An icon whose tap presents a `GlassModalSheet` that morphs out of the
@@ -157,6 +160,7 @@ sealed class GlassBarItem {
     String? label,
     bool enabled,
     GlassBarItemBackground background,
+    Color? tintColor,
   }) = GlassBarSheetItem;
 
   /// Splits the shared glass background, mirroring SwiftUI's
@@ -182,6 +186,7 @@ sealed class GlassBarActionItem extends GlassBarItem {
     this.label,
     this.enabled = true,
     this.background = GlassBarItemBackground.shared,
+    this.tintColor,
   });
 
   /// The tap handler for items that do not want one, mirroring
@@ -213,6 +218,20 @@ sealed class GlassBarActionItem extends GlassBarItem {
   /// Defaults to [GlassBarItemBackground.shared], so items form one capsule.
   final GlassBarItemBackground background;
 
+  /// Tints the entire glass capsule with this colour, matching iOS 26's
+  /// `.tint()` modifier on a prominent bar button.
+  ///
+  /// When non-null, the host widget fills the glass body with this colour
+  /// (using [GlassBodyMode.clear] for accurate on-screen hex fidelity) and
+  /// automatically adjusts the foreground icon/label to high-contrast white
+  /// or black based on the colour's luminance.
+  ///
+  /// **Only effective for [GlassBarItemBackground.separate] items.** A shared
+  /// capsule is a single glass mesh — tinting one slot while leaving others
+  /// clear is not supported. In debug mode, setting [tintColor] on a
+  /// [GlassBarItemBackground.shared] item asserts.
+  final Color? tintColor;
+
   /// The widget rendered inside the cluster.
   Widget get content;
 }
@@ -229,6 +248,7 @@ final class GlassBarIconItem extends GlassBarActionItem {
     super.label,
     super.enabled,
     super.background,
+    super.tintColor,
   });
 
   /// The icon widget, typically an [Icon].
@@ -252,6 +272,7 @@ final class GlassBarCustomItem extends GlassBarActionItem {
     super.label,
     super.enabled,
     super.background,
+    super.tintColor,
   });
 
   /// The widget rendered inside the cluster, measured at its intrinsic width.
@@ -274,6 +295,7 @@ final class GlassBarMenuItem extends GlassBarActionItem {
     super.id,
     super.label,
     super.background,
+    super.tintColor,
   }) : super(onTap: GlassBarActionItem._noOp);
 
   /// The icon widget, typically an [Icon]. Conventionally an ellipsis.
@@ -308,6 +330,7 @@ final class GlassBarSheetItem extends GlassBarActionItem {
     super.label,
     super.enabled,
     super.background,
+    super.tintColor,
   }) : super(onTap: GlassBarActionItem._noOp);
 
   /// The icon widget, typically an [Icon].

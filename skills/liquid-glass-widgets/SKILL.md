@@ -280,6 +280,14 @@ GlassAppBar.pinned(
       icon: const Icon(CupertinoIcons.square_and_arrow_up),
       onTap: () => _share(),
     ),
+    // Tinted capsule (iOS 26 prominent action): set tintColor + separate background.
+    // The capsule fills with the colour; foreground icon auto-flips to white/black.
+    GlassBarItem.icon(
+      icon: const Icon(CupertinoIcons.checkmark),
+      onTap: _save,
+      background: GlassBarItemBackground.separate,
+      tintColor: CupertinoColors.activeBlue,
+    ),
   ],
 )
 ```
@@ -301,3 +309,4 @@ GlassAppBar.pinned(
 - [ ] **`GlassAppBar` uses `actions: [...]` (a List), not `trailing:`.** There is no `trailing` parameter.
 - [ ] **`GlassChip.label` is a `String`, not a `Widget`.** Pass `label: 'text'`, not `label: Text('text')`.
 - [ ] **`GlassBarItem.icon` uses `onTap` (required), not `onPressed`.**
+- [ ] **`tintColor` on `GlassBarItem` requires `background: GlassBarItemBackground.separate`.** A shared-background item cannot be tinted (asserts in debug mode). The foreground icon colour is flipped automatically — do not also set a manual `Icon(color:)` on the child.

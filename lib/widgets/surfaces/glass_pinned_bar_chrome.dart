@@ -421,8 +421,21 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
             ),
           );
         }
+        // For a single-item separate group with a tintColor, fill the capsule
+        // using GlassBodyMode.clear — direct alpha-composite tinting that
+        // preserves the exact design-token hex while retaining the specular
+        // and Fresnel rim, matching iOS 26's coloured bar button behaviour.
+        final tintColor =
+            group.items.length == 1 ? group.items.first.tintColor : null;
+        final groupSettings = tintColor != null
+            ? LiquidGlassSettings(
+                glassColor: tintColor,
+                bodyMode: GlassBodyMode.clear,
+              )
+            : null;
         return GlassButtonGroup.icons(
           platformViewBackdrop: widget.platformViewBackdrop,
+          settings: groupSettings,
           items: [
             for (final item in group.items)
               if (item is GlassBarMenuItem)

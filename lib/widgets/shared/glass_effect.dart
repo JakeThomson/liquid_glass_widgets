@@ -972,11 +972,16 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
       // compositor backdrop via a saveLayer, destroying the frosted-glass effect.
       // antiAlias creates a ClipPathLayer with no saveLayer, giving sub-pixel AA
       // on the pill edge without compositor isolation.
-      final pillPath = _shape.getOuterPath(offset & size);
+      //
+      // IMPORTANT: build the path in **local** coordinates (Offset.zero & size).
+      // PaintingContext.pushClipPath calls clipPath.shift(offset) internally, so
+      // passing `offset & size` here would shift the clip twice — placing it
+      // entirely outside the widget's screen bounds whenever offset != zero.
+      final pillPath = _shape.getOuterPath(Offset.zero & size);
       _clipPathLayerHandle.layer = context.pushClipPath(
         needsCompositing,
         offset,
-        offset & size,
+        Offset.zero & size,
         pillPath,
         (context, offset) {
           context.pushLayer(

@@ -114,7 +114,8 @@ void main() {
       var selected = -1;
       await tester.pumpWidget(ltrBar(onTabSelected: (i) => selected = i));
 
-      final profile = tester.getCenter(find.text('Profile').hitTestable().first);
+      final profile =
+          tester.getCenter(find.text('Profile').hitTestable().first);
       final search = tester.getCenter(find.text('Search').hitTestable().first);
       expect(profile.dx, greaterThan(search.dx));
 

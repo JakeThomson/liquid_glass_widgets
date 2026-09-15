@@ -14,6 +14,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
 import '../renderer/glass_materialize_scope.dart';
+import '../renderer/liquid_glass_push_back_scope.dart';
 import '../renderer/liquid_glass_self_scale_scope.dart';
 import 'glass_glow.dart';
 import 'internal/transform_tracking_repaint_boundary_mixin.dart';
@@ -260,6 +261,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
                 captureImage: widget.captureImage,
                 captureOriginInScreenSpace: widget.captureOriginInScreenSpace,
                 selfScaled: LiquidGlassSelfScaleScope.of(context),
+                pushBackActive: LiquidGlassPushBackScope.of(context),
                 child: child!,
               ),
               child: widget.child,
@@ -297,6 +299,7 @@ class _TouchSpecularBridge extends StatefulWidget {
     this.captureImage,
     this.captureOriginInScreenSpace = Offset.zero,
     this.selfScaled = false,
+    this.pushBackActive = false,
   });
 
   final FragmentShader renderShader;
@@ -309,6 +312,7 @@ class _TouchSpecularBridge extends StatefulWidget {
   final ui.Image? captureImage;
   final Offset captureOriginInScreenSpace;
   final bool selfScaled;
+  final bool pushBackActive;
 
   @override
   State<_TouchSpecularBridge> createState() => _TouchSpecularBridgeState();
@@ -373,6 +377,7 @@ class _TouchSpecularBridgeState extends State<_TouchSpecularBridge> {
       captureImage: widget.captureImage,
       captureOriginInScreenSpace: widget.captureOriginInScreenSpace,
       selfScaled: widget.selfScaled,
+      pushBackActive: widget.pushBackActive,
       child: widget.child,
     );
   }
@@ -391,6 +396,7 @@ class _RawShapes extends SingleChildRenderObjectWidget {
     this.captureImage,
     this.captureOriginInScreenSpace = Offset.zero,
     this.selfScaled = false,
+    this.pushBackActive = false,
   });
 
   final FragmentShader renderShader;
@@ -405,6 +411,12 @@ class _RawShapes extends SingleChildRenderObjectWidget {
   /// See [LiquidGlassSelfScaleScope].
   final bool selfScaled;
 
+  /// See [LiquidGlassPushBackScope]. When `false` (the default),
+  /// [RenderLiquidGlassLayer._hasScale] always returns `false` regardless of
+  /// the ancestor transform — a static app-level scale (e.g.
+  /// `responsive_framework`) never freezes UV coordinates.
+  final bool pushBackActive;
+
   @override
   RenderObject createRenderObject(BuildContext context) {
     return RenderLiquidGlassLayer(
@@ -418,6 +430,7 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       captureImage: captureImage,
       captureOriginInScreenSpace: captureOriginInScreenSpace,
       selfScaled: selfScaled,
+      pushBackActive: pushBackActive,
     );
   }
 
@@ -435,7 +448,8 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       ..clipExpansion = clipExpansion
       ..captureImage = captureImage
       ..captureOriginInScreenSpace = captureOriginInScreenSpace
-      ..selfScaled = selfScaled;
+      ..selfScaled = selfScaled
+      ..pushBackActive = pushBackActive;
   }
 }
 
@@ -452,8 +466,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     super.captureOriginInScreenSpace,
     EdgeInsets clipExpansion = EdgeInsets.zero,
     bool selfScaled = false,
+    bool pushBackActive = false,
   })  : _clipExpansion = clipExpansion,
-        _selfScaled = selfScaled;
+        _selfScaled = selfScaled,
+        _pushBackActive = pushBackActive;
 
   // ── Cached blur filter ──────────────────────────────────────────────────
   // The BackdropFilterLayer's blur filter is rebuilt only when blurSigma
@@ -482,6 +498,35 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     markNeedsPaint();
   }
 
+  /// See [LiquidGlassPushBackScope]. When `false`, [_hasScale] returns
+  /// `false` unconditionally — a static app-level scale (e.g.
+  /// `responsive_framework`) is never mistaken for a CupertinoSheet push-back.
+  bool _pushBackActive;
+  set pushBackActive(bool value) {
+    if (_pushBackActive == value) return;
+    // When the push-back scope deactivates (sheet dismissed → returning to
+    // rest), eagerly re-snapshot the live transform before clearing the flag.
+    //
+    // Without this, there is a 1-frame race: on the frame the
+    // secondaryAnimation first ticks above 0, _onAnimationTick() schedules
+    // a setState (pushBackActive: true) for the *next* frame. In the
+    // *current* frame, _pushBackActive is still false on the render object,
+    // so _hasScale() returns false → _updateScaleState() writes the
+    // slightly-scaled matrix (e.g. 0.9997×) into _unscaledTransform,
+    // contaminating the snapshot the frozen path will use on the next frame.
+    //
+    // By re-snapshotting here (true→false transition = sheet fully gone,
+    // page back at rest), we guarantee _unscaledTransform always reflects
+    // the true unscaled rest matrix for the *next* presentation, completely
+    // eliminating the contamination window.
+    if (!value && attached) {
+      _unscaledTransform = getTransformTo(null);
+      _unscaledCaptureOrigin = super.captureOriginInScreenSpace;
+    }
+    _pushBackActive = value;
+    markNeedsPaint();
+  }
+
   List<BoxShadow> shadows;
 
   @override
@@ -498,6 +543,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     // A surface scaling itself leaves its backdrop where it was, so the live
     // transform is the right one and freezing would strand the shape.
     if (_selfScaled) return false;
+    // A push-back scope must be active — a persistent app-level scale
+    // (e.g. responsive_framework, FittedBox, InteractiveViewer) must never
+    // freeze UV coordinates. Only a CupertinoSheet push-back emits the scope.
+    if (!_pushBackActive) return false;
     // Detects the CupertinoSheet push-back, which scales the page down
     // uniformly on both X and Y axes simultaneously (< 1.0 on both).
     //
