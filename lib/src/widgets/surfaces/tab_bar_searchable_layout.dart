@@ -1206,6 +1206,9 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
               glowSpreadRadius: widget.glowSpreadRadius,
               glowOpacity: widget.glowOpacity,
               onTap: null,
+              // Pointer selection stays with the indicator; this is the tap
+              // action a screen reader and the keyboard activate.
+              semanticOnTap: () => widget.onTabSelected(i),
             ),
           ),
       ],
