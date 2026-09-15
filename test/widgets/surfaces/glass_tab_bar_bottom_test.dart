@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_bottom_internal.dart';
+import 'package:liquid_glass_widgets/widgets/shared/glass_effect.dart';
 
 import '../../shared/test_helpers.dart';
 
@@ -1192,6 +1193,25 @@ void main() {
       );
       expect(find.byType(GlassTabBar), findsOneWidget);
       expect(tester.takeException(), isNull);
+
+      // Press down to activate indicator lens (thickness > 0.01)
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.text('A').first));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final indicatorGlass = tester.widget<GlassEffect>(
+        find.byType(GlassEffect).first,
+      );
+      expect(
+        indicatorGlass.settings.effectiveBlur,
+        0.0,
+        reason:
+            'Indicator lens in GlassTabBar must never apply BackdropFilter blur',
+      );
+
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
 
     testWidgets(

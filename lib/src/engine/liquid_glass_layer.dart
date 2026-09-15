@@ -504,6 +504,25 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   bool _pushBackActive;
   set pushBackActive(bool value) {
     if (_pushBackActive == value) return;
+    // When the push-back scope deactivates (sheet dismissed → returning to
+    // rest), eagerly re-snapshot the live transform before clearing the flag.
+    //
+    // Without this, there is a 1-frame race: on the frame the
+    // secondaryAnimation first ticks above 0, _onAnimationTick() schedules
+    // a setState (pushBackActive: true) for the *next* frame. In the
+    // *current* frame, _pushBackActive is still false on the render object,
+    // so _hasScale() returns false → _updateScaleState() writes the
+    // slightly-scaled matrix (e.g. 0.9997×) into _unscaledTransform,
+    // contaminating the snapshot the frozen path will use on the next frame.
+    //
+    // By re-snapshotting here (true→false transition = sheet fully gone,
+    // page back at rest), we guarantee _unscaledTransform always reflects
+    // the true unscaled rest matrix for the *next* presentation, completely
+    // eliminating the contamination window.
+    if (!value && attached) {
+      _unscaledTransform = getTransformTo(null);
+      _unscaledCaptureOrigin = super.captureOriginInScreenSpace;
+    }
     _pushBackActive = value;
     markNeedsPaint();
   }

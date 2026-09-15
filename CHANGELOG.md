@@ -4,44 +4,30 @@
 
 - Added `tintColor` to `GlassBarItem` — floods the entire glass capsule with the colour;
   foreground flips to white or black automatically. Separate-background items only.
+  Demonstrated in the example app under **Nav Patterns → Tinted Bar Items** (#312) with
+  an interactive 8-color palette switcher and before/after comparison.
 
 ## Bug Fixes
 
-- **Slow drags over glass inside a scroll view no longer freeze:** `GeometryTransformTrackingLayer`
-  noticed a moved glass from `addToScene` — i.e. while the frame was being composited — and called
-  `onTransformChanged` (→ `markNeedsPaint`) right there. Inside a frame that sets `_needsPaint` up to
-  the nearest repaint boundary without a frame being scheduled, so the next scroll step returned early
-  from `markNeedsPaint` and nothing was drawn until something unrelated requested a frame (the pointer
-  lifting, a fling's ticker, a semantics update). On Android, a page with `GlassCard` /
-  `GlassGroupedSection` content followed a slow finger drag for one step, froze, and jumped on release.
-  The callback now runs from a post-frame callback when `addToScene` is inside a frame, where
-  `markNeedsPaint` does schedule one; a `toImage` snapshot outside a frame still calls it directly.
-  Regression test: `test/transform_tracking_frame_request_test.dart`.
+- **Slow drags over glass inside a scroll view no longer freeze (#317):** `GeometryTransformTrackingLayer`
+  was calling `onTransformChanged` (→ `markNeedsPaint`) directly from `addToScene` — inside a frame —
+  where no new frame gets scheduled. The callback now defers to a post-frame callback when fired during
+  compositing; a `toImage` snapshot outside a frame still calls it directly.
 
 Thanks to [@almazfm](https://github.com/almazfm) for the fix (#317).
 
-- **`GlassTabBar.bottom` no longer drags backwards under RTL (#313):** Follow-up to #142, which
-  normalised the ordering and the tap path but left the drag physics mirroring the pointer a second
-  time — so a press landed on the correct tab and the slide out of it ran the wrong way, with the
-  release reporting the mirror-image tab.
-  `DraggableIndicatorPhysics.getAlignmentFromGlobalPosition` now takes a `mirrorForRtl` flag
-  (default `true`, so the `AlignmentDirectional`-positioned segmented controls keep their existing
-  behaviour) and `TabDragGestureMixin` passes `false` — matching the physical `Alignment` both bars
-  paint the indicator with, and agreeing with the never-mirrored `tabIndexFromGlobalPosition` that
-  the tap path already used.
+- **`GlassTabBar.bottom` no longer drags backwards under RTL (#313):** Follow-up to #142. The drag
+  path was mirroring the pointer a second time — a press landed on the correct tab but the slide ran
+  backwards, and release reported the mirror-image tab. `DraggableIndicatorPhysics.getAlignmentFromGlobalPosition`
+  now takes a `mirrorForRtl` flag; `TabDragGestureMixin` passes `false`, matching the physical
+  `Alignment` the bars paint with.
 
 Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#316).
 
-- **`GlassTabBar` tabs expose a semantics tap action (#314):** Every tab in `GlassTabBar.bottom`
-  and `GlassTabBar.searchable` is built with a null `onTap` — selection is owned by the indicator's
-  own `onTapDown` — and the `GestureDetector` under each tab is excluded from semantics, so a tab's
-  node was a button with a selected state and **no** `SemanticsAction.tap`: TalkBack and VoiceOver
-  could read every destination and activate none of them, and a focused tab answered neither Enter
-  nor Space. `BottomBarTabItem` now takes a `semanticOnTap` and forwards it to the
-  `GlassFocusRegion` it already builds (which had the parameter all along); both layouts pass
-  `() => onTabSelected(i)`. It handles no pointer input, so the bar's own drag gesture is
-  unchanged, the selected overlay row stays inside `ExcludeSemantics` so a tab still yields exactly
-  one node, and under RTL the bottom bar's mirrored callback keeps the reported index logical.
+- **`GlassTabBar` tabs expose a semantics tap action (#314):** Tab nodes were buttons with a selected
+  state but no `SemanticsAction.tap` — TalkBack and VoiceOver could read every destination but
+  activate none of them. `BottomBarTabItem` now wires `semanticOnTap` through to the `GlassFocusRegion`
+  it already builds, leaving the drag gesture and single-node-per-tab invariant untouched.
 
 Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#315).
 
@@ -55,18 +41,16 @@ Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#315).
   The fix inverts the gate: UV freezing now requires a positive signal (`LiquidGlassPushBackScope`,
   an internal `InheritedWidget`) that is only emitted by `GlassPage` when a real CupertinoSheet
   push-back `secondaryAnimation` is in progress. Static app-level scales no longer trigger the
-  freeze. **Zero user code changes required.**
+  freeze. Also hardens against a 1-frame snapshot race at sheet presentation start.
+  **Zero user code changes required.**
 
 ## Internal / Developer
 
-- Added `LiquidGlassPushBackScope` internal `InheritedWidget` — positive signal used exclusively
-  by `GlassPage` to gate UV freezing during real push-back transitions. Not part of the public API.
-
+- Added `LiquidGlassPushBackScope` — internal `InheritedWidget` used by `GlassPage` to gate UV freezing during push-back transitions.
 - Added `example/lib/harnesses/uv_freeze_harness.dart` — visual regression harness for #292.
-  Simulates a `responsive_framework`-style `Transform.scale(0.90×)` on `GlassTabBar` with a
-  scrollable list of 25 cards passing behind it. Includes A/B toggle to reproduce the pre-fix jitter
-  and confirm the fix. Run with:
-  `flutter run -t example/lib/harnesses/uv_freeze_harness.dart`
+- Fixed `pushClipPath` double-offset clip bug in `_RenderInteractiveIndicator`: `pillPath` was built in canvas coords, causing the blur clip to shift twice. Fixed to local coords (`Offset.zero & size`). Three regression tests added to `glass_effect_test.dart`.
+- Fixed `quality_comparison_demo.dart`: corrected `_kPillDefault.blur` (3.0 → 0.0), removed accidental `indicatorSettings: _kGlass` on premium `GlassSegmentedControl`, and used `GlassTabBar.inline` for the `GlassTabBar` row.
+- Fixed `AnimatedGlassIndicator._mergeWithBase`: `blur` is now unconditionally enforced to `0`. Indicator pills are refractive lenses — non-zero blur triggered `BackdropFilter` on the SDF pill, producing a blur blob. Docstrings corrected. Regression tests added to `animated_glass_indicator_coverage_test.dart`, `glass_segmented_control_test.dart`, and `glass_tab_bar_bottom_test.dart`.
 
 ---
 

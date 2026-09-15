@@ -23,7 +23,6 @@ import 'package:liquid_glass_widgets_example/demos/meniscus_and_blur_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/materialize_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/scroll_edge_style_demo.dart';
 import 'package:liquid_glass_widgets_example/demos/touch_specular_and_vibrancy_demo.dart';
-import 'package:liquid_glass_widgets_example/harnesses/uv_freeze_harness.dart';
 
 import 'package:liquid_glass_widgets_example/demos/google_maps_demo.dart'
     show PlatformViewDemo;
@@ -954,19 +953,6 @@ class _ExamplesTab extends StatelessWidget {
                       Color(0xFF2C5364),
                     ],
                     destination: const TouchSpecularAndVibrancyDemo(),
-                  ),
-                  SizedBox(height: 14),
-
-                  _LargeDemoCard(
-                    title: 'UV Stability (#292)',
-                    subtitle:
-                        'responsive_framework scale simulation & push-back UV freeze test',
-                    icon: CupertinoIcons.arrow_up_left_arrow_down_right,
-                    gradient: const [
-                      Color(0xFF0F172A),
-                      Color(0xFF38BDF8),
-                    ],
-                    destination: const UvFreezeHarness(),
                   ),
                   SizedBox(height: 14),
 

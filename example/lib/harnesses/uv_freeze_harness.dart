@@ -140,10 +140,9 @@ class _UvFreezeHarnessState extends State<UvFreezeHarness>
     );
   }
 
-  double get _maxScrollExtent =>
-      _scrollController.hasClients
-          ? _scrollController.position.maxScrollExtent
-          : 0.0;
+  double get _maxScrollExtent => _scrollController.hasClients
+      ? _scrollController.position.maxScrollExtent
+      : 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -964,7 +963,8 @@ class _StripePainter extends CustomPainter {
     // Bold diagonal stripes — any UV freeze jitter makes these swim visibly.
     const spacing = 48.0;
     for (double x = -size.height; x < size.width + size.height; x += spacing) {
-      canvas.drawLine(Offset(x, 0), Offset(x + size.height, size.height), paint);
+      canvas.drawLine(
+          Offset(x, 0), Offset(x + size.height, size.height), paint);
     }
   }
 
