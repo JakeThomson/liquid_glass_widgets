@@ -39,7 +39,7 @@ Every file in this directory originated from Tim Lehmann's `liquid_glass_rendere
 | `glass_drag_builder.dart` | `lib/src/internal/glass_drag_builder.dart` | Continuous drag gesture builder; integrated `InteractionNotification` for Smart Silence touch suppression. |
 | `liquid_glass_render_scope.dart` | `lib/src/liquid_glass_render_scope.dart` | Render scope InheritedWidget. |
 | `shaders.dart` | `lib/src/shaders.dart` | Mapped compiled shader asset keys. |
-| `internal/transform_tracking_repaint_boundary_mixin.dart` | `lib/src/internal/...` | Repaint boundary transform tracking mixin. |
+| `internal/transform_tracking_repaint_boundary_mixin.dart` | `lib/src/internal/...` | Repaint boundary transform tracking mixin; `onTransformChanged` deferred to a post-frame callback when fired from compositing, so the repaint it asks for gets a frame. |
 
 ---
 
