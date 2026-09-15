@@ -12,6 +12,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 mixin TransformTrackingRepaintBoundaryMixin on RenderProxyBox {
   @override
@@ -107,9 +108,38 @@ class GeometryTransformTrackingLayer extends OffsetLayer {
       // The render object just painted itself, so it is already up to date. Triggering it
       // here would needlessly dirty the render tree and force a second frame to render.
       if (_lastTransform != null) {
-        onTransformChanged?.call();
+        _notifyTransformChanged();
       }
       _lastTransform = currentTransform;
+    }
+  }
+
+  /// Runs [onTransformChanged] at a point where dirtying the render tree
+  /// actually schedules a frame.
+  ///
+  /// [addToScene] is called while the current frame is being composited
+  /// (`SchedulerPhase.persistentCallbacks`), and every [onTransformChanged]
+  /// implementation ends in `markNeedsPaint`. From inside a frame that sets
+  /// `_needsPaint` up to the nearest repaint boundary but
+  /// `ensureVisualUpdate` schedules nothing; the next change in that subtree
+  /// (a scroll step, say) then returns early from `markNeedsPaint` because
+  /// the flag is already set, and no frame is requested until something
+  /// unrelated asks for one. On a page whose scrolled content holds glass,
+  /// a slow finger drag froze that way and jumped on release (flings were
+  /// fine only because their ticker kept requesting frames; accessibility
+  /// masks it too, since `markNeedsSemanticsUpdate` requests a frame of its
+  /// own). A post-frame callback runs in `SchedulerPhase.postFrameCallbacks`,
+  /// where `markNeedsPaint` does schedule the frame. Outside a frame (an
+  /// `OffsetLayer.toImage` snapshot) the callback is safe to run directly.
+  void _notifyTransformChanged() {
+    final callback = onTransformChanged;
+    if (callback == null) return;
+    final binding = SchedulerBinding.instance;
+    if (binding.schedulerPhase
+        case SchedulerPhase.idle || SchedulerPhase.postFrameCallbacks) {
+      callback();
+    } else {
+      binding.addPostFrameCallback((_) => onTransformChanged?.call());
     }
   }
 }

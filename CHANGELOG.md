@@ -7,6 +7,44 @@
 
 ## Bug Fixes
 
+- **Slow drags over glass inside a scroll view no longer freeze:** `GeometryTransformTrackingLayer`
+  noticed a moved glass from `addToScene` — i.e. while the frame was being composited — and called
+  `onTransformChanged` (→ `markNeedsPaint`) right there. Inside a frame that sets `_needsPaint` up to
+  the nearest repaint boundary without a frame being scheduled, so the next scroll step returned early
+  from `markNeedsPaint` and nothing was drawn until something unrelated requested a frame (the pointer
+  lifting, a fling's ticker, a semantics update). On Android, a page with `GlassCard` /
+  `GlassGroupedSection` content followed a slow finger drag for one step, froze, and jumped on release.
+  The callback now runs from a post-frame callback when `addToScene` is inside a frame, where
+  `markNeedsPaint` does schedule one; a `toImage` snapshot outside a frame still calls it directly.
+  Regression test: `test/transform_tracking_frame_request_test.dart`.
+
+Thanks to [@almazfm](https://github.com/almazfm) for the fix (#317).
+
+- **`GlassTabBar.bottom` no longer drags backwards under RTL (#313):** Follow-up to #142, which
+  normalised the ordering and the tap path but left the drag physics mirroring the pointer a second
+  time — so a press landed on the correct tab and the slide out of it ran the wrong way, with the
+  release reporting the mirror-image tab.
+  `DraggableIndicatorPhysics.getAlignmentFromGlobalPosition` now takes a `mirrorForRtl` flag
+  (default `true`, so the `AlignmentDirectional`-positioned segmented controls keep their existing
+  behaviour) and `TabDragGestureMixin` passes `false` — matching the physical `Alignment` both bars
+  paint the indicator with, and agreeing with the never-mirrored `tabIndexFromGlobalPosition` that
+  the tap path already used.
+
+Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#316).
+
+- **`GlassTabBar` tabs expose a semantics tap action (#314):** Every tab in `GlassTabBar.bottom`
+  and `GlassTabBar.searchable` is built with a null `onTap` — selection is owned by the indicator's
+  own `onTapDown` — and the `GestureDetector` under each tab is excluded from semantics, so a tab's
+  node was a button with a selected state and **no** `SemanticsAction.tap`: TalkBack and VoiceOver
+  could read every destination and activate none of them, and a focused tab answered neither Enter
+  nor Space. `BottomBarTabItem` now takes a `semanticOnTap` and forwards it to the
+  `GlassFocusRegion` it already builds (which had the parameter all along); both layouts pass
+  `() => onTabSelected(i)`. It handles no pointer input, so the bar's own drag gesture is
+  unchanged, the selected overlay row stays inside `ExcludeSemantics` so a tab still yields exactly
+  one node, and under RTL the bottom bar's mirrored callback keeps the reported index logical.
+
+Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#315).
+
 - Fixed `AdaptiveGlass` ignoring explicit `settings` when inside a glass container
   (`useOwnLayer: false`). Broke `GlassBodyMode.clear` tinting at standard quality.
 
@@ -31,7 +69,6 @@
   `flutter run -t example/lib/harnesses/uv_freeze_harness.dart`
 
 ---
-
 
 # 1.5.0
 
