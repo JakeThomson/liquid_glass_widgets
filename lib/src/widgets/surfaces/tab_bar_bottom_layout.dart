@@ -399,6 +399,12 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
                                   glowOpacity: widget.glowOpacity,
                                   semanticsSelected: i == selectedIndex,
                                   onTap: null,
+                                  // Pointer selection stays with the
+                                  // indicator; this is the tap action a screen
+                                  // reader and the keyboard activate. Under
+                                  // RTL [onTabSelected] is the mirrored
+                                  // wrapper, so `i` reports the logical index.
+                                  semanticOnTap: () => onTabSelected(i),
                                 ),
                               ),
                           ],
