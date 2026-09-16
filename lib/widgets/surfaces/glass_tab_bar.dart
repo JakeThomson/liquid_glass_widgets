@@ -229,7 +229,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
     EdgeInsetsGeometry indicatorExpansion =
         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     Color? interactionGlowColor,
-    double interactionGlowRadius = 1.5,
+    double? interactionGlowRadius,
     GlassInteractionBehavior interactionBehavior =
         GlassInteractionBehavior.full,
     double pressScale = 1.04,
@@ -371,7 +371,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
         GlassInteractionBehavior.full,
     double pressScale = 1.02,
     Color? interactionGlowColor,
-    double interactionGlowRadius = 1.0,
+    double? interactionGlowRadius,
     bool platformViewBackdrop = false,
     bool adaptiveBrightness = false,
     ValueChanged<Brightness>? onBrightnessChanged,
@@ -486,7 +486,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
         GlassInteractionBehavior.full,
     double? pressScale,
     Color? interactionGlowColor,
-    double interactionGlowRadius = 1.5,
+    double? interactionGlowRadius,
     GlassQuality? quality,
     GlassQuality? backgroundQuality,
     double magnification = 1.15,
@@ -686,7 +686,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
         GlassInteractionBehavior.full,
     double? pressScale,
     Color? interactionGlowColor,
-    double interactionGlowRadius = 1.5,
+    double? interactionGlowRadius,
     GlassQuality? quality,
     GlassQuality? backgroundQuality,
     double magnification = 1.15,
@@ -829,7 +829,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
       this.interactionBehavior = GlassInteractionBehavior.full,
       this.pressScale,
       this.interactionGlowColor,
-      this.interactionGlowRadius = 1.5,
+      this.interactionGlowRadius,
       this.platformViewBackdrop = false,
       this.adaptiveBrightness = false,
       this.onBrightnessChanged,
@@ -1064,7 +1064,14 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   final Color? interactionGlowColor;
 
   /// Spread radius of the directional glow. Defaults to 1.5.
-  final double interactionGlowRadius;
+  /// Radius of the interaction glow, as a fraction of the layer's shortest
+  /// side.
+  ///
+  /// Null — the default — asks for the iOS 26 calibration: a wide 1.6
+  /// radius under a sigma-16 Gaussian at a low alpha, the same native mode
+  /// [GlassButton] resolves from a null `glowRadius`. Pass a number to keep
+  /// the theme's glow palette instead.
+  final double? interactionGlowRadius;
 
   /// Forces BackdropFilter rendering over iOS PlatformViews. Defaults to false.
   final bool platformViewBackdrop;

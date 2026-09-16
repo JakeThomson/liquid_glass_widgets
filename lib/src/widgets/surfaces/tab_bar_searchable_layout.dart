@@ -40,6 +40,7 @@ import 'tab_bar_searchable_internal.dart'
         SearchableTabIndicator;
 import '../../../widgets/surfaces/shared/tab_bar_accessory_placement.dart';
 import '../../../widgets/surfaces/shared/tab_bar_minimize_controller.dart';
+import 'tab_bar_layout_utils.dart';
 
 /// Internal [StatefulWidget] that owns the searchable-placement rendering engine.
 ///
@@ -93,7 +94,7 @@ class TabBarSearchableLayout extends StatefulWidget {
     this.glowSpreadRadius = 8,
     this.glowOpacity = 0.6,
     this.interactionGlowColor,
-    this.interactionGlowRadius = 1.5,
+    this.interactionGlowRadius,
     this.quality,
     this.backgroundQuality,
     this.magnification = 1.15,
@@ -184,7 +185,11 @@ class TabBarSearchableLayout extends StatefulWidget {
   final double glowSpreadRadius;
   final double glowOpacity;
   final Color? interactionGlowColor;
-  final double interactionGlowRadius;
+
+  /// Radius of the interaction glow, as a fraction of the layer's shortest
+  /// side. Null asks for the iOS 26 calibration — see
+  /// [resolveTabBarInteractionGlow].
+  final double? interactionGlowRadius;
   final GlassQuality? quality;
   final GlassQuality? backgroundQuality;
   final double magnification;
@@ -456,8 +461,16 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
 
     final resolvedGlowColors =
         GlassThemeData.of(context).glowColorsFor(context);
-    final effectiveInteractionGlowColor =
-        widget.interactionGlowColor ?? resolvedGlowColors.primary;
+    // A null radius asks for native mode — the same resolution the bottom bar
+    // runs, through the same helper, so the two cannot drift apart again.
+    final glow = resolveTabBarInteractionGlow(
+      interactionGlowRadius: widget.interactionGlowRadius,
+      interactionGlowColor: widget.interactionGlowColor,
+      themeGlowColor: resolvedGlowColors.primary,
+      themeGlowBlurRadius: resolvedGlowColors.glowBlurRadius,
+      isDark: GlassTheme.brightnessOf(context) == Brightness.dark,
+    );
+    final effectiveInteractionGlowColor = glow.color;
 
     final dynamicLabelColor = resolveBarLabelColor(context, darkAmount);
     final resolvedSelectedIconColor =
@@ -470,7 +483,9 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
         ? resolvedSelectedIconColor
         : resolvedUnselectedIconColor;
 
-    final effectiveGlowBlurRadius = resolvedGlowColors.glowBlurRadius;
+    // Native mode owns the blur: the radius and the falloff are one
+    // calibration. Everything else stays the theme's.
+    final effectiveGlowBlurRadius = glow.blurRadius;
     final effectiveGlowSpreadRadius = resolvedGlowColors.glowSpreadRadius;
     final effectiveGlowOpacity = resolvedGlowColors.glowOpacity;
 
@@ -684,8 +699,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                   widget.interactionBehavior.hasGlow
                                       ? effectiveInteractionGlowColor
                                       : const Color(0x00000000),
-                              interactionGlowRadius:
-                                  widget.interactionGlowRadius,
+                              interactionGlowRadius: glow.radius,
                               interactionGlowBlurRadius:
                                   effectiveGlowBlurRadius,
                               interactionGlowSpreadRadius:
@@ -725,8 +739,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                     widget.interactionBehavior.hasGlow
                                         ? effectiveInteractionGlowColor
                                         : const Color(0x00000000),
-                                interactionGlowRadius:
-                                    widget.interactionGlowRadius,
+                                interactionGlowRadius: glow.radius,
                                 interactionGlowBlurRadius:
                                     effectiveGlowBlurRadius,
                                 interactionGlowSpreadRadius:
@@ -888,8 +901,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                   widget.interactionBehavior.hasGlow
                                       ? effectiveInteractionGlowColor
                                       : const Color(0x00000000),
-                              interactionGlowRadius:
-                                  widget.interactionGlowRadius,
+                              interactionGlowRadius: glow.radius,
                               interactionGlowBlurRadius:
                                   effectiveGlowBlurRadius,
                               interactionGlowSpreadRadius:

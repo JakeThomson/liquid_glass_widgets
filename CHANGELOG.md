@@ -1,4 +1,29 @@
 
+# Unreleased
+
+## Features
+
+- **`GlassTabBar` can reach the native interaction glow (#323):** `GlassButton` has resolved the
+  iOS 26 calibration since 1.3.0 — a wide `1.6` radius under a sigma-`16` Gaussian at a low alpha,
+  which washes the light across the surface instead of concentrating it into a hotspot — and it
+  keys that off a **null** `glowRadius`. Every `GlassTabBar` factory declared
+  `interactionGlowRadius` non-nullable with a default, so no bar had a null to key on: whatever
+  radius you chose, the falloff stayed pinned to `GlassGlowColors.glowBlurRadius`, whose fallback
+  is `4`. At any radius wide enough to read on a bar that draws a disc with a visible edge on it.
+
+  `interactionGlowRadius` is now `double?` on all four factories and the private constructor they
+  delegate to, and `null` means native mode. Resolution is shared between `TabBarBottomLayout` and
+  `TabBarSearchableLayout` through `resolveTabBarInteractionGlow`, so the two bars cannot drift
+  apart again.
+
+  **Behaviour change:** `null` is the new default, so a bar that never passed a radius moves from
+  `1.5`/sigma-`4` (or `1.0` on `GlassTabBar.inline`) to the native `1.6`/sigma-`16`, and takes the
+  native sheen in place of the theme's adaptive primary — the same substitution `GlassButton`
+  makes in native mode, and for the same reason: the theme's white at 24% (light) / 16% (dark) is
+  roughly double the native alpha, which at this radius reads as fog rather than a specular wash.
+  Passing any explicit radius keeps the previous behaviour exactly, palette included, and an
+  explicit `interactionGlowColor` still wins in both modes.
+
 # 1.6.1
 
 ## Bug Fixes
