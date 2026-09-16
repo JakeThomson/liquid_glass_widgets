@@ -504,25 +504,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   bool _pushBackActive;
   set pushBackActive(bool value) {
     if (_pushBackActive == value) return;
-    // When the push-back scope deactivates (sheet dismissed → returning to
-    // rest), eagerly re-snapshot the live transform before clearing the flag.
-    //
-    // Without this, there is a 1-frame race: on the frame the
-    // secondaryAnimation first ticks above 0, _onAnimationTick() schedules
-    // a setState (pushBackActive: true) for the *next* frame. In the
-    // *current* frame, _pushBackActive is still false on the render object,
-    // so _hasScale() returns false → _updateScaleState() writes the
-    // slightly-scaled matrix (e.g. 0.9997×) into _unscaledTransform,
-    // contaminating the snapshot the frozen path will use on the next frame.
-    //
-    // By re-snapshotting here (true→false transition = sheet fully gone,
-    // page back at rest), we guarantee _unscaledTransform always reflects
-    // the true unscaled rest matrix for the *next* presentation, completely
-    // eliminating the contamination window.
-    if (!value && attached) {
-      _unscaledTransform = getTransformTo(null);
-      _unscaledCaptureOrigin = super.captureOriginInScreenSpace;
-    }
+    // Called by updateRenderObject during build. An attached ancestor may
+    // still need layout (e.g. a newly inserted route SlideTransition), so
+    // reading getTransformTo here can throw. Refresh the resting snapshot
+    // on the next paint, after the entire ancestor chain has been laid out.
     _pushBackActive = value;
     markNeedsPaint();
   }
@@ -570,7 +555,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   /// values so [matteTransform] and [captureOriginInScreenSpace] can return
   /// coordinates that match the unscaled [captureImage] texture.
   ///
-  /// Called from [paintLiquidGlass] on every frame — not from
+  /// Called from [paint] on every frame — not from
   /// [onTransformChanged] — because [GeometryTransformTrackingLayer] skips
   /// the callback on the very first frame (when [_lastTransform] is null), and
   /// only fires again when the accumulated transform actually changes between
@@ -612,6 +597,15 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     // Geometry is in LOCAL space; matteTransform is applied at paint time,
     // so only a repaint — not a layout/geometry rebuild — is required here.
     markNeedsPaint();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (!attached) return;
+    // Refresh before the base paint reads matteTransform to build geometry.
+    // This also records the resting baseline when geometry is not ready yet.
+    _updateScaleState(getTransformTo(null), super.captureOriginInScreenSpace);
+    super.paint(context, offset);
   }
 
   @override
@@ -758,12 +752,6 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     // the snapshot stops updating. The matteTransform and
     // captureOriginInScreenSpace getters then return the last known unscaled
     // coordinates, perfectly neutralising the double-scale artifact.
-    //
-    // NOTE: _updateScaleState is intentionally called from paint rather than
-    // onTransformChanged. GeometryTransformTrackingLayer skips the callback on
-    // the very first frame, so relying on it alone would leave _unscaledTransform
-    // null if a sheet opens before any position change ever occurs.
-    _updateScaleState(getTransformTo(null), super.captureOriginInScreenSpace);
 
     if (captureImage case final capture?) {
       paintLiquidGlassWithCapture(

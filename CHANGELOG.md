@@ -1,3 +1,11 @@
+# Unreleased
+
+## Bug Fixes
+
+- Refresh glass push-back coordinate snapshots during paint rather than widget
+  updates. Returning through a Cupertino page transition no longer reads an
+  unlaid-out ancestor, while sheet UV freezing keeps its resting baseline.
+
 # 1.6.0
 
 ## Features
