@@ -3,15 +3,39 @@
 
 ## Bug Fixes
 
-- **A sheet morphing out of a pinned capsule no longer loses that capsule (#324):** Presenting hands the pinned chrome back to its route, and the tapped capsule went with it — the hoisted capsule the droplet came out of vanished the frame the sheet landed, and the route's copy was painted under the barrier in its place. `GlassBarItem.sheet` now presents out of the hoisted capsule, which the shell keeps through the sheet while every other capsule still hands back; the morph has emptied it, so nothing is drawn above the sheet. `GlassPinnedBarChrome` keeps that slot as a placeholder and reports the item as `chrome.presenting`. `GlassNavBarRegistration.presentSheet` is deprecated.
+- **Hoisted capsule kept through sheet morph (#325, fixes #324):** When a
+  `GlassBarItem.sheet` was tapped, the capsule it morphed out of vanished mid-flight
+  and the route's copy appeared under the sheet barrier in its place. The shell now
+  keeps only the tapped capsule hoisted through the presentation while all other chrome
+  hands back. `GlassPinnedBarChrome` exposes the presenting item via `chrome.presenting`.
+  `GlassNavBarRegistration.presentSheet` is deprecated.
 
-- Keep the `GlassSlider` resting thumb shadow outside the clipped glass surface,
-  so the thumb remains visible on a white background. The shadow still fades
-  during interaction and returns on release or cancellation.
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#325).
 
-- Refresh glass push-back coordinate snapshots during paint rather than widget
-  updates. Returning through a Cupertino page transition no longer reads an
-  unlaid-out ancestor, while sheet UV freezing keeps its resting baseline.
+- **`GlassSlider` resting shadow no longer clipped on light backgrounds (#319):** The
+  thumb's `BoxShadow` was part of the material child inside `GlassEffect`, whose content
+  is clipped to the glass shape — hiding the shadow on white backgrounds. The shadow is
+  now painted as a sibling behind `GlassEffect`, outside the clip, and its alpha is
+  multiplied by the material's own fade so it vanishes cleanly during interaction and
+  returns on release or cancellation.
+
+  Thanks to [@leoluobuqi](https://github.com/leoluobuqi) for the fix (#319).
+
+- **Cupertino back-swipe no longer crashes with a layout assertion (#326):** Returning
+  through a Cupertino page transition could throw a layout assertion when glass surfaces
+  were present. The coordinate snapshot is now refreshed during paint, after all ancestors
+  have been laid out, preserving UV freeze behaviour across repeated sheet presentations.
+
+  Thanks to [@leoluobuqi](https://github.com/leoluobuqi) for the fix (#326).
+
+- **Glow highlight no longer dies when dragging off a bar (#322):** `GlassGlow` was
+  forwarding unclamped pointer coordinates to `GlassGlowLayer`. On captured moves outside
+  the widget the centre walked past the layer's clip and the light faded out mid-gesture,
+  while the selection indicator — which does clamp — kept tracking the same finger. The
+  position is now clamped to the layer bounds so the highlight parks on the nearest edge
+  and keeps travelling with the finger, matching platform behaviour.
+
+  Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#322).
 
 
 # 1.6.0
@@ -25,48 +49,34 @@
 
 ## Bug Fixes
 
-- **Slow drags over glass inside a scroll view no longer freeze (#317):** `GeometryTransformTrackingLayer`
-  was calling `onTransformChanged` (→ `markNeedsPaint`) directly from `addToScene` — inside a frame —
-  where no new frame gets scheduled. The callback now defers to a post-frame callback when fired during
-  compositing; a `toImage` snapshot outside a frame still calls it directly.
+- **Slow drags over glass inside a scroll view no longer freeze (#317):**
+  `GeometryTransformTrackingLayer` was calling `onTransformChanged` directly from
+  `addToScene` — inside a frame — where no new frame gets scheduled. The callback now
+  defers to a post-frame callback during compositing.
 
-Thanks to [@almazfm](https://github.com/almazfm) for the fix (#317).
+  Thanks to [@almazfm](https://github.com/almazfm) for the fix (#317).
 
-- **`GlassTabBar.bottom` no longer drags backwards under RTL (#313):** Follow-up to #142. The drag
-  path was mirroring the pointer a second time — a press landed on the correct tab but the slide ran
-  backwards, and release reported the mirror-image tab. `DraggableIndicatorPhysics.getAlignmentFromGlobalPosition`
-  now takes a `mirrorForRtl` flag; `TabDragGestureMixin` passes `false`, matching the physical
-  `Alignment` the bars paint with.
+- **`GlassTabBar.bottom` no longer drags backwards under RTL (#313):** The drag path was
+  mirroring the pointer twice — a press landed on the correct tab but the slide ran
+  backwards. `DraggableIndicatorPhysics.getAlignmentFromGlobalPosition` now takes a
+  `mirrorForRtl` flag; `TabDragGestureMixin` passes `false`.
 
-Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#316).
+  Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#316).
 
-- **`GlassTabBar` tabs expose a semantics tap action (#314):** Tab nodes were buttons with a selected
-  state but no `SemanticsAction.tap` — TalkBack and VoiceOver could read every destination but
-  activate none of them. `BottomBarTabItem` now wires `semanticOnTap` through to the `GlassFocusRegion`
-  it already builds, leaving the drag gesture and single-node-per-tab invariant untouched.
+- **`GlassTabBar` tabs expose a semantics tap action (#314):** Tab nodes were buttons with
+  a selected state but no `SemanticsAction.tap` — TalkBack and VoiceOver could read every
+  destination but activate none of them.
 
-Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#315).
+  Thanks to [@azizibahram](https://github.com/azizibahram) for the fix (#315).
 
 - Fixed `AdaptiveGlass` ignoring explicit `settings` when inside a glass container
   (`useOwnLayer: false`). Broke `GlassBodyMode.clear` tinting at standard quality.
 
-- **Fixed UV freeze jitter with `responsive_framework` (#292):** `RenderLiquidGlassLayer._hasScale`
-  previously froze UV coordinates whenever *any* uniform scale-down was detected above the layer —
-  including persistent app-level scales from `responsive_framework`, `FittedBox`, and
-  `InteractiveViewer`. This caused constant shimmer/jitter on every premium glass widget at rest.
-  The fix inverts the gate: UV freezing now requires a positive signal (`LiquidGlassPushBackScope`,
-  an internal `InheritedWidget`) that is only emitted by `GlassPage` when a real CupertinoSheet
-  push-back `secondaryAnimation` is in progress. Static app-level scales no longer trigger the
-  freeze. Also hardens against a 1-frame snapshot race at sheet presentation start.
-  **Zero user code changes required.**
-
-## Internal / Developer
-
-- Added `LiquidGlassPushBackScope` — internal `InheritedWidget` used by `GlassPage` to gate UV freezing during push-back transitions.
-- Added `example/lib/harnesses/uv_freeze_harness.dart` — visual regression harness for #292.
-- Fixed `pushClipPath` double-offset clip bug in `_RenderInteractiveIndicator`: `pillPath` was built in canvas coords, causing the blur clip to shift twice. Fixed to local coords (`Offset.zero & size`). Three regression tests added to `glass_effect_test.dart`.
-- Fixed `quality_comparison_demo.dart`: corrected `_kPillDefault.blur` (3.0 → 0.0), removed accidental `indicatorSettings: _kGlass` on premium `GlassSegmentedControl`, and used `GlassTabBar.inline` for the `GlassTabBar` row.
-- Fixed `AnimatedGlassIndicator._mergeWithBase`: `blur` is now unconditionally enforced to `0`. Indicator pills are refractive lenses — non-zero blur triggered `BackdropFilter` on the SDF pill, producing a blur blob. Docstrings corrected. Regression tests added to `animated_glass_indicator_coverage_test.dart`, `glass_segmented_control_test.dart`, and `glass_tab_bar_bottom_test.dart`.
+- **Fixed UV freeze jitter with `responsive_framework` (#292):** UV freezing now requires
+  an explicit `LiquidGlassPushBackScope` signal emitted by `GlassPage` during a real
+  CupertinoSheet push-back. Static app-level scales from `responsive_framework`,
+  `FittedBox`, and `InteractiveViewer` no longer trigger the freeze. **Zero user code
+  changes required.**
 
 ---
 
