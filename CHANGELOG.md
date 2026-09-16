@@ -6,6 +6,10 @@
   so the thumb remains visible on a white background. The shadow still fades
   during interaction and returns on release or cancellation.
 
+- Refresh glass push-back coordinate snapshots during paint rather than widget
+  updates. Returning through a Cupertino page transition no longer reads an
+  unlaid-out ancestor, while sheet UV freezing keeps its resting baseline.
+
 # 1.6.0
 
 ## Features
