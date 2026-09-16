@@ -261,21 +261,9 @@ void main() {
           reason: 'after transition settles, scope must be inactive');
     });
 
-    // Regression test for the 1-frame contamination race fixed in
-    // RenderLiquidGlassLayer.pushBackActive setter:
-    //
-    // When pushBackActive flips true→false, the render object now eagerly
-    // re-snapshots the live transform before clearing the flag. This ensures
-    // that _unscaledTransform always holds a clean, unscaled baseline for
-    // the *next* presentation, even if _updateScaleState() ran with a
-    // slightly-scaled matrix during the overlap frame.
-    //
-    // This widget-level test verifies the scope reads the correct value after
-    // a complete active→inactive cycle — the render-level snapshot cannot be
-    // exercised without a GPU/shader stack, but the InheritedWidget contract
-    // (which drives the pushBackActive setter value) is verified here.
-    testWidgets(
-        're-snapshot hardening: scope reads false cleanly after active→inactive cycle',
+    // These tests cover scope notifications; push_back_layout_test.dart
+    // exercises the render object's layout-safe snapshot refresh directly.
+    testWidgets('scope reads false cleanly after active→inactive cycle',
         (tester) async {
       bool active = false;
       late StateSetter outerSetState;
@@ -301,7 +289,7 @@ void main() {
       expect(LiquidGlassPushBackScope.of(capturedContext), isTrue,
           reason: 'scope must be active after first flip');
 
-      // Deactivate (sheet dismissed — re-snapshot path fires in render object).
+      // Deactivate (sheet dismissed).
       outerSetState(() => active = false);
       await tester.pump();
       expect(LiquidGlassPushBackScope.of(capturedContext), isFalse,
@@ -309,8 +297,7 @@ void main() {
               'scope must be inactive after dismissal; no stale true must linger');
     });
 
-    testWidgets(
-        're-snapshot hardening: rapid true→false→true→false cycling lands correctly',
+    testWidgets('rapid true→false→true→false cycling lands correctly',
         (tester) async {
       bool active = false;
       late StateSetter outerSetState;
