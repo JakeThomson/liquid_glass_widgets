@@ -1,8 +1,18 @@
+
 # 1.6.1
 
 ## Bug Fixes
 
 - **A sheet morphing out of a pinned capsule no longer loses that capsule (#324):** Presenting hands the pinned chrome back to its route, and the tapped capsule went with it — the hoisted capsule the droplet came out of vanished the frame the sheet landed, and the route's copy was painted under the barrier in its place. `GlassBarItem.sheet` now presents out of the hoisted capsule, which the shell keeps through the sheet while every other capsule still hands back; the morph has emptied it, so nothing is drawn above the sheet. `GlassPinnedBarChrome` keeps that slot as a placeholder and reports the item as `chrome.presenting`. `GlassNavBarRegistration.presentSheet` is deprecated.
+
+- Keep the `GlassSlider` resting thumb shadow outside the clipped glass surface,
+  so the thumb remains visible on a white background. The shadow still fades
+  during interaction and returns on release or cancellation.
+
+- Refresh glass push-back coordinate snapshots during paint rather than widget
+  updates. Returning through a Cupertino page transition no longer reads an
+  unlaid-out ancestor, while sheet UV freezing keeps its resting baseline.
+
 
 # 1.6.0
 
