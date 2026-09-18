@@ -1,45 +1,19 @@
-# Unreleased
+# 1.6.2
 
 ## Features
 
-- Add `GlassSlider.thumbShadow` for configurable resting thumb shadows, matching
-  the list-based customization used by segmented indicators. `null` uses the
-  default; an empty list disables the thumb shadow. Custom shadows retain their
-  geometry and fade with the existing press/release animation outside the glass clip.
+- **Native interaction glow for `GlassTabBar` (#329, fixes #323):** `interactionGlowRadius` is now nullable (defaulting to `null`), bringing `GlassTabBar` to parity with `GlassButton`'s iOS 26 native glow calibration (1.6 radius, sigma-16 blur, soft sheen). Explicit values still preserve custom palettes and geometry.
 
-## Visual Changes
+  Thanks to [@azizibahram](https://github.com/azizibahram) for the contribution (#329, fixes #323).
 
-- Soften the default `GlassSlider` resting shadow from 25% to 15% black for a less
-  prominent outline on light backgrounds. Blur (8) and offset (0, 2) are unchanged.
-  This is a visual adjustment, not a measured UIKit shadow specification. To retain
-  the previous appearance, pass a `thumbShadow` with black at 25% opacity,
-  `blurRadius: 8` and `offset: Offset(0, 2)`.
+- **Configurable `GlassSlider.thumbShadow` with softer default (#327):** Adds `thumbShadow` to `GlassSlider` for custom resting thumb shadow lists (pass `[]` to disable), while softening the default resting shadow opacity from 25% to 15% black for a cleaner look on light backgrounds.
 
+  Thanks to [@leoluobuqi](https://github.com/leoluobuqi) for the contribution (#327).
 
-# Unreleased
+## Bug Fixes
 
-## Features
+- **`GlassTabBar` overdrag no longer clips the edge tab icon (#328):** Rubber-banding past the first or last tab no longer slides the selection window off the edge icon. `JellyClipper` now clamps the clip window against the bar boundary so the icon stays visible and the pill presses elastically against the wall.
 
-- **`GlassTabBar` can reach the native interaction glow (#323):** `GlassButton` has resolved the
-  iOS 26 calibration since 1.3.0 — a wide `1.6` radius under a sigma-`16` Gaussian at a low alpha,
-  which washes the light across the surface instead of concentrating it into a hotspot — and it
-  keys that off a **null** `glowRadius`. Every `GlassTabBar` factory declared
-  `interactionGlowRadius` non-nullable with a default, so no bar had a null to key on: whatever
-  radius you chose, the falloff stayed pinned to `GlassGlowColors.glowBlurRadius`, whose fallback
-  is `4`. At any radius wide enough to read on a bar that draws a disc with a visible edge on it.
-
-  `interactionGlowRadius` is now `double?` on all four factories and the private constructor they
-  delegate to, and `null` means native mode. Resolution is shared between `TabBarBottomLayout` and
-  `TabBarSearchableLayout` through `resolveTabBarInteractionGlow`, so the two bars cannot drift
-  apart again.
-
-  **Behaviour change:** `null` is the new default, so a bar that never passed a radius moves from
-  `1.5`/sigma-`4` (or `1.0` on `GlassTabBar.inline`) to the native `1.6`/sigma-`16`, and takes the
-  native sheen in place of the theme's adaptive primary — the same substitution `GlassButton`
-  makes in native mode, and for the same reason: the theme's white at 24% (light) / 16% (dark) is
-  roughly double the native alpha, which at this radius reads as fog rather than a specular wash.
-  Passing any explicit radius keeps the previous behaviour exactly, palette included, and an
-  explicit `interactionGlowColor` still wins in both modes.
 
 # 1.6.1
 
