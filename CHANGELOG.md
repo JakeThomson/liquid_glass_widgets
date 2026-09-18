@@ -15,6 +15,17 @@
   the previous appearance, pass a `thumbShadow` with black at 25% opacity,
   `blurRadius: 8` and `offset: Offset(0, 2)`.
 
+## Performance
+
+- **Geometry matte capped while a premium surface resizes (#330):** Every frame a
+  `GlassQuality.premium` surface's shape changed, its geometry matte was rebuilt through
+  `Picture.toImageSync` at the device pixel ratio — ~8 MB a frame for a sheet at 3× — so
+  a content-sized `GlassModalSheet` took the process to 400–800 MB on every open and close.
+  The matte is now held to a 1024×1024 physical-pixel budget while its shape is animating,
+  which bilinear sampling through a normalised UV hides on a moving edge, and is rasterised
+  once more at full resolution when the surface comes to rest. A surface at rest, or under
+  the budget at any pixel ratio, is unchanged.
+
 
 # Unreleased
 
