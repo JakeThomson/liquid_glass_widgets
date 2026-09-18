@@ -1514,7 +1514,8 @@ class GlassTabBarTrailingButton {
     this.enabled = true,
   })  : menuItems = null,
         menuAlignment = null,
-        menuWidth = 200;
+        menuWidth = 200,
+        menuHeight = null;
 
   /// Opens a [GlassMenu] pull-down when the trailing pill is tapped.
   ///
@@ -1535,6 +1536,7 @@ class GlassTabBarTrailingButton {
     this.enabled = true,
     this.menuAlignment,
     this.menuWidth = 200,
+    this.menuHeight,
   }) : onTap = _noOp;
 
   /// The glyph centered on the pill.
@@ -1557,6 +1559,9 @@ class GlassTabBarTrailingButton {
 
   /// Width of the expanded menu panel in logical pixels. Defaults to 200.
   final double menuWidth;
+
+  /// Optional fixed height of the expanded menu panel in logical pixels.
+  final double? menuHeight;
 
   /// Whether this button opens a menu rather than firing a tap callback.
   bool get isMenu => menuItems != null;

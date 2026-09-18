@@ -472,7 +472,15 @@ class GlassModalSheet extends StatefulWidget {
       context: context,
       barrierDismissible: isDismissible,
       barrierLabel: 'Dismiss',
-      barrierColor: barrierColor,
+      barrierColor: morphing
+          // When morphing, the presenter drives the scrim itself via the liquid
+          // spring so it stays in lockstep with the blob. A route-level barrier
+          // would fade linearly on an independent clock, creating the "two
+          // separate things" visual that GlassMenu avoids by having no route
+          // barrier at all. Pass transparent here so showGeneralDialog's built-in
+          // linear fade does not run alongside the spring-driven scrim.
+          ? const Color(0x00000000)
+          : barrierColor,
       useRootNavigator: useRootNavigator,
       transitionDuration: transitionDuration,
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -590,6 +598,9 @@ class GlassModalSheet extends StatefulWidget {
           peekWidth: peekWidth,
           peekTopBorderRadius: peekTopBorderRadius,
           platformViewBackdrop: platformViewBackdrop,
+          // The route-level barrier is transparent above; the presenter drives
+          // the scrim itself via the liquid spring for single-unified-motion.
+          barrierColor: barrierColor,
           child: scaffold,
         );
       },

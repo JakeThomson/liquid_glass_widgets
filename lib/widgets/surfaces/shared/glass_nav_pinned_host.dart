@@ -1682,6 +1682,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
               // The fallback is never read: with no menu item there is no
               // trigger to open one. It matches GlassMenu's own default.
               menuWidth: menuItem?.menuWidth ?? 200,
+              menuHeight: menuItem?.menuHeight,
               platformViewBackdrop: platformViewBackdrop,
               triggerBuilder: (context, _) => toGroup.glass
                   ? _buildShell(

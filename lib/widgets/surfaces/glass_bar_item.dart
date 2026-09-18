@@ -127,6 +127,7 @@ sealed class GlassBarItem {
     required List<Widget> menuItems,
     GlassMenuAlignment? menuAlignment,
     double menuWidth,
+    double? menuHeight,
     Object? id,
     String? label,
     GlassBarItemBackground background,
@@ -297,6 +298,7 @@ final class GlassBarMenuItem extends GlassBarActionItem {
     required this.menuItems,
     this.menuAlignment,
     this.menuWidth = 200,
+    this.menuHeight,
     super.id,
     super.label,
     super.background,
@@ -318,6 +320,9 @@ final class GlassBarMenuItem extends GlassBarActionItem {
 
   /// Width of the expanded menu panel, in logical pixels.
   final double menuWidth;
+
+  /// Optional fixed height for the menu panel, in logical pixels.
+  final double? menuHeight;
 
   @override
   Widget get content => icon;

@@ -155,6 +155,10 @@ class GlassMenuLabel extends StatelessWidget {
   /// Horizontal padding for the content. Only used if [child] is provided.
   final double horizontalPadding;
 
+  /// Optional alignment for the content. Defaults to [Alignment.centerLeft] if
+  /// [title] is provided, or null (filling parent constraints) if [child] is provided.
+  final AlignmentGeometry? alignment;
+
   /// Creates a glass menu label.
   const GlassMenuLabel({
     this.title,
@@ -162,6 +166,7 @@ class GlassMenuLabel extends StatelessWidget {
     this.style,
     this.height = 30.0,
     this.horizontalPadding = 16.0,
+    this.alignment,
     super.key,
   }) : assert(title != null || child != null,
             'Either title or child must be provided');
@@ -176,7 +181,7 @@ class GlassMenuLabel extends StatelessWidget {
     return Container(
       height: height,
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      alignment: Alignment.centerLeft,
+      alignment: alignment ?? (title != null ? Alignment.centerLeft : null),
       child: child ??
           Text(
             title!.toUpperCase(),

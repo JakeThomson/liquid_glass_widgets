@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:liquid_glass_widgets/utils/liquid_morph_physics.dart';
@@ -277,11 +279,10 @@ void main() {
       expect(LiquidMorphPhysics.openSpring.damping, equals(16.0));
     });
 
-    test('closeSpring has same profile as openSpring', () {
-      expect(LiquidMorphPhysics.closeSpring.stiffness,
-          equals(LiquidMorphPhysics.openSpring.stiffness));
-      expect(LiquidMorphPhysics.closeSpring.damping,
-          equals(LiquidMorphPhysics.openSpring.damping));
+    test('closeSpring has snappy profile (higher stiffness for fast dismiss)',
+        () {
+      expect(LiquidMorphPhysics.closeSpring.stiffness, equals(200.0));
+      expect(LiquidMorphPhysics.closeSpring.damping, equals(21.0));
     });
 
     test('closeVelocityHint is negative (drives spring toward 0 with momentum)',
@@ -364,6 +365,243 @@ void main() {
           reason: 'containerScale ≠ 1.0 at rawValue=$raw',
         );
       }
+    });
+  });
+
+  // ── Adaptive-mode helpers ──────────────────────────────────────────────────
+
+  group('LiquidMorphPhysics.computeScaleDelta', () {
+    test('returns 1.0 for identical square sizes', () {
+      expect(
+        LiquidMorphPhysics.computeScaleDelta(
+          sourceSize: const Size(48, 48),
+          targetSize: const Size(48, 48),
+        ),
+        closeTo(1.0, 1e-9),
+      );
+    });
+
+    test('returns correct ratio for compose-button → full-sheet', () {
+      // source: 48×48 = 2304 px²,  target: 393×852 = 334 836 px²
+      // ratio = √(334836 / 2304) ≈ 12.05
+      final delta = LiquidMorphPhysics.computeScaleDelta(
+        sourceSize: const Size(48, 48),
+        targetSize: const Size(393, 852),
+      );
+      expect(delta, greaterThan(10.0));
+      expect(delta, lessThan(15.0));
+    });
+
+    test('returns 1.0 for zero-area source (morphFromZero guard)', () {
+      expect(
+        LiquidMorphPhysics.computeScaleDelta(
+          sourceSize: const Size(0, 0),
+          targetSize: const Size(200, 300),
+        ),
+        equals(1.0),
+      );
+    });
+  });
+
+  group('LiquidMorphPhysics.computeAdaptiveBackOutAmplitude', () {
+    test('returns 2.5 when |finalDy| <= 100 px', () {
+      expect(
+        LiquidMorphPhysics.computeAdaptiveBackOutAmplitude(finalDy: 80.0),
+        closeTo(2.5, 1e-9),
+      );
+    });
+
+    test('is attenuated for large vertical travel (|finalDy| = 388 px)', () {
+      final amp = LiquidMorphPhysics.computeAdaptiveBackOutAmplitude(
+        finalDy: -388.0,
+      );
+      // Expected ≈ 2.5 * 100/388 ≈ 0.644 → clamped to min 0.7
+      expect(amp, closeTo(0.7, 1e-6));
+    });
+
+    test('never falls below the minimum amplitude (0.7)', () {
+      // Extreme travel distance that would otherwise go below min.
+      final amp = LiquidMorphPhysics.computeAdaptiveBackOutAmplitude(
+        finalDy: -10000.0,
+      );
+      expect(amp, greaterThanOrEqualTo(0.7));
+    });
+
+    test('never exceeds the base amplitude (2.5)', () {
+      final amp = LiquidMorphPhysics.computeAdaptiveBackOutAmplitude(
+        finalDy: -10.0, // very small
+      );
+      expect(amp, lessThanOrEqualTo(2.5));
+    });
+  });
+
+  group('LiquidMorphPhysics.computeBlendAttenuation', () {
+    test('returns 1.0 for scaleDelta <= 3.0 (full blend)', () {
+      expect(LiquidMorphPhysics.computeBlendAttenuation(1.0), equals(1.0));
+      expect(LiquidMorphPhysics.computeBlendAttenuation(3.0), equals(1.0));
+    });
+
+    test('is attenuated for scaleDelta > 3.0', () {
+      final att = LiquidMorphPhysics.computeBlendAttenuation(12.0);
+      expect(att, closeTo(3.0 / 12.0, 1e-9)); // 0.25
+      expect(att, lessThan(1.0));
+    });
+
+    test('never falls below 0.2', () {
+      final att = LiquidMorphPhysics.computeBlendAttenuation(1000.0);
+      expect(att, greaterThanOrEqualTo(0.2));
+    });
+  });
+
+  group('LiquidMorphPhysics — adaptive mode (scaleDelta = 12.0)', () {
+    // Simulate a compose-button (48×48) → full-sheet (393×852) morph.
+    const scaleDelta = 12.0;
+    // finalDy = sheet_center.y - trigger_center.y (upward → negative)
+    const finalDy = -388.0;
+    const finalDx = 0.0;
+
+    LiquidMorphState computeAdaptive(double rawValue) =>
+        LiquidMorphPhysics.compute(
+          rawValue: rawValue,
+          finalDx: finalDx,
+          finalDy: finalDy,
+          scaleDelta: scaleDelta,
+        );
+
+    test('sizeT stays compact (< 0.40) through first 35% of open', () {
+      for (int i = 0; i <= 35; i++) {
+        final raw = i / 100.0;
+        final s = computeAdaptive(raw);
+        expect(
+          s.sizeT,
+          lessThan(0.40),
+          reason: 'sizeT not compact at rawValue=$raw (adaptive off?)',
+        );
+      }
+    });
+
+    test('sizeT reaches exactly 1.0 at rawValue = 1.0', () {
+      expect(computeAdaptive(1.0).sizeT, closeTo(1.0, 1e-9));
+    });
+
+    test('sizeT is 0.0 at rawValue = 0.0', () {
+      expect(computeAdaptive(0.0).sizeT, equals(0.0));
+    });
+
+    test('sizeT is monotonically increasing on [0, 1]', () {
+      double prev = -1.0;
+      for (int i = 0; i <= 100; i++) {
+        final raw = i / 100.0;
+        final cur = computeAdaptive(raw).sizeT;
+        expect(cur, greaterThanOrEqualTo(prev),
+            reason: 'sizeT not monotonic at rawValue=$raw (adaptive)');
+        prev = cur;
+      }
+    });
+
+    test('close undershoot pushDy magnitude is bounded (< 20 px)', () {
+      // rawValue = -0.15 simulates peak close bounce.
+      // With full travel (388 px), unbounded push would be ~58 px.
+      // Bounded push must be < 20 px.
+      final s = LiquidMorphPhysics.compute(
+        rawValue: -0.15,
+        finalDx: finalDx,
+        finalDy: finalDy,
+        scaleDelta: scaleDelta,
+      );
+      expect(
+        s.pushDy.abs(),
+        lessThan(20.0),
+        reason:
+            'pushDy=${s.pushDy} exceeds 20 px threshold — trigger will jolt',
+      );
+    });
+
+    test('close undershoot pushDy is still non-zero (bounce is visible)', () {
+      final s = LiquidMorphPhysics.compute(
+        rawValue: -0.15,
+        finalDx: finalDx,
+        finalDy: finalDy,
+        scaleDelta: scaleDelta,
+      );
+      expect(s.pushDy.abs(), greaterThan(0.0));
+    });
+
+    test('blend is attenuated for large-scale morph', () {
+      // At mid-travel the blend should still be > 0 but reduced from the
+      // un-attenuated value that would saturate the SDF viewport.
+      final s = computeAdaptive(0.5);
+      final fullBlend = LiquidMorphPhysics.compute(
+        rawValue: 0.5,
+        finalDx: finalDx,
+        finalDy: finalDy,
+        scaleDelta: 1.0, // no attenuation
+      ).blend;
+      expect(s.blend, lessThanOrEqualTo(fullBlend));
+    });
+  });
+
+  // ── Closing trajectory (isClosing = true) ──────────────────────────────────
+
+  group('LiquidMorphPhysics — closing trajectory (isClosing = true)', () {
+    test(
+        'pathT never exceeds 1.0 on close (no reverse launch in wrong direction)',
+        () {
+      for (int i = 0; i <= 100; i++) {
+        final raw = i / 100.0;
+        final s = LiquidMorphPhysics.compute(
+          rawValue: raw,
+          finalDx: _finalDx,
+          finalDy: _finalDy,
+          isClosing: true,
+        );
+        expect(s.pathT, lessThanOrEqualTo(1.0),
+            reason: 'pathT exceeded 1.0 at rawValue=$raw on close');
+      }
+    });
+
+    test('pathT decreases monotonically from 1.0 to 0.0 on close', () {
+      double prev = -0.1;
+      for (int i = 0; i <= 100; i++) {
+        final raw = i / 100.0;
+        final s = LiquidMorphPhysics.compute(
+          rawValue: raw,
+          finalDx: _finalDx,
+          finalDy: _finalDy,
+          isClosing: true,
+        );
+        expect(s.pathT, greaterThanOrEqualTo(prev),
+            reason: 'pathT not monotonic at rawValue=$raw on close');
+        prev = s.pathT;
+      }
+    });
+
+    test('sizeT decreases monotonically from 1.0 to 0.0 on close', () {
+      double prev = -0.1;
+      for (int i = 0; i <= 100; i++) {
+        final raw = i / 100.0;
+        final s = LiquidMorphPhysics.compute(
+          rawValue: raw,
+          finalDx: _finalDx,
+          finalDy: _finalDy,
+          isClosing: true,
+        );
+        expect(s.sizeT, greaterThanOrEqualTo(prev),
+            reason: 'sizeT not monotonic at rawValue=$raw on close');
+        prev = s.sizeT;
+      }
+    });
+
+    test('pathT and sizeT include closeUndershoot when rawValue < 0.0', () {
+      const undershoot = -0.15;
+      final s = LiquidMorphPhysics.compute(
+        rawValue: undershoot,
+        finalDx: _finalDx,
+        finalDy: _finalDy,
+        isClosing: true,
+      );
+      expect(s.pathT, closeTo(undershoot, 1e-9));
+      expect(s.sizeT, closeTo(undershoot, 1e-9));
     });
   });
 }

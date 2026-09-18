@@ -6,6 +6,7 @@
 // public surface, so — like the mechanics tests — this imports the library file
 // directly.
 
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
@@ -589,6 +590,153 @@ void main() {
     });
   });
 
+  group(
+      'SheetMorphGeometry.blobRect — continuous fluid expansion (large scaleDelta)',
+      () {
+    // Typical compose-button → full sheet geometry.
+    const trigger = Rect.fromLTWH(172.5, 790.0, 48.0, 48.0);
+    const destination = Rect.fromLTWH(0.0, 0.0, 393.0, 852.0);
+    const scaleDelta = 12.0; // √(393*852 / 48*48) ≈ 12.05
+
+    test('starts exactly on the trigger at sizeT = 0.0', () {
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: 0.0,
+        sizeT: 0.0,
+        scaleDelta: scaleDelta,
+      );
+      expect(rect.size, trigger.size);
+      expect(rect.center, trigger.center);
+    });
+
+    test('lands exactly on the destination at sizeT = 1.0 / pathT = 1.0', () {
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: 1.0,
+        sizeT: 1.0,
+        scaleDelta: scaleDelta,
+      );
+      expect(rect.center.dx, closeTo(destination.center.dx, 1e-9));
+      expect(rect.center.dy, closeTo(destination.center.dy, 1e-9));
+      expect(rect.width, closeTo(destination.width, 1e-9));
+      expect(rect.height, closeTo(destination.height, 1e-9));
+    });
+
+    test('continuous fluid expansion in flight (sizeT = 0.50)', () {
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: 0.50,
+        sizeT: 0.50,
+        scaleDelta: scaleDelta,
+      );
+      final expectedWidth = lerpDouble(trigger.width, destination.width, 0.50)!;
+      final expectedHeight =
+          lerpDouble(trigger.height, destination.height, 0.50)!;
+      expect(rect.width, closeTo(expectedWidth, 1e-6));
+      expect(rect.height, closeTo(expectedHeight, 1e-6));
+    });
+
+    test(
+        'anchor drift is clamped to at most 8px, keeping the blob rooted at trigger',
+        () {
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: 0.9,
+        sizeT: 0.1,
+        scaleDelta: scaleDelta,
+      );
+      // Even under extreme pathT - sizeT separation (0.8), the anchor drift
+      // is clamped to 8px so the blob never detaches from the trigger button.
+      final driftX = rect.center.dx -
+          (trigger.center.dx +
+              (destination.center.dx - trigger.center.dx) * 0.1);
+      final driftY = rect.center.dy -
+          (trigger.center.dy +
+              (destination.center.dy - trigger.center.dy) * 0.1);
+      expect(driftX.abs(), lessThanOrEqualTo(8.0 + 1e-6));
+      expect(driftY.abs(), lessThanOrEqualTo(8.0 + 1e-6));
+    });
+
+    test('close undershoot (sizeT = -0.2) does not go negative', () {
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: -0.2,
+        sizeT: -0.2,
+        scaleDelta: scaleDelta,
+      );
+      expect(rect.width, greaterThanOrEqualTo(0.0));
+      expect(rect.height, greaterThanOrEqualTo(0.0));
+    });
+
+    test(
+        'close undershoot (sizeT = -0.2) does not collapse to 0 px on large destinations',
+        () {
+      final rect = SheetMorphGeometry.blobRect(
+        trigger: trigger,
+        destination: destination,
+        pathT: -0.2,
+        sizeT: -0.2,
+        scaleDelta: scaleDelta,
+      );
+      // Squeezed relative to trigger (not collapsed to 0):
+      expect(rect.width, closeTo(trigger.width * 0.95, 0.1));
+      expect(rect.height, closeTo(trigger.height * 0.95, 0.1));
+    });
+
+    group('symmetric monotonic dismissal (isClosing = true)', () {
+      const closeTrigger = Rect.fromLTWH(172.5, 780.0, 48.0, 48.0);
+      const closeDest = Rect.fromLTWH(0.0, 0.0, 393.0, 852.0);
+      const closeScaleDelta = 13.3;
+
+      test('at sizeT=1.0 (start of close) matches destination size', () {
+        final rect = SheetMorphGeometry.blobRect(
+          trigger: closeTrigger,
+          destination: closeDest,
+          pathT: 1.0,
+          sizeT: 1.0,
+          scaleDelta: closeScaleDelta,
+          isClosing: true,
+        );
+        expect(rect.width, closeTo(closeDest.width, 1e-9));
+        expect(rect.height, closeTo(closeDest.height, 1e-9));
+      });
+
+      test('at mid-dismiss (sizeT=0.5) dimensions are linearly lerped', () {
+        final rect = SheetMorphGeometry.blobRect(
+          trigger: closeTrigger,
+          destination: closeDest,
+          pathT: 0.5,
+          sizeT: 0.5,
+          scaleDelta: closeScaleDelta,
+          isClosing: true,
+        );
+        final expectedW = lerpDouble(closeTrigger.width, closeDest.width, 0.5)!;
+        final expectedH =
+            lerpDouble(closeTrigger.height, closeDest.height, 0.5)!;
+        expect(rect.width, closeTo(expectedW, 1e-6));
+        expect(rect.height, closeTo(expectedH, 1e-6));
+      });
+
+      test('at sizeT=0.0 (close complete) lands on trigger size', () {
+        final rect = SheetMorphGeometry.blobRect(
+          trigger: closeTrigger,
+          destination: closeDest,
+          pathT: 0.0,
+          sizeT: 0.0,
+          scaleDelta: closeScaleDelta,
+          isClosing: true,
+        );
+        expect(rect.width, closeTo(closeTrigger.width, 1e-9));
+        expect(rect.height, closeTo(closeTrigger.height, 1e-9));
+      });
+    });
+  });
+
   group('SheetMorphGeometry.blobRadius', () {
     test('starts fully rounded at the trigger', () {
       final radius = SheetMorphGeometry.blobRadius(
@@ -904,8 +1052,8 @@ void main() {
       await tester.pumpWidget(buildPresenter(routeAnimation: route));
       await tester.pump(const Duration(milliseconds: 16));
 
-      // Mid-morph: the droplet's glass layer is in the tree and the sheet is
-      // mounted but not painted.
+      // Mid-morph: the droplet's glass layer is in the tree and the real sheet
+      // is mounted but not yet handed off (content reveals inside the blob).
       expect(find.byType(AdaptiveLiquidGlassLayer), findsWidgets);
       expect(
         tester.widget<Visibility>(find.byType(Visibility).first).visible,
@@ -966,6 +1114,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
 
       // The sheet hands back to the droplet for the return trip.
+      // Real sheet is not yet visible; content is only in the blob.
       expect(
         tester.widget<Visibility>(find.byType(Visibility).first).visible,
         isFalse,
@@ -1029,6 +1178,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 16));
 
+      // Wobble-within-slop still triggers the morph close.
       expect(
         tester.widget<Visibility>(find.byType(Visibility).first).visible,
         isFalse,
@@ -1060,6 +1210,9 @@ void main() {
       var landed = false;
       for (var elapsed = 0; elapsed < 200 && !landed; elapsed += 16) {
         await tester.pump(const Duration(milliseconds: 16));
+        // _handedOffToSheet flips to true only when the spring has fully settled
+        // at value >= 0.999 — not when the opacity fade starts. That is exactly
+        // the moment the droplet hands control to the real sheet.
         landed =
             tester.widget<Visibility>(find.byType(Visibility).first).visible;
       }
@@ -2137,6 +2290,8 @@ void main() {
 
       // Still mounted: the route stays up for the whole closing morph.
       expect(find.byType(GlassSheetMorphPresenter), findsOneWidget);
+      // The real sheet is handed back to the blob; Visibility.visible is false
+      // while the droplet returns to the trigger.
       expect(
         tester.widget<Visibility>(find.byType(Visibility).first).visible,
         isFalse,

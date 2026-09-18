@@ -444,6 +444,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
                   menuItems: item.menuItems,
                   menuAlignment: item.menuAlignment,
                   menuWidth: item.menuWidth,
+                  menuHeight: item.menuHeight,
                   label: item.label,
                 )
               else

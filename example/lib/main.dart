@@ -3,6 +3,7 @@ import 'package:liquid_glass_widgets_example/constants/glass_settings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import 'package:liquid_glass_widgets_example/apple_mail/apple_mail_demo.dart';
 import 'package:liquid_glass_widgets_example/apple_messages/apple_messages_demo.dart';
 import 'package:liquid_glass_widgets_example/apple_music/apple_music_demo.dart';
 import 'package:liquid_glass_widgets_example/apple_news/apple_news_demo.dart';
@@ -604,7 +605,20 @@ class _DemosTab extends StatelessWidget {
                   ),
                   SizedBox(height: 24),
 
-                  // Large featured card
+                  // Large featured cards
+                  _LargeDemoCard(
+                    title: 'Apple Mail',
+                    subtitle:
+                        'Pinned nav, gel morph, morphing compose & tinted capsule',
+                    icon: CupertinoIcons.mail_solid,
+                    gradient: const [
+                      Color(0xFF0A3D62),
+                      Color(0xFF007AFF),
+                    ],
+                    destination: const AppleMailHomeScreen(),
+                  ),
+                  SizedBox(height: 14),
+
                   _LargeDemoCard(
                     title: 'Apple Music',
                     subtitle:

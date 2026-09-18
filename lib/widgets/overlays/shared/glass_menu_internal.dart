@@ -54,6 +54,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         _hoveredIndexNotifier.value = null;
       }
     }
+    if (widget.morphSpeed != oldWidget.morphSpeed) {
+      _morphController.setSpeed(widget.morphSpeed);
+    }
   }
 
   Alignment _morphAlignment = Alignment.topLeft;
@@ -87,7 +90,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _morphController = GlassMorphController(vsync: this);
+    _morphController =
+        GlassMorphController(vsync: this, speed: widget.morphSpeed);
     _morphController.addListener(() {
       if (mounted) setState(() {});
 
@@ -499,11 +503,14 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     //
     // All J-curve, size, push, anchor-scale, blend, and containerScale math
     // is encapsulated in LiquidMorphPhysics.compute() via the controller.
+    // Large menus engage adaptive damping so vertical overshoot and push
+    // remain within tight iOS-native bounds, while sizeT follows linearToEaseOut.
     final state = _morphController.computeState(
       finalDx: finalDx,
       finalDy: finalDy,
       horizontalOffset: _horizontalOffset,
       verticalOffset: _verticalOffset,
+      adaptiveDamping: finalDy.abs() > 100.0,
     );
 
     final targetHeight = widget.menuHeight ?? menuHeight;
@@ -512,16 +519,19 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // false path keeps tw/th so the spawn-blob behavior is byte-identical.
     final double sizeStartW = widget.morphFromZero ? 0.0 : tw;
     final double sizeStartH = widget.morphFromZero ? 0.0 : th;
-    // Clamp to >= 0: the rubber-band close drives sizeT slightly negative during
-    // the undershoot, which lerps the size below zero for a tiny trigger and
-    // trips a debug BoxConstraints assert. A size can't be negative; 0 (fully
-    // collapsed) is the correct floor and is visually identical to the intended
-    // shrink-to-nothing at the close tail. Under morphFromZero the lerp already
-    // starts at 0, so this same clamp still floors the close undershoot.
-    final currentHeight = lerpDouble(sizeStartH, targetHeight, state.sizeT)!
-        .clamp(0.0, double.infinity);
-    final currentWidth = lerpDouble(sizeStartW, widget.menuWidth, state.sizeT)!
-        .clamp(0.0, double.infinity);
+
+    // During close undershoot (sizeT < 0), squeeze relative to trigger size.
+    // NEVER lerp against the distant targetHeight — for a tall menu (e.g. 340 px),
+    // a negative lerp would subtract 45+ px from a 44 px trigger and collapse
+    // the container to 0 px, causing a visible flash on the close bounce.
+    final currentHeight = state.sizeT < 0.0
+        ? (sizeStartH * (1.0 + state.sizeT * 0.25)).clamp(1.0, double.infinity)
+        : lerpDouble(sizeStartH, targetHeight, state.sizeT)!
+            .clamp(0.0, double.infinity);
+    final currentWidth = state.sizeT < 0.0
+        ? (sizeStartW * (1.0 + state.sizeT * 0.25)).clamp(1.0, double.infinity)
+        : lerpDouble(sizeStartW, widget.menuWidth, state.sizeT)!
+            .clamp(0.0, double.infinity);
 
     final inheritedSettings = InheritedLiquidGlass.of(context);
     final effectiveSettings = widget.settings ??
@@ -556,17 +566,31 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final currentRadius =
         lerpDouble(maxRadius, widget.menuBorderRadius, radiusT)!;
 
+    // For large menus, clamp the anchor edge displacement so the menu's pinned
+    // corner never drifts more than 8 px from the trigger button during flight.
+    // Small menus have <= 5 px natural displacement and are completely unaffected.
+    const double maxAnchorDrift = 8.0;
+    final double rawAnchorDriftX = finalDx * (state.pathT - state.sizeT);
+    final double anchorDriftX =
+        rawAnchorDriftX.clamp(-maxAnchorDrift, maxAnchorDrift);
+    final double effectiveDx = finalDx * state.sizeT + anchorDriftX;
+
+    final double rawAnchorDriftY = finalDy * (state.pathT - state.sizeT);
+    final double anchorDriftY =
+        rawAnchorDriftY.clamp(-maxAnchorDrift, maxAnchorDrift);
+    final double effectiveDy = finalDy * state.sizeT + anchorDriftY;
+
     final blobBLeft = _triggerOverlayPosition.dx +
         _followOffset.dx +
         tw / 2.0 +
-        state.currentDx -
+        effectiveDx -
         currentWidth / 2.0 +
         (_horizontalOffset * clampedValue);
 
     final blobBTop = _triggerOverlayPosition.dy +
         _followOffset.dy +
         th / 2.0 +
-        state.currentDy -
+        effectiveDy -
         currentHeight / 2.0 +
         (_verticalOffset * clampedValue);
 
@@ -826,8 +850,8 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                     Clip.none, // Prevent double-clip artifacts during stretch
                 children: [
                   // Menu content scales up with the container morph — items
-                  // enter the tree at 30% and scale from 0.5× to 1.0×.
-                  if (clampedValue > 0.3)
+                  // enter the tree at 25% and scale from 0.7× to 1.0×.
+                  if (clampedValue > 0.25)
                     Stack(
                       clipBehavior: Clip.none,
                       children: [
@@ -943,13 +967,13 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                                         .entries
                                         .expand((entry) {
                                       final itemOpacity =
-                                          ((clampedValue - 0.3) / 0.4)
+                                          ((clampedValue - 0.25) / 0.45)
                                               .clamp(0.0, 1.0);
                                       final itemScale = lerpDouble(
-                                        0.5,
+                                        0.7,
                                         1.0,
                                         Curves.easeOut.transform(
-                                          ((clampedValue - 0.3) / 0.7)
+                                          ((clampedValue - 0.25) / 0.75)
                                               .clamp(0.0, 1.0),
                                         ),
                                       )!;
@@ -1074,6 +1098,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // Dividers and labels don't contain user-facing scaled text
     if (item is GlassMenuDivider) return item.height;
     if (item is GlassMenuLabel) return item.height;
+    if (item is PreferredSizeWidget) return item.preferredSize.height;
     return 44.0;
   }
 

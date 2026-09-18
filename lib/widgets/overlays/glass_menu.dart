@@ -253,6 +253,14 @@ class GlassMenu extends StatefulWidget {
   /// the underlying [AdaptiveLiquidGlassLayer].
   final bool platformViewBackdrop;
 
+  /// Speed profile for the open/close morph animation.
+  ///
+  /// Defaults to [MorphSpeed.normal] for native iOS 26 parity. Use
+  /// [MorphSpeed.fast] on high-frequency trigger surfaces (e.g. toolbars where
+  /// users tap repeatedly) or [MorphSpeed.instant] when Reduce Motion is
+  /// active and you want a single-frame transition without bouncing.
+  final MorphSpeed morphSpeed;
+
   /// Creates a liquid glass menu.
   const GlassMenu({
     super.key,
@@ -287,6 +295,7 @@ class GlassMenu extends StatefulWidget {
     this.showDismissBarrier = true,
     this.morphFromZero = false,
     this.platformViewBackdrop = false,
+    this.morphSpeed = MorphSpeed.normal,
   }) : assert(trigger != null || triggerBuilder != null,
             'Either trigger or triggerBuilder must be provided');
 

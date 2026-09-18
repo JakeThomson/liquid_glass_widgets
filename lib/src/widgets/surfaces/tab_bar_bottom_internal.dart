@@ -427,6 +427,7 @@ class BottomBarExtraBtn extends StatelessWidget {
       return GlassMenu(
         menuAlignment: config.menuAlignment,
         menuWidth: config.menuWidth,
+        menuHeight: config.menuHeight,
         autoAdjustToScreen: true,
         items: config.menuItems!,
         triggerBuilder: (context, toggleMenu) => buildButton(toggleMenu),

@@ -739,6 +739,7 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                               pillChild = GlassMenu(
                                 menuAlignment: renderedTrailing!.menuAlignment,
                                 menuWidth: renderedTrailing.menuWidth,
+                                menuHeight: renderedTrailing.menuHeight,
                                 autoAdjustToScreen: true,
                                 items: renderedTrailing.menuItems!,
                                 triggerBuilder: (context, toggleMenu) =>
