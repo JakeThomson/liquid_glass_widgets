@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import '../../utils/glass_morph_controller.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
@@ -261,6 +262,29 @@ class GlassMenu extends StatefulWidget {
   /// active and you want a single-frame transition without bouncing.
   final MorphSpeed morphSpeed;
 
+  /// Whether to enable iOS-style continuous swipe-to-select.
+  ///
+  /// When true, pressing down on the trigger opens the menu immediately and
+  /// allows the user to slide across items and release to activate in a single
+  /// unbroken gesture without lifting their finger.
+  ///
+  /// If the finger is released within [continuousSwipeSlop] of the touch-down
+  /// origin, the gesture is treated as a tap and the menu remains open for
+  /// subsequent interaction (tap mode).
+  ///
+  /// Defaults to `false` for raw [GlassMenu] (opt-in for backward compatibility
+  /// with custom triggers); enabled by default on [GlassPullDownButton].
+  final bool enableContinuousSwipe;
+
+  /// The movement threshold in logical pixels required to arm continuous swipe.
+  ///
+  /// While the pointer displacement is below this distance, the interaction is
+  /// considered within the press deadband, preventing accidental item selection
+  /// on quick taps or presses.
+  ///
+  /// Defaults to 10.0.
+  final double continuousSwipeSlop;
+
   /// Creates a liquid glass menu.
   const GlassMenu({
     super.key,
@@ -296,6 +320,8 @@ class GlassMenu extends StatefulWidget {
     this.morphFromZero = false,
     this.platformViewBackdrop = false,
     this.morphSpeed = MorphSpeed.normal,
+    this.enableContinuousSwipe = false,
+    this.continuousSwipeSlop = 10.0,
   }) : assert(trigger != null || triggerBuilder != null,
             'Either trigger or triggerBuilder must be provided');
 

@@ -1,3 +1,29 @@
+# 1.7.0
+
+## Features
+
+- **Continuous swipe-to-select for `GlassMenu` and `GlassPullDownButton` (#331):** Adds native iOS-style continuous press-and-slide interaction. Users can press and hold the trigger, slide directly onto an item, and release to select in a single fluid motion without requiring a second tap.
+  - Enabled by default on `GlassPullDownButton` (`enableContinuousSwipe: true`), opt-in on `GlassMenu`.
+  - Configurable `continuousSwipeSlop` (defaults to 10px) to distinguish quick taps from deliberate swipes without latency.
+  - Includes pointer ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional interaction glow tracking, and automatic deactivation on scrollable menus to preserve standard scroll gestures.
+
+
+# 1.6.2
+
+## Features
+
+- **Native interaction glow for `GlassTabBar` (#329, fixes #323):** `interactionGlowRadius` is now nullable (defaulting to `null`), bringing `GlassTabBar` to parity with `GlassButton`'s iOS 26 native glow calibration (1.6 radius, sigma-16 blur, soft sheen). Explicit values still preserve custom palettes and geometry.
+
+  Thanks to [@azizibahram](https://github.com/azizibahram) for the contribution (#329, fixes #323).
+
+- **Configurable `GlassSlider.thumbShadow` with softer default (#327):** Adds `thumbShadow` to `GlassSlider` for custom resting thumb shadow lists (pass `[]` to disable), while softening the default resting shadow opacity from 25% to 15% black for a cleaner look on light backgrounds.
+
+  Thanks to [@leoluobuqi](https://github.com/leoluobuqi) for the contribution (#327).
+
+## Bug Fixes
+
+- **`GlassTabBar` overdrag no longer clips the edge tab icon (#328):** Rubber-banding past the first or last tab no longer slides the selection window off the edge icon. `JellyClipper` now clamps the clip window against the bar boundary so the icon stays visible and the pill presses elastically against the wall.
+
 
 # 1.6.1
 
