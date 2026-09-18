@@ -1,3 +1,20 @@
+# Unreleased
+
+## Features
+
+- Add `GlassSlider.thumbShadow` for configurable resting thumb shadows, matching
+  the list-based customization used by segmented indicators. `null` uses the
+  default; an empty list disables the thumb shadow. Custom shadows retain their
+  geometry and fade with the existing press/release animation outside the glass clip.
+
+## Visual Changes
+
+- Soften the default `GlassSlider` resting shadow from 25% to 15% black for a less
+  prominent outline on light backgrounds. Blur (8) and offset (0, 2) are unchanged.
+  This is a visual adjustment, not a measured UIKit shadow specification. To retain
+  the previous appearance, pass a `thumbShadow` with black at 25% opacity,
+  `blurRadius: 8` and `offset: Offset(0, 2)`.
+
 
 # 1.6.1
 
