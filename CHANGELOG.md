@@ -1,3 +1,13 @@
+# 1.7.0
+
+## Features
+
+- **Continuous swipe-to-select for `GlassMenu` and `GlassPullDownButton` (#331):** Adds native iOS-style continuous press-and-slide interaction. Users can press and hold the trigger, slide directly onto an item, and release to select in a single fluid motion without requiring a second tap.
+  - Enabled by default on `GlassPullDownButton` (`enableContinuousSwipe: true`), opt-in on `GlassMenu`.
+  - Configurable `continuousSwipeSlop` (defaults to 10px) to distinguish quick taps from deliberate swipes without latency.
+  - Includes pointer ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional interaction glow tracking, and automatic deactivation on scrollable menus to preserve standard scroll gestures.
+
+
 # 1.6.2
 
 ## Features

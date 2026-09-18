@@ -16,7 +16,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   bool _hasStretched =
       false; // Prevents closing if we moved into stretch territory
   double _initialScrollOffset = 0.0;
-  Offset _initialLocalPosition = Offset.zero;
   double _horizontalOffset = 0.0;
   double _verticalOffset = 0.0;
 
@@ -29,6 +28,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   /// small and bounded, and recomputing per-frame is not worth the cost. Driven
   /// via [GlassMenuController.setFollowOffset] / [setFollowOffset].
   Offset _followOffset = Offset.zero;
+
+  int? _swipePointerId;
+  Offset _swipeStartPosition = Offset.zero;
+  bool _swipeArmed = false;
+  bool _openedOnPointerDown = false;
+  final GlobalKey _menuContentKey = GlobalKey();
 
   // --- Granular Update System (Performance + No flicker) ---
   // We cache the outer list but use notifiers to update selection state
@@ -240,6 +245,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     _isDraggingNotifier.value = false;
     _hasStretched = false;
     _followOffset = Offset.zero;
+    _swipePointerId = null;
+    _swipeArmed = false;
+    _openedOnPointerDown = false;
     if (!wasClosing) {
       widget.onClose?.call();
     }
@@ -301,16 +309,24 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
             // Trigger — physically bounces when slammed by the closing menu!
             Transform.translate(
               offset: Offset(pushDx, pushDy),
-              child: Opacity(
-                opacity: triggerOpacity,
-                child: GlassMaterializeScope(
-                  glassProgress: triggerOpacity * (outer?.glassProgress ?? 1.0),
-                  contentOpacity:
-                      triggerOpacity * (outer?.contentOpacity ?? 1.0),
-                  contentSigma: outer?.contentSigma ?? 0.0,
-                  child: IgnorePointer(
-                    ignoring: isMenuBlocking,
-                    child: triggerChild,
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: _handleTriggerPointerDown,
+                onPointerMove: _handleTriggerPointerMove,
+                onPointerUp: _handleTriggerPointerUp,
+                onPointerCancel: _handleTriggerPointerCancel,
+                child: Opacity(
+                  opacity: triggerOpacity,
+                  child: GlassMaterializeScope(
+                    glassProgress:
+                        triggerOpacity * (outer?.glassProgress ?? 1.0),
+                    contentOpacity:
+                        triggerOpacity * (outer?.contentOpacity ?? 1.0),
+                    contentSigma: outer?.contentSigma ?? 0.0,
+                    child: IgnorePointer(
+                      ignoring: isMenuBlocking,
+                      child: triggerChild,
+                    ),
                   ),
                 ),
               ),
@@ -337,11 +353,184 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _toggleMenu() {
+    if (_openedOnPointerDown) {
+      // Tap-up from the same press that opened the menu on pointer down.
+      // Consume it so we don't immediately re-toggle the menu closed.
+      _openedOnPointerDown = false;
+      return;
+    }
     if (_overlayController.isShowing && _morphController.value > 0.1) {
       _closeMenu();
     } else {
       _openMenu();
     }
+  }
+
+  void _handleTriggerPointerDown(PointerDownEvent event) {
+    if (!widget.enableContinuousSwipe) return;
+
+    if (_overlayController.isShowing && _morphController.value > 0.1) {
+      _closeMenu();
+      return;
+    }
+
+    _swipePointerId = event.pointer;
+    _swipeStartPosition = event.position;
+    _swipeArmed = false;
+    _openedOnPointerDown = true;
+
+    _openMenu();
+  }
+
+  void _handleTriggerPointerMove(PointerMoveEvent event) {
+    if (!widget.enableContinuousSwipe) return;
+    if (event.pointer != _swipePointerId) return;
+    // Continuous swipe has no meaning on scrollable menus: arming would block
+    // scroll and always dismiss on release without selecting anything.
+    if (_isScrollable) return;
+
+    final distance = (event.position - _swipeStartPosition).distance;
+    if (!_swipeArmed) {
+      if (distance >= widget.continuousSwipeSlop) {
+        _swipeArmed = true;
+        _openedOnPointerDown = false;
+        _isDragging = true;
+        _isDraggingNotifier.value = true;
+      }
+    }
+
+    if (_swipeArmed) {
+      _updateHoverFromGlobalPosition(event.position);
+    }
+  }
+
+  void _updateHoverFromGlobalPosition(Offset globalPosition) {
+    Offset localPosition;
+    final renderBox =
+        _menuContentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox != null && renderBox.attached && renderBox.hasSize) {
+      localPosition = renderBox.globalToLocal(globalPosition);
+    } else {
+      final tw = _triggerSize?.width ?? 44.0;
+      final th = _triggerSize?.height ?? 44.0;
+      final menuWidth = widget.menuWidth.toDouble();
+      final menuHeight = _calculateMenuHeight();
+      final dxMag = (menuWidth - tw) / 2.0;
+      final dyMag = (menuHeight - th) / 2.0;
+      final finalDx = -_morphAlignment.x * dxMag;
+      final finalDy = -_morphAlignment.y * dyMag;
+
+      final menuGlobalLeft = _triggerGlobalPosition.dx +
+          _followOffset.dx +
+          tw / 2.0 +
+          finalDx +
+          _horizontalOffset -
+          menuWidth / 2.0;
+      final menuGlobalTop = _triggerGlobalPosition.dy +
+          _followOffset.dy +
+          th / 2.0 +
+          finalDy +
+          _verticalOffset -
+          menuHeight / 2.0;
+
+      localPosition = Offset(
+        globalPosition.dx - menuGlobalLeft,
+        globalPosition.dy - menuGlobalTop,
+      );
+    }
+
+    final previousIndex = _hoveredIndex;
+    _updateHoveredIndex(localPosition);
+
+    // Haptic feedback on item boundary crossing (iOS HIG)
+    if (_hoveredIndex != null && _hoveredIndex != previousIndex) {
+      HapticFeedback.selectionClick();
+    }
+
+    // Feed touch position to GlassGlow if interaction glow is enabled
+    if (widget.enableInteractionGlow) {
+      final glowLayerState = _menuContentKey.currentContext
+          ?.findAncestorStateOfType<GlassGlowLayerState>();
+      if (glowLayerState != null) {
+        final layerBox =
+            glowLayerState.context.findRenderObject() as RenderBox?;
+        if (layerBox != null && layerBox.attached && layerBox.hasSize) {
+          final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
+          final glowColor = widget.glowColor ??
+              (isDark
+                  ? CupertinoColors.white
+                      .withValues(alpha: GlassDefaults.specularLightAlpha)
+                  : CupertinoColors.black
+                      .withValues(alpha: GlassDefaults.specularDarkAlpha));
+          glowLayerState.updateTouch(
+            layerBox.globalToLocal(globalPosition),
+            radius: widget.glowRadius,
+            color: glowColor,
+            blurRadius: 40,
+          );
+        }
+      }
+    }
+  }
+
+  void _handleTriggerPointerUp(PointerUpEvent event) {
+    if (!widget.enableContinuousSwipe) return;
+    if (event.pointer != _swipePointerId) return;
+
+    if (widget.enableInteractionGlow) {
+      final glowLayerState = _menuContentKey.currentContext
+          ?.findAncestorStateOfType<GlassGlowLayerState>();
+      glowLayerState?.removeTouch();
+    }
+
+    if (_swipeArmed) {
+      final indexToTap = _hoveredIndex;
+      if (indexToTap != null &&
+          indexToTap >= 0 &&
+          indexToTap < widget.items.length) {
+        final item = widget.items[indexToTap];
+        if (item is GlassMenuItem && item.enabled) {
+          item.onTap();
+          _closeMenu();
+        } else {
+          _closeMenu();
+        }
+      } else {
+        _closeMenu();
+      }
+    }
+
+    _isDragging = false;
+    _isDraggingNotifier.value = false;
+    _hoveredIndex = null;
+    _hoveredIndexNotifier.value = null;
+    _hasStretched = false;
+    _swipePointerId = null;
+    _swipeArmed = false;
+  }
+
+  void _handleTriggerPointerCancel(PointerCancelEvent event) {
+    if (!widget.enableContinuousSwipe) return;
+    if (event.pointer != _swipePointerId) return;
+
+    if (widget.enableInteractionGlow) {
+      final glowLayerState = _menuContentKey.currentContext
+          ?.findAncestorStateOfType<GlassGlowLayerState>();
+      glowLayerState?.removeTouch();
+    }
+
+    if (_swipeArmed) {
+      _closeMenu();
+    }
+
+    _isDragging = false;
+    _isDraggingNotifier.value = false;
+    _hoveredIndex = null;
+    _hoveredIndexNotifier.value = null;
+    _hasStretched = false;
+    _swipePointerId = null;
+    _swipeArmed = false;
+    _openedOnPointerDown = false;
   }
 
   /// Nudges the OPEN menu by [offset] (screen px) on top of its captured trigger
@@ -358,7 +547,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // Capture geometry and screen position for morphing
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.hasSize) {
-      // Safety: Cannot open menu if render box is not ready
+      // Safety: Cannot open menu if render box is not ready.
+      // Also clear the pointer ID so stray move/up events from the same
+      // finger don't try to hit-test against a menu that never opened.
+      _openedOnPointerDown = false;
+      _swipePointerId = null;
       return;
     }
 
@@ -467,6 +660,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       _hoveredIndex = null;
       _isDragging = false;
     });
+    _hoveredIndexNotifier.value = null;
+    _isDraggingNotifier.value = false;
+    _swipePointerId = null;
+    _swipeArmed = false;
+    _openedOnPointerDown = false;
     // GlassMorphController.close() injects the -2.5 velocity hint internally,
     // maximising the rubber-band bounce amplitude at close.
     _morphController.close();
@@ -871,7 +1069,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                             _isDragging = true;
                             _isDraggingNotifier.value = true;
                             _hasStretched = false;
-                            _initialLocalPosition = event.localPosition;
                             _initialScrollOffset = _scrollController.hasClients
                                 ? _scrollController.offset
                                 : 0.0;
@@ -889,14 +1086,9 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                                   : 0.0;
                               final scrollDisplacement =
                                   (currentOffset - _initialScrollOffset).abs();
-                              final dragDisplacement =
-                                  (event.localPosition - _initialLocalPosition)
-                                      .distance;
 
-                              // Slide-to-select tap logic (only for non-scrollable menus)
-                              if (scrollDisplacement < 10 &&
-                                  dragDisplacement < 10 &&
-                                  !_isScrollable) {
+                              // Slide-to-select logic (for non-scrollable menus, tap or slide-and-release)
+                              if (scrollDisplacement < 10 && !_isScrollable) {
                                 final indexToTap = _hoveredIndex ??
                                     _calculateIndexFromPosition(
                                         event.localPosition, context);
@@ -922,6 +1114,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                             _hoveredIndexNotifier.value = null;
                           },
                           child: SizedBox(
+                            key: _menuContentKey,
                             width: currentWidth,
                             height: widget.menuHeight, // Apply fixed height
                             child: Padding(
