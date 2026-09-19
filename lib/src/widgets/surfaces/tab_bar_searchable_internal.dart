@@ -1128,12 +1128,13 @@ class SearchPillState extends State<SearchPill> {
       return c;
     }
 
-    final rawTextColor = config.textColor ?? CupertinoColors.label;
-    final textColor = resolveDynamicColor(rawTextColor);
-
-    final effectiveTextColor = config.hintStyle?.color != null
-        ? resolveDynamicColor(config.hintStyle!.color!)
-        : textColor;
+    // Typed text: an explicit config.textColor wins. hintStyle's colour is the
+    // fallback only when no textColor was given, so a caller can mute the
+    // placeholder without muting what the user types.
+    final hintColor = config.hintStyle?.color;
+    final effectiveTextColor = resolveDynamicColor(
+      config.textColor ?? hintColor ?? CupertinoColors.label,
+    );
 
     final effectiveTextStyle = (config.hintStyle ?? const TextStyle()).copyWith(
       color: effectiveTextColor,
@@ -1141,9 +1142,8 @@ class SearchPillState extends State<SearchPill> {
       fontWeight: config.hintStyle?.fontWeight ?? FontWeight.w400,
     );
 
-    final placeholderColor = config.hintStyle?.color != null
-        ? resolveDynamicColor(config.hintStyle!.color!)
-        : iconColor;
+    final placeholderColor =
+        hintColor != null ? resolveDynamicColor(hintColor) : iconColor;
 
     final effectivePlaceholderStyle = (config.hintStyle ??
             const TextStyle(fontSize: 17, fontWeight: FontWeight.w400))

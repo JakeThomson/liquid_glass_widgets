@@ -11,6 +11,16 @@
   once more at full resolution when the surface comes to rest. A surface at rest, or under
   the budget at any pixel ratio, is unchanged.
 
+## Bug Fixes
+
+- **`GlassTabBar.searchable`: an explicit `textColor` is no longer overridden by `hintStyle`'s colour:**
+  `GlassSearchBarConfig.textColor` is documented as the colour of the typed text and `hintStyle`
+  as the style of the hint, but a colour on `hintStyle` was applied to both and `textColor` was
+  ignored whenever one was set. A caller muting the placeholder (the iOS look — secondary label
+  for the hint, label for the text) got muted typed text as well, with no way to tell them apart.
+  Typed text now resolves `textColor`, then `hintStyle.color`, then the default label; the hint
+  keeps `hintStyle.color`. Only callers that set **both** see a change. Font size, weight and
+  family stay shared between the two, so the field does not shift as the first character lands.
 
 # 1.6.2
 
