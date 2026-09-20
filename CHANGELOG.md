@@ -7,28 +7,6 @@
   - Configurable `continuousSwipeSlop` (defaults to 10px) to distinguish quick taps from deliberate swipes without latency.
   - Includes pointer ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional interaction glow tracking, and automatic deactivation on scrollable menus to preserve standard scroll gestures.
 
-## Bug Fixes
-
-- **A sheet presented some frames after the tap keeps its capsule hoisted:** The hold
-  `GlassNavigationShell` takes on a `GlassBarItem.sheet` tap (#325) was released at the end
-  of the next frame if nothing had emptied the anchor by then — so a presenter that does
-  anything asynchronous before `GlassModalSheet.show` (measuring the sheet's content
-  offscreen, awaiting a fetch) lost it, the chrome handed back wholesale when the sheet
-  landed, and the route's own capsule was painted under the barrier, exactly as before
-  #325. The hold is now inert until a route is presented over the item's, and is only
-  released once that presentation's first frame ends with the anchor still unemptied.
-  `GlassBarItem.sheet` no longer needs to present synchronously.
-
-## Bug Fixes
-
-- **Rim refraction stays inside the glass:** On a small `GlassQuality.premium` surface —
-  a pill, a round icon button — the rim's refraction reached further than the surface is
-  tall: the bottom rim sampled the backdrop well above the top edge, so a title or a logo
-  sitting there came through as rainbow-coloured noise along the rim once chromatic
-  dispersion split it. The displacement is now held to half the geometry matte's shorter
-  side, which keeps every sample inside the surface's own footprint. Larger surfaces, whose
-  displacement never came near that bound, render exactly as before.
-
 ## Performance
 
 - **Geometry matte pixel budget while a premium surface animates (#330):** `GlassQuality.premium`
@@ -41,6 +19,39 @@
 
 ## Bug Fixes
 
+- **Hoisted capsule kept through async sheet presentation (#335, fixes #334):** The hold
+  `GlassNavigationShell` takes on a `GlassBarItem.sheet` tap (#325) was released at the end
+  of the next frame if nothing had emptied the anchor by then — so a presenter that does
+  anything asynchronous before `GlassModalSheet.show` (measuring the sheet's content
+  offscreen, awaiting a fetch) lost it, the chrome handed back wholesale when the sheet
+  landed, and the route's own capsule was painted under the barrier, exactly as before
+  #325. The hold is now inert until a route is presented over the item's, and is only
+  released once that presentation's first frame ends with the anchor still unemptied.
+  `GlassBarItem.sheet` no longer needs to present synchronously.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#335, fixes #334).
+
+- **`GlassTabBar.searchable`: an explicit `textColor` is no longer overridden by `hintStyle`'s colour (#336):**
+  `GlassSearchBarConfig.textColor` is documented as the colour of the typed text and `hintStyle`
+  as the style of the hint, but a colour on `hintStyle` was applied to both and `textColor` was
+  ignored whenever one was set. A caller muting the placeholder (the iOS look — secondary label
+  for the hint, label for the text) got muted typed text as well, with no way to tell them apart.
+  Typed text now resolves `textColor`, then `hintStyle.color`, then the default label; the hint
+  keeps `hintStyle.color`. Only callers that set **both** see a change. Font size, weight and
+  family stay shared between the two, so the field does not shift as the first character lands.
+
+  Thanks to [@jfhair](https://github.com/jfhair) for the fix (#336).
+
+- **Rim refraction stays inside the glass (#337):** On a small `GlassQuality.premium` surface —
+  a pill, a round icon button — the rim's refraction reached further than the surface is
+  tall: the bottom rim sampled the backdrop well above the top edge, so a title or a logo
+  sitting there came through as rainbow-coloured noise along the rim once chromatic
+  dispersion split it. The displacement is now held to half the geometry matte's shorter
+  side, which keeps every sample inside the surface's own footprint. Larger surfaces, whose
+  displacement never came near that bound, render exactly as before.
+
+  Thanks to [@hinata-platform](https://github.com/hinata-platform) for the fix (#337).
+
 - **Premium glass inside a backdrop-reading ancestor no longer paints displaced on Impeller (#333):**
   On Impeller, `BackdropFilterLayer` renders its subtree into an offscreen pass scoped to the
   ancestor's clip; `FlutterFragCoord()` inside nested shaders is then relative to that pass, not
@@ -51,18 +62,6 @@
 
   Thanks to [@brockbrunson](https://github.com/brockbrunson) for the detailed root-cause analysis
   and proposed fix (#333).
-
-
-## Bug Fixes
-
-- **`GlassTabBar.searchable`: an explicit `textColor` is no longer overridden by `hintStyle`'s colour:**
-  `GlassSearchBarConfig.textColor` is documented as the colour of the typed text and `hintStyle`
-  as the style of the hint, but a colour on `hintStyle` was applied to both and `textColor` was
-  ignored whenever one was set. A caller muting the placeholder (the iOS look — secondary label
-  for the hint, label for the text) got muted typed text as well, with no way to tell them apart.
-  Typed text now resolves `textColor`, then `hintStyle.color`, then the default label; the hint
-  keeps `hintStyle.color`. Only callers that set **both** see a change. Font size, weight and
-  family stay shared between the two, so the field does not shift as the first character lands.
 
 # 1.6.2
 
