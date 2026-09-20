@@ -61,6 +61,7 @@ void main() {
     final reach = t[0].abs() * baseHeight / t[2].abs();
 
     expect(reach, greaterThan(pillHeight));
-    expect(math.min(reach, 0.5 * pillHeight), lessThanOrEqualTo(pillHeight / 2));
+    expect(
+        math.min(reach, 0.5 * pillHeight), lessThanOrEqualTo(pillHeight / 2));
   });
 }
