@@ -766,27 +766,37 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       // the offscreen surface when we're no longer using the backdrop path.
       _shaderHandle.layer = null;
       _clipRectLayerHandle.layer = null;
+      // Capture path does not open a live backdrop pass — clear so that
+      // descendant glass does not inherit a stale pass rect.
+      backdropPassClipRectLocal = null;
       return;
     }
     // BackdropFilter path (default): live compositor read via BackdropFilterLayer.
+    // Publish the clip rect so descendant premium glass can find the pass their
+    // FlutterFragCoord() is relative to (see enclosingBackdropPassRect).
+    backdropPassClipRectLocal = clipRect;
     final shaderLayer = (_shaderHandle.layer ??= BackdropFilterLayer())
       ..filter = ImageFilter.shader(renderShader!);
 
-    _clipRectLayerHandle.layer = context.pushClipRect(
-      needsCompositing,
-      offset,
-      clipRect,
-      (context, offset) {
-        context.pushLayer(
-          shaderLayer,
-          (context, offset) {
-            paintShapeContents(context, offset, shapes, insideGlass: false);
-          },
-          offset,
-        );
-      },
-      oldLayer: _clipRectLayerHandle.layer,
-    );
+    try {
+      _clipRectLayerHandle.layer = context.pushClipRect(
+        needsCompositing,
+        offset,
+        clipRect,
+        (context, offset) {
+          context.pushLayer(
+            shaderLayer,
+            (context, offset) {
+              paintShapeContents(context, offset, shapes, insideGlass: false);
+            },
+            offset,
+          );
+        },
+        oldLayer: _clipRectLayerHandle.layer,
+      );
+    } finally {
+      backdropPassClipRectLocal = null;
+    }
   }
 
   @override

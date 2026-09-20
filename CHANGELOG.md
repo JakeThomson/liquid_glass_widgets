@@ -7,6 +7,30 @@
   - Configurable `continuousSwipeSlop` (defaults to 10px) to distinguish quick taps from deliberate swipes without latency.
   - Includes pointer ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional interaction glow tracking, and automatic deactivation on scrollable menus to preserve standard scroll gestures.
 
+## Performance
+
+- **Geometry matte pixel budget while a premium surface animates (#330):** `GlassQuality.premium`
+  surfaces that resize (e.g. a `GlassModalSheet` opening) now rasterize their geometry matte at a
+  capped 1024×1024 physical-pixel budget during the animation, settling at full resolution on the
+  frame the shape comes to rest. Reduces animation memory peaks from 400–800 MB to ~340–394 MB
+  and roughly halves worst-case outliers on iPhone 17 Pro Max at 120 Hz.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#330).
+
+## Bug Fixes
+
+- **Premium glass inside a backdrop-reading ancestor no longer paints displaced on Impeller (#333):**
+  On Impeller, `BackdropFilterLayer` renders its subtree into an offscreen pass scoped to the
+  ancestor's clip; `FlutterFragCoord()` inside nested shaders is then relative to that pass, not
+  the screen. `uSize`, `uGeometryOffset`, and `uTouchPosition` were expressed in screen space and
+  therefore wrong, displacing nested glass by the ancestor's origin. `LiquidGlassRenderObject` now
+  walks the parent chain to find the nearest enclosing pass and expresses those uniforms relative
+  to it. Top-level surfaces are unaffected.
+
+  Thanks to [@brockbrunson](https://github.com/brockbrunson) for the detailed root-cause analysis
+  and proposed fix (#333).
+
+
 
 # 1.6.2
 
