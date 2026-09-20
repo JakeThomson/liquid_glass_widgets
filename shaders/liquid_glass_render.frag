@@ -259,6 +259,22 @@ void main() {
     // Scale displacement by uRefractScale (uOpticalProps.w) to ensure logical-pixel
     // identical refraction magnitude across all device pixel ratios.
     displacement *= uOpticalProps.w;
+
+    // A lens cannot show what lies beyond its far side. At the rim the normal is
+    // nearly horizontal and refract() returns a displacement that grows with
+    // uThickness, not with the shape: on a pill a few dozen pixels tall the
+    // bottom rim sampled the backdrop well above the pill's top edge, so any
+    // text sitting there — a page title, a logo — came through as noise along
+    // the rim, split into red, green and blue by the dispersion below.
+    // Holding the reach to half the matte's shorter side keeps every sample,
+    // chromatic offsets included, inside the glass's own footprint. Surfaces
+    // large enough that the displacement never came near that bound are
+    // unchanged.
+    float maxReach = 0.5 * min(uGeometrySize.x, uGeometrySize.y);
+    float reach = length(displacement);
+    if (reach > maxReach) {
+        displacement *= maxReach / reach;
+    }
     // On pre-3.46 OpenGL ES, screenUV.y is flipped to (1.0 - y) above to
     // compensate for the bottom-left texture-origin convention.  The
     // displacement is computed in Flutter's native Y-down space (outward normal

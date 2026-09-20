@@ -19,6 +19,16 @@
   released once that presentation's first frame ends with the anchor still unemptied.
   `GlassBarItem.sheet` no longer needs to present synchronously.
 
+## Bug Fixes
+
+- **Rim refraction stays inside the glass:** On a small `GlassQuality.premium` surface —
+  a pill, a round icon button — the rim's refraction reached further than the surface is
+  tall: the bottom rim sampled the backdrop well above the top edge, so a title or a logo
+  sitting there came through as rainbow-coloured noise along the rim once chromatic
+  dispersion split it. The displacement is now held to half the geometry matte's shorter
+  side, which keeps every sample inside the surface's own footprint. Larger surfaces, whose
+  displacement never came near that bound, render exactly as before.
+
 ## Performance
 
 - **Geometry matte pixel budget while a premium surface animates (#330):** `GlassQuality.premium`
