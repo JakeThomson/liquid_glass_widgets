@@ -4,64 +4,50 @@
 
 - **Continuous swipe-to-select for `GlassMenu` and `GlassPullDownButton` (#331):** Adds native iOS-style continuous press-and-slide interaction. Users can press and hold the trigger, slide directly onto an item, and release to select in a single fluid motion without requiring a second tap.
   - Enabled by default on `GlassPullDownButton` (`enableContinuousSwipe: true`), opt-in on `GlassMenu`.
-  - Configurable `continuousSwipeSlop` (defaults to 10px) to distinguish quick taps from deliberate swipes without latency.
-  - Includes pointer ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional interaction glow tracking, and automatic deactivation on scrollable menus to preserve standard scroll gestures.
+  - Configurable `continuousSwipeSlop` (defaults to 10 logical px) to distinguish quick taps from deliberate swipes without latency.
+  - Pointer-ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional glow tracking, and automatic deactivation on scrollable menus.
 
 ## Performance
 
 - **Geometry matte pixel budget while a premium surface animates (#330):** `GlassQuality.premium`
   surfaces that resize (e.g. a `GlassModalSheet` opening) now rasterize their geometry matte at a
-  capped 1024×1024 physical-pixel budget during the animation, settling at full resolution on the
-  frame the shape comes to rest. Reduces animation memory peaks from 400–800 MB to ~340–394 MB
-  and roughly halves worst-case outliers on iPhone 17 Pro Max at 120 Hz.
+  capped 1 MP budget during animation, settling at full resolution once the shape comes to rest.
+  Reduces animation memory peaks from 400–800 MB to ~340–394 MB on iPhone 17 Pro Max at 120 Hz.
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#330).
 
 ## Bug Fixes
 
-- **Hoisted capsule kept through async sheet presentation (#335, fixes #334):** The hold
-  `GlassNavigationShell` takes on a `GlassBarItem.sheet` tap (#325) was released at the end
-  of the next frame if nothing had emptied the anchor by then — so a presenter that does
-  anything asynchronous before `GlassModalSheet.show` (measuring the sheet's content
-  offscreen, awaiting a fetch) lost it, the chrome handed back wholesale when the sheet
-  landed, and the route's own capsule was painted under the barrier, exactly as before
-  #325. The hold is now inert until a route is presented over the item's, and is only
-  released once that presentation's first frame ends with the anchor still unemptied.
-  `GlassBarItem.sheet` no longer needs to present synchronously.
+- **Async sheet presenters no longer lose their hoisted capsule (#335, fixes #334):** A
+  `GlassBarItem.sheet` presenter that does async work before calling `GlassModalSheet.show`
+  (e.g. measuring content offscreen, awaiting a fetch) could lose the shell's hold, reverting to
+  the pre-#325 symptom. `GlassBarItem.sheet` no longer requires a synchronous present.
 
-  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#335, fixes #334).
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#335).
 
-- **`GlassTabBar.searchable`: an explicit `textColor` is no longer overridden by `hintStyle`'s colour (#336):**
-  `GlassSearchBarConfig.textColor` is documented as the colour of the typed text and `hintStyle`
-  as the style of the hint, but a colour on `hintStyle` was applied to both and `textColor` was
-  ignored whenever one was set. A caller muting the placeholder (the iOS look — secondary label
-  for the hint, label for the text) got muted typed text as well, with no way to tell them apart.
-  Typed text now resolves `textColor`, then `hintStyle.color`, then the default label; the hint
-  keeps `hintStyle.color`. Only callers that set **both** see a change. Font size, weight and
-  family stay shared between the two, so the field does not shift as the first character lands.
+- **`GlassTabBar.searchable`: `textColor` is no longer overridden by `hintStyle`'s colour (#336):**
+  When both `GlassSearchBarConfig.textColor` and a colour on `hintStyle` were set, the hint colour
+  was applied to typed text too, ignoring `textColor`. The standard iOS look — muted placeholder,
+  strong typed text — can now be expressed by setting both. Callers using only `hintStyle` are
+  unaffected; font metrics are shared between hint and text in all cases.
 
   Thanks to [@jfhair](https://github.com/jfhair) for the fix (#336).
 
-- **Rim refraction stays inside the glass (#337):** On a small `GlassQuality.premium` surface —
-  a pill, a round icon button — the rim's refraction reached further than the surface is
-  tall: the bottom rim sampled the backdrop well above the top edge, so a title or a logo
-  sitting there came through as rainbow-coloured noise along the rim once chromatic
-  dispersion split it. The displacement is now held to half the geometry matte's shorter
-  side, which keeps every sample inside the surface's own footprint. Larger surfaces, whose
-  displacement never came near that bound, render exactly as before.
+- **Rim refraction no longer bleeds past the glass boundary on small surfaces (#337):** On small
+  `GlassQuality.premium` pills and icon buttons the rim refraction could reach far enough to sample
+  content above the surface's top edge, producing rainbow-coloured artefacts once chromatic
+  dispersion split it. Displacement is now capped to the surface's own footprint. Larger surfaces
+  are unaffected.
 
   Thanks to [@hinata-platform](https://github.com/hinata-platform) for the fix (#337).
 
-- **Premium glass inside a backdrop-reading ancestor no longer paints displaced on Impeller (#333):**
-  On Impeller, `BackdropFilterLayer` renders its subtree into an offscreen pass scoped to the
-  ancestor's clip; `FlutterFragCoord()` inside nested shaders is then relative to that pass, not
-  the screen. `uSize`, `uGeometryOffset`, and `uTouchPosition` were expressed in screen space and
-  therefore wrong, displacing nested glass by the ancestor's origin. `LiquidGlassRenderObject` now
-  walks the parent chain to find the nearest enclosing pass and expresses those uniforms relative
-  to it. Top-level surfaces are unaffected.
+- **Premium glass inside a `BackdropFilter` ancestor no longer renders displaced on Impeller (#333):**
+  Glass nested inside any backdrop-reading ancestor was displaced by the ancestor's screen origin
+  due to `FlutterFragCoord()` being relative to the offscreen pass. `LiquidGlassRenderObject` now
+  resolves uniforms relative to the enclosing Impeller compositor pass. Top-level surfaces are
+  unaffected.
 
-  Thanks to [@brockbrunson](https://github.com/brockbrunson) for the detailed root-cause analysis
-  and proposed fix (#333).
+  Thanks to [@brockbrunson](https://github.com/brockbrunson) for the root-cause analysis and fix (#333).
 
 # 1.6.2
 
