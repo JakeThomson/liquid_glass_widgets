@@ -1593,4 +1593,94 @@ void main() {
       );
     });
   });
+
+  // ── typed text vs hint colour ─────────────────────────────────────────────
+  // `textColor` is documented as the typed text's colour and `hintStyle` as
+  // the hint's. A caller that mutes the hint must not get muted typed text.
+
+  group('textColor and hintStyle colour are independent', () {
+    const typed = Color(0xFF112233);
+    const hint = Color(0xFF8899AA);
+
+    Future<CupertinoTextField> pumpField(
+      WidgetTester tester,
+      GlassSearchBarConfig config, {
+      Brightness appBrightness = Brightness.light,
+      Brightness platformBrightness = Brightness.light,
+    }) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(platformBrightness: platformBrightness),
+          child: MaterialApp(
+            theme: ThemeData(brightness: appBrightness),
+            home: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: GlassTabBar.searchable(
+                tabs: _testTabs,
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                isSearchActive: true,
+                maskingQuality: MaskingQuality.off,
+                searchConfig: config,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return tester.widget<CupertinoTextField>(find.byType(CupertinoTextField));
+    }
+
+    testWidgets('both set → typed text takes textColor, hint takes hintStyle',
+        (tester) async {
+      final field = await pumpField(
+        tester,
+        GlassSearchBarConfig(
+          onSearchToggle: (_) {},
+          textColor: typed,
+          hintStyle: const TextStyle(color: hint, fontSize: 15),
+        ),
+      );
+      expect(field.style?.color, equals(typed),
+          reason: 'an explicit textColor must not be overridden by hintStyle');
+      expect(field.placeholderStyle?.color, equals(hint));
+      // Metrics stay shared, so the field does not jump on the first key.
+      expect(field.style?.fontSize, equals(15));
+      expect(field.placeholderStyle?.fontSize, equals(15));
+    });
+
+    testWidgets('only hintStyle colour set → typed text still follows it',
+        (tester) async {
+      // Unchanged behaviour for callers that style the field through
+      // hintStyle alone.
+      final field = await pumpField(
+        tester,
+        GlassSearchBarConfig(
+          onSearchToggle: (_) {},
+          hintStyle: const TextStyle(color: hint),
+        ),
+      );
+      expect(field.style?.color, equals(hint));
+      expect(field.placeholderStyle?.color, equals(hint));
+    });
+
+    testWidgets('dynamic colours on both resolve against the app brightness',
+        (tester) async {
+      final field = await pumpField(
+        tester,
+        GlassSearchBarConfig(
+          onSearchToggle: (_) {},
+          textColor: CupertinoColors.label,
+          hintStyle: const TextStyle(color: CupertinoColors.secondaryLabel),
+        ),
+        appBrightness: Brightness.dark,
+        platformBrightness: Brightness.light,
+      );
+      expect(field.style?.color, equals(CupertinoColors.label.darkColor));
+      expect(
+        field.placeholderStyle?.color,
+        equals(CupertinoColors.secondaryLabel.darkColor),
+      );
+    });
+  });
 }
