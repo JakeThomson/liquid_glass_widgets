@@ -7,6 +7,18 @@
   - Configurable `continuousSwipeSlop` (defaults to 10px) to distinguish quick taps from deliberate swipes without latency.
   - Includes pointer ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional interaction glow tracking, and automatic deactivation on scrollable menus to preserve standard scroll gestures.
 
+## Bug Fixes
+
+- **A sheet presented some frames after the tap keeps its capsule hoisted:** The hold
+  `GlassNavigationShell` takes on a `GlassBarItem.sheet` tap (#325) was released at the end
+  of the next frame if nothing had emptied the anchor by then — so a presenter that does
+  anything asynchronous before `GlassModalSheet.show` (measuring the sheet's content
+  offscreen, awaiting a fetch) lost it, the chrome handed back wholesale when the sheet
+  landed, and the route's own capsule was painted under the barrier, exactly as before
+  #325. The hold is now inert until a route is presented over the item's, and is only
+  released once that presentation's first frame ends with the anchor still unemptied.
+  `GlassBarItem.sheet` no longer needs to present synchronously.
+
 ## Performance
 
 - **Geometry matte pixel budget while a premium surface animates (#330):** `GlassQuality.premium`
