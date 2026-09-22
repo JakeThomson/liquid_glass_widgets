@@ -20,8 +20,6 @@ import '../../renderer/fragment_shader_extensions.dart';
 import '../../renderer/liquid_glass_renderer.dart'
     show debugPaintLiquidGlassGeometry;
 import '../liquid_glass_settings.dart';
-import '../multi_shader_builder.dart';
-import '../shaders.dart';
 import '../render_liquid_glass_geometry.dart';
 import '../snap_rect_to_pixels.dart';
 
@@ -49,29 +47,13 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
 
   final FragmentShader? renderShader;
 
-  /// Second instance of the render program for the lens pass, created on
-  /// first use from the cached program. See [splitLensPass].
-  FragmentShader? _lensShader;
-  FragmentShader? get lensShader => _lensShader ??=
-      MultiShaderBuilder.cachedProgram(ShaderKeys.liquidGlassRender)
-          ?.fragmentShader();
-
-  /// The matte stages around a blended frost pass, created on first use
-  /// from the cached programs. The mask's matte uniforms are set alongside
-  /// the render shader's; see shaders/frost_mask.frag.
-  FragmentShader? _frostMaskShader;
-  FragmentShader? get frostMaskShader => _frostMaskShader ??=
-      MultiShaderBuilder.cachedProgram(ShaderKeys.frostMask)?.fragmentShader();
-  FragmentShader? _frostUnmaskShader;
-  FragmentShader? get frostUnmaskShader => _frostUnmaskShader ??=
-      MultiShaderBuilder.cachedProgram(ShaderKeys.frostUnmask)
-          ?.fragmentShader();
-
-  /// Whether this paint runs the lens as its own pass ahead of the frost,
-  /// so the rim band folds the sharp backdrop rather than the cloud. Only
-  /// the paraxial lens with a frost does; everything else is one pass, as
-  /// before. Set by [paint] for [paintLiquidGlass].
-  bool splitLensPass = false;
+  /// With a frost, the alternate pixel rows its blur pass is clipped to, in
+  /// local coordinates: every row with an odd y in the enclosing pass, over
+  /// the glass's bounds. The render shader reads the frost's cloud from
+  /// these rows and the sharp backdrop from the rows between (see uFrost in
+  /// liquid_glass_render.frag). Null without a frost, or when the glass is
+  /// rotated or skewed and rows in local space would not land on pixel rows.
+  Path? frostRowsPath;
 
   /// Cached light direction vector — updated only when [settings.lightAngle]
   /// changes. Avoids recomputing cos/sin on every setting change.
@@ -89,6 +71,46 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   /// [enclosingBackdropPassRect] to find the pass its own fragment
   /// coordinates are relative to.
   Rect? backdropPassClipRectLocal;
+
+  /// Builds [frostRowsPath]: one rect per odd pass-relative pixel row across
+  /// the glass's bounds, mapped back into local coordinates.
+  Path? _frostRows(Rect passPhysical, double dpr) {
+    final transform = getTransformTo(null);
+    final storage = transform.storage;
+    // Only scale and translation keep a local rect on whole pixel rows.
+    if (storage[1] != 0 ||
+        storage[4] != 0 ||
+        storage[3] != 0 ||
+        storage[7] != 0 ||
+        storage[0] == 0 ||
+        storage[5] == 0) {
+      return null;
+    }
+    final inverse = Matrix4.tryInvert(transform);
+    if (inverse == null) return null;
+    final screen = MatrixUtils.transformRect(transform, _paintBounds);
+    final top = (screen.top * dpr - passPhysical.top).floorToDouble();
+    final bottom = (screen.bottom * dpr - passPhysical.top).ceilToDouble();
+    final left = screen.left * dpr - passPhysical.left - 1;
+    final right = screen.right * dpr - passPhysical.left + 1;
+    final path = Path();
+    // Dart's % is Euclidean, so this is the first odd row at or below top.
+    for (var y = top % 2 == 1 ? top : top + 1; y < bottom; y += 2) {
+      path.addRect(
+        MatrixUtils.transformRect(
+          inverse,
+          Rect.fromLTRB(
+            (left + passPhysical.left) / dpr,
+            (y + passPhysical.top) / dpr,
+            (right + passPhysical.left) / dpr,
+            (y + 1 + passPhysical.top) / dpr,
+          ),
+        ),
+      );
+    }
+    return path;
+  }
+
 
   /// Screen-space (logical) rect of the nearest enclosing Impeller compositor
   /// pass that a [BackdropFilterLayer] in this subtree samples from, or null
@@ -468,6 +490,13 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
                 (passLogical.bottom * dpr).ceilToDouble(),
               );
 
+        frostRowsPath = settings.effectiveFrost > 0
+            ? _frostRows(passPhysical, dpr)
+            : null;
+        // The frost's opacity, kept above zero so uFrost.x doubles as the
+        // frost's on switch.
+        final frostOpacity = max(settings.frostOpacity.clamp(0.0, 1.0), 1e-3);
+
         void configure(FragmentShader shader, double pass) {
           shader
             // Slot 0-1: uSize — physical-pixel size of the enclosing compositor
@@ -558,6 +587,11 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
                 settings.lensModel == GlassLensModel.paraxial ? 1.0 : 0.0,
                 // Slot 42: uPass — 0 one pass, 1 lens only, 2 everything but.
                 pass,
+                // Slots 43-46: uFrost.
+                if (frostRowsPath == null) 0.0 else frostOpacity,
+                settings.frostClamp.clamp(-1.0, 1.0),
+                settings.effectiveBlur * dpr,
+                settings.blurGamma,
               ]);
             })
             ..setImageSampler(
@@ -567,26 +601,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
             );
         }
 
-        splitLensPass = lensShader != null &&
-            settings.lensModel == GlassLensModel.paraxial &&
-            settings.effectiveFrost > 0;
-        configure(renderShader!, splitLensPass ? 2.0 : 0.0);
-        if (splitLensPass) configure(lensShader!, 1.0);
-        if (settings.effectiveFrost > 0 && frostMaskShader != null) {
-          frostMaskShader!
-            ..setFloatUniforms(initialIndex: 2, (value) {
-              value
-                ..setOffset(activeBounds.topLeft * dpr - passPhysical.topLeft)
-                ..setSize(activeBounds.size * dpr)
-                // Slot 6: uErode, the frost's signed dilate radius in device px.
-                ..setFloat(settings.frostDilate * dpr);
-            })
-            ..setImageSampler(
-              1,
-              geometryImage,
-              filterQuality: FilterQuality.medium,
-            );
-        }
+        configure(renderShader!, 0.0);
         paintLiquidGlass(
           context,
           offset,
@@ -909,12 +924,6 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     // retains a path back to the shader's GPU resources past the Vulkan
     // context lifetime (Crash 2 in Mali GPU crash analysis).
     _settings = null;
-    _lensShader?.dispose();
-    _lensShader = null;
-    _frostMaskShader?.dispose();
-    _frostMaskShader = null;
-    _frostUnmaskShader?.dispose();
-    _frostUnmaskShader = null;
     super.dispose();
   }
 
