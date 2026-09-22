@@ -1,3 +1,53 @@
+# Unreleased
+
+## Features
+
+- **Native-parity material for `GlassQuality.premium`:** Additions to the premium pipeline,
+  each measured pixel for pixel against a SwiftUI `glassEffect(.regular)` control rendered
+  beside the package's on the same screen, so a button can match iOS 26 at rest in either
+  appearance. All default to off; existing recipes render as before.
+  - `rimShade` draws the half-point outline on the very edge of the glass — the backdrop just
+    outside the shape, untinted, darkened by a fixed step that is strongest across the light
+    axis — with `rimShadeEnds` for how much of it survives at the ends, and `rimLight` the two
+    sharp highlight lobes there, each with a soft inward tail.
+  - `GlassLensModel.paraxial` replaces the exact Snell refraction with the small-angle law, so
+    the rim band shows an evenly compressed, mirrored copy of the interior the way the native
+    band does, rather than one that steepens toward the edge.
+  - `frost`, `frostOpacity`, `frostClamp`, `frostDilate` and `frostGamma` add the heavy blur
+    of the native material: a cloud through which a copy of the content still shows, held
+    from straying more than a fixed step to one side of the cloud, so black detail is a flat
+    pale band while white keeps its shape. The cloud is averaged after a dilate and in a
+    curved space, which keeps it near white over a page of text yet close to the mean over
+    broad dark areas, as it is natively. `blurGamma` runs the blur of that copy in its own
+    curve, which is what makes dark content read a pixel bolder through the light glass and
+    light content through the dark. Under a paraxial lens the refraction runs as its own pass
+    ahead of the frost, so the rim band folds the sharp backdrop.
+  - The geometry edge is now anti-aliased over half a logical pixel rather than one and a
+    half and sits a third of a point outside the frame, where the native silhouette
+    measures; every premium edge is correspondingly crisper and a hair larger.
+
+  The recipes, light and dark, differ only where the native materials do:
+
+  ```dart
+  const light = LiquidGlassSettings(
+    glassColor: Color(0x87F8F8F8), saturation: 2.1,
+    blur: 0.8, blurGamma: 0.6,
+    frost: 14, frostOpacity: 0.73, frostClamp: 0.4, frostDilate: 0.5, frostGamma: 0.9,
+    thickness: 32, refractiveIndex: 1.24, lensModel: GlassLensModel.paraxial,
+    lightAngle: math.pi / 2, lightIntensity: 0, fresnelStrength: 0,
+    edgeAbsorption: 0.035, rimShade: 1, rimLight: 1,
+    shadow: [BoxShadow(color: Color(0x04000000), blurRadius: 10, offset: Offset(0, 7))],
+  );
+  const dark = LiquidGlassSettings(
+    glassColor: Color(0x1FFFFFFF), saturation: 1.4,
+    blur: 0.8, blurGamma: 1.6,
+    frost: 14, frostOpacity: 0.8, frostClamp: -0.4, frostGamma: 0.5,
+    thickness: 32, refractiveIndex: 1.24, lensModel: GlassLensModel.paraxial,
+    lightAngle: -math.pi / 2, lightIntensity: 0, fresnelStrength: 0,
+    edgeAbsorption: 0.035, rimShade: 0.45, rimShadeEnds: 0, rimLight: 1.15, shadowElevation: 0,
+  );
+  ```
+
 # 1.7.1
 
 ## Bug Fixes

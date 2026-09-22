@@ -352,7 +352,13 @@ class RenderLiquidGlassBlendGroup extends RenderLiquidGlassGeometry
     }
 
     return (
-      (layerBounds ?? Rect.zero).inflate(blend * .25),
+      // Room for the geometry pass, which draws the glass a physical pixel
+      // larger than the shape (see the SDF offset in
+      // liquid_glass_geometry_blended.frag), plus a transparent border: the
+      // matte's edge texels are what the shadow blurs and what the render
+      // pass clamps to outside the matte, and either shows the matte's
+      // rectangle if they carry coverage.
+      (layerBounds ?? Rect.zero).inflate(blend * .25 + 3 / devicePixelRatio),
       shapes,
       anyShapeChangedInLayer,
     );

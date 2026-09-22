@@ -78,16 +78,22 @@ void main() {
     // (like our continuous superellipse) into a true Euclidean distance metric.
     float sdN = (gradMag > 0.1) ? sd / gradMag : sd;
 
-    // Apply logical-pixel anti-aliasing using the NORMALIZED distance (sdN).
-    // Using raw `sd` for pseudo-SDFs causes pixelated edges because the field
-    // crosses zero too quickly. `sdN` guarantees exact 1-pixel wide gradients.
-    // 
-    // Note: The physical radius here scales directly by raw `uDpr`, not by `uDpr / 3.0`.
-    // This is correct because we want a 1.5 logical-pixel wide smoothing radius on all
-    // screens. A 1.5 logical-pixel radius naturally maps to `1.5 * uDpr` physical pixels.
-    // This guarantees a pristine edge that survives the 4% bilinear scaling of press 
-    // animations without stair-stepping, on every device density.
-    float smoothing = 1.5 * max(1.0, uDpr);
+    // Apply anti-aliasing using the NORMALIZED distance (sdN). Using raw `sd`
+    // for pseudo-SDFs causes pixelated edges because the field crosses zero
+    // too quickly. `sdN` guarantees exact 1-pixel wide gradients.
+    //
+    // The window is half a logical pixel, never less than one physical pixel:
+    // 1.5 px at 3x, 1 px at 1x and 2x. iOS 26 glass ends in a single
+    // anti-aliased pixel, and the rim hairline the render pass draws has to
+    // land on an opaque pixel right at the edge; the previous 1.5 logical
+    // pixel window (4.5 px at 3x) left the outermost two pixels translucent
+    // and the edge visibly soft beside the native control.
+    float smoothing = max(1.0, 0.5 * uDpr);
+    // iOS 26 glass draws its outline just outside its frame, so the native
+    // silhouette measures a third of a point larger than the shape: grow by
+    // one physical pixel at 3x to match. The layer bounds are inflated by a
+    // pixel for it in gatherShapeData.
+    sdN -= max(1.0, uDpr / 3.0);
     float foregroundAlpha = smoothstep(smoothing * 0.5, -smoothing * 0.5, sdN);
     if (foregroundAlpha < 0.01) {
         fragColor = vec4(0.0);
@@ -102,7 +108,7 @@ void main() {
     // normal, which is why storing the normal (not displacement) fixes lighting.
     vec3 normal = normalize(vec3(dx * n_cos, dy * n_cos, n_sin));
 
-    if (sd >= 0.0 || uThickness <= 0.0) {
+    if (sdN >= 0.0 || uThickness <= 0.0) {
         fragColor = vec4(0.0);
         return;
     }

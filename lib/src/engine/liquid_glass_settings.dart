@@ -60,6 +60,36 @@ enum GlassBodyMode {
   clear,
 }
 
+/// How the glass bevel bends the backdrop it refracts.
+///
+/// Both models use the same hemispherical bevel; they differ in how the
+/// deviation of a ray is derived from the surface slope at each pixel.
+enum GlassLensModel {
+  /// Exact Snell refraction through the bevel (default).
+  ///
+  /// The deviation grows without bound as the incidence angle approaches
+  /// grazing, so the outermost pixels of the rim sample far into the body and
+  /// the fold in the rim band steepens toward the edge instead of staying
+  /// even.
+  spherical,
+
+  /// Small-angle (thin-prism) refraction: deviation is `(n - 1)` times the
+  /// bevel slope.
+  ///
+  /// The displacement runs up quadratically from the inner edge of the
+  /// bevel, `8 (n - 1)` times the bevel depth at the rim, so past
+  /// `n = 1.125` the band folds and shows a mirrored, compressed copy of the
+  /// interior. That is the native rim: measured with line probes on a 56 pt
+  /// circle the lens starts 0.6 of the radius out, folds at 0.76, and the
+  /// outer band is an inverted 1.9:1 image of the backdrop between 0.27 and
+  /// 0.72 of the radius, which is `thickness: 32, refractiveIndex: 1.24`.
+  /// Under a [frost] the lens runs as its own pass ahead of it, so the band
+  /// folds the sharp backdrop while the flat face stays a cloud.
+  ///
+  /// Only affects the Premium (Impeller) path.
+  paraxial,
+}
+
 /// Represents the settings for a liquid glass effect.
 class LiquidGlassSettings {
   /// Creates a new [LiquidGlassSettings] with the given settings.
@@ -74,6 +104,10 @@ class LiquidGlassSettings {
     this.glassColor = const Color.fromARGB(0, 255, 255, 255),
     this.thickness = 20,
     this.blur = 5,
+    this.frost = 0.0,
+    this.frostOpacity = 1.0,
+    this.frostClamp = 0.0,
+    this.frostDilate = 0.0,
     this.chromaticAberration = .01,
     this.lightAngle = GlassDefaults.lightAngle,
     this.lightIntensity = .5,
@@ -90,6 +124,12 @@ class LiquidGlassSettings {
     this.whitenStrength = 0.0,
     this.whitenGated = true,
     this.edgeAbsorption = 0.0,
+    this.rimShade = 0.0,
+    this.rimShadeEnds = 0.2,
+    this.rimLight = 0.0,
+    this.lensModel = GlassLensModel.spherical,
+    this.frostGamma = 1.0,
+    this.blurGamma = 1.0,
     this.backerColor,
     this.platformViewFallbackColor,
     this.platformViewMode = PlatformViewGlassMode.fallbackColor,
@@ -106,6 +146,10 @@ class LiquidGlassSettings {
     required this.glassColor,
     required this.thickness,
     required this.blur,
+    this.frost = 0.0,
+    this.frostOpacity = 1.0,
+    this.frostClamp = 0.0,
+    this.frostDilate = 0.0,
     required this.chromaticAberration,
     required this.lightAngle,
     required this.lightIntensity,
@@ -122,6 +166,12 @@ class LiquidGlassSettings {
     required this.whitenStrength,
     required this.whitenGated,
     required this.edgeAbsorption,
+    this.rimShade = 0.0,
+    this.rimShadeEnds = 0.2,
+    this.rimLight = 0.0,
+    this.lensModel = GlassLensModel.spherical,
+    this.frostGamma = 1.0,
+    this.blurGamma = 1.0,
     this.backerColor,
     this.platformViewFallbackColor,
     this.platformViewMode = PlatformViewGlassMode.fallbackColor,
@@ -240,6 +290,56 @@ class LiquidGlassSettings {
 
   /// The effective blur taking visibility into account.
   double get effectiveBlur => blur * visibility;
+
+  /// Heavy blur of the backdrop, as a Gaussian sigma in logical pixels,
+  /// composited at [frostOpacity]. Defaults to 0, off.
+  ///
+  /// This is the cloud of iOS 26 glass: a blur far wider than [blur] that a
+  /// copy of the lightly blurred content still shows through, so text under
+  /// a control reads as pale ghosts rather than going out of focus. On a
+  /// 56 pt control it measures at about `frost: 14, frostOpacity: 0.8`,
+  /// with `blur: 0.2` barely softening the copy: the ghosts keep their edges. With a paraxial [lensModel] the lens
+  /// runs as its own pass ahead of the frost, so the rim band folds the
+  /// sharp backdrop.
+  ///
+  /// Only affects the Premium (Impeller) path.
+  final double frost;
+
+  /// The effective frost taking visibility into account.
+  double get effectiveFrost => frost * visibility;
+
+  /// Opacity of the [frost] over the backdrop beneath it, from 0 to 1.
+  ///
+  /// At `1.0` (the default) the frost replaces the content under it. Below
+  /// that a copy of the content, blurred by [blur], shows through and keeps
+  /// `1 - frostOpacity` of its contrast against the cloud; see [frostClamp]
+  /// for the side of it that is held back. The native material measures
+  /// `0.73` light, `0.8` dark.
+  final double frostOpacity;
+
+  /// How far the copy of the content showing through the [frost] may stray
+  /// from the cloud on one side, as a fraction of full scale before
+  /// [frostOpacity] is applied; 0 (the default) leaves both sides free.
+  ///
+  /// Positive holds it from going darker than the cloud by more than this,
+  /// negative from going lighter. That is the asymmetry of the native
+  /// material: through the light glass a black stripe is a flat pale band
+  /// and a white one a narrow bright hump, so dark detail reads bolder and
+  /// light detail finer, and through the dark glass the reverse. Light
+  /// measures `0.4`, dark `-0.4`.
+  final double frostClamp;
+
+  /// Radius in logical pixels of a dilate of the backdrop ahead of the
+  /// [frost] blur, so light detail spreads over dark before the cloud is
+  /// averaged; negative erodes instead, spreading dark over light; 0 (the
+  /// default) averages the backdrop as it is.
+  ///
+  /// Fine dark detail then hardly darkens the cloud while broad dark areas
+  /// still do, as under the native light material: its cloud over a page
+  /// of text stays near white where a plain mean of the page would grey it,
+  /// yet over even stripes it sits close to the mean. The dark material is
+  /// the reverse. Light measures `0.5`; the dark material does without.
+  final double frostDilate;
 
   /// The chromatic aberration of the glass effect (WIP).
   ///
@@ -458,6 +558,71 @@ class LiquidGlassSettings {
   /// The effective meniscus darkening taking visibility into account.
   double get effectiveEdgeAbsorption => edgeAbsorption * visibility;
 
+  /// Strength of the hairline outline on the very edge of the glass, 0 to 1.
+  ///
+  /// iOS 26 glass is bounded by a half-point line that is the backdrop at
+  /// its own position, untinted and unblurred, darkened by a fixed step:
+  /// about 31% across the light axis and 10% at its ends, where the rim
+  /// light sits. Together with [rimLight] this is what reads as the "bubble"
+  /// edge of a native control. `1.0` matches the native light-mode material.
+  ///
+  /// Unlike [edgeAbsorption], which darkens the whole bevel, this touches
+  /// only the outermost pixels. The line is subtracted from the colour
+  /// beneath it rather than blended, so it stays the same step below any
+  /// backdrop.
+  ///
+  /// Only affects the Premium (Impeller) path. Defaults to `0.0`, off.
+  final double rimShade;
+
+  /// The effective rim shade taking visibility into account.
+  double get effectiveRimShade => rimShade * visibility;
+
+  /// How much of [rimShade] survives at the ends of the light axis, where
+  /// the [rimLight] lobes sit, as a fraction of its strength across it.
+  ///
+  /// The native light material keeps about a fifth of the outline there
+  /// (`0.2`, the default); the dark material's outline dissolves into the
+  /// lobes entirely (`0.0`).
+  final double rimShadeEnds;
+
+  /// Strength of the iOS 26 rim highlight, 0 to 1.
+  ///
+  /// Two lobes at the ends of the light axis ([lightAngle]), the lit end
+  /// stronger, each a sharp core one pixel inside the outline with a soft
+  /// tail reaching a couple of points into the body. Additive, easing off as
+  /// the body brightens so it reads the same over black and over white. `1.0` matches the native
+  /// material in both appearances; the wide specular controlled by
+  /// [lightIntensity] is independent and can be left at zero alongside it.
+  ///
+  /// Only affects the Premium (Impeller) path. Defaults to `0.0`, off.
+  final double rimLight;
+
+  /// The effective rim light taking visibility into account.
+  double get effectiveRimLight => rimLight * visibility;
+
+  /// How the bevel bends the backdrop. See [GlassLensModel].
+  ///
+  /// Defaults to [GlassLensModel.spherical], the existing rendering.
+  final GlassLensModel lensModel;
+
+  /// Exponent of the space the [frost] blur averages in.
+  ///
+  /// The native frost is not a plain mean of the content beneath it: the
+  /// light material's cloud over black-on-white detail reads brighter than
+  /// the mean (`1.5`), the dark material's over white-on-black darker
+  /// (`0.8`). Flat colour is unchanged either way. Defaults to `1.0`, a
+  /// plain sRGB mean.
+  final double frostGamma;
+
+  /// Exponent of the tone curve the [blur] runs in, as [frostGamma] is for
+  /// the frost; 1 (the default) blurs the backdrop as it is.
+  ///
+  /// Below 1 dark detail dominates the average, so through a [frost] a
+  /// black stripe stays a flat, wide band while a white one thins to a
+  /// hump: that is what makes dark content read bolder through the native
+  /// light material. Above 1 the reverse, as under its dark material.
+  final double blurGamma;
+
   /// Internal shader transport — the animated pinch strength for the concave
   /// lens effect on indicator pills.
   ///
@@ -478,6 +643,10 @@ class LiquidGlassSettings {
         glassColor: glassColor,
         thickness: thickness,
         blur: blur,
+        frost: frost,
+        frostOpacity: frostOpacity,
+        frostClamp: frostClamp,
+        frostDilate: frostDilate,
         chromaticAberration: chromaticAberration,
         lightAngle: lightAngle,
         lightIntensity: lightIntensity,
@@ -494,6 +663,12 @@ class LiquidGlassSettings {
         whitenStrength: whitenStrength,
         whitenGated: whitenGated,
         edgeAbsorption: edgeAbsorption,
+        rimShade: rimShade,
+        rimShadeEnds: rimShadeEnds,
+        rimLight: rimLight,
+        lensModel: lensModel,
+        frostGamma: frostGamma,
+        blurGamma: blurGamma,
         backerColor: backerColor,
         platformViewFallbackColor: platformViewFallbackColor,
         platformViewMode: platformViewMode,
@@ -585,6 +760,10 @@ class LiquidGlassSettings {
         glassColor: Color.lerp(a.glassColor, b.glassColor, t)!,
         thickness: lerpDouble(a.thickness, b.thickness, t)!,
         blur: lerpDouble(a.blur, b.blur, t)!,
+        frost: lerpDouble(a.frost, b.frost, t)!,
+        frostOpacity: lerpDouble(a.frostOpacity, b.frostOpacity, t)!,
+        frostClamp: lerpDouble(a.frostClamp, b.frostClamp, t)!,
+        frostDilate: lerpDouble(a.frostDilate, b.frostDilate, t)!,
         chromaticAberration:
             lerpDouble(a.chromaticAberration, b.chromaticAberration, t)!,
         lightAngle: lerpDouble(a.lightAngle, b.lightAngle, t)!,
@@ -603,6 +782,12 @@ class LiquidGlassSettings {
         whitenStrength: lerpDouble(a.whitenStrength, b.whitenStrength, t)!,
         whitenGated: t < 0.5 ? a.whitenGated : b.whitenGated,
         edgeAbsorption: lerpDouble(a.edgeAbsorption, b.edgeAbsorption, t)!,
+        rimShade: lerpDouble(a.rimShade, b.rimShade, t)!,
+        rimShadeEnds: lerpDouble(a.rimShadeEnds, b.rimShadeEnds, t)!,
+        rimLight: lerpDouble(a.rimLight, b.rimLight, t)!,
+        lensModel: t < 0.5 ? a.lensModel : b.lensModel,
+        frostGamma: lerpDouble(a.frostGamma, b.frostGamma, t)!,
+        blurGamma: lerpDouble(a.blurGamma, b.blurGamma, t)!,
         // Lerp the color so the backer fades smoothly (from/to transparent when
         // one side is null), rather than popping at the midpoint.
         backerColor: Color.lerp(a.backerColor, b.backerColor, t),
@@ -631,6 +816,10 @@ class LiquidGlassSettings {
     Color? glassColor,
     double? thickness,
     double? blur,
+    double? frost,
+    double? frostOpacity,
+    double? frostClamp,
+    double? frostDilate,
     double? chromaticAberration,
     double? blend,
     double? lightAngle,
@@ -648,6 +837,12 @@ class LiquidGlassSettings {
     double? whitenStrength,
     bool? whitenGated,
     double? edgeAbsorption,
+    double? rimShade,
+    double? rimShadeEnds,
+    double? rimLight,
+    GlassLensModel? lensModel,
+    double? frostGamma,
+    double? blurGamma,
     Color? backerColor,
     Color? platformViewFallbackColor,
     PlatformViewGlassMode? platformViewMode,
@@ -658,6 +853,10 @@ class LiquidGlassSettings {
         glassColor: glassColor ?? this.glassColor,
         thickness: thickness ?? this.thickness,
         blur: blur ?? this.blur,
+        frost: frost ?? this.frost,
+        frostOpacity: frostOpacity ?? this.frostOpacity,
+        frostClamp: frostClamp ?? this.frostClamp,
+        frostDilate: frostDilate ?? this.frostDilate,
         chromaticAberration: chromaticAberration ?? this.chromaticAberration,
         lightAngle: lightAngle ?? this.lightAngle,
         lightIntensity: lightIntensity ?? this.lightIntensity,
@@ -675,6 +874,12 @@ class LiquidGlassSettings {
         whitenStrength: whitenStrength ?? this.whitenStrength,
         whitenGated: whitenGated ?? this.whitenGated,
         edgeAbsorption: edgeAbsorption ?? this.edgeAbsorption,
+        rimShade: rimShade ?? this.rimShade,
+        rimShadeEnds: rimShadeEnds ?? this.rimShadeEnds,
+        rimLight: rimLight ?? this.rimLight,
+        lensModel: lensModel ?? this.lensModel,
+        frostGamma: frostGamma ?? this.frostGamma,
+        blurGamma: blurGamma ?? this.blurGamma,
         backerColor: backerColor ?? this.backerColor,
         platformViewFallbackColor:
             platformViewFallbackColor ?? this.platformViewFallbackColor,
@@ -692,6 +897,10 @@ class LiquidGlassSettings {
         other.glassColor == glassColor &&
         other.thickness == thickness &&
         other.blur == blur &&
+        other.frost == frost &&
+        other.frostOpacity == frostOpacity &&
+        other.frostClamp == frostClamp &&
+        other.frostDilate == frostDilate &&
         other.chromaticAberration == chromaticAberration &&
         other.lightAngle == lightAngle &&
         other.lightIntensity == lightIntensity &&
@@ -708,6 +917,12 @@ class LiquidGlassSettings {
         other.whitenStrength == whitenStrength &&
         other.whitenGated == whitenGated &&
         other.edgeAbsorption == edgeAbsorption &&
+        other.rimShade == rimShade &&
+        other.rimShadeEnds == rimShadeEnds &&
+        other.rimLight == rimLight &&
+        other.lensModel == lensModel &&
+        other.frostGamma == frostGamma &&
+        other.blurGamma == blurGamma &&
         other.backerColor == backerColor &&
         other.platformViewFallbackColor == platformViewFallbackColor &&
         other.platformViewMode == platformViewMode &&
@@ -721,6 +936,10 @@ class LiquidGlassSettings {
         glassColor,
         thickness,
         blur,
+        frost,
+        frostOpacity,
+        frostClamp,
+        frostDilate,
         chromaticAberration,
         lightAngle,
         lightIntensity,
@@ -737,6 +956,12 @@ class LiquidGlassSettings {
         whitenStrength,
         whitenGated,
         edgeAbsorption,
+        rimShade,
+        rimShadeEnds,
+        rimLight,
+        lensModel,
+        frostGamma,
+        blurGamma,
         backerColor,
         platformViewFallbackColor,
         platformViewMode,

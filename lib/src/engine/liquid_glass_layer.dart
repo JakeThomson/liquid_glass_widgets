@@ -471,16 +471,100 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         _selfScaled = selfScaled,
         _pushBackActive = pushBackActive;
 
-  // ── Cached blur filter ──────────────────────────────────────────────────
-  // The BackdropFilterLayer's blur filter is rebuilt only when blurSigma
-  // changes — not on every paint frame during jelly/morph animations.
+  // ── Cached blur filters ─────────────────────────────────────────────────
+  // The BackdropFilterLayers' blur filters are rebuilt only when their sigma
+  // or opacity changes — not on every paint frame during jelly/morph
+  // animations.
   ImageFilter? _cachedBlur;
   double _cachedBlurSigma = -1;
+  double _cachedBlurGamma = -1;
+  ImageFilter? _cachedFrost;
+  ImageFilter? _cachedFrostClampFilter;
+  double _cachedFrostSigma = -1;
+  double _cachedFrostOpacity = -1;
+  double _cachedFrostGamma = -1;
+  double _cachedFrostClamp = 0;
+  double _cachedFrostDilate = 0;
 
   final _shaderHandle = LayerHandle<BackdropFilterLayer>();
   final _blurLayerHandle = LayerHandle<BackdropFilterLayer>();
+  final _lensLayerHandle = LayerHandle<BackdropFilterLayer>();
+  final _frostLayerHandle = LayerHandle<BackdropFilterLayer>();
+  final _frostClampLayerHandle = LayerHandle<BackdropFilterLayer>();
   final _clipRectLayerHandle = LayerHandle<ClipRectLayer>();
   final _clipPathLayerHandle = LayerHandle<ClipPathLayer>();
+  final _lensClipLayerHandle = LayerHandle<ClipRectLayer>();
+  final _frostClipLayerHandle = LayerHandle<ClipPathLayer>();
+
+  /// A Gaussian blur of [sigma], composited over the sharp backdrop at
+  /// [opacity]. A colour matrix is an ImageFilter, so it composes onto the
+  /// blur in the same layer.
+  ///
+  /// With [gamma] other than 1, the backdrop is raised to that exponent
+  /// before the blur and to its reciprocal after (frost_gamma.frag on both
+  /// sides), so the blur averages in a curved space: see
+  /// LiquidGlassSettings.frostGamma. Falls back to a plain blur until the
+  /// program is cached (LiquidGlassWidgets.initialize).
+  ImageFilter _blurFilter(
+    double sigma,
+    double opacity,
+    List<FragmentShader> shaders, {
+    double gamma = 1.0,
+    double offset = 0.0,
+    double dilate = 0.0,
+  }) {
+    ImageFilter blur = ImageFilter.blur(
+      tileMode: TileMode.mirror,
+      sigmaX: sigma,
+      sigmaY: sigma,
+    );
+    if (dilate != 0) {
+      final radius = dilate.abs();
+      blur = ImageFilter.compose(
+        outer: blur,
+        inner: dilate > 0
+            ? ImageFilter.dilate(radiusX: radius, radiusY: radius)
+            : ImageFilter.erode(radiusX: radius, radiusY: radius),
+      );
+    }
+    if (gamma != 1.0) {
+      final program = MultiShaderBuilder.cachedProgram(ShaderKeys.frostGamma);
+      if (program != null) {
+        // Each filter gets its own pair: a filter reads its shader's
+        // uniforms when it is first drawn, so instances shared between the
+        // blur and frost filters would all end up with the last exponent
+        // set. Held in [shaders] to be disposed with the filter.
+        final curve = program.fragmentShader()..setFloat(2, gamma);
+        final back = program.fragmentShader()..setFloat(2, 1.0 / gamma);
+        shaders
+          ..forEach((shader) => shader.dispose())
+          ..clear()
+          ..addAll([curve, back]);
+        blur = ImageFilter.compose(
+          outer: ImageFilter.shader(back),
+          inner: ImageFilter.compose(
+            outer: blur,
+            inner: ImageFilter.shader(curve),
+          ),
+        );
+      }
+    }
+    if (opacity >= 1.0 && offset == 0.0) return blur;
+    final shift = offset * 255.0;
+    return ImageFilter.compose(
+      outer: ColorFilter.matrix(<double>[
+        1, 0, 0, 0, shift, //
+        0, 1, 0, 0, shift, //
+        0, 0, 1, 0, shift, //
+        0, 0, 0, opacity, 0, //
+      ]),
+      inner: blur,
+    );
+  }
+
+  final _blurShaders = <FragmentShader>[];
+  final _frostShaders = <FragmentShader>[];
+  final _frostClampShaders = <FragmentShader>[];
 
   EdgeInsets _clipExpansion;
   set clipExpansion(EdgeInsets value) {
@@ -670,25 +754,55 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       }
     }
 
-    // ── Pass 1: Blur ─────────────────────────────────────────────────────────
+    // ── Pass 0b: Lens ────────────────────────────────────────────────────────
+    // With a paraxial lens under a frost the refraction runs first, on the
+    // sharp backdrop, so the frost blurs the lensed image: the flat face
+    // ends up a cloud while the rim band folds crisp content, as the native
+    // band does. Ungrouped so the passes after it read its output.
+    if (splitLensPass) {
+      final lensLayer = (_lensLayerHandle.layer ??= BackdropFilterLayer())
+        ..backdropKey = null
+        ..filter = ImageFilter.shader(lensShader!);
+      _lensClipLayerHandle.layer = context.pushClipRect(
+        needsCompositing,
+        offset,
+        boundingBox,
+        (context, offset) {
+          context.pushLayer(lensLayer, (context, offset) {}, offset);
+        },
+        oldLayer: _lensClipLayerHandle.layer,
+      );
+    } else {
+      _lensLayerHandle.layer = null;
+      _lensClipLayerHandle.layer = null;
+    }
+
+    // ── Pass 1a: Blur ────────────────────────────────────────────────────────
     // Use Flutter's native ImageFilter.blur for smooth, multi-pass Gaussian
     // quality (the inline 9-tap shader approximation was pixelated with text).
     // Clip tightly to the actual pill shape path — no expansion needed here.
+    //
+    // Under a frost this is the ghost of the content that shows through the
+    // cloud, so it runs on the sharp backdrop ahead of the frost, ungrouped
+    // so the frost passes see it, and in its own tone curve (blurGamma).
     if (settings.effectiveBlur > 0) {
       final blurSigma = settings.effectiveBlur;
+      final hasFrost = settings.effectiveFrost > 0;
       // Reuse cached blur filter when sigma hasn't changed.
-      if (_cachedBlur == null || _cachedBlurSigma != blurSigma) {
-        _cachedBlur = ImageFilter.blur(
-          tileMode: TileMode.mirror,
-          sigmaX: blurSigma,
-          sigmaY: blurSigma,
-        );
+      final blurGamma = settings.blurGamma;
+      if (_cachedBlur == null ||
+          _cachedBlurSigma != blurSigma ||
+          _cachedBlurGamma != blurGamma) {
+        _cachedBlur =
+            _blurFilter(blurSigma, 1.0, _blurShaders, gamma: blurGamma);
         _cachedBlurSigma = blurSigma;
+        _cachedBlurGamma = blurGamma;
       }
 
       final blurLayer = (_blurLayerHandle.layer ??= BackdropFilterLayer())
-        ..backdropKey =
-            backdropKey // Scoped to this LiquidGlassLayer's BackdropGroup
+        // Scoped to this LiquidGlassLayer's BackdropGroup, unless the frost
+        // passes after it have to read its output.
+        ..backdropKey = hasFrost ? null : backdropKey
         ..filter = _cachedBlur!;
 
       final clipPath = Path();
@@ -719,6 +833,116 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     } else {
       _blurLayerHandle.layer = null;
       _clipPathLayerHandle.layer = null;
+    }
+
+    // ── Pass 1b: Frost ───────────────────────────────────────────────────────
+    // The cloud of iOS 26 glass, composited so the ghost of the content
+    // (the blur pass above) still shows through it at 1 - frostOpacity. The
+    // native ghost is held back on one side: under the light material it
+    // never goes more than a fixed step darker than the cloud, so black
+    // detail is a flat pale band while white detail keeps its shape. A
+    // first pass composites the cloud, shifted down by frostClamp, with
+    // BlendMode.lighten (or shifted up with darken for a negative clamp);
+    // the second composites the cloud normally at frostOpacity.
+    if (settings.effectiveFrost > 0) {
+      final frostSigma = settings.effectiveFrost;
+      final frostOpacity = settings.frostOpacity.clamp(0.0, 1.0);
+      final frostGamma = settings.frostGamma;
+      final frostClamp = settings.frostClamp.clamp(-1.0, 1.0);
+      final frostDilate = settings.frostDilate;
+      if (_cachedFrost == null ||
+          _cachedFrostSigma != frostSigma ||
+          _cachedFrostOpacity != frostOpacity ||
+          _cachedFrostGamma != frostGamma ||
+          _cachedFrostClamp != frostClamp ||
+          _cachedFrostDilate != frostDilate) {
+        _cachedFrost = _blurFilter(
+          frostSigma,
+          frostOpacity,
+          _frostShaders,
+          gamma: frostGamma,
+          dilate: frostDilate,
+        );
+        _cachedFrostClampFilter = frostClamp == 0
+            ? null
+            : _blurFilter(
+                frostSigma,
+                1.0,
+                _frostClampShaders,
+                gamma: frostGamma,
+                offset: -frostClamp,
+                dilate: frostDilate,
+              );
+        _cachedFrostSigma = frostSigma;
+        _cachedFrostOpacity = frostOpacity;
+        _cachedFrostGamma = frostGamma;
+        _cachedFrostClamp = frostClamp;
+        _cachedFrostDilate = frostDilate;
+      }
+
+      // A blended BackdropFilterLayer is composited over its whole rect, not
+      // the clip path around it, so the blended pass cuts its output to the
+      // matte itself: the backdrop is cut to the matte before the blur and
+      // the edge made hard again after it (shaders/frost_mask.frag and
+      // frost_unmask.frag). The mask reads this paint's matte uniforms, so
+      // the filter is rebuilt each paint.
+      final mask = frostMaskShader;
+      final unmask = frostUnmaskShader;
+      ImageFilter masked(ImageFilter filter) => mask == null || unmask == null
+          ? filter
+          : ImageFilter.compose(
+              outer: ImageFilter.shader(unmask),
+              inner: ImageFilter.compose(
+                outer: filter,
+                inner: ImageFilter.shader(mask),
+              ),
+            );
+
+      // Not part of the layer's BackdropGroup: filters sharing a key read
+      // one snapshot of the backdrop, so the shader pass would never see
+      // the frost. Left ungrouped they read live, and the group's snapshot
+      // is taken after they have drawn.
+      if (_cachedFrostClampFilter case final clampFilter?) {
+        _frostClampLayerHandle.layer ??= BackdropFilterLayer();
+        _frostClampLayerHandle.layer!
+          ..backdropKey = null
+          ..blendMode = frostClamp > 0 ? BlendMode.lighten : BlendMode.darken
+          ..filter = masked(clampFilter);
+      } else {
+        _frostClampLayerHandle.layer = null;
+      }
+      final frostLayer = (_frostLayerHandle.layer ??= BackdropFilterLayer())
+        ..backdropKey = null
+        ..blendMode = BlendMode.srcOver
+        ..filter = _cachedFrost!;
+
+      final frostPath = Path();
+      for (final geometry in shapes) {
+        if (!geometry.$1.attached) continue;
+        frostPath.addPath(
+          geometry.$2.path,
+          Offset.zero,
+          matrix4: geometry.$3.storage,
+        );
+      }
+      _frostClipLayerHandle.layer = context.pushClipPath(
+        needsCompositing,
+        offset,
+        boundingBox,
+        frostPath,
+        (context, offset) {
+          final clampLayer = _frostClampLayerHandle.layer;
+          if (clampLayer != null) {
+            context.pushLayer(clampLayer, (context, offset) {}, offset);
+          }
+          context.pushLayer(frostLayer, (context, offset) {}, offset);
+        },
+        oldLayer: _frostClipLayerHandle.layer,
+      );
+    } else {
+      _frostLayerHandle.layer = null;
+      _frostClampLayerHandle.layer = null;
+      _frostClipLayerHandle.layer = null;
     }
 
     // ── Pass 2: Glass refraction + lighting shader ────────────────────────────
@@ -808,10 +1032,24 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     // the filter property breaks this retention chain immediately.
     _shaderHandle.layer?.filter = ImageFilter.blur(sigmaX: 0, sigmaY: 0);
     _blurLayerHandle.layer?.filter = ImageFilter.blur(sigmaX: 0, sigmaY: 0);
+    _frostLayerHandle.layer?.filter = ImageFilter.blur(sigmaX: 0, sigmaY: 0);
+    _frostClampLayerHandle.layer?.filter =
+        ImageFilter.blur(sigmaX: 0, sigmaY: 0);
+    _lensLayerHandle.layer?.filter = ImageFilter.blur(sigmaX: 0, sigmaY: 0);
+    _lensLayerHandle.layer = null;
+    _lensClipLayerHandle.layer = null;
     _shaderHandle.layer = null;
     _blurLayerHandle.layer = null;
+    _frostLayerHandle.layer = null;
+    _frostClampLayerHandle.layer = null;
     _clipRectLayerHandle.layer = null;
     _clipPathLayerHandle.layer = null;
+    _frostClipLayerHandle.layer = null;
+    for (final shader in _blurShaders.followedBy(_frostShaders).followedBy(
+          _frostClampShaders,
+        )) {
+      shader.dispose();
+    }
     super.dispose();
   }
 }

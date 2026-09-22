@@ -20,6 +20,8 @@ import '../../renderer/fragment_shader_extensions.dart';
 import '../../renderer/liquid_glass_renderer.dart'
     show debugPaintLiquidGlassGeometry;
 import '../liquid_glass_settings.dart';
+import '../multi_shader_builder.dart';
+import '../shaders.dart';
 import '../render_liquid_glass_geometry.dart';
 import '../snap_rect_to_pixels.dart';
 
@@ -46,6 +48,30 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         );
 
   final FragmentShader? renderShader;
+
+  /// Second instance of the render program for the lens pass, created on
+  /// first use from the cached program. See [splitLensPass].
+  FragmentShader? _lensShader;
+  FragmentShader? get lensShader => _lensShader ??=
+      MultiShaderBuilder.cachedProgram(ShaderKeys.liquidGlassRender)
+          ?.fragmentShader();
+
+  /// The matte stages around a blended frost pass, created on first use
+  /// from the cached programs. The mask's matte uniforms are set alongside
+  /// the render shader's; see shaders/frost_mask.frag.
+  FragmentShader? _frostMaskShader;
+  FragmentShader? get frostMaskShader => _frostMaskShader ??=
+      MultiShaderBuilder.cachedProgram(ShaderKeys.frostMask)?.fragmentShader();
+  FragmentShader? _frostUnmaskShader;
+  FragmentShader? get frostUnmaskShader => _frostUnmaskShader ??=
+      MultiShaderBuilder.cachedProgram(ShaderKeys.frostUnmask)
+          ?.fragmentShader();
+
+  /// Whether this paint runs the lens as its own pass ahead of the frost,
+  /// so the rim band folds the sharp backdrop rather than the cloud. Only
+  /// the paraxial lens with a frost does; everything else is one pass, as
+  /// before. Set by [paint] for [paintLiquidGlass].
+  bool splitLensPass = false;
 
   /// Cached light direction vector — updated only when [settings.lightAngle]
   /// changes. Avoids recomputing cos/sin on every setting change.
@@ -442,89 +468,125 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
                 (passLogical.bottom * dpr).ceilToDouble(),
               );
 
-        renderShader!
-          // Slot 0-1: uSize — physical-pixel size of the enclosing compositor
-          // pass (root surface when no backdrop ancestor exists).
-          ..setFloatUniforms(initialIndex: 0, (value) {
-            value.setSize(passPhysical.size);
-          })
-          // Slots 2-5: uGeometryOffset + uGeometrySize, pass-relative.
-          // Subtracting passPhysical.topLeft converts screen-space activeBounds
-          // into coordinates relative to the pass texture's origin (0,0).
-          ..setFloatUniforms(initialIndex: 2, (value) {
-            value
-              ..setOffset(activeBounds.topLeft * dpr - passPhysical.topLeft)
-              ..setSize(activeBounds.size * dpr);
-          })
-          ..setFloatUniforms(initialIndex: 6, (value) {
-            value
-              ..setColor(settings.effectiveGlassColor)
-              ..setFloats([
-                settings.effectiveRefractiveIndex,
-                settings.effectiveChromaticAberration,
-                settings.effectiveThickness * scale,
-                1.0, // uRefractScale (slot 13) - normalization handled by physical geometry curve scaling
-                settings.effectiveLightIntensity,
-                settings.effectiveAmbientStrength,
-                settings.effectiveSaturation,
-              ])
-              ..setOffset(_cachedLightDir); // slots 17-18
-          })
-          // Slot 19: uWhiten (whitening amount); slot 20: uWhitenGated
-          // Slot 21: uPinchStrength
-          ..setFloatUniforms(initialIndex: 19, (value) {
-            value
-              ..setFloat(settings.effectiveWhitenStrength)
-              ..setFloat(settings.whitenGated ? 1.0 : 0.0)
-              ..setFloat(settings.pinchStrength);
-          })
-          // Slots 22-25: uBackgroundFallback (straight RGBA).
-          ..setFloatUniforms(initialIndex: 22, (value) {
-            final b = settings.platformViewFallbackColor ??
-                settings.effectiveBackerColor ??
-                const Color(0x00000000);
-            value.setFloats(<double>[b.r, b.g, b.b, b.a]);
-          })
-          // Slots 26-27: uCaptureOffset
-          ..setFloatUniforms(initialIndex: 26, (value) {
-            value.setOffset(Offset.zero);
-          })
-          // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
-          ..setFloatUniforms(initialIndex: 28, (value) {
-            value.setFloats([
-              settings.effectiveAmbientRim * scale,
-              settings.effectiveFresnelStrength,
-              scale,
-              settings.effectiveEdgeAbsorption,
-            ]);
-          })
-          // Slot 32: uPlatformViewMode; Slot 33: uBodyMode.
-          ..setFloatUniforms(initialIndex: 32, (value) {
-            value
-              ..setFloat(
-                settings.platformViewMode == PlatformViewGlassMode.passthrough
-                    ? 1.0
-                    : 0.0,
-              )
-              ..setFloat(
-                settings.bodyMode == GlassBodyMode.clear ? 1.0 : 0.0,
-              );
-          })
-          // Slots 34-35: uTouchPosition (physical px); Slot 36: uTouchIntensity.
-          // Multiply by DPR here so the shader receives physical-pixel coords
-          // matching FlutterFragCoord() — GlassGlowLayerState delivers logical px.
-          // Subtract passPhysical.topLeft for the same reason as uGeometryOffset:
-          // touch position must be relative to the enclosing pass, not the screen.
-          ..setFloatUniforms(initialIndex: 34, (value) {
-            value
-              ..setOffset(_touchPosition * dpr - passPhysical.topLeft)
-              ..setFloat(_touchIntensity.clamp(0.0, 1.0));
-          })
-          ..setImageSampler(
-            1,
-            geometryImage,
-            filterQuality: FilterQuality.medium,
-          );
+        void configure(FragmentShader shader, double pass) {
+          shader
+            // Slot 0-1: uSize — physical-pixel size of the enclosing compositor
+            // pass (root surface when no backdrop ancestor exists).
+            ..setFloatUniforms(initialIndex: 0, (value) {
+              value.setSize(passPhysical.size);
+            })
+            // Slots 2-5: uGeometryOffset + uGeometrySize, pass-relative.
+            // Subtracting passPhysical.topLeft converts screen-space activeBounds
+            // into coordinates relative to the pass texture's origin (0,0).
+            ..setFloatUniforms(initialIndex: 2, (value) {
+              value
+                ..setOffset(activeBounds.topLeft * dpr - passPhysical.topLeft)
+                ..setSize(activeBounds.size * dpr);
+            })
+            ..setFloatUniforms(initialIndex: 6, (value) {
+              value
+                ..setColor(settings.effectiveGlassColor)
+                ..setFloats([
+                  settings.effectiveRefractiveIndex,
+                  settings.effectiveChromaticAberration,
+                  settings.effectiveThickness * scale,
+                  1.0, // uRefractScale (slot 13) - normalization handled by physical geometry curve scaling
+                  settings.effectiveLightIntensity,
+                  settings.effectiveAmbientStrength,
+                  settings.effectiveSaturation,
+                ])
+                ..setOffset(_cachedLightDir); // slots 17-18
+            })
+            // Slot 19: uWhiten (whitening amount); slot 20: uWhitenGated
+            // Slot 21: uPinchStrength
+            ..setFloatUniforms(initialIndex: 19, (value) {
+              value
+                ..setFloat(settings.effectiveWhitenStrength)
+                ..setFloat(settings.whitenGated ? 1.0 : 0.0)
+                ..setFloat(settings.pinchStrength);
+            })
+            // Slots 22-25: uBackgroundFallback (straight RGBA).
+            ..setFloatUniforms(initialIndex: 22, (value) {
+              final b = settings.platformViewFallbackColor ??
+                  settings.effectiveBackerColor ??
+                  const Color(0x00000000);
+              value.setFloats(<double>[b.r, b.g, b.b, b.a]);
+            })
+            // Slots 26-27: uCaptureOffset
+            ..setFloatUniforms(initialIndex: 26, (value) {
+              value.setOffset(Offset.zero);
+            })
+            // Slots 28-31: uEdgeConfig (ambientRim, fresnelStrength, dprScale, edgeAbsorption)
+            ..setFloatUniforms(initialIndex: 28, (value) {
+              value.setFloats([
+                settings.effectiveAmbientRim * scale,
+                settings.effectiveFresnelStrength,
+                scale,
+                settings.effectiveEdgeAbsorption,
+              ]);
+            })
+            // Slot 32: uPlatformViewMode; Slot 33: uBodyMode.
+            ..setFloatUniforms(initialIndex: 32, (value) {
+              value
+                ..setFloat(
+                  settings.platformViewMode == PlatformViewGlassMode.passthrough
+                      ? 1.0
+                      : 0.0,
+                )
+                ..setFloat(
+                  settings.bodyMode == GlassBodyMode.clear ? 1.0 : 0.0,
+                );
+            })
+            // Slots 34-35: uTouchPosition (physical px); Slot 36: uTouchIntensity.
+            // Multiply by DPR here so the shader receives physical-pixel coords
+            // matching FlutterFragCoord() — GlassGlowLayerState delivers logical px.
+            // Subtract passPhysical.topLeft for the same reason as uGeometryOffset:
+            // touch position must be relative to the enclosing pass, not the screen.
+            ..setFloatUniforms(initialIndex: 34, (value) {
+              value
+                ..setOffset(_touchPosition * dpr - passPhysical.topLeft)
+                ..setFloat(_touchIntensity.clamp(0.0, 1.0));
+            })
+            // Slots 37-40: uRimConfig (rimShade, rimLight, rimShadeEnds, reserved);
+            // slot 41: uLensModel.
+            ..setFloatUniforms(initialIndex: 37, (value) {
+              value.setFloats([
+                settings.effectiveRimShade,
+                settings.effectiveRimLight,
+                settings.rimShadeEnds,
+                0.0,
+                settings.lensModel == GlassLensModel.paraxial ? 1.0 : 0.0,
+                // Slot 42: uPass — 0 one pass, 1 lens only, 2 everything but.
+                pass,
+              ]);
+            })
+            ..setImageSampler(
+              1,
+              geometryImage,
+              filterQuality: FilterQuality.medium,
+            );
+        }
+
+        splitLensPass = lensShader != null &&
+            settings.lensModel == GlassLensModel.paraxial &&
+            settings.effectiveFrost > 0;
+        configure(renderShader!, splitLensPass ? 2.0 : 0.0);
+        if (splitLensPass) configure(lensShader!, 1.0);
+        if (settings.effectiveFrost > 0 && frostMaskShader != null) {
+          frostMaskShader!
+            ..setFloatUniforms(initialIndex: 2, (value) {
+              value
+                ..setOffset(activeBounds.topLeft * dpr - passPhysical.topLeft)
+                ..setSize(activeBounds.size * dpr)
+                // Slot 6: uErode, the frost's signed dilate radius in device px.
+                ..setFloat(settings.frostDilate * dpr);
+            })
+            ..setImageSampler(
+              1,
+              geometryImage,
+              filterQuality: FilterQuality.medium,
+            );
+        }
         paintLiquidGlass(
           context,
           offset,
@@ -679,6 +741,18 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         value
           ..setOffset(_touchPosition * dpr)
           ..setFloat(_touchIntensity.clamp(0.0, 1.0));
+      })
+      // Slots 37-40: uRimConfig (rimShade, rimLight, rimShadeEnds, reserved);
+      // slot 41: uLensModel.
+      ..setFloatUniforms(initialIndex: 37, (value) {
+        value.setFloats([
+          settings.effectiveRimShade,
+          settings.effectiveRimLight,
+          settings.rimShadeEnds,
+          0.0,
+          settings.lensModel == GlassLensModel.paraxial ? 1.0 : 0.0,
+          0.0, // uPass: the capture path is always one pass.
+        ]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).
       ..setImageSampler(0, capture)
@@ -835,6 +909,12 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     // retains a path back to the shader's GPU resources past the Vulkan
     // context lifetime (Crash 2 in Mali GPU crash analysis).
     _settings = null;
+    _lensShader?.dispose();
+    _lensShader = null;
+    _frostMaskShader?.dispose();
+    _frostMaskShader = null;
+    _frostUnmaskShader?.dispose();
+    _frostUnmaskShader = null;
     super.dispose();
   }
 

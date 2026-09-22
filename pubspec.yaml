@@ -42,3 +42,6 @@ flutter:
     - shaders/liquid_glass_geometry_blended.frag
     - shaders/liquid_glass_render.frag
     - shaders/progressive_blur.frag
+    - shaders/frost_gamma.frag
+    - shaders/frost_mask.frag
+    - shaders/frost_unmask.frag
