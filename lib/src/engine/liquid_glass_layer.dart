@@ -793,7 +793,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         }
         (_weightLayerHandle.layer ??= BackdropFilterLayer())
           ..backdropKey = null
-          ..blendMode = BlendMode.src
+          // Only the alpha is taken: the pixels beneath keep their colour,
+          // premultiplied by it.
+          ..blendMode = BlendMode.dstIn
           ..filter = _cachedWeight!;
       } else {
         _weightLayerHandle.layer = null;

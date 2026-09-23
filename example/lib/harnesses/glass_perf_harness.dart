@@ -99,6 +99,15 @@ final List<(String, LiquidGlassSettings, Exp)> kVariants = switch (kRecipe) {
       ('light-nofrost', kSettings.copyWith(frost: 0), _base),
       ('dark-nofrost', kDarkSettings.copyWith(frost: 0), _base),
     ],
+  'wexp' => [
+      ('original', kOriginal, _base),
+      ('light', kSettings, _base),
+      ('light-shared-weight-key', kSettings,
+          (gamma: 1, noMask: false, saveLayer: false)),
+      ('light-noweight', kSettings.copyWith(frostGamma: 1), _base),
+      ('light-noweight-shared-cloud', kSettings.copyWith(frostGamma: 1),
+          (gamma: 0, noMask: true, saveLayer: false)),
+    ],
   _ => [('parity', kSettings, _base)],
 };
 

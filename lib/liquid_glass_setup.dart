@@ -128,9 +128,6 @@ class LiquidGlassWidgets {
         MultiShaderBuilder.precacheShaders([
           ShaderKeys.blendedGeometry,
           ShaderKeys.liquidGlassRender,
-          ShaderKeys.frostGamma,
-          ShaderKeys.frostMask,
-          ShaderKeys.frostUnmask,
         ]),
       );
     }

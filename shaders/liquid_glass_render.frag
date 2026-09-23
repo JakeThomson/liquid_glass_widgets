@@ -126,15 +126,7 @@ uniform vec4 uRimConfig;
 // linear in the bevel slope). See GlassLensModel.
 uniform float uLensModel;
 
-// Slot 42: uPass — 0 = everything in one pass (default). With a paraxial
-// lens under a frost the layer runs this shader twice: 1 = lens only, which
-// writes the refracted backdrop and nothing else so the frost that follows
-// blurs the lensed image, and 2 = everything but the lens, sampling the
-// backdrop where it stands. The rim band then folds the sharp backdrop, as
-// the native band does, while the flat face is a cloud.
-uniform float uPass;
-
-// Slots 43-46: uFrost — x: frostOpacity (0 = no frost), y: frostClamp,
+// Slots 42-45: uFrost — x: frostOpacity (0 = no frost), y: frostClamp,
 // z: ghost blur sigma in physical px, w: blurGamma (how many times a white
 // texel outweighs a black one in the ghost).
 // With a frost the layer runs one blur pass before this shader, clipped to
@@ -399,11 +391,6 @@ void main() {
     // is strongest across the light axis and weakest at its ends. So within
     // the line the lens and the body tint are switched off below, and the
     // darkening is applied last.
-    // The shading pass reads the lensed image where it stands.
-    if (uPass > 1.5) {
-        displacement = vec2(0.0);
-    }
-
     vec2 lensDisplacement = displacement;
     float hairline = 0.0;
     if (uRimConfig.x > 0.001) {
@@ -553,14 +540,6 @@ void main() {
         vec2 q = fragCoord + uCaptureOffset - inward;
         vec3 frost = frostAt(p, q, invTexSize);
         refractColor.rgb = mix(frost, refractColor.rgb, hairline);
-    }
-
-    if (uPass > 0.5 && uPass < 1.5) {
-        // Lens pass: the refracted backdrop, premultiplied by the shape's
-        // coverage, and nothing else.
-        float lensAlpha = geometryData.a * refractColor.a;
-        fragColor = vec4(refractColor.rgb * lensAlpha, lensAlpha);
-        return;
     }
 
     vec4 bodyGlassColor = uGlassColor;

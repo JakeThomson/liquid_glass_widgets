@@ -24,10 +24,4 @@ abstract class ShaderKeys {
 
   static final liquidGlassRender =
       '${_shadersRoot}shaders/liquid_glass_render.frag';
-
-  static final frostGamma = '${_shadersRoot}shaders/frost_gamma.frag';
-
-  static final frostMask = '${_shadersRoot}shaders/frost_mask.frag';
-
-  static final frostUnmask = '${_shadersRoot}shaders/frost_unmask.frag';
 }

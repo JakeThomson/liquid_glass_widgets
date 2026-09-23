@@ -146,18 +146,18 @@ const String kMode = 'sweep';
 
 /// Scene the `sweep` mode repeats per entry of [kSweep]: `stripes`, `text`,
 /// `dark_text` or `dark_stripes`.
-const String kSweepScene = 'text';
+const String kSweepScene = 'dark_text';
 
 /// Shape size of the `text` sweep scene.
 const Size kSweepButton = Size(56, 56);
 
 /// Five recipes shown one per row against the same native host.
 final List<LiquidGlassSettings> kSweep = [
-  kSettings.copyWith(blurGamma: 0.85),
-  kSettings.copyWith(blurGamma: 1.0),
-  kDarkSettings.copyWith(blurGamma: 1.6),
-  kDarkSettings.copyWith(blurGamma: 2.5),
-  kDarkSettings.copyWith(blurGamma: 4.0),
+  kSettings,
+  kSettings,
+  kDarkSettings,
+  kDarkSettings,
+  kSettings,
 ];
 
 /// Shows the native and package resting glass side by side over five
