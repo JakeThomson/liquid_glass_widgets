@@ -471,10 +471,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         _selfScaled = selfScaled,
         _pushBackActive = pushBackActive;
 
-  // ── Cached blur filters ─────────────────────────────────────────────────
-  // The BackdropFilterLayers' blur filters are rebuilt only when their sigma
-  // or opacity changes — not on every paint frame during jelly/morph
-  // animations.
+  // ── Cached filters ──────────────────────────────────────────────────────
+  // The BackdropFilterLayers' filters are rebuilt only when their settings
+  // change — not on every paint frame during jelly/morph animations.
   ImageFilter? _cachedBlur;
   double _cachedBlurSigma = -1;
   ImageFilter? _cachedFrost;
@@ -749,10 +748,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     // alternate pixel rows of the shape (frostRowsPath), so the sharp
     // backdrop survives on the rows between. The render shader reads both
     // and makes the ghost, the clamp and the mix itself (uFrost), which keeps
-    // the frost to one plain blur pass — any other filter stage around a
-    // backdrop blur renders the whole backdrop on Impeller. Not part of the
-    // layer's BackdropGroup, so that content painted inside the glass above
-    // is in what it reads.
+    // the frost to one plain blur pass: on Impeller any other filter stage
+    // composed with a backdrop blur measured as costly as a pass over the
+    // whole screen. Not part of the layer's BackdropGroup, so that content
+    // painted inside the glass above is in what it reads.
     if (frostRows != null) {
       final frostSigma = settings.effectiveFrost;
       if (_cachedFrost == null || _cachedFrostSigma != frostSigma) {
@@ -763,7 +762,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         );
         _cachedFrostSigma = frostSigma;
       }
-      final weight = settings.frostGamma;
+      final weight = settings.frostWeight;
       final frostLayer = (_frostLayerHandle.layer ??= BackdropFilterLayer())
         ..backdropKey = null
         // Replaces rather than covers the weighted pixels below, so the
@@ -771,7 +770,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         ..blendMode = weight == 1.0 ? BlendMode.srcOver : BlendMode.src
         ..filter = _cachedFrost!;
 
-      // frostGamma: the shape is first given an alpha that weights each
+      // frostWeight: the shape is first given an alpha that weights each
       // pixel by its luminance, colour premultiplied by it, so the blur's
       // unpremultiplied result is a weighted mean in which light (or dark)
       // pixels count for more; the sharp rows unpremultiply back to what

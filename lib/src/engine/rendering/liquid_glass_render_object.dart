@@ -489,9 +489,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
                 (passLogical.bottom * dpr).ceilToDouble(),
               );
 
-        frostRowsPath = settings.effectiveFrost > 0
-            ? _frostRows(passPhysical, dpr)
-            : null;
+        frostRowsPath =
+            settings.effectiveFrost > 0 ? _frostRows(passPhysical, dpr) : null;
         // The frost's opacity, kept above zero so uFrost.x doubles as the
         // frost's on switch.
         final frostOpacity = max(settings.frostOpacity.clamp(0.0, 1.0), 1e-3);
@@ -587,7 +586,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               if (frostRowsPath == null) 0.0 else frostOpacity,
               settings.frostClamp.clamp(-1.0, 1.0),
               settings.effectiveBlur * dpr,
-              settings.blurGamma,
+              settings.blurWeight,
             ]);
           })
           ..setImageSampler(

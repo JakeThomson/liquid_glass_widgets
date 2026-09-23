@@ -132,8 +132,8 @@ class GlassThemeSettings {
       rimShadeEnds: base.rimShadeEnds,
       rimLight: base.rimLight,
       lensModel: base.lensModel,
-      frostGamma: base.frostGamma,
-      blurGamma: base.blurGamma,
+      frostWeight: base.frostWeight,
+      blurWeight: base.blurWeight,
       backerColor: base.backerColor,
       platformViewFallbackColor: base.platformViewFallbackColor,
     );

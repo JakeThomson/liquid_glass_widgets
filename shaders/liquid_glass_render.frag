@@ -127,13 +127,15 @@ uniform vec4 uRimConfig;
 uniform float uLensModel;
 
 // Slots 42-45: uFrost — x: frostOpacity (0 = no frost), y: frostClamp,
-// z: ghost blur sigma in physical px, w: blurGamma (how many times a white
+// z: ghost blur sigma in physical px, w: blurWeight (how many times a white
 // texel outweighs a black one in the ghost).
 // With a frost the layer runs one blur pass before this shader, clipped to
 // the shape and to alternate pixel rows (those with an odd pass-relative y),
 // so the backdrop this shader reads holds the frost's cloud on odd rows and
 // the sharp backdrop on even rows. The ghost, the clamp and the mix are all
-// done here from those two, in the one pass. See frostAt().
+// done here from those two, in the one pass. See frostAt(). With a
+// frostWeight both carry a weight in their alpha, colour premultiplied by
+// it, which texelAt() takes back out.
 uniform vec4 uFrost;
 
 uniform sampler2D uBackgroundTexture;
@@ -210,7 +212,7 @@ vec3 texelAt(vec2 p, vec2 invSize) {
 // read at [q] (kept a few px inside the shape, where the cloud rows are).
 //
 // Ghost: a Gaussian of uFrost.z px over the sharp (even) rows around p,
-// each texel weighted by its luminance (uFrost.w, blurGamma).
+// each texel weighted by its luminance (uFrost.w, blurWeight).
 // Cloud: the two odd rows either side of q, which hold the blur pass's
 // output. The ghost is held within frostClamp of the cloud on one side, then
 // the cloud is laid over it at frostOpacity:

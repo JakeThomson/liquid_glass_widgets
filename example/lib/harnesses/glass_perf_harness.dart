@@ -9,7 +9,8 @@
 //     --dart-define=RECIPE=parity
 //
 // RECIPE: `original` (the pre-parity premium path: blur + render only),
-// `parity` (the light iOS 26 recipe), `dark` (the dark recipe).
+// `dark` (the dark recipe alone), `decomp` (each frost feature on and off),
+// anything else the light and dark recipes against the original.
 library;
 
 import 'dart:async';
@@ -42,76 +43,31 @@ const LiquidGlassSettings kOriginal = LiquidGlassSettings(
 /// Variants stepped through in one launch, each measured for [kWindowMs]
 /// and appended to the summary file before the next starts, so a variant
 /// that gets the app killed is the one after the last line written.
-/// Temporary engine experiment switches applied with a variant.
-typedef Exp = ({int gamma, bool noMask, bool saveLayer});
-const Exp _base = (gamma: 0, noMask: false, saveLayer: false);
-
-const LiquidGlassSettings _frost = LiquidGlassSettings(
-  glassColor: Color(0x33FFFFFF),
-  blur: 3,
-  blurGamma: 0.6,
-  thickness: 32,
-  lightIntensity: 0.6,
-  saturation: 1.5,
-  frost: 14,
-  frostOpacity: 0.73,
-);
-
 /// Variants stepped through in one launch, each measured for [kWindowMs]
 /// and appended to the summary file before the next starts, so a variant
-/// that gets the app killed is the one after the last line written.
-final List<(String, LiquidGlassSettings, Exp)> kVariants = switch (kRecipe) {
-  'original' => [('original', kOriginal, _base)],
-  'dark' => [('dark', kDarkSettings, _base)],
-  'exp' => [
-      ('warmup', kOriginal, _base),
-      ('frost-nogamma', _frost, (gamma: 4, noMask: false, saveLayer: false)),
-      ('frost+lens', _frost.copyWith(lensModel: GlassLensModel.paraxial),
-          (gamma: 4, noMask: false, saveLayer: false)),
-      ('frost-gamma-outer', _frost,
-          (gamma: 1, noMask: false, saveLayer: false)),
-      ('frost-gamma-srgb', _frost,
-          (gamma: 2, noMask: false, saveLayer: false)),
-      ('frost-gamma-matrix', _frost,
-          (gamma: 3, noMask: false, saveLayer: false)),
-      ('clamp-mask', _frost.copyWith(frostClamp: 0.4),
-          (gamma: 4, noMask: false, saveLayer: false)),
-      ('clamp-nomask', _frost.copyWith(frostClamp: 0.4),
-          (gamma: 4, noMask: true, saveLayer: false)),
-      ('clamp-nomask-savelayer', _frost.copyWith(frostClamp: 0.4),
-          (gamma: 4, noMask: true, saveLayer: true)),
-    ],
-  'pair' => [
-      ('warmup', kOriginal, _base),
-      ('original', kOriginal, _base),
-      ('parity', kSettings, _base),
-      ('dark', kDarkSettings, _base),
-      ('original2', kOriginal, _base),
-      ('parity2', kSettings, _base),
-    ],
+/// that gets the app killed is the one after the last line written. A
+/// `<tmp>/glass_variant.txt` holding an index runs that one alone, for a GPU
+/// trace.
+final List<(String, LiquidGlassSettings)> kVariants = switch (kRecipe) {
+  'original' => [('original', kOriginal)],
+  'dark' => [('dark', kDarkSettings)],
   'decomp' => [
-      ('original', kOriginal, _base),
-      ('light', kSettings, _base),
-      ('light-noweight', kSettings.copyWith(frostGamma: 1), _base),
-      ('dark', kDarkSettings, _base),
-      ('dark-noweight', kDarkSettings.copyWith(frostGamma: 1), _base),
-      ('dark-bgamma1', kDarkSettings.copyWith(blurGamma: 1), _base),
-      ('light-nofrost', kSettings.copyWith(frost: 0), _base),
-      ('dark-nofrost', kDarkSettings.copyWith(frost: 0), _base),
+      ('original', kOriginal),
+      ('light', kSettings),
+      ('light-noweight', kSettings.copyWith(frostWeight: 1)),
+      ('dark', kDarkSettings),
+      ('dark-noweight', kDarkSettings.copyWith(frostWeight: 1)),
+      ('light-nofrost', kSettings.copyWith(frost: 0)),
+      ('dark-nofrost', kDarkSettings.copyWith(frost: 0)),
     ],
-  'wexp' => [
-      ('original', kOriginal, _base),
-      ('light', kSettings, _base),
-      ('light-shared-weight-key', kSettings,
-          (gamma: 1, noMask: false, saveLayer: false)),
-      ('light-noweight', kSettings.copyWith(frostGamma: 1), _base),
-      ('light-noweight-shared-cloud', kSettings.copyWith(frostGamma: 1),
-          (gamma: 0, noMask: true, saveLayer: false)),
+  _ => [
+      ('warmup', kOriginal),
+      ('original', kOriginal),
+      ('light', kSettings),
+      ('dark', kDarkSettings),
+      ('light-noweight', kSettings.copyWith(frostWeight: 1)),
     ],
-  _ => [('parity', kSettings, _base)],
 };
-
-void _apply(Exp e) {}
 
 void _log(String line) => File('${Directory.systemTemp.path}/glass_perf.txt')
     .writeAsStringSync('$line\n', mode: FileMode.append);
@@ -165,7 +121,9 @@ class _GlassPerfHarnessState extends State<GlassPerfHarness>
   /// (for a GPU trace) instead of stepping through the list.
   static final int? _held = () {
     final file = File('${Directory.systemTemp.path}/glass_variant.txt');
-    return file.existsSync() ? int.tryParse(file.readAsStringSync().trim()) : null;
+    return file.existsSync()
+        ? int.tryParse(file.readAsStringSync().trim())
+        : null;
   }();
 
   @override
@@ -183,7 +141,6 @@ class _GlassPerfHarnessState extends State<GlassPerfHarness>
       ..start();
     SchedulerBinding.instance.addTimingsCallback(_onTimings);
     if (_held case final held?) _variant = held;
-    _apply(kVariants[_variant].$3);
     File('${Directory.systemTemp.path}/glass_perf.txt')
         .writeAsStringSync('start ${DateTime.now()} held $_held\n');
     _schedule();
@@ -242,7 +199,6 @@ class _GlassPerfHarnessState extends State<GlassPerfHarness>
         _log('done');
       } else if (_variant < kVariants.length - 1) {
         _variant++;
-        _apply(kVariants[_variant].$3);
         _schedule();
       } else {
         _summary = _lines.join('\n');

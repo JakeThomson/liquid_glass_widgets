@@ -30,7 +30,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 const LiquidGlassSettings kSettings = LiquidGlassSettings(
   glassColor: Color(0x87F8F8F8),
   blur: 0.6,
-  blurGamma: 0.8,
+  blurWeight: 0.8,
   frost: 14,
   frostOpacity: 0.73,
   frostClamp: 0.4,
@@ -45,7 +45,7 @@ const LiquidGlassSettings kSettings = LiquidGlassSettings(
   chromaticAberration: 0,
   edgeAbsorption: 0.035,
   rimShade: 1,
-  frostGamma: 2.0,
+  frostWeight: 2.0,
   rimLight: 1,
   lensModel: GlassLensModel.paraxial,
   shadow: [
@@ -58,7 +58,7 @@ const LiquidGlassSettings kSettings = LiquidGlassSettings(
 const LiquidGlassSettings kDarkSettings = LiquidGlassSettings(
   glassColor: Color(0x1FFFFFFF),
   blur: 0.6,
-  blurGamma: 2.5,
+  blurWeight: 2.5,
   frost: 14,
   frostOpacity: 0.85,
   frostClamp: -0.45,
@@ -74,7 +74,7 @@ const LiquidGlassSettings kDarkSettings = LiquidGlassSettings(
   edgeAbsorption: 0.035,
   rimShade: 0.45,
   rimShadeEnds: 0,
-  frostGamma: 0.5,
+  frostWeight: 0.5,
   rimLight: 1.15,
   lensModel: GlassLensModel.paraxial,
   shadowElevation: 0,

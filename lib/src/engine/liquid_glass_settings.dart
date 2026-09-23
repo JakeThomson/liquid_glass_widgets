@@ -83,8 +83,8 @@ enum GlassLensModel {
   /// circle the lens starts 0.6 of the radius out, folds at 0.76, and the
   /// outer band is an inverted 1.9:1 image of the backdrop between 0.27 and
   /// 0.72 of the radius, which is `thickness: 32, refractiveIndex: 1.24`.
-  /// Under a [frost] the lens runs as its own pass ahead of it, so the band
-  /// folds the sharp backdrop while the flat face stays a cloud.
+  /// Under a [frost] the band folds the copy of the content that shows
+  /// through the cloud.
   ///
   /// Only affects the Premium (Impeller) path.
   paraxial,
@@ -127,8 +127,8 @@ class LiquidGlassSettings {
     this.rimShadeEnds = 0.2,
     this.rimLight = 0.0,
     this.lensModel = GlassLensModel.spherical,
-    this.frostGamma = 1.0,
-    this.blurGamma = 1.0,
+    this.frostWeight = 1.0,
+    this.blurWeight = 1.0,
     this.backerColor,
     this.platformViewFallbackColor,
     this.platformViewMode = PlatformViewGlassMode.fallbackColor,
@@ -168,8 +168,8 @@ class LiquidGlassSettings {
     this.rimShadeEnds = 0.2,
     this.rimLight = 0.0,
     this.lensModel = GlassLensModel.spherical,
-    this.frostGamma = 1.0,
-    this.blurGamma = 1.0,
+    this.frostWeight = 1.0,
+    this.blurWeight = 1.0,
     this.backerColor,
     this.platformViewFallbackColor,
     this.platformViewMode = PlatformViewGlassMode.fallbackColor,
@@ -301,7 +301,8 @@ class LiquidGlassSettings {
   ///
   /// Costs one blur pass, written to alternate pixel rows of the shape; the
   /// glass shader makes the ghosts from the sharp rows between and mixes
-  /// the two, so [blur] adds no pass of its own under a frost.
+  /// the two, so [blur] adds no pass of its own under a frost. A
+  /// [frostWeight] other than 1 adds one colour pass ahead of it.
   ///
   /// Only affects the Premium (Impeller) path.
   final double frost;
@@ -315,7 +316,7 @@ class LiquidGlassSettings {
   /// that a copy of the content, blurred by [blur], shows through and keeps
   /// `1 - frostOpacity` of its contrast against the cloud; see [frostClamp]
   /// for the side of it that is held back. The native material measures
-  /// `0.73` light, `0.8` dark.
+  /// `0.73` light, `0.85` dark.
   final double frostOpacity;
 
   /// How far the copy of the content showing through the [frost] may stray
@@ -594,26 +595,27 @@ class LiquidGlassSettings {
   /// Defaults to [GlassLensModel.spherical], the existing rendering.
   final GlassLensModel lensModel;
 
-  /// Bias of the [frost]'s average toward light or dark detail.
+  /// How many times a white pixel outweighs a black one in the [frost]'s
+  /// average; 1 (the default) is a plain mean.
   ///
   /// The native frost is not a plain mean of the content beneath it: the
   /// light material's cloud over black-on-white detail reads brighter than
   /// the mean, the dark material's over white-on-black darker. Above 1
   /// light detail weighs more, below 1 dark detail; flat colour is
-  /// unchanged either way. The frost averages part of the backdrop through
-  /// the sRGB transfer curve and undoes it after, so the bias tops out at
-  /// `2.2` and `1 / 2.2`, which is what the light and dark materials
-  /// measure (`2.2`, `0.45`). Defaults to `1.0`, a plain mean.
-  final double frostGamma;
+  /// unchanged either way. The light material measures `2.0`, the dark
+  /// `0.5`.
+  final double frostWeight;
 
-  /// Exponent of the tone curve the [blur] averages in under a [frost]; 1
-  /// (the default) blurs the backdrop as it is.
+  /// How many times a white pixel outweighs a black one in the copy of the
+  /// content that shows through a [frost], as [frostWeight] is for the
+  /// cloud; 1 (the default) is a plain [blur].
   ///
-  /// Below 1 dark detail dominates the average, so through a [frost] a
-  /// black stripe stays a flat, wide band while a white one thins to a
-  /// hump: that is what makes dark content read bolder through the native
-  /// light material. Above 1 the reverse, as under its dark material.
-  final double blurGamma;
+  /// Below 1 dark detail dominates the copy, so through a [frost] a black
+  /// stripe stays a flat, wide band while a white one thins to a hump: that
+  /// is what makes dark content read bolder through the native light
+  /// material (`0.8`). Above 1 the reverse, as under its dark material
+  /// (`2.5`).
+  final double blurWeight;
 
   /// Internal shader transport — the animated pinch strength for the concave
   /// lens effect on indicator pills.
@@ -658,8 +660,8 @@ class LiquidGlassSettings {
         rimShadeEnds: rimShadeEnds,
         rimLight: rimLight,
         lensModel: lensModel,
-        frostGamma: frostGamma,
-        blurGamma: blurGamma,
+        frostWeight: frostWeight,
+        blurWeight: blurWeight,
         backerColor: backerColor,
         platformViewFallbackColor: platformViewFallbackColor,
         platformViewMode: platformViewMode,
@@ -776,8 +778,8 @@ class LiquidGlassSettings {
         rimShadeEnds: lerpDouble(a.rimShadeEnds, b.rimShadeEnds, t)!,
         rimLight: lerpDouble(a.rimLight, b.rimLight, t)!,
         lensModel: t < 0.5 ? a.lensModel : b.lensModel,
-        frostGamma: lerpDouble(a.frostGamma, b.frostGamma, t)!,
-        blurGamma: lerpDouble(a.blurGamma, b.blurGamma, t)!,
+        frostWeight: lerpDouble(a.frostWeight, b.frostWeight, t)!,
+        blurWeight: lerpDouble(a.blurWeight, b.blurWeight, t)!,
         // Lerp the color so the backer fades smoothly (from/to transparent when
         // one side is null), rather than popping at the midpoint.
         backerColor: Color.lerp(a.backerColor, b.backerColor, t),
@@ -830,8 +832,8 @@ class LiquidGlassSettings {
     double? rimShadeEnds,
     double? rimLight,
     GlassLensModel? lensModel,
-    double? frostGamma,
-    double? blurGamma,
+    double? frostWeight,
+    double? blurWeight,
     Color? backerColor,
     Color? platformViewFallbackColor,
     PlatformViewGlassMode? platformViewMode,
@@ -866,8 +868,8 @@ class LiquidGlassSettings {
         rimShadeEnds: rimShadeEnds ?? this.rimShadeEnds,
         rimLight: rimLight ?? this.rimLight,
         lensModel: lensModel ?? this.lensModel,
-        frostGamma: frostGamma ?? this.frostGamma,
-        blurGamma: blurGamma ?? this.blurGamma,
+        frostWeight: frostWeight ?? this.frostWeight,
+        blurWeight: blurWeight ?? this.blurWeight,
         backerColor: backerColor ?? this.backerColor,
         platformViewFallbackColor:
             platformViewFallbackColor ?? this.platformViewFallbackColor,
@@ -908,8 +910,8 @@ class LiquidGlassSettings {
         other.rimShadeEnds == rimShadeEnds &&
         other.rimLight == rimLight &&
         other.lensModel == lensModel &&
-        other.frostGamma == frostGamma &&
-        other.blurGamma == blurGamma &&
+        other.frostWeight == frostWeight &&
+        other.blurWeight == blurWeight &&
         other.backerColor == backerColor &&
         other.platformViewFallbackColor == platformViewFallbackColor &&
         other.platformViewMode == platformViewMode &&
@@ -946,8 +948,8 @@ class LiquidGlassSettings {
         rimShadeEnds,
         rimLight,
         lensModel,
-        frostGamma,
-        blurGamma,
+        frostWeight,
+        blurWeight,
         backerColor,
         platformViewFallbackColor,
         platformViewMode,
