@@ -146,7 +146,7 @@ const String kMode = 'look';
 
 /// Scene the `sweep` mode repeats per entry of [kSweep]: `stripes`, `text`,
 /// `dark_text` or `dark_stripes`.
-const String kSweepScene = 'text';
+const String kSweepScene = 'stripes';
 
 /// Shape size of the `text` sweep scene.
 const Size kSweepButton = Size(56, 56);
@@ -237,7 +237,7 @@ class LookParityHarness extends StatelessWidget {
               capsule: true),
           _Scene(
               backdrop: _Flat(Color(0xFFF2F2F7)),
-              button: Size(160, 56),
+              button: Size(124, 56),
               capsule: true),
           _Scene(backdrop: _Flat(Color(0xFF808080)), button: Size(80, 80)),
         ],

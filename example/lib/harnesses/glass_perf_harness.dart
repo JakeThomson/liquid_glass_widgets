@@ -42,9 +42,6 @@ const LiquidGlassSettings kOriginal = LiquidGlassSettings(
 
 /// Variants stepped through in one launch, each measured for [kWindowMs]
 /// and appended to the summary file before the next starts, so a variant
-/// that gets the app killed is the one after the last line written.
-/// Variants stepped through in one launch, each measured for [kWindowMs]
-/// and appended to the summary file before the next starts, so a variant
 /// that gets the app killed is the one after the last line written. A
 /// `<tmp>/glass_variant.txt` holding an index runs that one alone, for a GPU
 /// trace.
