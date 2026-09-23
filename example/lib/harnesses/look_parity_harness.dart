@@ -142,11 +142,11 @@ class _App extends StatelessWidget {
 
 /// Which set of backdrops to show. `look` is the visual comparison; `greys`
 /// and `colors` are flat ramps used to fit the body transfer curve.
-const String kMode = 'sweep';
+const String kMode = 'look';
 
 /// Scene the `sweep` mode repeats per entry of [kSweep]: `stripes`, `text`,
 /// `dark_text` or `dark_stripes`.
-const String kSweepScene = 'dark_text';
+const String kSweepScene = 'text';
 
 /// Shape size of the `text` sweep scene.
 const Size kSweepButton = Size(56, 56);
@@ -154,10 +154,10 @@ const Size kSweepButton = Size(56, 56);
 /// Five recipes shown one per row against the same native host.
 final List<LiquidGlassSettings> kSweep = [
   kSettings,
-  kSettings,
+  kSettings.copyWith(frostWeight: 1),
+  kSettings.copyWith(blurWeight: 1),
   kDarkSettings,
-  kDarkSettings,
-  kSettings,
+  kDarkSettings.copyWith(frostWeight: 1),
 ];
 
 /// Shows the native and package resting glass side by side over five

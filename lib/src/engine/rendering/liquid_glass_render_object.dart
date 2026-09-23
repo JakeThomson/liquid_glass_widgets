@@ -51,8 +51,9 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   /// local coordinates: every row with an odd y in the enclosing pass, over
   /// the glass's bounds. The render shader reads the frost's cloud from
   /// these rows and the sharp backdrop from the rows between (see uFrost in
-  /// liquid_glass_render.frag). Null without a frost, or when the glass is
-  /// rotated or skewed and rows in local space would not land on pixel rows.
+  /// liquid_glass_render.frag). Null without a frost, on the capture path,
+  /// or when the glass is rotated or skewed and rows in local space would
+  /// not land on pixel rows.
   Path? frostRowsPath;
 
   /// Cached light direction vector — updated only when [settings.lightAngle]
@@ -489,8 +490,10 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
                 (passLogical.bottom * dpr).ceilToDouble(),
               );
 
-        frostRowsPath =
-            settings.effectiveFrost > 0 ? _frostRows(passPhysical, dpr) : null;
+        // The capture path draws without a live backdrop, so no frost.
+        frostRowsPath = settings.effectiveFrost > 0 && _captureImage == null
+            ? _frostRows(passPhysical, dpr)
+            : null;
         // The frost's opacity, kept above zero so uFrost.x doubles as the
         // frost's on switch.
         final frostOpacity = max(settings.frostOpacity.clamp(0.0, 1.0), 1e-3);
