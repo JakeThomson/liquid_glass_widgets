@@ -903,4 +903,77 @@ void main() {
 
     await tester.pumpAndSettle();
   });
+
+  // ── Trigger soft-detach and landing opacity ───────────────────────────────
+
+  testWidgets('Trigger dissolves cleanly to 0.0 when popover is fully open',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassPopover(
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              popoverWidth: 200,
+              contentBuilder: (context, close) => const Text('Content'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    // When fully open, the trigger must be cleanly dissolved (opacity 0.0)
+    // so there is no ghost button or visual artifact under/behind the popover.
+    final opacityWidgets = tester.widgetList<Opacity>(find.byType(Opacity));
+    final triggerOpacity = opacityWidgets.first.opacity;
+    expect(
+      triggerOpacity,
+      equals(0.0),
+      reason:
+          'Trigger should be fully dissolved when popover is open (clean detach)',
+    );
+  });
+
+  testWidgets('Trigger opacity returns to 1.0 after popover fully closes',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassPopover(
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              popoverWidth: 200,
+              contentBuilder: (context, close) => const Text('Content'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    // Close via barrier tap
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    // When fully closed, the trigger should not have an Opacity widget or it should be 1.0
+    final opacityFinder = find.byType(Opacity);
+    if (opacityFinder.evaluate().isNotEmpty) {
+      final opacity = tester.widget<Opacity>(opacityFinder.first);
+      expect(opacity.opacity, equals(1.0));
+    }
+    expect(find.text('Btn'), findsOneWidget);
+  });
 }

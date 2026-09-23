@@ -284,56 +284,77 @@ class _GlassMenuItemState extends State<GlassMenuItem>
               ),
               child: Opacity(
                 opacity: widget.enabled ? 1.0 : 0.4,
-                child: Row(
-                  children: [
-                    // Icon
-                    if (widget.icon != null) ...[
-                      IconTheme(
-                        data: IconThemeData(
-                          color: iconColor,
-                          size: widget.iconSize,
-                        ),
-                        child: widget.icon!,
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-
-                    // Text Content (Title & Subtitle)
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.title,
-                            maxLines: widget.maxLines,
-                            overflow: TextOverflow.ellipsis,
-                            style: widget.titleStyle ??
-                                TextStyle(
-                                  color: textColor,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                          ),
-                          if (widget.subtitle != null)
-                            Text(
-                              widget.subtitle!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: widget.subtitleStyle ??
-                                  TextStyle(
-                                    color: textColor.withValues(alpha: 0.6),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final row = Row(
+                      children: [
+                        // Icon
+                        if (widget.icon != null) ...[
+                          IconTheme(
+                            data: IconThemeData(
+                              color: iconColor,
+                              size: widget.iconSize,
                             ),
+                            child: widget.icon!,
+                          ),
+                          const SizedBox(width: 12),
                         ],
-                      ),
-                    ),
 
-                    // Trailing
-                    if (widget.trailing != null) widget.trailing!,
-                  ],
+                        // Text Content (Title & Subtitle)
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.title,
+                                maxLines: widget.maxLines,
+                                overflow: TextOverflow.ellipsis,
+                                style: widget.titleStyle ??
+                                    TextStyle(
+                                      color: textColor,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                              ),
+                              if (widget.subtitle != null)
+                                Text(
+                                  widget.subtitle!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: widget.subtitleStyle ??
+                                      TextStyle(
+                                        color: textColor.withValues(alpha: 0.6),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        // Trailing
+                        if (widget.trailing != null) widget.trailing!,
+                      ],
+                    );
+
+                    if (constraints.hasBoundedWidth) {
+                      final double minRequired = (widget.icon != null
+                              ? (widget.iconSize + 12.0)
+                              : 0.0) +
+                          (widget.trailing != null ? 24.0 : 0.0);
+                      if (constraints.maxWidth < minRequired) {
+                        return OverflowBox(
+                          alignment: Alignment.centerLeft,
+                          minWidth: minRequired,
+                          maxWidth: minRequired,
+                          child: row,
+                        );
+                      }
+                    }
+
+                    return row;
+                  },
                 ),
               ),
             ),

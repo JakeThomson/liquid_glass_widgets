@@ -257,12 +257,14 @@ void main() {
       }
     });
 
-    test('blend is always non-negative', () {
+    test('blend is always non-negative (open path)', () {
+      // Only tests the open path; the closing proximity blend is covered
+      // separately in the 'closing trajectory' group below.
       for (final v in [-0.3, 0.0, 0.25, 0.5, 0.75, 1.0, 1.1]) {
         expect(
           _compute(v).blend,
           greaterThanOrEqualTo(0.0),
-          reason: 'rawValue=$v produced negative blend',
+          reason: 'rawValue=$v produced negative blend (open path)',
         );
       }
     });
@@ -602,6 +604,77 @@ void main() {
       );
       expect(s.pathT, closeTo(undershoot, 1e-9));
       expect(s.sizeT, closeTo(undershoot, 1e-9));
+    });
+  });
+
+  // ── Closing blend proximity ramp ─────────────────────────────────────────
+  //
+  // Verifies the new _closeProximityThreshold-based blend that makes the SDF
+  // metaball bridge re-form as the droplet returns to the trigger on close.
+
+  group('LiquidMorphPhysics — closing blend proximity ramp', () {
+    LiquidMorphState closeCompute(double raw) => LiquidMorphPhysics.compute(
+          rawValue: raw,
+          finalDx: _finalDx,
+          finalDy: _finalDy,
+          isClosing: true,
+        );
+
+    test('blend is 0.0 at start of close (clampedValue = 1.0)', () {
+      // At the very top of the closing arc the droplet is far from the
+      // trigger; no bridge should be visible.
+      expect(closeCompute(1.0).blend, equals(0.0));
+    });
+
+    test('blend is 0.0 while clampedValue >= closeProximityThreshold (0.6)',
+        () {
+      // Bridge must not appear while the droplet is still in mid-travel.
+      for (final v in [1.0, 0.9, 0.8, 0.7, 0.6]) {
+        expect(
+          closeCompute(v).blend,
+          equals(0.0),
+          reason:
+              'Expected blend=0 at clampedValue=$v (above proximity threshold)',
+        );
+      }
+    });
+
+    test('blend grows as clampedValue falls below 0.6 on close', () {
+      // easeOut: bridge snaps on quickly once inside the threshold.
+      final blendAt55 = closeCompute(0.55).blend;
+      final blendAt30 = closeCompute(0.30).blend;
+      expect(blendAt55, greaterThan(0.0),
+          reason: 'Expected blend > 0 at clampedValue=0.55');
+      expect(blendAt30, greaterThan(blendAt55),
+          reason: 'Expected blend to grow as clampedValue decreases toward 0');
+    });
+
+    test('blend reaches maximum (28.0) near clampedValue = 0.0 on close', () {
+      // At landing the bridge should be at full strength.
+      expect(closeCompute(0.0).blend, closeTo(28.0, 0.5));
+    });
+
+    test('blend is always clamped to [0, 28] on entire close trajectory', () {
+      for (int i = 0; i <= 100; i++) {
+        final raw = i / 100.0;
+        final b = closeCompute(raw).blend;
+        expect(b, greaterThanOrEqualTo(0.0),
+            reason: 'Negative blend at rawValue=$raw on close');
+        expect(b, lessThanOrEqualTo(28.0),
+            reason: 'Blend exceeds max at rawValue=$raw on close');
+      }
+    });
+
+    test('blend is non-negative during close undershoot (rawValue < 0)', () {
+      // The close undershoot (spring bounces past 0) must never produce
+      // a negative blend value.
+      for (final v in [-0.05, -0.1, -0.15, -0.2]) {
+        expect(
+          closeCompute(v).blend,
+          greaterThanOrEqualTo(0.0),
+          reason: 'Negative blend at rawValue=$v during undershoot',
+        );
+      }
     });
   });
 }

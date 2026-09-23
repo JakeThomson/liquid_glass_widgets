@@ -1074,4 +1074,165 @@ void main() {
 
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+      'GlassMenuItem does not throw RenderFlex overflow when constrained to narrow width',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 59.9,
+              child: GlassMenuItem(
+                icon: const Icon(Icons.share),
+                title: 'Share',
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(GlassMenuItem), findsOneWidget);
+  });
+
+  testWidgets(
+      'GlassMenu opening morph with icons and default menuWidth does not overflow',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Open'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(
+                  icon: const Icon(Icons.share),
+                  title: 'Option A',
+                  onTap: () {},
+                ),
+                GlassMenuItem(
+                  icon: const Icon(Icons.edit),
+                  title: 'Option B',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    // Pump through morph animation frame by frame
+    for (int i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await tester.pumpAndSettle();
+    expect(find.text('Option A'), findsOneWidget);
+    expect(find.text('Option B'), findsOneWidget);
+  });
+
+  // ── Trigger soft-detach opacity ───────────────────────────────────────────
+
+  testWidgets('Trigger opacity is 1.0 before menu opens', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(title: 'Item', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    // Before tapping: the trigger must be fully opaque.
+    final opacity = tester.widget<Opacity>(find.byType(Opacity).first);
+    expect(opacity.opacity, equals(1.0));
+  });
+
+  testWidgets('Trigger dissolves cleanly to 0.0 when menu is fully open',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(title: 'Item', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    // When fully open, the trigger must be cleanly dissolved (opacity 0.0)
+    // so there is no ghost button or visual artifact under/behind the menu.
+    final opacityWidgets = tester.widgetList<Opacity>(find.byType(Opacity));
+    final triggerOpacity = opacityWidgets.first.opacity;
+    expect(
+      triggerOpacity,
+      equals(0.0),
+      reason:
+          'Trigger should be fully dissolved when menu is open (clean detach)',
+    );
+  });
+
+  testWidgets('Trigger opacity returns to 1.0 after menu fully closes',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(title: 'Item', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+    // Close by tapping again.
+    await tester.tap(find.text('Btn'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    final opacity = tester.widget<Opacity>(find.byType(Opacity).first);
+    expect(opacity.opacity, equals(1.0));
+  });
 }
