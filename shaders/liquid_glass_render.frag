@@ -135,7 +135,8 @@ uniform float uLensModel;
 uniform float uPass;
 
 // Slots 43-46: uFrost — x: frostOpacity (0 = no frost), y: frostClamp,
-// z: ghost blur sigma in physical px, w: blurGamma.
+// z: ghost blur sigma in physical px, w: blurGamma (how many times a white
+// texel outweighs a black one in the ghost).
 // With a frost the layer runs one blur pass before this shader, clipped to
 // the shape and to alternate pixel rows (those with an odd pass-relative y),
 // so the backdrop this shader reads holds the frost's cloud on odd rows and
@@ -217,7 +218,7 @@ vec3 texelAt(vec2 p, vec2 invSize) {
 // read at [q] (kept a few px inside the shape, where the cloud rows are).
 //
 // Ghost: a Gaussian of uFrost.z px over the sharp (even) rows around p,
-// averaged in the tone curve uFrost.w — the blurGamma of the old ghost pass.
+// each texel weighted by its luminance (uFrost.w, blurGamma).
 // Cloud: the two odd rows either side of q, which hold the blur pass's
 // output. The ghost is held within frostClamp of the cloud on one side, then
 // the cloud is laid over it at frostOpacity:
@@ -225,30 +226,37 @@ vec3 texelAt(vec2 p, vec2 invSize) {
 //   frost = op * cloud + (1 - op) * min(ghost, cloud - clamp)   (clamp < 0)
 vec3 frostAt(vec2 p, vec2 q, vec2 invSize) {
     float sigma = max(uFrost.z, 0.3);
-    float g = max(uFrost.w, 0.05);
     vec2 base = floor(p);
     // Snap the centre row to the even (sharp) row at or above p.
     float cy = base.y - mod(base.y, 2.0);
-    // Separable Gaussian weights: 11 columns at 1 px, 6 even rows at 2 px.
-    // The support scales with sigma past 2.4 px (3x at 0.8 pt) at the cost
-    // of skipping texels.
-    float stride = max(1.0, sigma / 2.4);
+    // Separable Gaussian weights over 9 columns at 1 px and 5 even rows at
+    // 2 px, +-2 sigma at 1.8 px (3x at 0.6 pt). The support scales with
+    // sigma past that at the cost of skipping texels.
+    float stride = max(1.0, sigma / 1.8);
     float inv2s2 = 1.0 / (2.0 * sigma * sigma);
+    float wx[9];
+    for (int i = 0; i < 9; i++) {
+        float dx = base.x + floor(float(i - 4) * stride + 0.5) + 0.5 - p.x;
+        wx[i] = exp(-dx * dx * inv2s2);
+    }
+    // Each texel also weighs by its luminance, white uFrost.w times as much
+    // as black: below 1 dark detail dominates the ghost.
+    float slope = uFrost.w - 1.0;
     vec3 acc = vec3(0.0);
     float wsum = 0.0;
-    for (int j = -2; j <= 3; j++) {
+    for (int j = -2; j <= 2; j++) {
         float y = cy + 2.0 * floor(float(j) * stride + 0.5);
         float dy = y + 0.5 - p.y;
         float wy = exp(-dy * dy * inv2s2);
-        for (int i = -5; i <= 5; i++) {
-            float x = base.x + floor(float(i) * stride + 0.5);
-            float dx = x + 0.5 - p.x;
-            float w = wy * exp(-dx * dx * inv2s2);
-            acc += w * pow(max(texelAt(vec2(x, y), invSize), 0.0), vec3(g));
+        for (int i = 0; i < 9; i++) {
+            float x = base.x + floor(float(i - 4) * stride + 0.5);
+            vec3 c = texelAt(vec2(x, y), invSize);
+            float w = wy * wx[i] * (1.0 + slope * dot(c, LUMA_WEIGHTS));
+            acc += w * c;
             wsum += w;
         }
     }
-    vec3 ghost = pow(acc / max(wsum, 1e-5), vec3(1.0 / g));
+    vec3 ghost = acc / max(wsum, 1e-5);
 
     vec2 qb = floor(q);
     float ya = qb.y - mod(qb.y + 1.0, 2.0); // odd row at or above q

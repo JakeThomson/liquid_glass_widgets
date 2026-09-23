@@ -112,7 +112,6 @@ class GlassThemeSettings {
       frost: base.frost,
       frostOpacity: base.frostOpacity,
       frostClamp: base.frostClamp,
-      frostDilate: base.frostDilate,
       chromaticAberration: chromaticAberration ?? base.chromaticAberration,
       lightAngle: lightAngle ?? base.lightAngle,
       lightIntensity: lightIntensity ?? base.lightIntensity,

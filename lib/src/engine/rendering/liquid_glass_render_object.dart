@@ -74,7 +74,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
 
   /// Builds [frostRowsPath]: one rect per odd pass-relative pixel row across
   /// the glass's bounds, mapped back into local coordinates.
-  Path? _frostRows(Rect passPhysical, double dpr) {
+  Path? _frostRows(Rect passPhysical, double dpr, {int every = 2}) {
     final transform = getTransformTo(null);
     final storage = transform.storage;
     // Only scale and translation keep a local rect on whole pixel rows.
@@ -94,8 +94,12 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     final left = screen.left * dpr - passPhysical.left - 1;
     final right = screen.right * dpr - passPhysical.left + 1;
     final path = Path();
-    // Dart's % is Euclidean, so this is the first odd row at or below top.
-    for (var y = top % 2 == 1 ? top : top + 1; y < bottom; y += 2) {
+    // Dart's % is Euclidean: rows with y % every == 1, from top down.
+    var y = top;
+    while (y % every != 1) {
+      y++;
+    }
+    for (; y < bottom; y += every) {
       path.addRect(
         MatrixUtils.transformRect(
           inverse,

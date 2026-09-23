@@ -479,10 +479,13 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   double _cachedBlurSigma = -1;
   ImageFilter? _cachedFrost;
   double _cachedFrostSigma = -1;
+  ColorFilter? _cachedWeight;
+  double _cachedWeightValue = 1;
 
   final _shaderHandle = LayerHandle<BackdropFilterLayer>();
   final _blurLayerHandle = LayerHandle<BackdropFilterLayer>();
   final _frostLayerHandle = LayerHandle<BackdropFilterLayer>();
+  final _weightLayerHandle = LayerHandle<BackdropFilterLayer>();
   final _clipRectLayerHandle = LayerHandle<ClipRectLayer>();
   final _clipPathLayerHandle = LayerHandle<ClipPathLayer>();
   final _frostClipLayerHandle = LayerHandle<ClipPathLayer>();
@@ -760,9 +763,41 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         );
         _cachedFrostSigma = frostSigma;
       }
+      final weight = settings.frostGamma;
       final frostLayer = (_frostLayerHandle.layer ??= BackdropFilterLayer())
         ..backdropKey = null
+        // Replaces rather than covers the weighted pixels below, so the
+        // cloud rows keep the blurred weight in their alpha.
+        ..blendMode = weight == 1.0 ? BlendMode.srcOver : BlendMode.src
         ..filter = _cachedFrost!;
+
+      // frostGamma: the shape is first given an alpha that weights each
+      // pixel by its luminance, colour premultiplied by it, so the blur's
+      // unpremultiplied result is a weighted mean in which light (or dark)
+      // pixels count for more; the sharp rows unpremultiply back to what
+      // they were. A lone colour filter stays within the clip; ahead of the
+      // blur in one filter it would not.
+      if (weight != 1.0 && weight > 0) {
+        if (_cachedWeight == null || _cachedWeightValue != weight) {
+          // alpha = base + slope * luma, with white weighing `weight` times
+          // black and the heavier end at 1.
+          final base = weight > 1 ? 1 / weight : 1.0;
+          final slope = weight > 1 ? 1 - 1 / weight : weight - 1;
+          _cachedWeight = ColorFilter.matrix(<double>[
+            1, 0, 0, 0, 0, //
+            0, 1, 0, 0, 0, //
+            0, 0, 1, 0, 0, //
+            slope * 0.2126, slope * 0.7152, slope * 0.0722, base, 0, //
+          ]);
+          _cachedWeightValue = weight;
+        }
+        (_weightLayerHandle.layer ??= BackdropFilterLayer())
+          ..backdropKey = null
+          ..blendMode = BlendMode.src
+          ..filter = _cachedWeight!;
+      } else {
+        _weightLayerHandle.layer = null;
+      }
 
       _frostClipLayerHandle.layer = context.pushClipPath(
         needsCompositing,
@@ -770,6 +805,9 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         boundingBox,
         _shapePath(shapes),
         (context, offset) {
+          if (_weightLayerHandle.layer case final weightLayer?) {
+            context.pushLayer(weightLayer, (context, offset) {}, offset);
+          }
           _frostRowsLayerHandle.layer = context.pushClipPath(
             needsCompositing,
             offset,
@@ -786,6 +824,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       );
     } else {
       _frostLayerHandle.layer = null;
+      _weightLayerHandle.layer = null;
       _frostClipLayerHandle.layer = null;
       _frostRowsLayerHandle.layer = null;
     }
@@ -878,9 +917,11 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     _shaderHandle.layer?.filter = ImageFilter.blur(sigmaX: 0, sigmaY: 0);
     _blurLayerHandle.layer?.filter = ImageFilter.blur(sigmaX: 0, sigmaY: 0);
     _frostLayerHandle.layer?.filter = ImageFilter.blur(sigmaX: 0, sigmaY: 0);
+    _weightLayerHandle.layer?.filter = ImageFilter.blur(sigmaX: 0, sigmaY: 0);
     _shaderHandle.layer = null;
     _blurLayerHandle.layer = null;
     _frostLayerHandle.layer = null;
+    _weightLayerHandle.layer = null;
     _clipRectLayerHandle.layer = null;
     _clipPathLayerHandle.layer = null;
     _frostClipLayerHandle.layer = null;

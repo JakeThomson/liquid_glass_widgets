@@ -25,6 +25,10 @@ import 'look_parity_harness.dart' show kDarkSettings, kSettings;
 
 const String kRecipe = String.fromEnvironment('RECIPE', defaultValue: 'parity');
 const int kWarmupMs = 2000;
+
+/// Extra copies of the top bar down the page, to load the GPU enough that
+/// it holds its clock for a trace (`--dart-define=COPIES=3`).
+const int kCopies = int.fromEnvironment('COPIES', defaultValue: 0);
 const int kWindowMs = 6000;
 
 const LiquidGlassSettings kOriginal = LiquidGlassSettings(
@@ -76,8 +80,6 @@ final List<(String, LiquidGlassSettings, Exp)> kVariants = switch (kRecipe) {
           (gamma: 4, noMask: true, saveLayer: false)),
       ('clamp-nomask-savelayer', _frost.copyWith(frostClamp: 0.4),
           (gamma: 4, noMask: true, saveLayer: true)),
-      ('frost-dilate', _frost.copyWith(frostDilate: 0.5),
-          (gamma: 4, noMask: false, saveLayer: false)),
     ],
   'pair' => [
       ('warmup', kOriginal, _base),
@@ -86,6 +88,16 @@ final List<(String, LiquidGlassSettings, Exp)> kVariants = switch (kRecipe) {
       ('dark', kDarkSettings, _base),
       ('original2', kOriginal, _base),
       ('parity2', kSettings, _base),
+    ],
+  'decomp' => [
+      ('original', kOriginal, _base),
+      ('light', kSettings, _base),
+      ('light-noweight', kSettings.copyWith(frostGamma: 1), _base),
+      ('dark', kDarkSettings, _base),
+      ('dark-noweight', kDarkSettings.copyWith(frostGamma: 1), _base),
+      ('dark-bgamma1', kDarkSettings.copyWith(blurGamma: 1), _base),
+      ('light-nofrost', kSettings.copyWith(frost: 0), _base),
+      ('dark-nofrost', kDarkSettings.copyWith(frost: 0), _base),
     ],
   _ => [('parity', kSettings, _base)],
 };
@@ -367,6 +379,23 @@ class _GlassPerfHarnessState extends State<GlassPerfHarness>
               ],
             ),
           ),
+          for (var c = 1; c <= kCopies; c++)
+            Positioned(
+              top: top + 8 + c * 150,
+              left: 16,
+              right: 16,
+              child: Row(
+                children: [
+                  _button(56),
+                  const SizedBox(width: 12),
+                  _capsule(120, 56),
+                  const Spacer(),
+                  _button(56),
+                  const SizedBox(width: 12),
+                  _button(56),
+                ],
+              ),
+            ),
           Positioned(
             bottom: bottom + 8,
             left: 16,

@@ -29,12 +29,11 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 /// this is being calibrated against; edit here and hot-restart.
 const LiquidGlassSettings kSettings = LiquidGlassSettings(
   glassColor: Color(0x87F8F8F8),
-  blur: 0.8,
-  blurGamma: 0.6,
+  blur: 0.6,
+  blurGamma: 0.8,
   frost: 14,
   frostOpacity: 0.73,
   frostClamp: 0.4,
-  frostDilate: 0.5,
   thickness: 32,
   lightIntensity: 0,
   lightAngle: 1.5708,
@@ -46,7 +45,7 @@ const LiquidGlassSettings kSettings = LiquidGlassSettings(
   chromaticAberration: 0,
   edgeAbsorption: 0.035,
   rimShade: 1,
-  frostGamma: 0.9,
+  frostGamma: 2.0,
   rimLight: 1,
   lensModel: GlassLensModel.paraxial,
   shadow: [
@@ -58,11 +57,11 @@ const LiquidGlassSettings kSettings = LiquidGlassSettings(
 /// material with `.dark` appearance.
 const LiquidGlassSettings kDarkSettings = LiquidGlassSettings(
   glassColor: Color(0x1FFFFFFF),
-  blur: 0.8,
-  blurGamma: 1.6,
+  blur: 0.6,
+  blurGamma: 2.5,
   frost: 14,
-  frostOpacity: 0.8,
-  frostClamp: -0.4,
+  frostOpacity: 0.85,
+  frostClamp: -0.45,
   thickness: 32,
   lightIntensity: 0,
   lightAngle: -1.5708,
@@ -154,11 +153,11 @@ const Size kSweepButton = Size(56, 56);
 
 /// Five recipes shown one per row against the same native host.
 final List<LiquidGlassSettings> kSweep = [
-  kSettings,
-  kSettings.copyWith(frostClamp: 0.3),
-  kSettings.copyWith(frostClamp: 0.5),
-  kSettings.copyWith(frostDilate: 0.34),
-  kSettings.copyWith(frostGamma: 1.2),
+  kSettings.copyWith(blurGamma: 0.85),
+  kSettings.copyWith(blurGamma: 1.0),
+  kDarkSettings.copyWith(blurGamma: 1.6),
+  kDarkSettings.copyWith(blurGamma: 2.5),
+  kDarkSettings.copyWith(blurGamma: 4.0),
 ];
 
 /// Shows the native and package resting glass side by side over five
@@ -180,6 +179,11 @@ class LookParityHarness extends StatelessWidget {
                 ),
               'dark_text' => _Scene(
                   backdrop: const _TextLines(dark: true),
+                  dark: true,
+                  settings: settings,
+                ),
+              'dark_grey' => _Scene(
+                  backdrop: const _Flat(Color(0xFF1C1C1E)),
                   dark: true,
                   settings: settings,
                 ),

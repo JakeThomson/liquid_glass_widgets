@@ -107,7 +107,6 @@ class LiquidGlassSettings {
     this.frost = 0.0,
     this.frostOpacity = 1.0,
     this.frostClamp = 0.0,
-    this.frostDilate = 0.0,
     this.chromaticAberration = .01,
     this.lightAngle = GlassDefaults.lightAngle,
     this.lightIntensity = .5,
@@ -149,7 +148,6 @@ class LiquidGlassSettings {
     this.frost = 0.0,
     this.frostOpacity = 1.0,
     this.frostClamp = 0.0,
-    this.frostDilate = 0.0,
     required this.chromaticAberration,
     required this.lightAngle,
     required this.lightIntensity,
@@ -297,10 +295,13 @@ class LiquidGlassSettings {
   /// This is the cloud of iOS 26 glass: a blur far wider than [blur] that a
   /// copy of the lightly blurred content still shows through, so text under
   /// a control reads as pale ghosts rather than going out of focus. On a
-  /// 56 pt control it measures at about `frost: 14, frostOpacity: 0.8`,
-  /// with `blur: 0.2` barely softening the copy: the ghosts keep their edges. With a paraxial [lensModel] the lens
-  /// runs as its own pass ahead of the frost, so the rim band folds the
-  /// sharp backdrop.
+  /// 56 pt control it measures at about `frost: 14, frostOpacity: 0.73`,
+  /// with `blur: 0.6` barely softening the copy: the ghosts keep their
+  /// edges.
+  ///
+  /// Costs one blur pass, written to alternate pixel rows of the shape; the
+  /// glass shader makes the ghosts from the sharp rows between and mixes
+  /// the two, so [blur] adds no pass of its own under a frost.
   ///
   /// Only affects the Premium (Impeller) path.
   final double frost;
@@ -326,20 +327,8 @@ class LiquidGlassSettings {
   /// material: through the light glass a black stripe is a flat pale band
   /// and a white one a narrow bright hump, so dark detail reads bolder and
   /// light detail finer, and through the dark glass the reverse. Light
-  /// measures `0.4`, dark `-0.4`.
+  /// measures `0.4`, dark `-0.45`.
   final double frostClamp;
-
-  /// Radius in logical pixels of a dilate of the backdrop ahead of the
-  /// [frost] blur, so light detail spreads over dark before the cloud is
-  /// averaged; negative erodes instead, spreading dark over light; 0 (the
-  /// default) averages the backdrop as it is.
-  ///
-  /// Fine dark detail then hardly darkens the cloud while broad dark areas
-  /// still do, as under the native light material: its cloud over a page
-  /// of text stays near white where a plain mean of the page would grey it,
-  /// yet over even stripes it sits close to the mean. The dark material is
-  /// the reverse. Light measures `0.5`; the dark material does without.
-  final double frostDilate;
 
   /// The chromatic aberration of the glass effect (WIP).
   ///
@@ -605,17 +594,20 @@ class LiquidGlassSettings {
   /// Defaults to [GlassLensModel.spherical], the existing rendering.
   final GlassLensModel lensModel;
 
-  /// Exponent of the space the [frost] blur averages in.
+  /// Bias of the [frost]'s average toward light or dark detail.
   ///
   /// The native frost is not a plain mean of the content beneath it: the
   /// light material's cloud over black-on-white detail reads brighter than
-  /// the mean (`1.5`), the dark material's over white-on-black darker
-  /// (`0.8`). Flat colour is unchanged either way. Defaults to `1.0`, a
-  /// plain sRGB mean.
+  /// the mean, the dark material's over white-on-black darker. Above 1
+  /// light detail weighs more, below 1 dark detail; flat colour is
+  /// unchanged either way. The frost averages part of the backdrop through
+  /// the sRGB transfer curve and undoes it after, so the bias tops out at
+  /// `2.2` and `1 / 2.2`, which is what the light and dark materials
+  /// measure (`2.2`, `0.45`). Defaults to `1.0`, a plain mean.
   final double frostGamma;
 
-  /// Exponent of the tone curve the [blur] runs in, as [frostGamma] is for
-  /// the frost; 1 (the default) blurs the backdrop as it is.
+  /// Exponent of the tone curve the [blur] averages in under a [frost]; 1
+  /// (the default) blurs the backdrop as it is.
   ///
   /// Below 1 dark detail dominates the average, so through a [frost] a
   /// black stripe stays a flat, wide band while a white one thins to a
@@ -646,7 +638,6 @@ class LiquidGlassSettings {
         frost: frost,
         frostOpacity: frostOpacity,
         frostClamp: frostClamp,
-        frostDilate: frostDilate,
         chromaticAberration: chromaticAberration,
         lightAngle: lightAngle,
         lightIntensity: lightIntensity,
@@ -763,7 +754,6 @@ class LiquidGlassSettings {
         frost: lerpDouble(a.frost, b.frost, t)!,
         frostOpacity: lerpDouble(a.frostOpacity, b.frostOpacity, t)!,
         frostClamp: lerpDouble(a.frostClamp, b.frostClamp, t)!,
-        frostDilate: lerpDouble(a.frostDilate, b.frostDilate, t)!,
         chromaticAberration:
             lerpDouble(a.chromaticAberration, b.chromaticAberration, t)!,
         lightAngle: lerpDouble(a.lightAngle, b.lightAngle, t)!,
@@ -819,7 +809,6 @@ class LiquidGlassSettings {
     double? frost,
     double? frostOpacity,
     double? frostClamp,
-    double? frostDilate,
     double? chromaticAberration,
     double? blend,
     double? lightAngle,
@@ -856,7 +845,6 @@ class LiquidGlassSettings {
         frost: frost ?? this.frost,
         frostOpacity: frostOpacity ?? this.frostOpacity,
         frostClamp: frostClamp ?? this.frostClamp,
-        frostDilate: frostDilate ?? this.frostDilate,
         chromaticAberration: chromaticAberration ?? this.chromaticAberration,
         lightAngle: lightAngle ?? this.lightAngle,
         lightIntensity: lightIntensity ?? this.lightIntensity,
@@ -900,7 +888,6 @@ class LiquidGlassSettings {
         other.frost == frost &&
         other.frostOpacity == frostOpacity &&
         other.frostClamp == frostClamp &&
-        other.frostDilate == frostDilate &&
         other.chromaticAberration == chromaticAberration &&
         other.lightAngle == lightAngle &&
         other.lightIntensity == lightIntensity &&
@@ -939,7 +926,6 @@ class LiquidGlassSettings {
         frost,
         frostOpacity,
         frostClamp,
-        frostDilate,
         chromaticAberration,
         lightAngle,
         lightIntensity,
