@@ -1,12 +1,79 @@
+# 1.7.2
+
+## Bug Fixes
+
+- **`GlassTabBar` no longer exposes an unlabelled bar-wide semantics node (fixes #340, PR #343):** The drag and tap detector that spans the full bar is now excluded from semantics across both `GlassTabBar.bottom` and `GlassTabBar.searchable`, leaving the labelled per-tab controls as the only announced actions.
+
+  Thanks to [@DeepanshuPal](https://github.com/DeepanshuPal) for the fix (#343).
+
+- **`GlassTabBar` default indicator follows app brightness (fixes #341, PR #344):** The selected pill now resolves its default black/white tint through `GlassTheme.brightnessOf(context)` across both `GlassTabBar.bottom` and `GlassTabBar.searchable` instead of the device appearance, so app-level light and dark overrides remain visible.
+
+  Thanks to [@DeepanshuPal](https://github.com/DeepanshuPal) for the fix (#344).
+
+- **iOS Reduce Motion is now respected (fixes #342, PR #345):** Accessibility motion handling now combines Flutter's `disableAnimations` flag with iOS's separate `reduceMotion` platform feature, including popover, menu, and modal-sheet morph controllers.
+
+  Thanks to [@DeepanshuPal](https://github.com/DeepanshuPal) for the fix (#345).
+
+# 1.7.1
+
+## Bug Fixes
+
+- **Prevent infinite `borderRadius` from collapsing clipping and shadows (#339):** Guards against `double.infinity` evaluating to `0.0` in Flutter's corner-scaling formula across clipping layers, drop shadows, and shader uniforms. Centralizes safe radius handling on `GlassDefaults` and `LiquidShape`.
+
+  Thanks to [@iimrudy](https://github.com/iimrudy) for the fix (#339).
+
+- **`GlassTabBar.searchable` RTL support (fixes #338):** Fixes miscalculated indicator positioning, drag hit-testing, and tab selection under `TextDirection.rtl`.
+
 # 1.7.0
 
 ## Features
 
 - **Continuous swipe-to-select for `GlassMenu` and `GlassPullDownButton` (#331):** Adds native iOS-style continuous press-and-slide interaction. Users can press and hold the trigger, slide directly onto an item, and release to select in a single fluid motion without requiring a second tap.
   - Enabled by default on `GlassPullDownButton` (`enableContinuousSwipe: true`), opt-in on `GlassMenu`.
-  - Configurable `continuousSwipeSlop` (defaults to 10px) to distinguish quick taps from deliberate swipes without latency.
-  - Includes pointer ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional interaction glow tracking, and automatic deactivation on scrollable menus to preserve standard scroll gestures.
+  - Configurable `continuousSwipeSlop` (defaults to 10 logical px) to distinguish quick taps from deliberate swipes without latency.
+  - Pointer-ID isolation for multi-touch safety, haptic feedback on item boundary crossings, optional glow tracking, and automatic deactivation on scrollable menus.
 
+## Performance
+
+- **Geometry matte pixel budget while a premium surface animates (#330):** `GlassQuality.premium`
+  surfaces that resize (e.g. a `GlassModalSheet` opening) now rasterize their geometry matte at a
+  capped 1 MP budget during animation, settling at full resolution once the shape comes to rest.
+  Reduces animation memory peaks from 400–800 MB to ~340–394 MB on iPhone 17 Pro Max at 120 Hz.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#330).
+
+## Bug Fixes
+
+- **Async sheet presenters no longer lose their hoisted capsule (#335, fixes #334):** A
+  `GlassBarItem.sheet` presenter that does async work before calling `GlassModalSheet.show`
+  (e.g. measuring content offscreen, awaiting a fetch) could lose the shell's hold, reverting to
+  the pre-#325 symptom. `GlassBarItem.sheet` no longer requires a synchronous present.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#335).
+
+- **`GlassTabBar.searchable`: `textColor` is no longer overridden by `hintStyle`'s colour (#336):**
+  When both `GlassSearchBarConfig.textColor` and a colour on `hintStyle` were set, the hint colour
+  was applied to typed text too, ignoring `textColor`. The standard iOS look — muted placeholder,
+  strong typed text — can now be expressed by setting both. Callers using only `hintStyle` are
+  unaffected; font metrics are shared between hint and text in all cases.
+
+  Thanks to [@jfhair](https://github.com/jfhair) for the fix (#336).
+
+- **Rim refraction no longer bleeds past the glass boundary on small surfaces (#337):** On small
+  `GlassQuality.premium` pills and icon buttons the rim refraction could reach far enough to sample
+  content above the surface's top edge, producing rainbow-coloured artefacts once chromatic
+  dispersion split it. Displacement is now capped to the surface's own footprint. Larger surfaces
+  are unaffected.
+
+  Thanks to [@hinata-platform](https://github.com/hinata-platform) for the fix (#337).
+
+- **Premium glass inside a `BackdropFilter` ancestor no longer renders displaced on Impeller (#333):**
+  Glass nested inside any backdrop-reading ancestor was displaced by the ancestor's screen origin
+  due to `FlutterFragCoord()` being relative to the offscreen pass. `LiquidGlassRenderObject` now
+  resolves uniforms relative to the enclosing Impeller compositor pass. Top-level surfaces are
+  unaffected.
+
+  Thanks to [@brockbrunson](https://github.com/brockbrunson) for the root-cause analysis and fix (#333).
 
 # 1.6.2
 

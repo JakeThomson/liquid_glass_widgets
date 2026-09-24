@@ -1084,5 +1084,124 @@ void main() {
       final stretch = stretchOf(tester);
       expect(stretch.stretch, 0.0);
     });
+
+    testWidgets(
+        'SearchableTabIndicatorState and SearchPillState buildShadowOverlay handle infinite barBorderRadius in light mode',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: Brightness.light),
+          home: Scaffold(
+            body: AdaptiveLiquidGlassLayer(
+              settings: const LiquidGlassSettings(shadowElevation: 8),
+              child: GlassTabBar.searchable(
+                tabs: const [
+                  GlassTab(label: 'Home', icon: Icon(Icons.home)),
+                  GlassTab(label: 'Search', icon: Icon(Icons.search)),
+                ],
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+                barBorderRadius: double.infinity,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final searchIndicatorState = tester.state<SearchableTabIndicatorState>(
+          find.byType(SearchableTabIndicator));
+      final searchIndicatorContext =
+          tester.element(find.byType(SearchableTabIndicator));
+      final indicatorOverlay =
+          searchIndicatorState.buildShadowOverlay(searchIndicatorContext);
+      expect(indicatorOverlay, isNotNull);
+
+      final searchPillState =
+          tester.state<SearchPillState>(find.byType(SearchPill));
+      final searchPillContext = tester.element(find.byType(SearchPill));
+      final pillOverlay = searchPillState.buildShadowOverlay(
+        searchPillContext,
+        const LiquidRoundedRectangle(borderRadius: double.infinity),
+      );
+      expect(pillOverlay, isNotNull);
+    });
+  });
+
+  group('GlassTabBar.searchable indicator brightness', () {
+    testWidgets('default indicator follows dark app theme on a light device',
+        (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: GlassTabBar.searchable(
+            tabs: const [
+              GlassTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+              GlassTab(label: 'B', icon: Icon(CupertinoIcons.search))
+            ],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      expect(indicator.indicatorColor,
+          CupertinoColors.white.withValues(alpha: .1));
+    });
+
+    testWidgets('default indicator follows light app theme on a dark device',
+        (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData.light(),
+        home: Scaffold(
+          body: GlassTabBar.searchable(
+            tabs: const [
+              GlassTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+              GlassTab(label: 'B', icon: Icon(CupertinoIcons.search))
+            ],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      expect(indicator.indicatorColor,
+          CupertinoColors.black.withValues(alpha: .1));
+    });
+
+    testWidgets('explicit indicatorColor is preserved regardless of theme',
+        (tester) async {
+      const customColor = Color(0x3300FF00);
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData.light(),
+        home: Scaffold(
+          body: GlassTabBar.searchable(
+            tabs: const [
+              GlassTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+              GlassTab(label: 'B', icon: Icon(CupertinoIcons.search))
+            ],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            indicatorColor: customColor,
+            searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      final indicator = tester.widget<AnimatedGlassIndicator>(
+          find.byType(AnimatedGlassIndicator).first);
+      expect(indicator.indicatorColor, customColor);
+    });
   });
 }

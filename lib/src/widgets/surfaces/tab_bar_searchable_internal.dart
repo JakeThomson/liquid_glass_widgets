@@ -214,8 +214,6 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
   @override
   void notifyTabChanged(int index) => widget.onTabChanged(index);
 
-  static const _fallbackIndicatorColor = Color(0x1AFFFFFF);
-
   /// RepaintBoundary key for the merged icon layer, so the premium indicator can
   /// refract the icons (capturable) over a PlatformView.
   final GlobalKey _iconLayerKey = GlobalKey();
@@ -294,10 +292,11 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
     }
 
     // ── Normal draggable tab bar — identical logic to GlassTabBar.bottom ─────
-    final theme = CupertinoTheme.of(context);
+    final brightness = GlassTheme.brightnessOf(context);
     final indicatorColor = widget.indicatorColor ??
-        theme.textTheme.textStyle.color?.withValues(alpha: .1) ??
-        _fallbackIndicatorColor;
+        (brightness == Brightness.dark
+            ? CupertinoColors.white.withValues(alpha: .1)
+            : CupertinoColors.black.withValues(alpha: .1));
     final targetAlignment = computeTabAlignment(widget.tabIndex);
     // Nested-arc default: if the outer bar is a capsule sentinel (≥ 9999),
     // the indicator is also passed 9999 directly, so the glass shader clamps to
@@ -340,6 +339,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
               child: GestureDetector(
                 key: ValueKey(gestureEpoch),
                 behavior: HitTestBehavior.opaque,
+                excludeFromSemantics: true,
                 onHorizontalDragDown: onBarDragDown,
                 onHorizontalDragStart: onBarDragStart,
                 onHorizontalDragUpdate: onBarDragUpdate,
@@ -445,7 +445,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
         clipper: _InverseSearchBarClipper(_barShape),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.barBorderRadius),
+            borderRadius:
+                GlassDefaults.safeBorderRadius(widget.barBorderRadius),
             boxShadow: shadows,
           ),
         ),
@@ -940,7 +941,8 @@ class SearchPillState extends State<SearchPill> {
         clipper: _InverseSearchBarClipper(pillShape),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.barBorderRadius),
+            borderRadius:
+                GlassDefaults.safeBorderRadius(widget.barBorderRadius),
             boxShadow: shadows,
           ),
         ),
@@ -1128,12 +1130,13 @@ class SearchPillState extends State<SearchPill> {
       return c;
     }
 
-    final rawTextColor = config.textColor ?? CupertinoColors.label;
-    final textColor = resolveDynamicColor(rawTextColor);
-
-    final effectiveTextColor = config.hintStyle?.color != null
-        ? resolveDynamicColor(config.hintStyle!.color!)
-        : textColor;
+    // Typed text: an explicit config.textColor wins. hintStyle's colour is the
+    // fallback only when no textColor was given, so a caller can mute the
+    // placeholder without muting what the user types.
+    final hintColor = config.hintStyle?.color;
+    final effectiveTextColor = resolveDynamicColor(
+      config.textColor ?? hintColor ?? CupertinoColors.label,
+    );
 
     final effectiveTextStyle = (config.hintStyle ?? const TextStyle()).copyWith(
       color: effectiveTextColor,
@@ -1141,9 +1144,8 @@ class SearchPillState extends State<SearchPill> {
       fontWeight: config.hintStyle?.fontWeight ?? FontWeight.w400,
     );
 
-    final placeholderColor = config.hintStyle?.color != null
-        ? resolveDynamicColor(config.hintStyle!.color!)
-        : iconColor;
+    final placeholderColor =
+        hintColor != null ? resolveDynamicColor(hintColor) : iconColor;
 
     final effectivePlaceholderStyle = (config.hintStyle ??
             const TextStyle(fontSize: 17, fontWeight: FontWeight.w400))
