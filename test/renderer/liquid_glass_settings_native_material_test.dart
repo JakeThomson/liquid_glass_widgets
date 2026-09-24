@@ -2,7 +2,8 @@
 // frostOpacity, frostClamp, frostWeight, blurWeight, rimShade, rimShadeEnds,
 // rimLight and lensModel: defaults that leave rendering stock, copyWith,
 // lerp, equality, preservation through copyWithPinch and a theme override,
-// and the ios27Light / ios27Dark presets.
+// the matching GlassThemeSettings overrides, and the ios27Light / ios27Dark
+// presets.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/src/engine/liquid_glass_settings.dart';
@@ -134,6 +135,86 @@ void main() {
 
     test('a theme override preserves every field of its base', () {
       expectTuned(const GlassThemeSettings(blur: 3).applyTo(tuned));
+    });
+  });
+
+  group('GlassThemeSettings iOS 27 material', () {
+    const theme = GlassThemeSettings(
+      frost: 14,
+      frostOpacity: 0.73,
+      frostClamp: 0.4,
+      frostWeight: 2,
+      blurWeight: 0.8,
+      rimShade: 1,
+      rimShadeEnds: 0.1,
+      rimLight: 1.15,
+      lensModel: GlassLensModel.paraxial,
+    );
+
+    test('applyTo overrides each field', () {
+      expectTuned(theme.applyTo(const LiquidGlassSettings()));
+    });
+
+    test('copyWith preserves and replaces each field', () {
+      expectTuned(theme.copyWith(blur: 3).applyTo(const LiquidGlassSettings()));
+      final s = const GlassThemeSettings().copyWith(
+        frost: 14,
+        frostOpacity: 0.73,
+        frostClamp: 0.4,
+        frostWeight: 2,
+        blurWeight: 0.8,
+        rimShade: 1,
+        rimShadeEnds: 0.1,
+        rimLight: 1.15,
+        lensModel: GlassLensModel.paraxial,
+      );
+      expect(s, equals(theme));
+    });
+
+    test('lerp interpolates the numbers and switches lensModel at the midpoint',
+        () {
+      const a = GlassThemeSettings(
+        frost: 0,
+        frostOpacity: 1,
+        frostClamp: 0,
+        frostWeight: 1,
+        blurWeight: 1,
+        rimShade: 0,
+        rimShadeEnds: 0.2,
+        rimLight: 0,
+        lensModel: GlassLensModel.spherical,
+      );
+      final s = GlassThemeSettings.lerp(a, theme, 0.5)!;
+      expect(s.frost, closeTo(7, 1e-10));
+      expect(s.frostOpacity, closeTo(0.865, 1e-10));
+      expect(s.frostClamp, closeTo(0.2, 1e-10));
+      expect(s.frostWeight, closeTo(1.5, 1e-10));
+      expect(s.blurWeight, closeTo(0.9, 1e-10));
+      expect(s.rimShade, closeTo(0.5, 1e-10));
+      expect(s.rimShadeEnds, closeTo(0.15, 1e-10));
+      expect(s.rimLight, closeTo(0.575, 1e-10));
+      expect(s.lensModel, GlassLensModel.paraxial);
+      expect(GlassThemeSettings.lerp(a, theme, 0.49)!.lensModel,
+          GlassLensModel.spherical);
+    });
+
+    test('each field takes part in == and hashCode', () {
+      final variants = [
+        theme.copyWith(frost: 13),
+        theme.copyWith(frostOpacity: 0.7),
+        theme.copyWith(frostClamp: -0.4),
+        theme.copyWith(frostWeight: 0.5),
+        theme.copyWith(blurWeight: 2.5),
+        theme.copyWith(rimShade: 0.45),
+        theme.copyWith(rimShadeEnds: 0),
+        theme.copyWith(rimLight: 1),
+        theme.copyWith(lensModel: GlassLensModel.spherical),
+      ];
+      for (final v in variants) {
+        expect(v, isNot(equals(theme)));
+      }
+      expect(theme.copyWith(), equals(theme));
+      expect(theme.copyWith().hashCode, theme.hashCode);
     });
   });
 

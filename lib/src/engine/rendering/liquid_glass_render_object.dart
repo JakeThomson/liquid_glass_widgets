@@ -786,7 +786,9 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           settings.effectiveRimLight,
           settings.rimShadeEnds,
           settings.lensModel == GlassLensModel.paraxial ? 1.0 : 0.0,
-          0.0, // uFrost.x: no frost on the capture path (no cloud rows).
+          // Slots 41-44: uFrost. No frost on the capture path (no cloud
+          // rows); every component is set so none is left stale.
+          0.0, 0.0, 0.0, 1.0,
         ]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).
