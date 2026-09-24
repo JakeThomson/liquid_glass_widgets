@@ -1235,4 +1235,47 @@ void main() {
     final opacity = tester.widget<Opacity>(find.byType(Opacity).first);
     expect(opacity.opacity, equals(1.0));
   });
+
+  testWidgets(
+      'GlassMenu on standard quality renders only single GlassContainer on close (no Blob A ghost)',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              quality: GlassQuality.standard,
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(title: 'Item', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    // Trigger close
+    await tester.tap(find.text('Item'));
+    // Pump partially into the close animation (e.g. 50ms)
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Under standard quality, Blob A is suppressed during close to prevent double-button overlap.
+    // There should be exactly 1 GlassContainer inside the overlay (Blob B, the collapsing menu body).
+    final overlayContainers = find.descendant(
+      of: find.byType(AdaptiveLiquidGlassLayer),
+      matching: find.byType(GlassContainer),
+    );
+    expect(overlayContainers, findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
 }

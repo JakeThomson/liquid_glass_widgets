@@ -782,28 +782,41 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       widgetQuality: widget.quality,
     );
 
-    // LiquidGlassBlendGroup requires an InheritedGeometryRenderLink that is
-    // only present when AdaptiveLiquidGlassLayer creates a full LiquidGlassLayer.
-    // That layer is skipped in minimal quality and platformViewBackdrop mode, so
-    // we must skip the blend group in those same cases (fixes issue #214).
     final bool useBlendGroup = effectiveQuality != GlassQuality.minimal &&
+        !widget.platformViewBackdrop;
+
+    final bool isPremium = effectiveQuality == GlassQuality.premium &&
+        ImageFilter.isShaderFilterSupported &&
         !widget.platformViewBackdrop;
 
     final maxRadius = math.min(currentWidth, currentHeight) / 2.0;
     final double radiusT =
         Curves.easeInExpo.transform(state.sizeT.clamp(0.0, 1.0));
     final currentRadius = _morphController.isClosing
-        ? maxRadius
+        ? (isPremium
+            ? maxRadius
+            : lerpDouble(
+                _triggerBorderRadius ?? (_triggerSize!.shortestSide / 2.0),
+                widget.menuBorderRadius,
+                radiusT,
+              )!)
         : lerpDouble(maxRadius, widget.menuBorderRadius, radiusT)!;
 
     final double effectiveDx;
     final double effectiveDy;
     if (_morphController.isClosing) {
-      // On close: the droplet separates from the open bounds and travels along
-      // the centroid trajectory directly to the trigger center, creating a visible
-      // in-flight gap that allows the SDF metaball bridge to form on approach.
-      effectiveDx = finalDx * state.pathT;
-      effectiveDy = finalDy * state.pathT;
+      if (isPremium) {
+        // On close (premium): the droplet separates from the open bounds and travels along
+        // the centroid trajectory directly to the trigger center, creating a visible
+        // in-flight gap that allows the SDF metaball bridge to form on approach.
+        effectiveDx = finalDx * state.pathT;
+        effectiveDy = finalDy * state.pathT;
+      } else {
+        // On close (standard/minimal): single-blob geometric collapse directly
+        // into the trigger button bounds with no ghost button underneath.
+        effectiveDx = finalDx * state.sizeT;
+        effectiveDy = finalDy * state.sizeT;
+      }
     } else {
       // On open: for large menus, clamp the anchor edge displacement so the menu's
       // pinned corner never drifts more than 8 px from the trigger button during flight.
@@ -877,7 +890,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                       // Shrinks to 0 scale over the first 40% of the animation to
                       // smoothly break the liquid bridge.
                       // Blob A is the spawn blob; under morphFromZero there is no trigger to ghost.
-                      if (!widget.morphFromZero)
+                      // For standard/minimal quality, Blob A is suppressed during close so only
+                      // the single collapsing menu container is visible (preventing double-button overlap).
+                      if (!widget.morphFromZero &&
+                          (!_morphController.isClosing || isPremium))
                         Positioned(
                           left: _triggerOverlayPosition.dx +
                               _followOffset.dx +

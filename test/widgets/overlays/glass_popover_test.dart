@@ -976,4 +976,45 @@ void main() {
     }
     expect(find.text('Btn'), findsOneWidget);
   });
+
+  testWidgets(
+      'GlassPopover on standard quality renders only single GlassContainer on close (no Blob A ghost)',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassPopover(
+              quality: GlassQuality.standard,
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              popoverWidth: 200,
+              contentBuilder: (context, close) => const Text('Content'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    // Trigger close via barrier tap
+    await tester.tapAt(const Offset(10, 10));
+    // Pump partially into the close animation (e.g. 50ms)
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Under standard quality, Blob A is suppressed during close to prevent double-button overlap.
+    // There should be exactly 1 GlassContainer inside the overlay (Blob B, the collapsing popover body).
+    final overlayContainers = find.descendant(
+      of: find.byType(LiquidGlassLayer),
+      matching: find.byType(GlassContainer),
+    );
+    expect(overlayContainers, findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
 }

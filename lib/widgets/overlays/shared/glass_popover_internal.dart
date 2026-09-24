@@ -778,6 +778,8 @@ class _GlassPopoverState extends State<GlassPopover>
     // parent LiquidGlassLayer. In minimal quality mode we skip the layer
     // (and thus the blend group) to avoid the assert / null crash (issue #214).
     final bool useBlendGroup = effectiveQuality != GlassQuality.minimal;
+    final bool isPremium = effectiveQuality == GlassQuality.premium &&
+        ImageFilter.isShaderFilterSupported;
 
     final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
 
@@ -811,6 +813,21 @@ class _GlassPopoverState extends State<GlassPopover>
 
         final currentHeight = lerpDouble(th, popoverHeight, state.sizeT)!;
         final currentWidth = lerpDouble(tw, popoverWidth, state.sizeT)!;
+
+        final double effectiveDx;
+        final double effectiveDy;
+        if (_morphController.isClosing) {
+          if (isPremium) {
+            effectiveDx = finalDx * state.pathT;
+            effectiveDy = finalDy * state.pathT;
+          } else {
+            effectiveDx = finalDx * state.sizeT;
+            effectiveDy = finalDy * state.sizeT;
+          }
+        } else {
+          effectiveDx = state.currentDx;
+          effectiveDy = state.currentDy;
+        }
 
         // Solid overlay during flight and metaball fusion.
         // Handoff to the real trigger button occurs cleanly when hasHandedOff fires (rawValue <= 0.0).
@@ -856,35 +873,38 @@ class _GlassPopoverState extends State<GlassPopover>
                             // Stays centred on the trigger and shrinks to 0
                             // over the first 40 % of the open animation,
                             // smoothly breaking the liquid bridge.
-                            Positioned(
-                              left: _triggerOverlayPosition.dx + state.pushDx,
-                              top: _triggerOverlayPosition.dy + state.pushDy,
-                              child: Transform.scale(
-                                scale: state.anchorScale,
-                                child: GlassContainer(
-                                  useOwnLayer: false,
-                                  settings: rampedSettings,
-                                  quality: effectiveQuality,
-                                  width: tw,
-                                  height: th,
-                                  shape: LiquidRoundedRectangle(
-                                    borderRadius: _triggerBorderRadius ??
-                                        _triggerSize!.shortestSide / 2.0,
+                            // Suppressed during close on standard/minimal quality
+                            // to avoid duplicate button overlap.
+                            if (!_morphController.isClosing || isPremium)
+                              Positioned(
+                                left: _triggerOverlayPosition.dx + state.pushDx,
+                                top: _triggerOverlayPosition.dy + state.pushDy,
+                                child: Transform.scale(
+                                  scale: state.anchorScale,
+                                  child: GlassContainer(
+                                    useOwnLayer: false,
+                                    settings: rampedSettings,
+                                    quality: effectiveQuality,
+                                    width: tw,
+                                    height: th,
+                                    shape: LiquidRoundedRectangle(
+                                      borderRadius: _triggerBorderRadius ??
+                                          _triggerSize!.shortestSide / 2.0,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
 
                             // ── Blob B: Popover body ─────────────────────────
                             Positioned(
                               left: _triggerOverlayPosition.dx +
                                   tw / 2.0 +
-                                  state.currentDx -
+                                  effectiveDx -
                                   currentWidth / 2.0 +
                                   (_horizontalOffset * clampedValue),
                               top: _triggerOverlayPosition.dy +
                                   th / 2.0 +
-                                  state.currentDy -
+                                  effectiveDy -
                                   currentHeight / 2.0 +
                                   (_verticalOffset * clampedValue),
                               child: IgnorePointer(
@@ -941,8 +961,16 @@ class _GlassPopoverState extends State<GlassPopover>
     final maxRadius = math.min(currentWidth, currentHeight) / 2.0;
     final double radiusT =
         Curves.easeInExpo.transform(state.sizeT.clamp(0.0, 1.0));
+    final bool isPremium = effectiveQuality == GlassQuality.premium &&
+        ImageFilter.isShaderFilterSupported;
     final currentRadius = _morphController.isClosing
-        ? maxRadius
+        ? (isPremium
+            ? maxRadius
+            : lerpDouble(
+                _triggerBorderRadius ?? (_triggerSize!.shortestSide / 2.0),
+                widget.popoverBorderRadius,
+                radiusT,
+              )!)
         : lerpDouble(maxRadius, widget.popoverBorderRadius, radiusT)!;
 
     final teardropShape = LiquidRoundedRectangle(
