@@ -1017,4 +1017,76 @@ void main() {
 
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+      'GlassPopover on minimal quality renders only single GlassContainer on close (no Blob A ghost)',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassPopover(
+              quality: GlassQuality.minimal,
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              popoverWidth: 200,
+              contentBuilder: (context, close) => const Text('Content'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final overlayContainers = find.descendant(
+      of: find.byType(LiquidGlassLayer),
+      matching: find.byType(GlassContainer),
+    );
+    expect(overlayContainers, findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+      'GlassPopover renders Blob A trigger ghost during opening morph (liquid bridge preserved on open)',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassPopover(
+              quality: GlassQuality.standard,
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              popoverWidth: 200,
+              popoverHeight: 100,
+              contentBuilder: (context, close) => const Text('Content'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pump(const Duration(milliseconds: 30));
+
+    final overlayContainers = find.descendant(
+      of: find.byType(LiquidGlassLayer),
+      matching: find.byType(GlassContainer),
+    );
+    expect(overlayContainers, findsNWidgets(2));
+
+    await tester.pumpAndSettle();
+  });
 }

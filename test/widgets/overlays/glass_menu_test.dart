@@ -1278,4 +1278,170 @@ void main() {
 
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+      'GlassMenu on minimal quality renders only single GlassContainer on close (no Blob A ghost)',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              quality: GlassQuality.minimal,
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(title: 'Item', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Item'));
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final overlayContainers = find.descendant(
+      of: find.byType(AdaptiveLiquidGlassLayer),
+      matching: find.byType(GlassContainer),
+    );
+    expect(overlayContainers, findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+      'GlassMenu with platformViewBackdrop: true suppresses Blob A on close even with premium quality',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              quality: GlassQuality.premium,
+              platformViewBackdrop: true,
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(title: 'Item', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Item'));
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final overlayContainers = find.descendant(
+      of: find.byType(AdaptiveLiquidGlassLayer),
+      matching: find.byType(GlassContainer),
+    );
+    expect(overlayContainers, findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+      'GlassMenu renders Blob A trigger ghost during opening morph (liquid bridge preserved on open)',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              quality: GlassQuality.standard,
+              trigger: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Text('Btn'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(title: 'Item', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    // Pump partially into the opening animation where anchorScale > 0
+    await tester.pump(const Duration(milliseconds: 30));
+
+    // On open, both Blob A (trigger ghost) and Blob B (menu body) must be present
+    final overlayContainers = find.descendant(
+      of: find.byType(AdaptiveLiquidGlassLayer),
+      matching: find.byType(GlassContainer),
+    );
+    expect(overlayContainers, findsNWidgets(2));
+
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+      'GlassMenu on standard quality lerps border radius toward trigger border radius during close',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GlassMenu(
+              quality: GlassQuality.standard,
+              menuBorderRadius: 24.0,
+              trigger: const SizedBox(
+                width: 40,
+                height: 20, // trigger shortest side / 2 = 10.0
+                child: Text('Btn'),
+              ),
+              menuWidth: 200,
+              items: [
+                GlassMenuItem(title: 'Item', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Btn'));
+    await tester.pumpAndSettle();
+
+    // Start close
+    await tester.tap(find.text('Item'));
+    // Pump into close travel
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final containerFinder = find.descendant(
+      of: find.byType(AdaptiveLiquidGlassLayer),
+      matching: find.byType(GlassContainer),
+    );
+    expect(containerFinder, findsOneWidget);
+
+    final container = tester.widget<GlassContainer>(containerFinder);
+    final shape = container.shape as LiquidRoundedRectangle;
+    // On standard quality, border radius lerps between trigger radius (10.0) and menuBorderRadius (24.0)
+    // rather than locking to full capsule rounding (which would be min(width, height)/2 >= 40.0)
+    expect(shape.borderRadius, lessThanOrEqualTo(24.0));
+    expect(shape.borderRadius, greaterThanOrEqualTo(10.0));
+
+    await tester.pumpAndSettle();
+  });
 }
