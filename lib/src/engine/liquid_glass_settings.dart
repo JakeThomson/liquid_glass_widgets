@@ -188,6 +188,9 @@ class LiquidGlassSettings {
   /// Figma's internal `depth` and `frost` use proprietary units with no public
   /// pixel-equivalent formula. Pass [depth] and [frost] as the logical-pixel
   /// values you want — typical ranges: depth 10–40, frost 2–8.
+  ///
+  /// [frost] here is the Figma blur slider: it maps to [blur] (a Gaussian
+  /// sigma), not to the iOS 27 cloud of [LiquidGlassSettings.frost].
   const LiquidGlassSettings.figma({
     required double refraction,
     required double depth,
