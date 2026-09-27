@@ -26,7 +26,7 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^1.7.2
+  liquid_glass_widgets: ^1.8.0
 ```
 
 ```bash
@@ -372,6 +372,8 @@ GlassCard(
 ```
 
 > **Use Premium only for static, non-scrolling surfaces** (hero sections, feature cards). It may not render correctly inside `ListView` or `CustomScrollView` on Impeller. `GlassScaffold` automatically promotes app bars and bottom bars to premium quality via `GlassIsolationScope`.
+
+> **iOS 27 material**: `settings: LiquidGlassSettings.ios27Light` (or `ios27Dark`) gives premium glass the native `glassEffect(.regular)` look — the frost, hairline outline, rim light and folded lens band.
 
 ### Minimal — Shader-Free
 

@@ -472,4 +472,46 @@ void main() {
       expect(radius.topLeft.x, greaterThan(0.0));
     });
   });
+
+  group('AdaptiveGlass nested vibrancy avoidance', () {
+    testWidgets(
+        'nested AdaptiveGlass with useOwnLayer=true bypasses _VibrancyFill',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: _settings,
+            child: AdaptiveGlass(
+              shape: _shape,
+              settings: _settings,
+              useOwnLayer: true,
+              child: const Text('nestedOwn'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('nestedOwn'), findsOneWidget);
+    });
+
+    testWidgets(
+        'nested AdaptiveGlass with useOwnLayer=false uses _VibrancyFill',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: _settings,
+            child: AdaptiveGlass(
+              shape: _shape,
+              settings: _settings,
+              useOwnLayer: false,
+              child: const Text('nestedGrouped'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('nestedGrouped'), findsOneWidget);
+    });
+  });
 }

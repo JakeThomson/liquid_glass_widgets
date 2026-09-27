@@ -431,6 +431,54 @@ void main() {
       expect(trailing.singleWhere((s) => s.toItem == c).fromItem, same(a));
       expect(trailing.singleWhere((s) => s.toItem == b).isEnter, isTrue);
     });
+
+    testWidgets('trailing action groups align to the trailing edge',
+        (tester) async {
+      final selectItem = GlassBarItem.icon(
+        icon: const Icon(CupertinoIcons.checkmark),
+        background: GlassBarItemBackground.separate,
+        onTap: () {},
+      );
+      final menuItem = GlassBarItem.icon(
+        icon: const Icon(CupertinoIcons.ellipsis),
+        background: GlassBarItemBackground.separate,
+        onTap: () {},
+      );
+      final navUp = GlassBarItem.icon(
+        icon: const Icon(CupertinoIcons.chevron_up),
+        background: GlassBarItemBackground.shared,
+        onTap: () {},
+      );
+      final navDown = GlassBarItem.icon(
+        icon: const Icon(CupertinoIcons.chevron_down),
+        background: GlassBarItemBackground.shared,
+        onTap: () {},
+      );
+
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Inbox',
+        actions: [selectItem, menuItem],
+      )));
+      await settle(tester);
+
+      await _push(
+        tester,
+        _Screen(
+          title: 'Detail',
+          actions: [navUp, navDown],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      final buttons = inHost(find.byType(GlassButton));
+      expect(buttons, findsWidgets);
+
+      await settle(tester);
+      expect(inHost(find.byIcon(CupertinoIcons.chevron_up)), findsOneWidget);
+      expect(inHost(find.byIcon(CupertinoIcons.chevron_down)), findsOneWidget);
+      expect(inHost(find.byIcon(CupertinoIcons.checkmark)), findsNothing);
+    });
   });
 
   group('interaction', () {
@@ -544,12 +592,14 @@ class _Screen extends StatelessWidget {
   const _Screen({
     required this.title,
     this.leading = const [],
+    this.actions = const [],
     this.backButton = true,
     this.supplement = false,
   });
 
   final String title;
   final List<GlassBarItem> leading;
+  final List<GlassBarItem> actions;
   final bool backButton;
   final bool supplement;
 
@@ -559,6 +609,7 @@ class _Screen extends StatelessWidget {
       appBar: GlassAppBar.pinned(
         title: Text(title),
         leading: leading,
+        actions: actions,
         backButton: backButton,
         leadingItemsSupplementBackButton: supplement,
       ),

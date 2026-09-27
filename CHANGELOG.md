@@ -1,3 +1,29 @@
+# 1.8.0
+
+## Features
+
+- **iOS 27 material for `GlassQuality.premium`:** New `LiquidGlassSettings` terms, each
+  measured against a SwiftUI `glassEffect(.regular)` control on the same screen: `frost`,
+  `frostOpacity`, `frostClamp` and `frostWeight` for the cloud that a copy of the content
+  still shows through (`blurWeight` shapes that copy), `rimShade` and `rimShadeEnds` for the
+  half-point outline, `rimLight` for its highlight lobes, and `GlassLensModel.paraxial` for
+  the evenly folded rim band. `LiquidGlassSettings.ios27Light` and `ios27Dark` put them
+  together, and `GlassThemeSettings` carries each term so a theme can apply them app-wide.
+  All default to off, and existing settings render exactly as before. The frost
+  costs one blur pass, written to alternate pixel rows of the shape, plus a colour pass when
+  `frostWeight` is not 1.
+- **Apple Mail iOS 26 showcase demo:** Added a high-fidelity Apple Mail showcase in `example/lib/apple_mail/` featuring pinned bar navigation with gel-morph across mailbox, inbox, and detail screens, living liquid morph compose sheet via `GlassMorphTrigger` and `GlassModalSheet`, floating triage bar with `GlassButtonGroup`, options popover with `GlassMenu`, and full Cupertino styling.
+- **Liquid droplet morph return and metaball fusion for `GlassMenu` and `GlassPopover`:** Implements centroid flight trajectory on close for `GlassMenu` and `GlassPopover`, unpinning the returning shape from the trigger corner to fly directly toward the trigger anchor center. Adds an ease-in droplet contraction curve and early `anchorScale` ramp-in to enable authentic SDF metaball bridging, morphs border radius directly to capsule/droplet shape on close, rapidly flushes menu items over the first 15% of close to maintain a pure liquid droplet in flight, and resolves narrow constraint layout in `GlassMenuItem`.
+
+## Bug Fixes
+
+- **Graceful quality tier routing for standard and minimal overlay close:** Standard and minimal tiers in `GlassMenu` and `GlassPopover` cleanly route through simplified fade and scale fallbacks on close rather than attempting premium shader metaball blending.
+- **`GlassModalSheet` submerged offset tracking via `SheetStateInfo.submergedBottom`:** Exposes `submergedBottom` on `SheetStateInfo` via `GlassModalSheetStateProvider` so sheet descendants can accurately compensate for the submerged depth of `GlassModalSheet` in `GlassSheetState.full` when positioning keyboard toolbars, floating action bars, or scroll view insets above the software keyboard and safe area floor.
+- **Scoped backdrop pass rect resolution for nested glass and layer coordinators:** Differentiates descendants painted inside a glass shape's `BackdropFilterLayer` (such as `GlassButton` inside `GlassModalSheet`) from children painted outside the pass via `super.paint` (such as `AnimatedGlassIndicator` inside `AdaptiveLiquidGlassLayer` / `GlassTabBar.bottom`). Retains `backdropPassClipRectLocal` across frames for isolated descendant repaints (preventing buttons in modal sheets from disappearing when clicked or animated), while ensuring peer children of layer coordinators correctly resolve against root screen coordinates.
+- **Nested `AdaptiveGlass` honors `useOwnLayer`:** Ensures nested glass controls explicitly marked with `useOwnLayer: true` preserve their own refractive shader layer and specular highlights rather than collapsing into an ancestor's 2D vibrancy backer.
+- **`GlassNavPinnedHost` trailing action groups align to the trailing edge:** Pairs action groups from the anchored trailing edge when `anchoredAtStart` is false instead of raw index 0. When navigating between routes with differing numbers of trailing groups, the rightmost buttons now correctly morph into each other in place on the trailing edge while remaining groups cleanly materialize or dematerialize without unexpected layout shifting.
+- **`GlassGlow` touch specular coordinates in nested layers:** Corrects screen-to-pass coordinate translation in `_TouchSpecularBridge` so touch specular highlights track accurately within nested backdrop passes.
+
 # 1.7.2
 
 ## Bug Fixes

@@ -38,9 +38,37 @@ const kMailAvatarBg = CupertinoDynamicColor.withBrightness(
 /// Standard iOS accent blue.
 const kMailBlue = Color(0xFF007AFF);
 
+/// Scope that manages whether the Apple Mail demo is rendering with the native
+/// iOS 27 material terms or legacy/classic 1.7.2 glass settings.
+class MailGlassScope extends InheritedNotifier<ValueNotifier<bool>> {
+  const MailGlassScope({
+    super.key,
+    required ValueNotifier<bool> notifier,
+    required super.child,
+  }) : super(notifier: notifier);
+
+  /// Returns whether iOS 27 native material is active. Defaults to true.
+  static bool isIos27(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<MailGlassScope>();
+    return scope?.notifier?.value ?? true;
+  }
+
+  /// Returns the underlying [ValueNotifier] if mounted in a [MailGlassScope].
+  static ValueNotifier<bool>? of(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<MailGlassScope>()
+        ?.notifier;
+  }
+}
+
 /// Glass shared by action triggers (matching Messages edit pill aesthetic).
 LiquidGlassSettings kMailTriggerGlass(BuildContext context) {
   final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+  if (MailGlassScope.isIos27(context)) {
+    return isDark
+        ? LiquidGlassSettings.ios27Dark
+        : LiquidGlassSettings.ios27Light;
+  }
   return LiquidGlassSettings(
     glassColor: isDark
         ? const Color(0xA6262626)
@@ -60,6 +88,11 @@ LiquidGlassSettings kMailTriggerGlass(BuildContext context) {
 /// Glass for floating utility bars and compose morph triggers.
 LiquidGlassSettings kMailSearchGlass(BuildContext context) {
   final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+  if (MailGlassScope.isIos27(context)) {
+    return isDark
+        ? LiquidGlassSettings.ios27Dark
+        : LiquidGlassSettings.ios27Light;
+  }
   return LiquidGlassSettings(
     glassColor: isDark
         ? const Color(0xA6262626)
@@ -79,6 +112,11 @@ LiquidGlassSettings kMailSearchGlass(BuildContext context) {
 /// Glass settings for dropdown popover menus.
 LiquidGlassSettings kMailMenuGlass(BuildContext context) {
   final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
+  if (MailGlassScope.isIos27(context)) {
+    return isDark
+        ? LiquidGlassSettings.ios27Dark
+        : LiquidGlassSettings.ios27Light;
+  }
   return LiquidGlassSettings(
     glassColor: isDark
         ? const Color(0xB31E1E1E)

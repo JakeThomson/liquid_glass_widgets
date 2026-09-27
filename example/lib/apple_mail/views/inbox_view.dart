@@ -119,6 +119,10 @@ class _InboxViewState extends State<InboxView> {
       background: ColoredBox(color: kMailBg.resolveFrom(context)),
       appBar: GlassAppBar.pinned(
         buttonSettings: kMailTriggerGlass(context),
+        // ── No leading on the root Inbox screen — it is the bottom of the
+        // navigation stack. A leading 'nav_back' item here would show a
+        // spurious back chevron and confuse the GlassNavigationShell, which
+        // uses id-matching to decide which items to hoist across routes.
         title: Text(
           'Inbox',
           style: TextStyle(
@@ -128,28 +132,38 @@ class _InboxViewState extends State<InboxView> {
           ),
         ),
         largeTitleController: _titleController,
+        // ─────────────────────────────────────────────────────────────────
+        // Actions — gel-morph across two states and across the push to Detail
+        //
+        // Normal mode:  [ Edit (id:inbox_edit) | ··· (id:inbox_menu) ]
+        //                 both share one glass capsule → glass == true
+        //
+        // Select mode:  [ Select All (id:inbox_select_all) | ✓ Done tinted ]
+        //                 id:inbox_edit on Done matches id:inbox_edit above,
+        //                 so the Shell cross-fades the glyph in-route.
+        //
+        // → Push to Detail: [ ∧ (id:detail_prev) | ∨ (id:detail_next) ]
+        //   The capsule swells and the icons cross-fade across the push.
+        // ─────────────────────────────────────────────────────────────────
         actions: _isSelectMode
             ? [
-                GlassBarItem.custom(
-                  id: 'select_all_action',
-                  child: CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    minimumSize: Size.zero,
-                    onPressed: _selectAll,
-                    child: Text(
-                      _selectedIds.length == widget.emails.length
-                          ? 'Deselect All'
-                          : 'Select All',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: CupertinoColors.activeBlue,
-                      ),
+                // "Select All" / "Deselect All" text item
+                GlassBarItem.icon(
+                  id: 'inbox_select_all',
+                  icon: Text(
+                    _selectedIds.length == widget.emails.length
+                        ? 'Deselect All'
+                        : 'Select All',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: CupertinoColors.activeBlue,
                     ),
                   ),
+                  onTap: _selectAll,
                 ),
-                // Prominent Done capsule with tintColor
+                // Done ✓ — same id as Edit so the glyph cross-fades in-route
                 GlassBarItem.icon(
-                  id: 'done_action',
+                  id: 'inbox_edit',
                   icon: const Icon(CupertinoIcons.checkmark, size: 18),
                   onTap: _toggleSelectMode,
                   background: GlassBarItemBackground.separate,
@@ -157,19 +171,23 @@ class _InboxViewState extends State<InboxView> {
                 ),
               ]
             : [
+                // ── "Select" pill — GlassButton.custom IS the glass surface,
+                // so background: own prevents double-refraction (Rule 2) and
+                // registers glass == true so the Shell can gel-morph on push.
                 GlassBarItem.custom(
                   id: 'select_toggle',
                   background: GlassBarItemBackground.own,
                   child: GlassButton.custom(
                     onTap: _toggleSelectMode,
-                    width: 76,
+                    width: null,
                     height: 44,
                     settings: kMailTriggerGlass(context),
                     shape: const LiquidRoundedRectangle(borderRadius: 22),
                     quality: GlassQuality.premium,
                     useOwnLayer: true,
                     persistPressOnDrag: true,
-                    child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Text(
                         'Select',
                         style: TextStyle(
@@ -182,10 +200,11 @@ class _InboxViewState extends State<InboxView> {
                     ),
                   ),
                 ),
-                // Options Menu (...) triggering GlassMenu
+                // ── Options ··· menu (separate capsule)
                 GlassBarItem.menu(
-                  id: 'options_menu',
+                  id: 'inbox_menu',
                   icon: const Icon(CupertinoIcons.ellipsis, size: 18),
+                  background: GlassBarItemBackground.separate,
                   menuWidth: 260,
                   menuItems: [
                     // Visual Switcher: Categories vs List View
@@ -223,6 +242,22 @@ class _InboxViewState extends State<InboxView> {
                       ),
                       onTap: () => setState(
                           () => _showContactPhotos = !_showContactPhotos),
+                    ),
+                    const GlassMenuDivider(),
+                    GlassMenuItem(
+                      title: 'iOS 27 Glass',
+                      subtitle: MailGlassScope.isIos27(context)
+                          ? 'Native frost & hairline rim'
+                          : 'Classic 1.7.2 glass',
+                      icon: Icon(
+                        MailGlassScope.isIos27(context)
+                            ? CupertinoIcons.sparkles
+                            : CupertinoIcons.circle,
+                      ),
+                      onTap: () {
+                        final scope = MailGlassScope.of(context);
+                        if (scope != null) scope.value = !scope.value;
+                      },
                     ),
                   ],
                 ),
@@ -293,6 +328,8 @@ class _InboxViewState extends State<InboxView> {
                         CupertinoPageRoute(
                           builder: (context) => EmailDetailView(
                             item: email,
+                            emailIndex: i,
+                            allEmails: widget.emails,
                             onDelete: () {
                               widget.onDeleteEmail(email.id);
                               Navigator.of(context).pop();

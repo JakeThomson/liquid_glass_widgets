@@ -19,6 +19,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'models/mail_models.dart';
+import 'theme/mail_theme.dart';
 import 'views/mailboxes_view.dart';
 
 // Re-export models, theme, and views for consumers and tests
@@ -72,11 +73,18 @@ class AppleMailHomeScreen extends StatefulWidget {
 
 class _AppleMailHomeScreenState extends State<AppleMailHomeScreen> {
   late List<MailItem> _emails;
+  final ValueNotifier<bool> _useIos27 = ValueNotifier<bool>(true);
 
   @override
   void initState() {
     super.initState();
     _emails = List.from(kInitialEmails);
+  }
+
+  @override
+  void dispose() {
+    _useIos27.dispose();
+    super.dispose();
   }
 
   void _markAllAsRead() {
@@ -102,17 +110,18 @@ class _AppleMailHomeScreenState extends State<AppleMailHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Navigator(
-      onGenerateRoute: (settings) {
-        return CupertinoPageRoute(
-          builder: (navContext) => MailboxesView(
-            emails: _emails,
-            onMarkAllAsRead: _markAllAsRead,
-            onDeleteEmail: _deleteEmail,
-            onToggleUnread: _toggleUnread,
-          ),
-        );
-      },
+    // NOTE: No inner Navigator here. All pushes (Mailboxes → Inbox → Detail)
+    // must resolve to the root CupertinoApp navigator that GlassNavigationShell
+    // is wrapping. A private inner Navigator would intercept those pushes on a
+    // navigator the Shell cannot see, preventing gel-morph from firing between screens.
+    return MailGlassScope(
+      notifier: _useIos27,
+      child: MailboxesView(
+        emails: _emails,
+        onMarkAllAsRead: _markAllAsRead,
+        onDeleteEmail: _deleteEmail,
+        onToggleUnread: _toggleUnread,
+      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/engine/liquid_glass_layer.dart';
 import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_bottom_internal.dart';
 import 'package:liquid_glass_widgets/widgets/shared/glass_effect.dart';
 
@@ -1461,6 +1462,33 @@ void main() {
         final extraBtn =
             tester.widget<BottomBarExtraBtn>(find.byType(BottomBarExtraBtn));
         expect(extraBtn.quality, equals(GlassQuality.minimal));
+      });
+
+      testWidgets(
+          'GlassTabBar.bottom indicator does not inherit enclosing backdrop pass rect from tab bar layer',
+          (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: GlassTabBar.bottom(
+              tabs: const [
+                GlassTab(label: 'A', icon: Icon(CupertinoIcons.home)),
+                GlassTab(label: 'B', icon: Icon(CupertinoIcons.search)),
+              ],
+              selectedIndex: 0,
+              onTabSelected: (_) {},
+              quality: GlassQuality.premium,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // The indicator's own RenderLiquidGlassLayer must resolve null for enclosingBackdropPassRect
+        final indicatorLayers = tester.allRenderObjects
+            .whereType<RenderLiquidGlassLayer>()
+            .where((l) => l.enclosingBackdropPassRect() != null);
+        expect(indicatorLayers, isEmpty,
+            reason:
+                'RenderLiquidGlassLayer in GlassTabBar must not leak backdrop pass to tab indicator');
       });
     });
   });

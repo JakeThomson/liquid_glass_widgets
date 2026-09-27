@@ -101,19 +101,13 @@ class _MailboxesViewState extends State<MailboxesView> {
         ),
         largeTitleController: _titleController,
         actions: [
-          // Edit capsule pill matching Messages & bottom button premium glass aesthetic
+          // Edit capsule pill that morphs into the inbox menu button (···)
           GlassBarItem.custom(
-            id: 'mailboxes_edit',
-            background: GlassBarItemBackground.own,
-            child: GlassButton.custom(
-              onTap: () {},
-              width: 68,
-              height: 44,
-              settings: kMailTriggerGlass(context),
-              shape: const LiquidRoundedRectangle(borderRadius: 22),
-              quality: GlassQuality.premium,
-              useOwnLayer: true,
-              persistPressOnDrag: true,
+            id: 'inbox_menu',
+            background: GlassBarItemBackground.separate,
+            onTap: () {},
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Center(
                 child: Text(
                   'Edit',
@@ -137,26 +131,76 @@ class _MailboxesViewState extends State<MailboxesView> {
           16,
           botPad > 24 ? botPad - 8 : 16,
         ),
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: GlassMorphTrigger(
-            builder: (triggerContext, anchor) => GlassButton.custom(
-              onTap: () => _openCompose(context, anchor),
-              width: 52,
-              height: 52,
-              settings: kMailSearchGlass(context),
-              shape: const LiquidOval(),
-              quality: GlassQuality.premium,
-              useOwnLayer: true,
-              child: const Center(
-                child: Icon(
-                  CupertinoIcons.square_pencil,
-                  size: 24,
-                  color: CupertinoColors.white,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // iOS 27 Material vs Classic Glass toggle pill
+            ValueListenableBuilder<bool>(
+              valueListenable:
+                  MailGlassScope.of(context) ?? ValueNotifier(true),
+              builder: (context, isIos27, _) {
+                return GlassButton.custom(
+                  onTap: () {
+                    final scope = MailGlassScope.of(context);
+                    if (scope != null) scope.value = !scope.value;
+                  },
+                  height: 44,
+                  settings: kMailTriggerGlass(context),
+                  shape: const LiquidRoundedRectangle(borderRadius: 22),
+                  quality: GlassQuality.premium,
+                  useOwnLayer: true,
+                  persistPressOnDrag: true,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isIos27
+                              ? CupertinoIcons.sparkles
+                              : CupertinoIcons.circle,
+                          size: 15,
+                          color: isIos27
+                              ? kMailBlue
+                              : CupertinoColors.secondaryLabel
+                                  .resolveFrom(context),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isIos27 ? 'iOS 27 Glass' : 'Classic Glass',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: CupertinoColors.label.resolveFrom(context),
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            GlassMorphTrigger(
+              builder: (triggerContext, anchor) => GlassButton.custom(
+                onTap: () => _openCompose(context, anchor),
+                width: 52,
+                height: 52,
+                settings: kMailSearchGlass(context),
+                shape: const LiquidOval(),
+                quality: GlassQuality.premium,
+                useOwnLayer: true,
+                child: const Center(
+                  child: Icon(
+                    CupertinoIcons.square_pencil,
+                    size: 24,
+                    color: CupertinoColors.white,
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
       body: CustomScrollView(

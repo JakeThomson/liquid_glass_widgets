@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/engine/liquid_glass.dart';
 import 'package:liquid_glass_widgets/src/engine/liquid_glass_layer.dart';
 import 'package:liquid_glass_widgets/src/engine/rendering/liquid_glass_render_object.dart';
 
@@ -22,6 +23,9 @@ class _TestLiquidGlassRenderObject extends LiquidGlassRenderObject {
 
   @override
   Matrix4 get matteTransform => Matrix4.identity();
+
+  @override
+  bool get encloseDirectChildrenInPass => true;
 
   @override
   void paintLiquidGlass(
@@ -60,6 +64,19 @@ class _RenderLayerWidget extends SingleChildRenderObjectWidget {
 
   @override
   RenderLiquidGlassLayer createRenderObject(BuildContext context) => layer;
+}
+
+class _TestGlassShapeWidget extends SingleChildRenderObjectWidget {
+  const _TestGlassShapeWidget({required Widget super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return RenderLiquidGlass(
+      shape: const LiquidRoundedRectangle(borderRadius: 10),
+      glassContainsChild: false,
+      blendGroupLink: null,
+    );
+  }
 }
 
 RenderLiquidGlassLayer _createLayer({
@@ -370,7 +387,7 @@ void main() {
     });
 
     testWidgets(
-        'glass-in-glass: inner RenderLiquidGlassLayer finds outer RenderLiquidGlassLayer pass rect',
+        'glass-in-glass: inner RenderLiquidGlassLayer finds outer RenderLiquidGlassLayer pass rect when inside glass shape',
         (tester) async {
       final outerLayer = _createLayer();
       final innerLayer = _createLayer();
@@ -393,9 +410,11 @@ void main() {
                     layer: outerLayer,
                     child: Padding(
                       padding: const EdgeInsets.all(40),
-                      child: _RenderLayerWidget(
-                        layer: innerLayer,
-                        child: const SizedBox(width: 100, height: 60),
+                      child: _TestGlassShapeWidget(
+                        child: _RenderLayerWidget(
+                          layer: innerLayer,
+                          child: const SizedBox(width: 100, height: 60),
+                        ),
                       ),
                     ),
                   ),
@@ -436,9 +455,11 @@ void main() {
                   height: 400,
                   child: _RenderLayerWidget(
                     layer: outerLayer,
-                    child: _RenderLayerWidget(
-                      layer: innerLayer,
-                      child: const SizedBox(width: 100, height: 60),
+                    child: _TestGlassShapeWidget(
+                      child: _RenderLayerWidget(
+                        layer: innerLayer,
+                        child: const SizedBox(width: 100, height: 60),
+                      ),
                     ),
                   ),
                 ),
@@ -452,10 +473,13 @@ void main() {
     });
 
     testWidgets(
-        'backdropPassClipRectLocal resets to null after paintLiquidGlass so super.paint children do not inherit it',
+        'backdropPassClipRectLocal is not inherited by super.paint children outside paintShapeContents',
         (tester) async {
       final outerLayer = _createLayer();
       final innerLayer = _createLayer();
+
+      outerLayer.backdropPassClipRectLocal =
+          const Rect.fromLTWH(0, 0, 320, 400);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -481,12 +505,60 @@ void main() {
         ),
       );
 
-      // Once paint is complete, the backdrop pass is closed and
-      // backdropPassClipRectLocal must be null so children rendered
-      // outside paintShapeContents (such as tab indicator peers)
-      // do not inherit a closed pass rect.
-      expect(outerLayer.backdropPassClipRectLocal, isNull);
+      // outerLayer retains its backdropPassClipRectLocal for its shapes
+      expect(outerLayer.backdropPassClipRectLocal, isNotNull);
+      // but innerLayer was rendered as a super.paint child (no RenderLiquidGlass shape),
+      // so it does NOT inherit the pass rect!
       expect(innerLayer.enclosingBackdropPassRect(), isNull);
+    });
+
+    testWidgets(
+        'isolated descendant repaint retains enclosing pass rect when outer layer does not repaint',
+        (tester) async {
+      final outerLayer = _createLayer();
+      final innerLayer = _createLayer();
+
+      outerLayer.backdropPassClipRectLocal =
+          const Rect.fromLTWH(0, 0, 320, 400);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(
+                  left: 80,
+                  top: 60,
+                  width: 320,
+                  height: 400,
+                  child: _RenderLayerWidget(
+                    layer: outerLayer,
+                    child: _TestGlassShapeWidget(
+                      child: _RenderLayerWidget(
+                        layer: innerLayer,
+                        child: const SizedBox(width: 100, height: 60),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Inner layer initially resolves the outer pass rect.
+      expect(innerLayer.enclosingBackdropPassRect(),
+          const Rect.fromLTWH(80, 60, 320, 400));
+
+      // Simulate isolated repaint on innerLayer (e.g. button click/glow animation)
+      innerLayer.markNeedsPaint();
+      await tester.pump();
+
+      // Outer layer did not repaint, but inner layer still resolves the outer pass rect!
+      expect(outerLayer.backdropPassClipRectLocal, isNotNull);
+      expect(innerLayer.enclosingBackdropPassRect(),
+          const Rect.fromLTWH(80, 60, 320, 400));
     });
   });
 

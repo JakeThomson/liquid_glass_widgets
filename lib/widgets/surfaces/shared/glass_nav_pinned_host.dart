@@ -661,9 +661,19 @@ class _PinnedSide extends StatelessWidget {
     // Under a presentation only the group the sheet came out of is still the
     // shell's; the route has the rest. See [GlassNavPinnedState.presenting].
     final presenting = state.presenting;
-    bool holdsPresenting(int i) =>
-        presenting == null ||
-        (i < toGroups.length && toGroups[i].contains(presenting));
+
+    GlassNavBarGroup? groupAt(List<GlassNavBarGroup> list, int index) {
+      if (anchoredAtStart) {
+        return index < list.length ? list[index] : null;
+      }
+      final offset = count - list.length;
+      return (index >= offset && index - offset < list.length)
+          ? list[index - offset]
+          : null;
+    }
+
+    bool holdsPresenting(GlassNavBarGroup? group) =>
+        presenting == null || (group != null && group.contains(presenting));
 
     return Transform.scale(
       scale: coverageScale,
@@ -677,20 +687,20 @@ class _PinnedSide extends StatelessWidget {
           spacing: GlassNavPinnedMetrics.groupGap,
           children: [
             for (var i = 0; i < count; i++)
-              if (holdsPresenting(i) &&
+              if (holdsPresenting(groupAt(toGroups, i)) &&
                   _groupShowsAt(
                     context,
                     state,
-                    i < fromGroups.length ? fromGroups[i] : null,
-                    i < toGroups.length ? toGroups[i] : null,
+                    groupAt(fromGroups, i),
+                    groupAt(toGroups, i),
                   ))
                 _PinnedGroup(
                   // Keyed by position so a surviving shell keeps its element:
                   // a glass surface that remounts mid-morph pops its backdrop.
                   key: ValueKey<int>(i),
                   state: state,
-                  from: i < fromGroups.length ? fromGroups[i] : null,
-                  to: i < toGroups.length ? toGroups[i] : null,
+                  from: groupAt(fromGroups, i),
+                  to: groupAt(toGroups, i),
                   anchoredAtStart: anchoredAtStart,
                 ),
           ],

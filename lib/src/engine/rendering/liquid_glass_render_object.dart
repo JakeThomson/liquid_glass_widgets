@@ -19,6 +19,7 @@ import 'package:flutter/widgets.dart';
 import '../../renderer/fragment_shader_extensions.dart';
 import '../../renderer/liquid_glass_renderer.dart'
     show debugPaintLiquidGlassGeometry;
+import '../liquid_glass.dart' show RenderLiquidGlass;
 import '../liquid_glass_settings.dart';
 import '../render_liquid_glass_geometry.dart';
 import '../snap_rect_to_pixels.dart';
@@ -47,6 +48,26 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
 
   final FragmentShader? renderShader;
 
+  /// With a frost, the alternate pixel rows its blur pass is clipped to, in
+  /// local coordinates: every row with an odd y in the enclosing pass, over
+  /// the glass's bounds. The render shader reads the frost's cloud from
+  /// these rows and the sharp backdrop from the rows between (see uFrost in
+  /// liquid_glass_render.frag). Null without a frost, on the capture path,
+  /// or when the glass is rotated or skewed and rows in local space would
+  /// not land on pixel rows.
+  Path? frostRowsPath;
+
+  /// Widest blur, as a sigma in physical pixels, that the render shader
+  /// applies to the copy of the content showing through a frost; a wider
+  /// [LiquidGlassSettings.blur] runs as its own pass first.
+  static const double frostGhostMaxSigma = 2.4;
+
+  // What [frostRowsPath] was last built for, so it is rebuilt only when the
+  // glass moves, resizes or changes pass.
+  Matrix4? _frostRowsTransform;
+  Rect? _frostRowsBounds;
+  Rect? _frostRowsPass;
+
   /// Cached light direction vector — updated only when [settings.lightAngle]
   /// changes. Avoids recomputing cos/sin on every setting change.
   Offset _cachedLightDir;
@@ -64,6 +85,65 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   /// coordinates are relative to.
   Rect? backdropPassClipRectLocal;
 
+  /// Whether direct children in [child] painted via [super.paint] should
+  /// inherit [backdropPassClipRectLocal] even if they are not descendants of
+  /// a [RenderLiquidGlass] shape.
+  ///
+  /// Defaults to `false` for [RenderLiquidGlassLayer] because it paints [child]
+  /// outside the [BackdropFilterLayer] via [super.paint], and only paints
+  /// [RenderLiquidGlass] shapes inside the backdrop pass.
+  ///
+  /// Test fixtures or custom subclasses that composite their [child] directly
+  /// inside the backdrop pass can override this to `true`.
+  bool get encloseDirectChildrenInPass => false;
+
+  /// Builds [frostRowsPath]: one rect per odd pass-relative pixel row across
+  /// the glass's bounds, mapped back into local coordinates.
+  Path? _frostRows(Rect passPhysical, double dpr) {
+    final transform = getTransformTo(null);
+    if (frostRowsPath != null &&
+        transform == _frostRowsTransform &&
+        _paintBounds == _frostRowsBounds &&
+        passPhysical == _frostRowsPass) {
+      return frostRowsPath;
+    }
+    final storage = transform.storage;
+    // Only scale and translation keep a local rect on whole pixel rows.
+    const tolerance = 1e-6;
+    if (storage[1].abs() > tolerance ||
+        storage[4].abs() > tolerance ||
+        storage[3].abs() > tolerance ||
+        storage[7].abs() > tolerance ||
+        storage[0] == 0 ||
+        storage[5] == 0) {
+      return null;
+    }
+    final inverse = Matrix4.tryInvert(transform);
+    if (inverse == null) return null;
+    final screen = MatrixUtils.transformRect(transform, _paintBounds);
+    final top = (screen.top * dpr - passPhysical.top).floorToDouble();
+    final bottom = (screen.bottom * dpr - passPhysical.top).ceilToDouble();
+    final path = Path();
+    // Dart's % is Euclidean, so this is the first odd row at or below top.
+    for (var y = top % 2 == 1 ? top : top + 1; y < bottom; y += 2) {
+      path.addRect(
+        MatrixUtils.transformRect(
+          inverse,
+          Rect.fromLTRB(
+            screen.left - 1 / dpr,
+            (y + passPhysical.top) / dpr,
+            screen.right + 1 / dpr,
+            (y + 1 + passPhysical.top) / dpr,
+          ),
+        ),
+      );
+    }
+    _frostRowsTransform = transform;
+    _frostRowsBounds = _paintBounds;
+    _frostRowsPass = passPhysical;
+    return path;
+  }
+
   /// Screen-space (logical) rect of the nearest enclosing Impeller compositor
   /// pass that a [BackdropFilterLayer] in this subtree samples from, or null
   /// when that pass is the root surface.
@@ -78,19 +158,27 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   /// Recognises two pass sources:
   ///   1. Flutter's own [RenderBackdropFilter] (any BackdropFilter widget).
   ///   2. A [LiquidGlassRenderObject] whose [backdropPassClipRectLocal] is
-  ///      non-null (any own-layer glass surface on the live/backdrop path).
+  ///      non-null (any own-layer glass surface on the live/backdrop path)
+  ///      when the querying node is inside a [RenderLiquidGlass] shape (or
+  ///      when [encloseDirectChildrenInPass] is true).
   ///
   /// Returns null (→ uniforms reduce to current behaviour) when no such
   /// ancestor is found, i.e. the glass composes directly into the root pass.
   Rect? enclosingBackdropPassRect() {
     RenderObject? node = parent;
+    bool passedThroughGlassShape = false;
     while (node != null) {
       Rect? local;
       if (node is RenderBackdropFilter) {
         // Flutter's BackdropFilter opens a pass scoped to its own logical size.
         local = Offset.zero & node.size;
+      } else if (node is RenderLiquidGlass) {
+        passedThroughGlassShape = true;
       } else if (node is LiquidGlassRenderObject) {
-        local = node.backdropPassClipRectLocal;
+        if (passedThroughGlassShape || node.encloseDirectChildrenInPass) {
+          local = node.backdropPassClipRectLocal;
+        }
+        passedThroughGlassShape = false;
       }
       if (local != null) {
         final global = MatrixUtils.transformRect(
@@ -269,6 +357,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   @override
   @mustCallSuper
   void detach() {
+    backdropPassClipRectLocal = null;
     // Reset transient paint-state flags so a re-attached surface always starts
     // its first paint at full resolution, without inheriting stale animation
     // state (e.g. a surface that was animating when removed would otherwise
@@ -442,6 +531,22 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
                 (passLogical.bottom * dpr).ceilToDouble(),
               );
 
+        // The capture path draws without a live backdrop, so no frost.
+        frostRowsPath = settings.effectiveFrost > 0 && _captureImage == null
+            ? _frostRows(passPhysical, dpr)
+            : null;
+        // The frost's opacity, eased in over its first 2 pt so a frost that
+        // animates up from 0 doesn't start as a sharp, opaque cloud, and kept
+        // above zero so uFrost.x doubles as the frost's on switch.
+        final frostOpacity = max(
+          settings.frostOpacity.clamp(0.0, 1.0) *
+              (settings.effectiveFrost / 2).clamp(0.0, 1.0),
+          1e-3,
+        );
+        // A blur wider than the shader's ghost runs as a pass of its own
+        // (see RenderLiquidGlassLayer), leaving the shader nothing to add.
+        final ghostSigma = settings.effectiveBlur * dpr;
+
         renderShader!
           // Slot 0-1: uSize — physical-pixel size of the enclosing compositor
           // pass (root surface when no backdrop ancestor exists).
@@ -519,6 +624,21 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
             value
               ..setOffset(_touchPosition * dpr - passPhysical.topLeft)
               ..setFloat(_touchIntensity.clamp(0.0, 1.0));
+          })
+          // Slots 37-39: uRimConfig (rimShade, rimLight, rimShadeEnds);
+          // slot 40: uLensModel.
+          ..setFloatUniforms(initialIndex: 37, (value) {
+            value.setFloats([
+              settings.effectiveRimShade,
+              settings.effectiveRimLight,
+              settings.rimShadeEnds,
+              settings.lensModel == GlassLensModel.paraxial ? 1.0 : 0.0,
+              // Slots 41-44: uFrost.
+              if (frostRowsPath == null) 0.0 else frostOpacity,
+              settings.frostClamp.clamp(-1.0, 1.0),
+              ghostSigma > frostGhostMaxSigma ? 0.0 : ghostSigma,
+              max(settings.blurWeight, 0.0),
+            ]);
           })
           ..setImageSampler(
             1,
@@ -679,6 +799,19 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         value
           ..setOffset(_touchPosition * dpr)
           ..setFloat(_touchIntensity.clamp(0.0, 1.0));
+      })
+      // Slots 37-39: uRimConfig (rimShade, rimLight, rimShadeEnds);
+      // slot 40: uLensModel.
+      ..setFloatUniforms(initialIndex: 37, (value) {
+        value.setFloats([
+          settings.effectiveRimShade,
+          settings.effectiveRimLight,
+          settings.rimShadeEnds,
+          settings.lensModel == GlassLensModel.paraxial ? 1.0 : 0.0,
+          // Slots 41-44: uFrost. No frost on the capture path (no cloud
+          // rows); every component is set so none is left stale.
+          0.0, 0.0, 0.0, 1.0,
+        ]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).
       ..setImageSampler(0, capture)

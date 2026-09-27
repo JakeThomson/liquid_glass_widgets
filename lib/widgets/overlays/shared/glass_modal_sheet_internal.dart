@@ -197,6 +197,7 @@ class _SheetLayout extends StatelessWidget {
                 state: currentStateNotifier.value,
                 progress: expandProgressValue,
                 isExpanded: expandProgressValue > 0.9,
+                submergedBottom: effectiveBottom < 0 ? -effectiveBottom : 0.0,
               ),
               child: LiquidStretch(
                 interactionScale: interactionScale,
@@ -644,11 +645,17 @@ class SheetStateInfo {
   /// Whether the sheet is currently in its expanded (full) state.
   final bool isExpanded;
 
+  /// The distance in logical pixels that the sheet's bottom edge is submerged
+  /// past the bottom of the device screen (e.g. to hide bottom rounded corners
+  /// in [GlassSheetState.full]), or 0.0 if resting at or above the screen edge.
+  final double submergedBottom;
+
   /// Creates a [SheetStateInfo] snapshot.
   const SheetStateInfo({
     required this.state,
     required this.progress,
     required this.isExpanded,
+    this.submergedBottom = 0.0,
   });
 }
 
@@ -677,7 +684,8 @@ class GlassModalSheetStateProvider extends InheritedWidget {
   bool updateShouldNotify(GlassModalSheetStateProvider oldWidget) {
     return info.state != oldWidget.info.state ||
         info.progress != oldWidget.info.progress ||
-        info.isExpanded != oldWidget.info.isExpanded;
+        info.isExpanded != oldWidget.info.isExpanded ||
+        info.submergedBottom != oldWidget.info.submergedBottom;
   }
 }
 

@@ -273,8 +273,7 @@ class AdaptiveGlass extends StatelessWidget {
     // trigger repaints of the ancestor GlassContainer layer or sibling glass cards.
     // Exterior drop shadow is suppressed: nested vibrancy controls sit flush on
     // the host glass surface without casting exterior drop shadows onto it.
-    // --------------------------------------------------------------------------
-    if (inherited?.avoidsRefraction ?? false) {
+    if (!useOwnLayer && (inherited?.avoidsRefraction ?? false)) {
       return _wrapWithBacker(
         baseSettings,
         RepaintBoundary(
