@@ -53,6 +53,7 @@ void main() {
           adaptiveConfig: const GlassAdaptiveScopeConfig(
             warmupPremiumThresholdMs: 24.0,
             warmupStandardThresholdMs: 32.0,
+            frostStep: true,
           ),
         ),
       ));
@@ -60,6 +61,7 @@ void main() {
           tester.widget<GlassAdaptiveScope>(find.byType(GlassAdaptiveScope));
       expect(scope.warmupPremiumThresholdMs, 24.0);
       expect(scope.warmupStandardThresholdMs, 32.0);
+      expect(scope.frostStep, isTrue);
     });
 
     test('config equality includes the warm-up thresholds', () {

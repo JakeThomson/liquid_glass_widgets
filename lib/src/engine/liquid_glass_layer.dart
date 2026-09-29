@@ -14,6 +14,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
+import '../renderer/glass_frost_budget.dart';
 import '../renderer/glass_materialize_scope.dart';
 import '../renderer/liquid_glass_push_back_scope.dart';
 import '../renderer/liquid_glass_self_scale_scope.dart';
@@ -422,7 +423,7 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
       renderShader: renderShader,
       backdropKey: backdropKey,
-      settings: settings,
+      settings: GlassFrostBudget.apply(context, settings),
       shadows: shadows,
       link: link,
       clipExpansion: clipExpansion,
@@ -441,7 +442,7 @@ class _RawShapes extends SingleChildRenderObjectWidget {
     renderObject
       ..link = link
       ..devicePixelRatio = MediaQuery.devicePixelRatioOf(context)
-      ..settings = settings
+      ..settings = GlassFrostBudget.apply(context, settings)
       ..shadows = shadows
       ..backdropKey = backdropKey
       ..clipExpansion = clipExpansion

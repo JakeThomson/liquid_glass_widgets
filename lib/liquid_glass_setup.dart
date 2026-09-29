@@ -293,6 +293,7 @@ class LiquidGlassWidgets {
         allowStepUp: config.allowStepUp,
         warmupPremiumThresholdMs: config.warmupPremiumThresholdMs,
         warmupStandardThresholdMs: config.warmupStandardThresholdMs,
+        frostStep: config.frostStep,
         onQualityChanged: config.onQualityChanged,
         onDiagnostic: config.onDiagnostic,
         debugLogDiagnostics: config.debugLogDiagnostics,
