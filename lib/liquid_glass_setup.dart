@@ -291,6 +291,8 @@ class LiquidGlassWidgets {
         initialQuality: config.initialQuality,
         targetFrameMs: config.targetFrameMs,
         allowStepUp: config.allowStepUp,
+        warmupPremiumThresholdMs: config.warmupPremiumThresholdMs,
+        warmupStandardThresholdMs: config.warmupStandardThresholdMs,
         onQualityChanged: config.onQualityChanged,
         onDiagnostic: config.onDiagnostic,
         debugLogDiagnostics: config.debugLogDiagnostics,

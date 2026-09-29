@@ -22,10 +22,11 @@
 //   demote it after the warm-up benchmark concludes.
 //
 // Phase 3 — Runtime hysteresis (ongoing, very low overhead):
-//   Degrades quality when P95 > targetFrameMs × 1.5 for 3 consecutive windows.
+//   Degrades quality when P95 > targetFrameMs × 1.5 for 2 consecutive windows
+//   (GlassQualityAdapter.degradeWindowCount).
 //   Upgrades quality (if allowStepUp) when P95 < targetFrameMs × 0.6
 //   for 10 consecutive windows. Hard 8-second cooldown between any change.
-//   Degradation is 3× faster than recovery — jank is noticed immediately;
+//   Degradation is 5× faster than recovery — jank is noticed immediately;
 //   recovery should be invisible and stable.
 //
 // ## Key design constraint
@@ -40,10 +41,10 @@
 // GlassAdaptiveScopeData.maybeOf(context) after resolving the widget-level
 // and inherited qualities.
 //
-// Widgets with an **explicit** quality parameter are not affected — the
-// resolution chain handles this: the explicit param is resolved before the
-// adaptive cap is applied. (That is intentional — the developer's explicit
-// override wins.)
+// Widgets with an **explicit** quality parameter are capped too: an explicit
+// `quality: GlassQuality.premium` means "premium if the device can handle
+// it". To force a floor on a subtree regardless of the ceiling, wrap it in
+// `GlassAdaptiveScope(minQuality: GlassQuality.premium, child: ...)`.
 //
 // ## Debug / Profile builds
 //
@@ -356,6 +357,8 @@ class GlassAdaptiveScopeConfig {
           initialQuality == other.initialQuality &&
           targetFrameMs == other.targetFrameMs &&
           allowStepUp == other.allowStepUp &&
+          warmupPremiumThresholdMs == other.warmupPremiumThresholdMs &&
+          warmupStandardThresholdMs == other.warmupStandardThresholdMs &&
           debugLogDiagnostics == other.debugLogDiagnostics;
 
   @override
@@ -365,6 +368,8 @@ class GlassAdaptiveScopeConfig {
         initialQuality,
         targetFrameMs,
         allowStepUp,
+        warmupPremiumThresholdMs,
+        warmupStandardThresholdMs,
         debugLogDiagnostics,
       );
 }
@@ -383,8 +388,8 @@ class GlassAdaptiveScopeConfig {
 /// - **Thermal throttling** ("fine at launch, janky after 10 minutes"):
 ///   detected and corrected by Phase 3 runtime hysteresis.
 ///
-/// The scope acts as a **quality ceiling** — it only caps inherited quality,
-/// never overrides explicit `quality:` widget parameters. See the file-level
+/// The scope acts as a **quality ceiling** — it caps inherited and explicit
+/// `quality:` widget parameters alike, and never raises them. See the file-level
 /// documentation for the complete architecture description.
 ///
 /// **Experimental** — available in 0.8.0 for community feedback. The Phase 2
