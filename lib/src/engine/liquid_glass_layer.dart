@@ -11,6 +11,7 @@
 import 'dart:ui';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
 import '../renderer/glass_materialize_scope.dart';
@@ -479,6 +480,18 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   ColorFilter? _cachedWeight;
   double _cachedWeightValue = 1;
 
+  // ── Baked shadow ────────────────────────────────────────────────────────
+  // The shadows drawn once into an image while the geometry holds still, so
+  // a resting surface doesn't pay a saveLayer and a blur for them on every
+  // frame the backdrop moves. See _paintShadows.
+  ui.Image? _lastShadowGeometry;
+  ui.Image? _bakedShadow;
+  Rect _bakedShadowRect = Rect.zero;
+  ui.Image? _bakedShadowGeometry;
+  List<BoxShadow>? _bakedShadowList;
+  Rect _bakedShadowBounds = Rect.zero;
+  double _bakedShadowDpr = 0;
+
   final _shaderHandle = LayerHandle<BackdropFilterLayer>();
   final _blurLayerHandle = LayerHandle<BackdropFilterLayer>();
   final _frostLayerHandle = LayerHandle<BackdropFilterLayer>();
@@ -641,55 +654,12 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
 
     // ── Pass 0: SDF Shadows ──────────────────────────────────────────────────
     if (shadows.isNotEmpty && geometryImage != null) {
-      final localBounds = geometryLocalBounds.shift(offset);
-
-      for (final shadow in shadows) {
-        if (shadow.color.a == 0) continue;
-
-        // Inflate clip rect to ensure large blurs aren't cut off
-        final shadowClip = localBounds.shift(shadow.offset).inflate(
-              shadow.spreadRadius + shadow.blurRadius * 3,
-            );
-
-        context.canvas.saveLayer(shadowClip, Paint());
-
-        // 1. Draw the geometry matte as a blurred, tinted shadow
-        final shadowPaint = Paint()
-          ..colorFilter = ColorFilter.mode(shadow.color, BlendMode.srcIn)
-          ..imageFilter = ImageFilter.blur(
-            sigmaX: shadow.blurSigma,
-            sigmaY: shadow.blurSigma,
-            tileMode: TileMode.decal,
-          );
-
-        context.canvas.drawImageRect(
-          geometryImage!,
-          Rect.fromLTWH(
-            0,
-            0,
-            geometryImage!.width.toDouble(),
-            geometryImage!.height.toDouble(),
-          ),
-          localBounds.shift(shadow.offset),
-          shadowPaint,
-        );
-
-        // 2. GPU Cutout (dstOut): punch out the interior using the same geometry
-        // matte to prevent the glass from blurring its own shadow (dirty rim).
-        context.canvas.drawImageRect(
-          geometryImage!,
-          Rect.fromLTWH(
-            0,
-            0,
-            geometryImage!.width.toDouble(),
-            geometryImage!.height.toDouble(),
-          ),
-          localBounds,
-          Paint()..blendMode = BlendMode.dstOut,
-        );
-
-        context.canvas.restore();
-      }
+      _paintShadows(
+        context.canvas,
+        offset,
+        geometryImage!,
+        geometryLocalBounds,
+      );
     }
 
     // ── Pass 1a: Blur ────────────────────────────────────────────────────────
@@ -916,8 +886,140 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     );
   }
 
+  /// Draws [shadows] under the glass.
+  ///
+  /// While the geometry changes from frame to frame (a jelly squash, a morph)
+  /// they are drawn live. Once the same geometry image is painted a second
+  /// time they are drawn once into an image and that image is drawn from
+  /// then on: same pixels, but no saveLayer and no blur per frame.
+  void _paintShadows(
+    Canvas canvas,
+    Offset offset,
+    ui.Image geometry,
+    Rect bounds,
+  ) {
+    final stable = identical(geometry, _lastShadowGeometry);
+    _lastShadowGeometry = geometry;
+    if (stable) {
+      if (!identical(_bakedShadowGeometry, geometry) ||
+          !listEquals(_bakedShadowList, shadows) ||
+          _bakedShadowBounds != bounds ||
+          _bakedShadowDpr != devicePixelRatio) {
+        _bakeShadows(geometry, bounds);
+      }
+      if (_bakedShadow case final baked?) {
+        canvas.drawImageRect(
+          baked,
+          Rect.fromLTWH(0, 0, baked.width.toDouble(), baked.height.toDouble()),
+          _bakedShadowRect.shift(offset),
+          Paint()..filterQuality = FilterQuality.low,
+        );
+        return;
+      }
+    }
+    _drawShadows(canvas, bounds.shift(offset), geometry);
+  }
+
+  void _bakeShadows(ui.Image geometry, Rect bounds) {
+    _bakedShadow?.dispose();
+    _bakedShadow = null;
+    _bakedShadowGeometry = geometry;
+    _bakedShadowList = List.of(shadows);
+    _bakedShadowBounds = bounds;
+    _bakedShadowDpr = devicePixelRatio;
+
+    Rect? area;
+    for (final shadow in shadows) {
+      if (shadow.color.a == 0) continue;
+      final clip = _shadowClip(bounds, shadow);
+      area = area == null ? clip : area.expandToInclude(clip);
+    }
+    if (area == null) return;
+    final dpr = devicePixelRatio;
+    final width = (area.width * dpr).ceil();
+    final height = (area.height * dpr).ceil();
+    if (width <= 0 || height <= 0) return;
+    // Whole physical pixels, so the image is drawn back unscaled.
+    final rect = Rect.fromLTWH(area.left, area.top, width / dpr, height / dpr);
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)
+      ..scale(dpr)
+      ..translate(-rect.left, -rect.top);
+    _drawShadows(canvas, bounds, geometry);
+    final picture = recorder.endRecording();
+    _bakedShadow = picture.toImageSync(width, height);
+    picture.dispose();
+    _bakedShadowRect = rect;
+  }
+
+  /// Paints the shadows as a paint pass would, for tests: [geometry] stands
+  /// in for the geometry matte and [bounds] for where it lies.
+  @visibleForTesting
+  void debugPaintShadows(
+    Canvas canvas,
+    Offset offset,
+    ui.Image geometry,
+    Rect bounds,
+  ) =>
+      _paintShadows(canvas, offset, geometry, bounds);
+
+  /// The image the shadows are baked into, once the geometry held still.
+  @visibleForTesting
+  ui.Image? get debugBakedShadow => _bakedShadow;
+
+  static Rect _shadowClip(Rect bounds, BoxShadow shadow) =>
+      // Inflated so large blurs aren't cut off.
+      bounds
+          .shift(shadow.offset)
+          .inflate(shadow.spreadRadius + shadow.blurRadius * 3);
+
+  void _drawShadows(Canvas canvas, Rect bounds, ui.Image geometry) {
+    final src = Rect.fromLTWH(
+      0,
+      0,
+      geometry.width.toDouble(),
+      geometry.height.toDouble(),
+    );
+    for (final shadow in shadows) {
+      if (shadow.color.a == 0) continue;
+
+      canvas.saveLayer(_shadowClip(bounds, shadow), Paint());
+
+      // 1. Draw the geometry matte as a blurred, tinted shadow
+      final shadowPaint = Paint()
+        ..colorFilter = ColorFilter.mode(shadow.color, BlendMode.srcIn)
+        ..imageFilter = ImageFilter.blur(
+          sigmaX: shadow.blurSigma,
+          sigmaY: shadow.blurSigma,
+          tileMode: TileMode.decal,
+        );
+      canvas.drawImageRect(
+        geometry,
+        src,
+        bounds.shift(shadow.offset),
+        shadowPaint,
+      );
+
+      // 2. GPU Cutout (dstOut): punch out the interior using the same geometry
+      // matte to prevent the glass from blurring its own shadow (dirty rim).
+      canvas.drawImageRect(
+        geometry,
+        src,
+        bounds,
+        Paint()..blendMode = BlendMode.dstOut,
+      );
+
+      canvas.restore();
+    }
+  }
+
   @override
   void dispose() {
+    _bakedShadow?.dispose();
+    _bakedShadow = null;
+    _bakedShadowGeometry = null;
+    _lastShadowGeometry = null;
     // Eagerly clear filter references on the backdrop layers before nulling
     // the handles. During isolate shutdown on Mali GPUs, GC finalization of
     // BackdropFilterLayer retains DlRuntimeEffectColorSource → TextureVK →
