@@ -5,7 +5,7 @@
 // builds, and its timings say little about a phone GPU):
 //
 //   cd example
-//   flutter drive --profile -d <device> \
+//   flutter drive --profile --no-dds --endless-trace-buffer -d <device> \
 //     --driver=test_driver/perf_glass_driver.dart \
 //     --target=integration_test/perf_glass_test.dart
 //
@@ -22,6 +22,8 @@
 //   --dart-define=BENCH_OVERLAY=true    Flutter's performance overlay (recordings)
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_driver/flutter_driver.dart' as driver
+    show Timeline, TimelineSummary;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -269,13 +271,18 @@ void main() {
       // Warm-up outside the measurement: first use of every shader and image.
       await _fling(tester, 400);
       await _fling(tester, -400);
-      // Only the engine's frame and GPU events: with every stream on, the
-      // timeline's ring buffer drops all but the last second or so.
-      await binding.traceAction(
+      // Frame build (Dart), raster and GPU (Embedder) events, summarized
+      // here so only the numbers travel back to the driver. Run with
+      // --endless-trace-buffer: a scene is more than the ring buffer holds.
+      final timeline = await binding.traceTimeline(
         action,
-        streams: const ['Embedder'],
-        reportKey: '$name|${config.name}|$round',
+        streams: const ['Dart', 'Embedder'],
       );
+      final summary = driver.TimelineSummary.summarize(
+        driver.Timeline.fromJson(timeline.toJson()),
+      ).summaryJson
+        ..removeWhere((key, value) => value is List);
+      (binding.reportData ??= {})['$name|${config.name}|$round'] = summary;
       if (_pauseMs > 0) {
         await _pumpFor(tester, const Duration(milliseconds: _pauseMs));
       }
