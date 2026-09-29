@@ -679,6 +679,9 @@ class _GlassAdaptiveScopeState extends State<GlassAdaptiveScope>
             '(P95 ${_adapter.lastP95Ms?.toStringAsFixed(1) ?? '-'} ms)');
       }
     });
+    // The callback above needs a frame; on a screen that just went idle
+    // there may be none coming.
+    SchedulerBinding.instance.ensureVisualUpdate();
   }
 
   /// Called by the adapter whenever Phase 2 completes — even if quality
