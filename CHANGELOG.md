@@ -2,6 +2,16 @@
 
 ## Performance
 
+- **`GlassBackdropGroup` (#357):** New opt-in widget. On Impeller every `BackdropFilter` ends
+  the render pass and copies the whole screen, and premium glass has two of them per surface
+  (three with the iOS 27 frost and its weight). Inside a `GlassBackdropGroup` the blur and
+  frost passes of all surfaces share one backdrop read, and where their settings match the
+  engine runs the filter once for all of them; only the refraction pass stays per surface.
+  Same idea as SwiftUI's `GlassEffectContainer`. Measured on an iPhone Air (iOS 27, profile)
+  with `ios27Light` on an app bar with three buttons, a floating button and a tab bar: GPU
+  time p90 while scrolling 15.6 → 6.8 ms (back to 120 fps), opening a sheet 26.4 → 13.7 ms.
+  Glass in a group doesn't see other glass of the same group, so it's meant for glass side by
+  side over content (bars, toolbars), not for glass lying over glass.
 - **Cheaper iOS 27 material on premium (#357):** The render shader skips frost and light work
   that has no visible effect: the 45-tap ghost under a fully opaque cloud (`frostOpacity: 1`),
   the bilinear backdrop sample in the frosted body away from the hairline (1 texel instead of
