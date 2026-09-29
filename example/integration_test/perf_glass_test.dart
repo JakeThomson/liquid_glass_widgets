@@ -255,7 +255,9 @@ void main() {
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   testWidgets('glass frame timings', (tester) async {
-    await LiquidGlassWidgets.initialize();
+    // The monitor reports sustained over-budget frames as a FlutterError,
+    // which fails a test; here slow frames are the measurement.
+    await LiquidGlassWidgets.initialize(enablePerformanceMonitor: false);
 
     Future<void> scene(String name, _Config config, int round,
         {required bool cards, required Future<void> Function() action}) async {

@@ -9,6 +9,7 @@ import 'package:integration_test/integration_test_driver.dart';
 Future<void> main() {
   return integrationDriver(
     timeout: const Duration(minutes: 45),
+    writeResponseOnFailure: true,
     responseDataCallback: (data) async {
       if (data == null) return;
       final directory = Directory('build/glass-perf');
