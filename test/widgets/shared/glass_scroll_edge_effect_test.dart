@@ -210,6 +210,205 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(GlassScrollEdgeEffect), findsOneWidget);
+
+      // Verify that texture capture succeeded and CustomPaint was installed
+      final effectFinder = find.byType(GlassScrollEdgeEffect);
+      final customPaints = tester.widgetList<CustomPaint>(
+        find.descendant(of: effectFinder, matching: find.byType(CustomPaint)),
+      );
+      expect(customPaints.length, 2);
+    });
+
+    testWidgets('recaptures background texture when fadeColor changes',
+        (tester) async {
+      Widget buildTree(Color color) {
+        return CupertinoApp(
+          home: Scaffold(
+            body: LiquidGlassScope(
+              child: Stack(
+                children: [
+                  GlassBackgroundSource(
+                    child: SizedBox(
+                      width: 800,
+                      height: 600,
+                      child: ColoredBox(color: color),
+                    ),
+                  ),
+                  GlassScrollEdgeEffect(
+                    fadeColor: color,
+                    style: GlassScrollEdgeStyle.soft,
+                    child: const SizedBox(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(buildTree(const Color(0xFF08111F)));
+      await tester.pumpAndSettle();
+
+      final effectFinder = find.byType(GlassScrollEdgeEffect);
+      final initialPaints = tester.widgetList<CustomPaint>(
+        find.descendant(of: effectFinder, matching: find.byType(CustomPaint)),
+      );
+      expect(initialPaints.length, 2);
+      final dynamic initialPainter = initialPaints.first.painter;
+      final initialImage = initialPainter.image;
+      expect(initialImage, isNotNull);
+
+      // Update with new fadeColor
+      await tester.pumpWidget(buildTree(const Color(0xFFFCFCFA)));
+
+      // On the update frame, stale image is cleared and DecoratedBox fallback is shown
+      final interimDecoratedBoxes = tester.widgetList<DecoratedBox>(
+        find.descendant(of: effectFinder, matching: find.byType(DecoratedBox)),
+      );
+      expect(interimDecoratedBoxes.length, 2);
+
+      // Settle to complete the new async capture
+      await tester.pumpAndSettle();
+
+      final updatedPaints = tester.widgetList<CustomPaint>(
+        find.descendant(of: effectFinder, matching: find.byType(CustomPaint)),
+      );
+      expect(updatedPaints.length, 2);
+      final dynamic updatedPainter = updatedPaints.first.painter;
+      final updatedImage = updatedPainter.image;
+      expect(updatedImage, isNotNull);
+      expect(updatedImage != initialImage, isTrue);
+    });
+
+    testWidgets(
+        'recaptures background and clears stale texture on theme mode change',
+        (tester) async {
+      final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
+
+      await tester.pumpWidget(
+        ValueListenableBuilder<ThemeMode>(
+          valueListenable: themeNotifier,
+          builder: (context, mode, _) {
+            return MaterialApp(
+              themeMode: mode,
+              theme: ThemeData(
+                brightness: Brightness.light,
+                scaffoldBackgroundColor: const Color(0xFFFCFCFA),
+              ),
+              darkTheme: ThemeData(
+                brightness: Brightness.dark,
+                scaffoldBackgroundColor: const Color(0xFF08111F),
+              ),
+              home: Builder(
+                builder: (context) {
+                  final background = Theme.of(context).scaffoldBackgroundColor;
+                  return GlassScaffold(
+                    backgroundColor: background,
+                    background: ColoredBox(color: background),
+                    bottomBar: GlassTabBar.bottom(
+                      tabs: const [
+                        GlassTab(icon: Icon(Icons.home), label: 'Home'),
+                      ],
+                      selectedIndex: 0,
+                      onTabSelected: (_) {},
+                    ),
+                    body: const Center(child: Text('Content')),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final effectFinder = find.byType(GlassScrollEdgeEffect);
+      final initialPaints = tester.widgetList<CustomPaint>(
+        find.descendant(of: effectFinder, matching: find.byType(CustomPaint)),
+      );
+      expect(initialPaints.length,
+          1); // bottomEdgeFade only by default without appBar
+      final dynamic initialPainter = initialPaints.first.painter;
+      final initialImage = initialPainter.image;
+      expect(initialImage, isNotNull);
+
+      // Switch theme to light
+      themeNotifier.value = ThemeMode.light;
+      await tester.pumpAndSettle();
+
+      final updatedPaints = tester.widgetList<CustomPaint>(
+        find.descendant(of: effectFinder, matching: find.byType(CustomPaint)),
+      );
+      expect(updatedPaints.length, 1);
+      final dynamic updatedPainter = updatedPaints.first.painter;
+      final updatedImage = updatedPainter.image;
+      expect(updatedImage, isNotNull);
+      expect(updatedImage != initialImage, isTrue);
+    });
+
+    testWidgets(
+        'recaptures background on theme change even when fadeColor is null',
+        (tester) async {
+      final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
+
+      await tester.pumpWidget(
+        ValueListenableBuilder<ThemeMode>(
+          valueListenable: themeNotifier,
+          builder: (context, mode, _) {
+            return MaterialApp(
+              themeMode: mode,
+              theme: ThemeData(
+                brightness: Brightness.light,
+                scaffoldBackgroundColor: const Color(0xFFFCFCFA),
+              ),
+              darkTheme: ThemeData(
+                brightness: Brightness.dark,
+                scaffoldBackgroundColor: const Color(0xFF08111F),
+              ),
+              home: Builder(
+                builder: (context) {
+                  final background = Theme.of(context).scaffoldBackgroundColor;
+                  // Explicitly omit backgroundColor so fadeColor remains null
+                  return GlassScaffold(
+                    background: ColoredBox(color: background),
+                    bottomBar: GlassTabBar.bottom(
+                      tabs: const [
+                        GlassTab(icon: Icon(Icons.home), label: 'Home'),
+                      ],
+                      selectedIndex: 0,
+                      onTabSelected: (_) {},
+                    ),
+                    body: const Center(child: Text('Content')),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final effectFinder = find.byType(GlassScrollEdgeEffect);
+      final initialPaint = tester.widget<CustomPaint>(
+        find.descendant(of: effectFinder, matching: find.byType(CustomPaint)),
+      );
+      final dynamic initialPainter = initialPaint.painter;
+      final initialImage = initialPainter.image;
+      expect(initialImage, isNotNull);
+
+      // Switch theme to light
+      themeNotifier.value = ThemeMode.light;
+      await tester.pumpAndSettle();
+
+      final updatedPaint = tester.widget<CustomPaint>(
+        find.descendant(of: effectFinder, matching: find.byType(CustomPaint)),
+      );
+      final dynamic updatedPainter = updatedPaint.painter;
+      final updatedImage = updatedPainter.image;
+      expect(updatedImage, isNotNull);
+      expect(updatedImage != initialImage, isTrue);
     });
   });
 }

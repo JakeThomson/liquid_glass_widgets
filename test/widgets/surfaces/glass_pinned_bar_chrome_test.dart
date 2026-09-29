@@ -96,6 +96,84 @@ void main() {
 
       expect(hostRect(tester).left, 4);
     });
+
+    testWidgets(
+        'a pop lands on the incoming route\'s guide from the first frame',
+        (tester) async {
+      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
+        title: 'Inbox',
+        actionIcon: CupertinoIcons.add,
+        horizontalInset: 16,
+      )));
+      await settle(tester);
+
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(MaterialPageRoute<void>(
+        builder: (_) => const _MaterialBarScreen(
+          title: 'Detail',
+          actionIcon: CupertinoIcons.share,
+          horizontalInset: 4,
+        ),
+      ));
+      await settle(tester);
+      expect(hostRect(tester).left, 4);
+
+      navigator.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(hostRect(tester).left, 16);
+
+      await settle(tester);
+      expect(hostRect(tester).left, 16);
+    });
+  });
+
+  group('buttonSettings', () {
+    testWidgets('follows the route being entered, on push and pop (fixes #351)',
+        (tester) async {
+      const inboxSettings = LiquidGlassSettings(blur: 10, thickness: 20);
+      const detailSettings = LiquidGlassSettings(blur: 30, thickness: 40);
+
+      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
+        title: 'Inbox',
+        actionIcon: CupertinoIcons.add,
+        buttonSettings: inboxSettings,
+      )));
+      await settle(tester);
+
+      LiquidGlassSettings? currentSettings() {
+        final scopeFinder = find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byType(DefaultButtonSettings),
+        );
+        if (scopeFinder.evaluate().isEmpty) return null;
+        return tester.widget<DefaultButtonSettings>(scopeFinder.first).settings;
+      }
+
+      expect(currentSettings()?.blur, 10);
+
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(MaterialPageRoute<void>(
+        builder: (_) => const _MaterialBarScreen(
+          title: 'Detail',
+          actionIcon: CupertinoIcons.share,
+          buttonSettings: detailSettings,
+        ),
+      ));
+      await settle(tester);
+      expect(currentSettings()?.blur, 30);
+
+      // On pop, the chrome adopts the destination's buttonSettings immediately
+      // during the transition rather than holding the leaving route's look
+      // until it snaps at completion.
+      navigator.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(currentSettings()?.blur, 10);
+
+      await settle(tester);
+      expect(currentSettings()?.blur, 10);
+    });
   });
 
   group('platform view backdrop', () {
@@ -420,6 +498,7 @@ class _MaterialBarScreen extends StatelessWidget {
     this.enabled = true,
     this.horizontalInset,
     this.platformViewBackdrop = false,
+    this.buttonSettings,
   });
 
   final String title;
@@ -429,6 +508,7 @@ class _MaterialBarScreen extends StatelessWidget {
   final bool enabled;
   final double? horizontalInset;
   final bool platformViewBackdrop;
+  final LiquidGlassSettings? buttonSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -441,6 +521,7 @@ class _MaterialBarScreen extends StatelessWidget {
       enabled: enabled,
       horizontalInset: horizontalInset,
       platformViewBackdrop: platformViewBackdrop,
+      buttonSettings: buttonSettings,
       builder: (context, chrome) => Scaffold(
         appBar: AppBar(
           title: Text(title),

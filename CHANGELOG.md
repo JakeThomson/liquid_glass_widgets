@@ -1,3 +1,11 @@
+# 1.8.1
+
+## Bug Fixes
+
+- **`GlassScrollEdgeEffect` stale texture on theme switch (fixes #352):** Recaptures background when brightness or `fadeColor` changes; stale in-flight captures are discarded via a generation counter.
+- **Pinned navigation chrome `buttonSettings` and inset on pop (fixes #351):** Resolves `buttonSettings` and `horizontalInset` against `flowTo` so pop transitions adopt the destination route's look from the first frame rather than snapping at animation completion.
+- **`GlassButton` / `GlassIconButton` isolated semantics node (fixes #354):** `GlassFocusRegion` now emits `container: true` when a button role or label is present, and `GlassButton` routes its tap through `semanticOnTap` with the `GestureDetector` excluded from semantics. Label, button role, and tap action now land on one isolated node rather than merging into an ancestor boundary or splitting across two nodes.
+
 # 1.8.0
 
 ## Features

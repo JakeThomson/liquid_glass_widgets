@@ -858,5 +858,32 @@ void main() {
         handle.dispose();
       }
     });
+
+    testWidgets('excludeFromSemantics hides button from semantics tree',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+
+      try {
+        await tester.pumpWidget(
+          createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: GlassButton(
+                icon: const Icon(CupertinoIcons.heart),
+                onTap: () {},
+                label: 'Like',
+                excludeFromSemantics: true,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        expect(find.bySemanticsLabel('Like'), findsNothing);
+      } finally {
+        handle.dispose();
+      }
+    });
   });
 }

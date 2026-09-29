@@ -378,7 +378,8 @@ class GlassNavPinnedHost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.paddingOf(context).top;
-    final settings = state.to.buttonSettings ?? state.from.buttonSettings;
+    final settings =
+        state.flowTo.buttonSettings ?? state.flowFrom.buttonSettings;
     final textDirection = Directionality.of(context);
 
     // Everything retreats together when an unregistered route covers the bar.
@@ -412,8 +413,8 @@ class GlassNavPinnedHost extends StatelessWidget {
     // The incoming route's guide, as `buttonSettings` above resolves the
     // material: a transition between two bars that disagree lands on the one
     // being entered rather than sliding the chrome between them.
-    final inset = state.to.horizontalInset ??
-        state.from.horizontalInset ??
+    final inset = state.flowTo.horizontalInset ??
+        state.flowFrom.horizontalInset ??
         GlassNavPinnedMetrics.horizontalPadding;
 
     return Positioned(

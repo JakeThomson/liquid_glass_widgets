@@ -1,6 +1,7 @@
 import 'package:liquid_glass_widgets/src/renderer/liquid_glass_renderer.dart';
 import 'package:liquid_glass_widgets/src/engine/stretch.dart';
 import 'package:liquid_glass_widgets/widgets/interactive/glass_icon_button.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/widgets/shared/adaptive_liquid_glass_layer.dart';
@@ -232,6 +233,117 @@ void main() {
       );
 
       expect(stretchOf(tester).anchorStretchSettings.intensity, equals(0.5));
+    });
+  });
+
+  group('GlassIconButton semantics (fixes #354)', () {
+    testWidgets(
+        'semanticLabel produces isolated button node with label and tap action',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: Center(
+            child: Semantics(
+              container: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Title'),
+                  GlassIconButton(
+                    key: const Key('icon_btn'),
+                    icon: const Icon(CupertinoIcons.gear_alt_fill),
+                    semanticLabel: 'Settings',
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Find the semantics node by its label — if the label merged with
+      // 'Title' this finder returns nothing and the test fails.
+      final settingsNode = find.bySemanticsLabel('Settings');
+      expect(settingsNode, findsOneWidget);
+
+      expect(
+        tester.getSemantics(settingsNode),
+        matchesSemantics(
+          label: 'Settings',
+          isButton: true,
+          hasTapAction: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+        ),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('label is not merged with sibling text', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: Center(
+            child: Semantics(
+              container: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Title'),
+                  GlassIconButton(
+                    icon: const Icon(CupertinoIcons.gear_alt_fill),
+                    semanticLabel: 'Settings',
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // There must be a 'Settings' node, and no node whose label contains
+      // both 'Title' and 'Settings' merged together.
+      expect(find.bySemanticsLabel('Settings'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp(r'(Title.*Settings|Settings.*Title)')),
+        findsNothing,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('disabled button omits tap action and reports isEnabled false',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: Center(
+            child: GlassIconButton(
+              icon: const Icon(CupertinoIcons.gear_alt_fill),
+              semanticLabel: 'Settings',
+              onPressed: null, // disabled
+            ),
+          ),
+        ),
+      );
+
+      final settingsNode = find.bySemanticsLabel('Settings');
+      expect(settingsNode, findsOneWidget);
+
+      expect(
+        tester.getSemantics(settingsNode),
+        matchesSemantics(
+          label: 'Settings',
+          isButton: true,
+          hasTapAction: false,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+      handle.dispose();
     });
   });
 }

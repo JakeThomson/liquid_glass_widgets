@@ -994,8 +994,17 @@ class _GlassButtonState extends State<GlassButton>
       focusNode: widget.focusNode,
       canRequestFocus: widget.canRequestFocus,
       autofocus: widget.autofocus,
-      semanticLabel: widget.label.isNotEmpty ? widget.label : null,
+      semanticLabel: (!widget.excludeFromSemantics && widget.label.isNotEmpty)
+          ? widget.label
+          : null,
       isButton: !widget.excludeFromSemantics,
+      // Route the tap through the Semantics node that carries the label so
+      // that label, button role, and tap action all live on the same node.
+      // The GestureDetectors below are excluded from semantics to prevent
+      // them from registering a competing tap on a different node.
+      semanticOnTap: (!widget.excludeFromSemantics && widget.enabled)
+          ? widget.onTap
+          : null,
       shape: widget.shape,
       isFocusedNotifier: _isFocused,
       isHoveredNotifier: _isHovered,
@@ -1025,7 +1034,11 @@ class _GlassButtonState extends State<GlassButton>
         child: GestureDetector(
           onTap: widget.enabled ? widget.onTap : null,
           behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: widget.excludeFromSemantics,
+          // Semantics live on the GlassFocusRegion node (via semanticOnTap).
+          // Exclude the GestureDetector so its tap doesn't create a second,
+          // unlabelled action node. When excludeFromSemantics is true, both
+          // the region node and this detector are silent — consistent.
+          excludeFromSemantics: true,
           child: focusableWidget,
         ),
       );
@@ -1038,7 +1051,8 @@ class _GlassButtonState extends State<GlassButton>
       onTapUp: _handleTapUp,
       onTapCancel: _handleTapCancel,
       behavior: HitTestBehavior.opaque,
-      excludeFromSemantics: widget.excludeFromSemantics,
+      // Same rationale as above: semantics are owned by GlassFocusRegion.
+      excludeFromSemantics: true,
       child: focusableWidget,
     );
   }

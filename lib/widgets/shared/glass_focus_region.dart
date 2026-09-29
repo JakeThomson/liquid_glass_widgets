@@ -361,6 +361,11 @@ class _GlassFocusRegionState extends State<GlassFocusRegion> {
 
     // ── Interactive mode ──────────────────────────────────────────────────────
     return Semantics(
+      // container: true creates an isolated semantics boundary so that the
+      // label and tap action stay on this node and are not merged into an
+      // ancestor container (which would concatenate the label with unrelated
+      // text, e.g. an app-bar title, and put the tap on a different node).
+      container: widget.isButton || widget.semanticLabel != null,
       button: widget.isButton,
       focusable: widget.enabled && widget.canRequestFocus,
       slider: widget.isSlider,
