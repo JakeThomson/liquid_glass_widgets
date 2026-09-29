@@ -37,11 +37,14 @@ const _overlay = bool.fromEnvironment('BENCH_OVERLAY');
 
 /// A glass configuration under test.
 class _Config {
-  const _Config(this.name, this.quality, this.settings);
+  const _Config(this.name, this.quality, this.settings, {this.group = false});
 
   final String name;
   final GlassQuality quality;
   final LiquidGlassSettings settings;
+
+  /// Whether the glass reads the backdrop together (GlassBackdropGroup).
+  final bool group;
 }
 
 LiquidGlassSettings get _ios27 =>
@@ -57,6 +60,13 @@ final _configs = <_Config>[
     _ios27.copyWith(frostWeight: 1),
   ),
   _Config('ios27', GlassQuality.premium, _ios27),
+  const _Config(
+    'ios26_group',
+    GlassQuality.premium,
+    LiquidGlassSettings(),
+    group: true,
+  ),
+  _Config('ios27_group', GlassQuality.premium, _ios27, group: true),
 ]
     .where(
         (c) => _onlyConfigs.isEmpty || _onlyConfigs.split(',').contains(c.name))
@@ -219,7 +229,7 @@ Widget _app(_Config config, {required bool cards}) {
     settings: _themeSettings(config.settings),
     quality: config.quality,
   );
-  return LiquidGlassWidgets.wrap(
+  final app = LiquidGlassWidgets.wrap(
     theme: GlassThemeData(light: variant, dark: variant),
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -234,6 +244,7 @@ Widget _app(_Config config, {required bool cards}) {
       ),
     ),
   );
+  return config.group ? GlassBackdropGroup(child: app) : app;
 }
 
 Future<void> _pumpFor(WidgetTester tester, Duration duration) async {

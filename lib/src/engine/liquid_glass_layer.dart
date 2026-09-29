@@ -14,6 +14,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
+import '../renderer/glass_backdrop_group.dart';
 import '../renderer/glass_frost_budget.dart';
 import '../renderer/glass_materialize_scope.dart';
 import '../renderer/liquid_glass_push_back_scope.dart';
@@ -243,7 +244,9 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer>
     }
 
     return BackdropGroup(
-      backdropKey: _backdropKey,
+      // Inside a GlassBackdropGroup the blur and frost passes share the
+      // group's backdrop read instead of this layer's own.
+      backdropKey: GlassBackdropGroup.keyOf(context) ?? _backdropKey,
       child: _ScaleSafeRepaintBoundary(
         // Inflate the RepaintBoundary texture by clipExpansion so that any
         // ancestor Transform.scale (e.g. LiquidStretch press animation) can
@@ -431,7 +434,7 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       captureOriginInScreenSpace: captureOriginInScreenSpace,
       selfScaled: selfScaled,
       pushBackActive: pushBackActive,
-    );
+    )..sharedBackdrop = GlassBackdropGroup.keyOf(context) != null;
   }
 
   @override
@@ -449,7 +452,8 @@ class _RawShapes extends SingleChildRenderObjectWidget {
       ..captureImage = captureImage
       ..captureOriginInScreenSpace = captureOriginInScreenSpace
       ..selfScaled = selfScaled
-      ..pushBackActive = pushBackActive;
+      ..pushBackActive = pushBackActive
+      ..sharedBackdrop = GlassBackdropGroup.keyOf(context) != null;
   }
 }
 
@@ -480,6 +484,17 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
   double _cachedFrostSigma = -1;
   ColorFilter? _cachedWeight;
   double _cachedWeightValue = 1;
+  ImageFilter? _cachedSharedFrost;
+
+  /// Whether this layer's blur and frost share the backdrop read of an
+  /// enclosing [GlassBackdropGroup]; see there.
+  bool get sharedBackdrop => _sharedBackdrop;
+  bool _sharedBackdrop = false;
+  set sharedBackdrop(bool value) {
+    if (_sharedBackdrop == value) return;
+    _sharedBackdrop = value;
+    markNeedsPaint();
+  }
 
   // ── Baked shadow ────────────────────────────────────────────────────────
   // The shadows drawn once into an image while the geometry holds still, so
@@ -734,10 +749,12 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     // the frost to one plain blur pass: on Impeller any other filter stage
     // composed with a backdrop blur measured as costly as a pass over the
     // whole screen. Not part of the layer's BackdropGroup, so that content
-    // painted inside the glass above is in what it reads.
+    // painted inside the glass above is in what it reads, unless the layer
+    // sits in a GlassBackdropGroup.
     if (frostRows != null) {
       final frostSigma = settings.effectiveFrost;
       if (_cachedFrost == null || _cachedFrostSigma != frostSigma) {
+        _cachedSharedFrost = null;
         _cachedFrost = ImageFilter.blur(
           tileMode: TileMode.mirror,
           sigmaX: frostSigma,
@@ -746,12 +763,40 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
         _cachedFrostSigma = frostSigma;
       }
       final weight = settings.frostWeight;
+      final weighted = weight != 1.0 && weight > 0;
+      if (weighted && (_cachedWeight == null || _cachedWeightValue != weight)) {
+        // alpha = base + slope * luma, with white weighing `weight` times
+        // black and the heavier end at 1.
+        final base = weight > 1 ? 1 / weight : 1.0;
+        final slope = weight > 1 ? 1 - 1 / weight : weight - 1;
+        _cachedWeight = ColorFilter.matrix(<double>[
+          1, 0, 0, 0, 0, //
+          0, 1, 0, 0, 0, //
+          0, 0, 1, 0, 0, //
+          slope * 0.2126, slope * 0.7152, slope * 0.0722, base, 0, //
+        ]);
+        _cachedWeightValue = weight;
+        _cachedSharedFrost = null;
+      }
+      // In a GlassBackdropGroup the frost reads the group's shared backdrop,
+      // so the weight can't be written into the backdrop by a pass of its
+      // own first: it goes ahead of the blur in the same filter. Alone that
+      // costs more than the two passes; shared, the engine runs the filter
+      // once for every surface with the same settings.
+      final shared = sharedBackdrop && backdropKey != null;
+      ImageFilter frostFilter = _cachedFrost!;
+      if (shared && weighted) {
+        frostFilter = _cachedSharedFrost ??= ImageFilter.compose(
+          outer: _cachedFrost!,
+          inner: _cachedWeight!,
+        );
+      }
       final frostLayer = (_frostLayerHandle.layer ??= BackdropFilterLayer())
-        ..backdropKey = null
+        ..backdropKey = shared ? backdropKey : null
         // Replaces rather than covers the weighted pixels below, so the
         // cloud rows keep the blurred weight in their alpha.
-        ..blendMode = weight == 1.0 ? BlendMode.srcOver : BlendMode.src
-        ..filter = _cachedFrost!;
+        ..blendMode = weighted ? BlendMode.src : BlendMode.srcOver
+        ..filter = frostFilter;
 
       // frostWeight: the shape is first given an alpha that weights each
       // pixel by its luminance, colour premultiplied by it, so the blur's
@@ -759,20 +804,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       // pixels count for more; the sharp rows unpremultiply back to what
       // they were. A lone colour filter stays within the clip; ahead of the
       // blur in one filter it would not.
-      if (weight != 1.0 && weight > 0) {
-        if (_cachedWeight == null || _cachedWeightValue != weight) {
-          // alpha = base + slope * luma, with white weighing `weight` times
-          // black and the heavier end at 1.
-          final base = weight > 1 ? 1 / weight : 1.0;
-          final slope = weight > 1 ? 1 - 1 / weight : weight - 1;
-          _cachedWeight = ColorFilter.matrix(<double>[
-            1, 0, 0, 0, 0, //
-            0, 1, 0, 0, 0, //
-            0, 0, 1, 0, 0, //
-            slope * 0.2126, slope * 0.7152, slope * 0.0722, base, 0, //
-          ]);
-          _cachedWeightValue = weight;
-        }
+      if (weighted && !shared) {
         (_weightLayerHandle.layer ??= BackdropFilterLayer())
           ..backdropKey = null
           // Only the alpha is taken: the pixels beneath keep their colour,
