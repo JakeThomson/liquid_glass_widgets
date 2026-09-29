@@ -19,6 +19,7 @@
 //   --dart-define=BENCH_CONFIGS=a,b     only these configurations
 //   --dart-define=BENCH_SCENES=scroll   only these scenes
 //   --dart-define=BENCH_PAUSE_MS=0      pause between scenes (for recordings)
+//   --dart-define=BENCH_OVERLAY=true    Flutter's performance overlay (recordings)
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +31,7 @@ const _dark = bool.fromEnvironment('BENCH_DARK');
 const _onlyConfigs = String.fromEnvironment('BENCH_CONFIGS');
 const _onlyScenes = String.fromEnvironment('BENCH_SCENES');
 const _pauseMs = int.fromEnvironment('BENCH_PAUSE_MS', defaultValue: 0);
+const _overlay = bool.fromEnvironment('BENCH_OVERLAY');
 
 /// A glass configuration under test.
 class _Config {
@@ -219,6 +221,7 @@ Widget _app(_Config config, {required bool cards}) {
     theme: GlassThemeData(light: variant, dark: variant),
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
+      showPerformanceOverlay: _overlay,
       theme: ThemeData(
         brightness: _dark ? Brightness.dark : Brightness.light,
       ),
