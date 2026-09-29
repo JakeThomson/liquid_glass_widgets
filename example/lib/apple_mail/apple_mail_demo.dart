@@ -50,12 +50,14 @@ class AppleMailDemoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoApp(
-      title: 'Apple Mail',
-      theme: const CupertinoThemeData(brightness: Brightness.dark),
-      builder: (context, child) => GlassNavigationShell(child: child!),
-      home: const AppleMailHomeScreen(),
-      debugShowCheckedModeBanner: false,
+    return MailGlassScope(
+      child: CupertinoApp(
+        title: 'Apple Mail',
+        theme: const CupertinoThemeData(brightness: Brightness.dark),
+        builder: (context, child) => GlassNavigationShell(child: child!),
+        home: const AppleMailHomeScreen(),
+        debugShowCheckedModeBanner: false,
+      ),
     );
   }
 }
@@ -73,18 +75,11 @@ class AppleMailHomeScreen extends StatefulWidget {
 
 class _AppleMailHomeScreenState extends State<AppleMailHomeScreen> {
   late List<MailItem> _emails;
-  final ValueNotifier<bool> _useIos27 = ValueNotifier<bool>(true);
 
   @override
   void initState() {
     super.initState();
     _emails = List.from(kInitialEmails);
-  }
-
-  @override
-  void dispose() {
-    _useIos27.dispose();
-    super.dispose();
   }
 
   void _markAllAsRead() {
@@ -115,7 +110,6 @@ class _AppleMailHomeScreenState extends State<AppleMailHomeScreen> {
     // is wrapping. A private inner Navigator would intercept those pushes on a
     // navigator the Shell cannot see, preventing gel-morph from firing between screens.
     return MailGlassScope(
-      notifier: _useIos27,
       child: MailboxesView(
         emails: _emails,
         onMarkAllAsRead: _markAllAsRead,

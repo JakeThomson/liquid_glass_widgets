@@ -85,10 +85,12 @@ class _EmailDetailViewState extends State<EmailDetailView> {
       context: context,
       morphFrom: anchor,
       initialState: GlassSheetState.full,
-      builder: (sheetContext) => ComposeEmailSheet(
-        initialRecipient: _current.sender,
-        initialSubject: '$prefix: ${_current.subject}',
-        onSend: (to, subject, body) {},
+      builder: (sheetContext) => MailGlassScope(
+        child: ComposeEmailSheet(
+          initialRecipient: _current.sender,
+          initialSubject: '$prefix: ${_current.subject}',
+          onSend: (to, subject, body) {},
+        ),
       ),
     );
   }

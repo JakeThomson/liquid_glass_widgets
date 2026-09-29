@@ -525,8 +525,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
           indexToTap < widget.items.length) {
         final item = widget.items[indexToTap];
         if (item is GlassMenuItem && item.enabled) {
-          item.onTap();
-          _closeMenu();
+          _fireItemTap(item);
         } else {
           _closeMenu();
         }
@@ -704,6 +703,24 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // maximising the rubber-band bounce amplitude at close.
     _morphController.close();
     widget.onClose?.call();
+  }
+
+  /// Fires [item.onTap] then closes the menu, honouring [GlassMenuItem.closeDelay].
+  ///
+  /// When [closeDelay] is null the close is synchronous (default behaviour).
+  /// When set, the item action fires immediately but the menu morph is deferred
+  /// so that animated [trailing] widgets (e.g. a [GlassSwitch]) can complete
+  /// their state transition while the menu is still visible.
+  void _fireItemTap(GlassMenuItem item) {
+    item.onTap();
+    final delay = item.closeDelay;
+    if (delay == null || delay == Duration.zero) {
+      _closeMenu();
+    } else {
+      Future.delayed(delay, () {
+        if (mounted) _closeMenu();
+      });
+    }
   }
 
   Widget _buildMorphingOverlay(BuildContext context) {
@@ -1193,8 +1210,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                                   if (indexToTap != null) {
                                     final item = widget.items[indexToTap];
                                     if (item is GlassMenuItem && item.enabled) {
-                                      item.onTap();
-                                      _closeMenu();
+                                      _fireItemTap(item);
                                     }
                                   }
                                 }
@@ -1313,8 +1329,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                 // For scrollable menus, we delegate taps to the native GestureDetector
                 // so it can properly participate in the gesture arena with the ScrollView.
                 if (_isScrollable && item.enabled) {
-                  item.onTap();
-                  _closeMenu();
+                  _fireItemTap(item);
                 }
               },
             );

@@ -27,6 +27,7 @@ class GlassMenuItem extends StatefulWidget {
     this.iconSize = 20.0,
     this.maxLines = 1,
     this.enablePressScale = true,
+    this.closeDelay,
   });
 
   /// The primary text of the item.
@@ -89,6 +90,14 @@ class GlassMenuItem extends StatefulWidget {
   ///
   /// Defaults to `true`.
   final bool enablePressScale;
+
+  /// How long to wait after [onTap] fires before the menu begins closing.
+  ///
+  /// Defaults to `null` (close immediately). Set to a short duration such as
+  /// `Duration(milliseconds: 320)` when the item hosts an animated [trailing]
+  /// widget (e.g. a [GlassSwitch]) whose state transition should be visible
+  /// before the menu morphs away.
+  final Duration? closeDelay;
 
   @override
   State<GlassMenuItem> createState() => _GlassMenuItemState();

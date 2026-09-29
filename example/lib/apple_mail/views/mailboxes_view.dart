@@ -41,11 +41,13 @@ class _MailboxesViewState extends State<MailboxesView> {
   void _navigateToInbox(BuildContext context) {
     Navigator.of(context).push(
       CupertinoPageRoute(
-        builder: (context) => InboxView(
-          emails: widget.emails,
-          onMarkAllAsRead: widget.onMarkAllAsRead,
-          onDeleteEmail: widget.onDeleteEmail,
-          onToggleUnread: widget.onToggleUnread,
+        builder: (context) => MailGlassScope(
+          child: InboxView(
+            emails: widget.emails,
+            onMarkAllAsRead: widget.onMarkAllAsRead,
+            onDeleteEmail: widget.onDeleteEmail,
+            onToggleUnread: widget.onToggleUnread,
+          ),
         ),
       ),
     );
@@ -56,26 +58,28 @@ class _MailboxesViewState extends State<MailboxesView> {
       context: context,
       morphFrom: anchor,
       initialState: GlassSheetState.full,
-      builder: (sheetContext) => ComposeEmailSheet(
-        onSend: (to, subject, body) {
-          setState(() {
-            widget.emails.insert(
-              0,
-              MailItem(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                sender: 'To: $to',
-                time: 'Just now',
-                subject: subject,
-                snippet: '↳ $body',
-                initials: to.isNotEmpty ? to[0].toUpperCase() : 'ME',
-                avatarType: AvatarType.initials,
-                avatarColor: const Color(0xFF007AFF),
-                isUnread: false,
-                body: body,
-              ),
-            );
-          });
-        },
+      builder: (sheetContext) => MailGlassScope(
+        child: ComposeEmailSheet(
+          onSend: (to, subject, body) {
+            setState(() {
+              widget.emails.insert(
+                0,
+                MailItem(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  sender: 'To: $to',
+                  time: 'Just now',
+                  subject: subject,
+                  snippet: '↳ $body',
+                  initials: to.isNotEmpty ? to[0].toUpperCase() : 'ME',
+                  avatarType: AvatarType.initials,
+                  avatarColor: const Color(0xFF007AFF),
+                  isUnread: false,
+                  body: body,
+                ),
+              );
+            });
+          },
+        ),
       ),
     );
   }
@@ -123,7 +127,7 @@ class _MailboxesViewState extends State<MailboxesView> {
           ),
         ],
       ),
-      // Placed in bottomBar to guarantee Z-ordering and GlassIsolationScope above scrollable body cards
+      // Compose button floats in bottom-right corner
       bottomBar: Padding(
         padding: EdgeInsets.fromLTRB(
           16,
@@ -132,56 +136,8 @@ class _MailboxesViewState extends State<MailboxesView> {
           botPad > 24 ? botPad - 8 : 16,
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // iOS 27 Material vs Classic Glass toggle pill
-            ValueListenableBuilder<bool>(
-              valueListenable:
-                  MailGlassScope.of(context) ?? ValueNotifier(true),
-              builder: (context, isIos27, _) {
-                return GlassButton.custom(
-                  onTap: () {
-                    final scope = MailGlassScope.of(context);
-                    if (scope != null) scope.value = !scope.value;
-                  },
-                  height: 44,
-                  settings: kMailTriggerGlass(context),
-                  shape: const LiquidRoundedRectangle(borderRadius: 22),
-                  quality: GlassQuality.premium,
-                  useOwnLayer: true,
-                  persistPressOnDrag: true,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          isIos27
-                              ? CupertinoIcons.sparkles
-                              : CupertinoIcons.circle,
-                          size: 15,
-                          color: isIos27
-                              ? kMailBlue
-                              : CupertinoColors.secondaryLabel
-                                  .resolveFrom(context),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isIos27 ? 'iOS 27 Glass' : 'Classic Glass',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: CupertinoColors.label.resolveFrom(context),
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
             GlassMorphTrigger(
               builder: (triggerContext, anchor) => GlassButton.custom(
                 onTap: () => _openCompose(context, anchor),
@@ -191,11 +147,11 @@ class _MailboxesViewState extends State<MailboxesView> {
                 shape: const LiquidOval(),
                 quality: GlassQuality.premium,
                 useOwnLayer: true,
-                child: const Center(
+                child: Center(
                   child: Icon(
                     CupertinoIcons.square_pencil,
                     size: 24,
-                    color: CupertinoColors.white,
+                    color: CupertinoColors.label.resolveFrom(context),
                   ),
                 ),
               ),

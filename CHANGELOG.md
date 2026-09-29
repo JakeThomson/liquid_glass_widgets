@@ -12,7 +12,11 @@
   All default to off, and existing settings render exactly as before. The frost
   costs one blur pass, written to alternate pixel rows of the shape, plus a colour pass when
   `frostWeight` is not 1.
-- **Apple Mail iOS 26 showcase demo:** Added a high-fidelity Apple Mail showcase in `example/lib/apple_mail/` featuring pinned bar navigation with gel-morph across mailbox, inbox, and detail screens, living liquid morph compose sheet via `GlassMorphTrigger` and `GlassModalSheet`, floating triage bar with `GlassButtonGroup`, options popover with `GlassMenu`, and full Cupertino styling.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#347).
+
+- **`GlassMenuItem.closeDelay`:** New optional `Duration` that defers menu dismissal after `onTap` fires. Useful when the item hosts an animated `trailing` widget (e.g. `GlassSwitch`) so its animation completes before the menu morphs away. Defaults to `null` (synchronous close — backward compatible).
+- **Apple Mail iOS 26/27 showcase demo:** Added an Apple Mail showcase in `example/lib/apple_mail/` featuring pinned bar navigation with gel-morph across mailbox, inbox, and detail screens, living liquid morph compose sheet via `GlassMorphTrigger` and `GlassModalSheet`, floating triage bar with `GlassButtonGroup`, options popover with `GlassMenu`, and full Cupertino styling. Includes a `GlassSwitch` row (with `closeDelay: 650 ms`) in the Inbox `···` menu to toggle between iOS 26 and iOS 27 glass modes, with state persisted globally across the full navigation stack via `kMailUseIos27` and `MailGlassScope`.
 - **Liquid droplet morph return and metaball fusion for `GlassMenu` and `GlassPopover`:** Implements centroid flight trajectory on close for `GlassMenu` and `GlassPopover`, unpinning the returning shape from the trigger corner to fly directly toward the trigger anchor center. Adds an ease-in droplet contraction curve and early `anchorScale` ramp-in to enable authentic SDF metaball bridging, morphs border radius directly to capsule/droplet shape on close, rapidly flushes menu items over the first 15% of close to maintain a pure liquid droplet in flight, and resolves narrow constraint layout in `GlassMenuItem`.
 
 ## Bug Fixes

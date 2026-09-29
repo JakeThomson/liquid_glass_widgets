@@ -85,26 +85,28 @@ class _InboxViewState extends State<InboxView> {
       context: context,
       morphFrom: anchor,
       initialState: GlassSheetState.full,
-      builder: (sheetContext) => ComposeEmailSheet(
-        onSend: (to, subject, body) {
-          setState(() {
-            widget.emails.insert(
-              0,
-              MailItem(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                sender: 'To: $to',
-                time: 'Just now',
-                subject: subject,
-                snippet: '↳ $body',
-                initials: to.isNotEmpty ? to[0].toUpperCase() : 'ME',
-                avatarType: AvatarType.initials,
-                avatarColor: const Color(0xFF007AFF),
-                isUnread: false,
-                body: body,
-              ),
-            );
-          });
-        },
+      builder: (sheetContext) => MailGlassScope(
+        child: ComposeEmailSheet(
+          onSend: (to, subject, body) {
+            setState(() {
+              widget.emails.insert(
+                0,
+                MailItem(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  sender: 'To: $to',
+                  time: 'Just now',
+                  subject: subject,
+                  snippet: '↳ $body',
+                  initials: to.isNotEmpty ? to[0].toUpperCase() : 'ME',
+                  avatarType: AvatarType.initials,
+                  avatarColor: const Color(0xFF007AFF),
+                  isUnread: false,
+                  body: body,
+                ),
+              );
+            });
+          },
+        ),
       ),
     );
   }
@@ -147,19 +149,33 @@ class _InboxViewState extends State<InboxView> {
         // ─────────────────────────────────────────────────────────────────
         actions: _isSelectMode
             ? [
-                // "Select All" / "Deselect All" text item
-                GlassBarItem.icon(
+                // "Select All" / "Deselect All" — same oval pill as "Select"
+                GlassBarItem.custom(
                   id: 'inbox_select_all',
-                  icon: Text(
-                    _selectedIds.length == widget.emails.length
-                        ? 'Deselect All'
-                        : 'Select All',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: CupertinoColors.activeBlue,
+                  background: GlassBarItemBackground.own,
+                  child: GlassButton.custom(
+                    onTap: _selectAll,
+                    width: null,
+                    height: 44,
+                    settings: kMailTriggerGlass(context),
+                    shape: const LiquidRoundedRectangle(borderRadius: 22),
+                    quality: GlassQuality.premium,
+                    useOwnLayer: true,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Text(
+                        _selectedIds.length == widget.emails.length
+                            ? 'Deselect All'
+                            : 'Select All',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w400,
+                          color: CupertinoColors.label.resolveFrom(context),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
                     ),
                   ),
-                  onTap: _selectAll,
                 ),
                 // Done ✓ — same id as Edit so the glyph cross-fades in-route
                 GlassBarItem.icon(
@@ -246,18 +262,20 @@ class _InboxViewState extends State<InboxView> {
                     const GlassMenuDivider(),
                     GlassMenuItem(
                       title: 'iOS 27 Glass',
-                      subtitle: MailGlassScope.isIos27(context)
-                          ? 'Native frost & hairline rim'
-                          : 'Classic 1.7.2 glass',
-                      icon: Icon(
-                        MailGlassScope.isIos27(context)
-                            ? CupertinoIcons.sparkles
-                            : CupertinoIcons.circle,
-                      ),
+                      closeDelay: const Duration(milliseconds: 650),
                       onTap: () {
-                        final scope = MailGlassScope.of(context);
-                        if (scope != null) scope.value = !scope.value;
+                        MailGlassScope.of(context).value =
+                            !MailGlassScope.isIos27(context);
                       },
+                      trailing: GlassSwitch(
+                        value: MailGlassScope.isIos27(context),
+                        activeColor: kMailBlue,
+                        useOwnLayer: true,
+                        enableHaptics: false,
+                        onChanged: (v) {
+                          MailGlassScope.of(context).value = v;
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -326,14 +344,16 @@ class _InboxViewState extends State<InboxView> {
                     } else {
                       Navigator.of(context).push(
                         CupertinoPageRoute(
-                          builder: (context) => EmailDetailView(
-                            item: email,
-                            emailIndex: i,
-                            allEmails: widget.emails,
-                            onDelete: () {
-                              widget.onDeleteEmail(email.id);
-                              Navigator.of(context).pop();
-                            },
+                          builder: (context) => MailGlassScope(
+                            child: EmailDetailView(
+                              item: email,
+                              emailIndex: i,
+                              allEmails: widget.emails,
+                              onDelete: () {
+                                widget.onDeleteEmail(email.id);
+                                Navigator.of(context).pop();
+                              },
+                            ),
                           ),
                         ),
                       );

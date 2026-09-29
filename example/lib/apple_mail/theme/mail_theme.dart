@@ -38,26 +38,31 @@ const kMailAvatarBg = CupertinoDynamicColor.withBrightness(
 /// Standard iOS accent blue.
 const kMailBlue = Color(0xFF007AFF);
 
+/// Global notifier controlling whether the Apple Mail demo is rendering with
+/// the native iOS 27 material terms or legacy/classic 1.7.2 glass settings.
+final ValueNotifier<bool> kMailUseIos27 = ValueNotifier<bool>(true);
+
 /// Scope that manages whether the Apple Mail demo is rendering with the native
 /// iOS 27 material terms or legacy/classic 1.7.2 glass settings.
 class MailGlassScope extends InheritedNotifier<ValueNotifier<bool>> {
-  const MailGlassScope({
+  MailGlassScope({
     super.key,
-    required ValueNotifier<bool> notifier,
+    ValueNotifier<bool>? notifier,
     required super.child,
-  }) : super(notifier: notifier);
+  }) : super(notifier: notifier ?? kMailUseIos27);
 
   /// Returns whether iOS 27 native material is active. Defaults to true.
   static bool isIos27(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<MailGlassScope>();
-    return scope?.notifier?.value ?? true;
+    return (scope?.notifier ?? kMailUseIos27).value;
   }
 
-  /// Returns the underlying [ValueNotifier] if mounted in a [MailGlassScope].
-  static ValueNotifier<bool>? of(BuildContext context) {
+  /// Returns the underlying [ValueNotifier].
+  static ValueNotifier<bool> of(BuildContext context) {
     return context
-        .dependOnInheritedWidgetOfExactType<MailGlassScope>()
-        ?.notifier;
+            .dependOnInheritedWidgetOfExactType<MailGlassScope>()
+            ?.notifier ??
+        kMailUseIos27;
   }
 }
 

@@ -199,34 +199,64 @@ void main() {
     expect(find.text('Show Priority'), findsOneWidget);
     expect(find.text('Show Contact Photos'), findsOneWidget);
     expect(find.text('iOS 27 Glass'), findsOneWidget);
+    expect(find.byType(GlassSwitch), findsOneWidget);
   });
 
-  testWidgets('Tapping iOS 27 Glass toggle switches between native and classic',
+  testWidgets(
+      'iOS 27 Glass GlassSwitch in menu persists glass mode across navigation',
       (tester) async {
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      kMailUseIos27.value = true;
+    });
 
     await tester.pumpWidget(const AppleMailDemoApp());
     await tester.pumpAndSettle();
 
     // Starts in iOS 27 mode
-    expect(find.text('iOS 27 Glass'), findsOneWidget);
-    expect(find.text('Classic Glass'), findsNothing);
+    expect(kMailUseIos27.value, isTrue);
 
-    // Tap toggle to switch to Classic
+    // Navigate to Inbox
+    await tester.tap(find.text('All Inboxes'));
+    await tester.pumpAndSettle();
+
+    // Verify Inbox starts in iOS 27 mode
+    final inboxContext = tester.element(find.text('Inbox').first);
+    expect(MailGlassScope.isIos27(inboxContext), isTrue);
+
+    // Open the ··· options menu
+    final ellipsisFinder = find.byIcon(CupertinoIcons.ellipsis).last;
+    await tester.tap(ellipsisFinder);
+    await tester.pumpAndSettle();
+
+    // Menu shows the iOS 27 Glass row with switch ON
+    expect(find.text('iOS 27 Glass'), findsOneWidget);
+    final switchWidget = tester.widget<GlassSwitch>(find.byType(GlassSwitch));
+    expect(switchWidget.value, isTrue);
+
+    // Tap the menu item row to toggle to iOS 26
     await tester.tap(find.text('iOS 27 Glass'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Classic Glass'), findsOneWidget);
-    expect(find.text('iOS 27 Glass'), findsNothing);
+    expect(kMailUseIos27.value, isFalse);
+    expect(MailGlassScope.isIos27(inboxContext), isFalse);
 
-    // Tap toggle to switch back to iOS 27
-    await tester.tap(find.text('Classic Glass'));
+    // Reopen menu — switch should now reflect iOS 26 mode (OFF)
+    await tester.tap(ellipsisFinder);
+    await tester.pumpAndSettle();
+    final switchOff = tester.widget<GlassSwitch>(find.byType(GlassSwitch));
+    expect(switchOff.value, isFalse);
+
+    // Dismiss the menu by tapping outside it, then pop back
+    await tester.tapAt(const Offset(30, 200));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(CupertinoIcons.back));
     await tester.pumpAndSettle();
 
-    expect(find.text('iOS 27 Glass'), findsOneWidget);
-    expect(find.text('Classic Glass'), findsNothing);
+    // MailboxesView still reflects iOS 26 mode via shared notifier
+    expect(kMailUseIos27.value, isFalse);
   });
 
   testWidgets(

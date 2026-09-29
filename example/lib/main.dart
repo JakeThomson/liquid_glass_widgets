@@ -609,7 +609,7 @@ class _DemosTab extends StatelessWidget {
                   _LargeDemoCard(
                     title: 'Apple Mail',
                     subtitle:
-                        'Pinned nav, gel morph, morphing compose & tinted capsule',
+                        'iOS 27 glass demo · pinned nav, gel morph & compose · compare iOS 26 in Inbox ··· menu',
                     icon: CupertinoIcons.mail_solid,
                     gradient: const [
                       Color(0xFF0A3D62),
