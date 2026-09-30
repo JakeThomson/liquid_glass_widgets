@@ -12,12 +12,14 @@ import '../../effects/glass_materialize.dart';
 import '../../effects/shared/glass_materialize_effect.dart';
 import '../../interactive/glass_button.dart';
 import '../../overlays/glass_menu.dart';
+import '../../overlays/glass_menu_item.dart';
 import '../../overlays/glass_modal_sheet.dart';
 import '../../shared/glass_accessibility_scope.dart';
 import '../../shared/glass_isolation_scope.dart';
 import '../glass_app_bar.dart';
 import '../glass_bar_item.dart';
 import '../glass_navigation_shell.dart';
+import '../glass_vertical_bar.dart';
 
 /// Geometry and timing constants for the pinned chrome.
 ///
@@ -388,6 +390,11 @@ class GlassNavPinnedHost extends StatelessWidget {
     final coverageScale = 1.0 - Curves.easeIn.transform(state.coverage);
     if (coverageScale <= 0.01) return const SizedBox.shrink();
 
+    final verticalBar = GlassVerticalBar.maybeOf(context);
+    if (verticalBar != null) {
+      return _buildVertical(context, verticalBar, coverageScale, settings);
+    }
+
     Widget chrome = Stack(
       clipBehavior: Clip.none,
       children: [
@@ -399,7 +406,14 @@ class GlassNavPinnedHost extends StatelessWidget {
             top: 0,
             child: _PinnedSide(
               state: state,
-              side: side,
+              groupsFor: (context, registration) => groupGlassNavBarItems(
+                _itemsFor(context, state, registration, side),
+              ),
+              anchoredAtStart: (side == _BarSide.leading) ==
+                  (textDirection == TextDirection.ltr),
+              scaleAlignment: side == _BarSide.leading
+                  ? AlignmentDirectional.centerStart
+                  : AlignmentDirectional.centerEnd,
               coverageScale: coverageScale,
             ),
           ),
@@ -422,6 +436,125 @@ class GlassNavPinnedHost extends StatelessWidget {
       left: inset,
       right: inset,
       height: GlassNavPinnedMetrics.toolbarHeight,
+      child: GlassIsolationScope(
+        isolated: true,
+        defaultQuality: GlassQuality.premium,
+        child: chrome,
+      ),
+    );
+  }
+
+  /// The chrome laid out for iPhone Duo's vertical bar strip.
+  ///
+  /// Everything that goes vertical stacks down the strip from its first
+  /// control: the back button, then the leading groups, then the trailing
+  /// ones, each keeping its grouping — the order the native strip reads in.
+  /// Whatever stays horizontal ([GlassBarActionItem.goesVertical]) gathers in
+  /// one row at the top-trailing corner of the content, beside the title the
+  /// route keeps drawing.
+  Widget _buildVertical(
+    BuildContext context,
+    GlassVerticalBarData bar,
+    double coverageScale,
+    LiquidGlassSettings? settings,
+  ) {
+    final textDirection = Directionality.of(context);
+    final trailingStrip = bar.edge == GlassVerticalBarEdge.trailing;
+
+    // The strip runs from its first control down to whatever the bars at its
+    // bottom have reserved, less the gap between the two.
+    final reserved =
+        GlassNavigationShell.maybeOf(context)?.verticalBarBottom ?? 0.0;
+    final available = MediaQuery.sizeOf(context).height -
+        bar.top -
+        (reserved > 0
+            ? reserved + GlassVerticalBarMetrics.spacing
+            : bar.bottom);
+
+    List<GlassNavBarGroup> stripGroups(
+      BuildContext context,
+      GlassNavBarRegistration registration,
+    ) =>
+        fitGlassNavStripGroups(
+          [
+            for (final side in _BarSide.values)
+              ...groupGlassNavBarItems(
+                _itemsFor(context, state, registration, side)
+                    .where((item) => item.goesVertical)
+                    .toList(),
+                axis: Axis.vertical,
+              ),
+          ],
+          available,
+        );
+
+    List<GlassNavBarGroup> rowGroups(
+      BuildContext context,
+      GlassNavBarRegistration registration,
+    ) =>
+        [
+          for (final side in _BarSide.values)
+            ...groupGlassNavBarItems(
+              _itemsFor(context, state, registration, side)
+                  .where((item) => !item.goesVertical)
+                  .toList(),
+            ),
+        ];
+
+    // The strip's controls sit [GlassVerticalBarMetrics.inset] from its inner
+    // edge. The column is centred in a box that inset wide on both sides of a
+    // control, so a group swelling through a morph grows about its own centre
+    // and never meets the clamp of a narrower box.
+    const columnWidth = GlassVerticalBarMetrics.controlExtent +
+        2 * GlassVerticalBarMetrics.inset;
+    final columnOffset = bar.width - columnWidth;
+
+    Widget chrome = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.directional(
+          textDirection: textDirection,
+          top: bar.top,
+          start: trailingStrip ? null : columnOffset,
+          end: trailingStrip ? columnOffset : null,
+          width: columnWidth,
+          child: _PinnedSide(
+            state: state,
+            groupsFor: stripGroups,
+            anchoredAtStart: true,
+            axis: Axis.vertical,
+            scaleAlignment: Alignment.topCenter,
+            coverageScale: coverageScale,
+          ),
+        ),
+        Positioned.directional(
+          textDirection: textDirection,
+          top: GlassVerticalBarMetrics.edgeMargin,
+          height: GlassVerticalBarMetrics.rowHeight,
+          start: trailingStrip
+              ? null
+              : bar.width + GlassVerticalBarMetrics.rowInset,
+          end: trailingStrip
+              ? bar.width + GlassVerticalBarMetrics.rowInset
+              : null,
+          child: Center(
+            child: _PinnedSide(
+              state: state,
+              groupsFor: rowGroups,
+              anchoredAtStart: textDirection == TextDirection.rtl,
+              scaleAlignment: AlignmentDirectional.centerEnd,
+              coverageScale: coverageScale,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (settings != null) {
+      chrome = DefaultButtonSettings(settings: settings, child: chrome);
+    }
+
+    return Positioned.fill(
       child: GlassIsolationScope(
         isolated: true,
         defaultQuality: GlassQuality.premium,
@@ -453,7 +586,11 @@ enum _BarSide { leading, trailing }
 @immutable
 class GlassNavBarGroup {
   /// Creates a group of items sharing one background.
-  const GlassNavBarGroup({required this.items, required this.background});
+  const GlassNavBarGroup({
+    required this.items,
+    required this.background,
+    this.axis = Axis.horizontal,
+  });
 
   /// The items sharing this group's background, leading to trailing.
   final List<GlassBarActionItem> items;
@@ -461,23 +598,40 @@ class GlassNavBarGroup {
   /// How this group's background is drawn, taken from its items.
   final GlassBarItemBackground background;
 
+  /// The direction the group's items run in: along a horizontal bar, or down
+  /// iPhone Duo's vertical strip.
+  final Axis axis;
+
   /// Whether a glass shell is drawn behind [items].
   bool get glass =>
       background != GlassBarItemBackground.none &&
       background != GlassBarItemBackground.own;
 
-  /// Height of the shell, and of an icon slot inside it.
+  /// Thickness of the shell across the bar: its height in a horizontal bar,
+  /// its width in the vertical strip.
   ///
   /// A group that shares with nothing is the 44pt circular button iOS 26 draws
   /// for a lone bar item — at that height the capsule's 22pt radius is clamped
   /// to exactly half the box, so the rounded rectangle *is* a circle. A shared
-  /// capsule keeps the taller icon-slot height it has always had.
-  double get height => background == GlassBarItemBackground.shared
-      ? GlassNavPinnedMetrics.slot
-      : GlassNavPinnedMetrics.backDiameter;
+  /// capsule keeps the taller icon-slot height it has always had. In the strip
+  /// every control is [GlassVerticalBarMetrics.controlExtent] wide.
+  double get crossExtent {
+    if (axis == Axis.vertical) return GlassVerticalBarMetrics.controlExtent;
+    return background == GlassBarItemBackground.shared
+        ? GlassNavPinnedMetrics.slot
+        : GlassNavPinnedMetrics.backDiameter;
+  }
 
-  /// Width of an icon slot inside the shell, square with [height].
-  double get slotWidth => height;
+  /// Length of an icon slot along the bar.
+  ///
+  /// Square with [crossExtent] in a horizontal bar. In the strip a lone item
+  /// is a circle too, while a capsule of several gives each item
+  /// [GlassVerticalBarMetrics.itemExtent].
+  double get slotExtent => axis == Axis.vertical &&
+          background == GlassBarItemBackground.shared &&
+          items.length > 1
+      ? GlassVerticalBarMetrics.itemExtent
+      : crossExtent;
 
   /// Press-stretch factor for the shell.
   double get stretch => background == GlassBarItemBackground.shared
@@ -498,7 +652,10 @@ class GlassNavBarGroup {
 ///
 /// Shared with [GlassAppBar]'s in-route fallback; this library is not exported
 /// from the package barrel.
-List<GlassNavBarGroup> groupGlassNavBarItems(List<GlassBarActionItem> items) {
+List<GlassNavBarGroup> groupGlassNavBarItems(
+  List<GlassBarActionItem> items, {
+  Axis axis = Axis.horizontal,
+}) {
   final groups = <GlassNavBarGroup>[];
   var run = <GlassBarActionItem>[];
 
@@ -507,6 +664,7 @@ List<GlassNavBarGroup> groupGlassNavBarItems(List<GlassBarActionItem> items) {
     groups.add(GlassNavBarGroup(
       items: run,
       background: GlassBarItemBackground.shared,
+      axis: axis,
     ));
     run = <GlassBarActionItem>[];
   }
@@ -525,7 +683,11 @@ List<GlassNavBarGroup> groupGlassNavBarItems(List<GlassBarActionItem> items) {
       continue;
     }
     flushRun();
-    groups.add(GlassNavBarGroup(items: [item], background: item.background));
+    groups.add(GlassNavBarGroup(
+      items: [item],
+      background: item.background,
+      axis: axis,
+    ));
   }
   flushRun();
   return groups;
@@ -548,6 +710,109 @@ List<GlassNavBarGroup> groupGlassNavBarItems(List<GlassBarActionItem> items) {
         : (from: from, to: null);
   }
   return (from: from, to: to);
+}
+
+/// Identity carried by the ••• item a crowded strip overflows into, so it
+/// holds its place across routes like any item with an `id`.
+const Object _overflowItemId = #glassNavOverflowItem;
+
+/// Fits a strip's groups into [available] points of height.
+///
+/// Natively, a strip that runs out of room keeps what fits from the top and
+/// collapses the rest into a ••• menu at the end: whole groups while they fit,
+/// then as many items of the next as still do — split off into a group of
+/// their own, a lone one standing as a circle — and everything after that
+/// becomes an entry in the menu. A [GlassBarItem.menu] among them contributes
+/// its own entries.
+///
+/// Shared with [GlassPinnedBarChrome]'s in-route strip; this library is not
+/// exported from the package barrel.
+List<GlassNavBarGroup> fitGlassNavStripGroups(
+  List<GlassNavBarGroup> groups,
+  double available,
+) {
+  double extentOf(int count, GlassBarItemBackground background) =>
+      count == 1 || background != GlassBarItemBackground.shared
+          ? count * GlassVerticalBarMetrics.controlExtent
+          : count * GlassVerticalBarMetrics.itemExtent;
+
+  var total = 0.0;
+  for (final group in groups) {
+    if (total > 0) total += GlassVerticalBarMetrics.spacing;
+    total += extentOf(group.items.length, group.background);
+  }
+  if (total <= available) return groups;
+
+  // Room for everything that stays, with the ••• circle held back at the end.
+  final budget = available -
+      GlassVerticalBarMetrics.controlExtent -
+      GlassVerticalBarMetrics.spacing;
+  final kept = <GlassNavBarGroup>[];
+  final overflow = <GlassBarActionItem>[];
+  var used = 0.0;
+  for (final group in groups) {
+    if (overflow.isNotEmpty) {
+      overflow.addAll(group.items);
+      continue;
+    }
+    final gap = kept.isEmpty ? 0.0 : GlassVerticalBarMetrics.spacing;
+    final extent = extentOf(group.items.length, group.background);
+    if (used + gap + extent <= budget) {
+      kept.add(group);
+      used += gap + extent;
+      continue;
+    }
+    var fits = 0;
+    while (fits < group.items.length &&
+        used + gap + extentOf(fits + 1, group.background) <= budget) {
+      fits++;
+    }
+    if (fits > 0) {
+      kept.add(GlassNavBarGroup(
+        items: group.items.sublist(0, fits),
+        background:
+            fits == 1 ? GlassBarItemBackground.separate : group.background,
+        axis: Axis.vertical,
+      ));
+      used += gap + extentOf(fits, group.background);
+    }
+    overflow.addAll(group.items.sublist(fits));
+  }
+
+  final entries = <Widget>[];
+  for (final item in overflow) {
+    if (item is GlassBarMenuItem) {
+      if (entries.isNotEmpty) entries.add(const GlassMenuDivider());
+      entries.addAll(item.menuItems);
+      continue;
+    }
+    entries.add(GlassMenuItem(
+      title: item.label ?? '',
+      icon: switch (item) {
+        GlassBarIconItem(:final icon) => icon,
+        GlassBarSheetItem(:final icon) => icon,
+        _ => null,
+      },
+      enabled: item.enabled,
+      onTap:
+          item is GlassBarSheetItem ? () => item.onPresent(null) : item.onTap,
+    ));
+  }
+  return [
+    ...kept,
+    GlassNavBarGroup(
+      items: [
+        GlassBarMenuItem(
+          icon: const Icon(CupertinoIcons.ellipsis),
+          menuItems: entries,
+          id: _overflowItemId,
+          background: GlassBarItemBackground.separate,
+        ),
+      ],
+      background: GlassBarItemBackground.separate,
+      axis: Axis.vertical,
+    ),
+  ];
 }
 
 /// Whether a group draws anything at [state]'s progress.
@@ -580,67 +845,89 @@ bool _groupShowsAt(
 /// positionally against whatever the destination happens to put first.
 const Object _backItemId = #glassNavBackItem;
 
-/// One edge's worth of pinned chrome.
+/// The automatic back button, as an ordinary item.
 ///
-/// Resolves each route's items for this side — synthesising the automatic back
-/// button as the leading cluster's first item — splits both into groups, and
-/// renders one [_PinnedGroup] per group. Groups are matched across routes by
-/// position, which is enough while a cluster is one shell in every case the
-/// package renders today.
+/// Built here rather than stored on the registration because its label is
+/// localised, and that needs a context. It shares with nothing, which is what
+/// makes a back-only cluster the circle it has always been.
+GlassBarIconItem _backItem(
+  BuildContext context,
+  GlassNavPinnedState state,
+  GlassNavBarRegistration registration,
+) {
+  return GlassBarIconItem(
+    icon: const Icon(CupertinoIcons.back),
+    id: _backItemId,
+    label: Localizations.of<CupertinoLocalizations>(
+          context,
+          CupertinoLocalizations,
+        )?.backButtonLabel ??
+        // The same string DefaultCupertinoLocalizations returns, for apps
+        // that ship no localizations delegates at all.
+        'Back',
+    background: GlassBarItemBackground.separate,
+    onTap: () {
+      final onBack = registration.onBack;
+      if (onBack != null) {
+        onBack();
+      } else {
+        state.topRoute.navigator?.maybePop();
+      }
+    },
+  );
+}
+
+/// Everything one edge of the bar renders for [registration], back button
+/// included.
+List<GlassBarActionItem> _itemsFor(
+  BuildContext context,
+  GlassNavPinnedState state,
+  GlassNavBarRegistration registration,
+  _BarSide side,
+) {
+  if (side == _BarSide.trailing) return registration.actionItems;
+  final leading = registration.leadingItems;
+  if (!registration.showsBackButton) return leading;
+  return [_backItem(context, state, registration), ...leading];
+}
+
+/// One run of pinned chrome: an edge of the bar, or iPhone Duo's strip.
+///
+/// Resolves each route's groups through [groupsFor] and renders one
+/// [_PinnedGroup] per group. Groups are matched across routes by position,
+/// which is enough while a cluster is one shell in every case the package
+/// renders today.
 class _PinnedSide extends StatelessWidget {
   const _PinnedSide({
     required this.state,
-    required this.side,
+    required this.groupsFor,
+    required this.anchoredAtStart,
+    required this.scaleAlignment,
     required this.coverageScale,
+    this.axis = Axis.horizontal,
   });
 
   final GlassNavPinnedState state;
-  final _BarSide side;
+
+  /// The groups this run draws for one route, in reading order.
+  final List<GlassNavBarGroup> Function(
+    BuildContext context,
+    GlassNavBarRegistration registration,
+  ) groupsFor;
+
+  /// Whether groups are matched and placed from the box's left edge — its top
+  /// edge in the strip — so each cluster grows away from the edge it is
+  /// pinned to.
+  final bool anchoredAtStart;
+
+  /// The point the run retreats towards when an unregistered route covers it.
+  final AlignmentGeometry scaleAlignment;
 
   /// Retreat factor applied when an unregistered route covers the bar.
   final double coverageScale;
 
-  /// The automatic back button, as an ordinary item.
-  ///
-  /// Built here rather than stored on the registration because its label is
-  /// localised, and that needs a context. It shares with nothing, which is
-  /// what makes a back-only cluster the circle it has always been.
-  GlassBarIconItem _backItem(
-    BuildContext context,
-    GlassNavBarRegistration registration,
-  ) {
-    return GlassBarIconItem(
-      icon: const Icon(CupertinoIcons.back),
-      id: _backItemId,
-      label: Localizations.of<CupertinoLocalizations>(
-            context,
-            CupertinoLocalizations,
-          )?.backButtonLabel ??
-          // The same string DefaultCupertinoLocalizations returns, for apps
-          // that ship no localizations delegates at all.
-          'Back',
-      background: GlassBarItemBackground.separate,
-      onTap: () {
-        final onBack = registration.onBack;
-        if (onBack != null) {
-          onBack();
-        } else {
-          state.topRoute.navigator?.maybePop();
-        }
-      },
-    );
-  }
-
-  /// Everything this side renders for one route, back button included.
-  List<GlassBarActionItem> _itemsFor(
-    BuildContext context,
-    GlassNavBarRegistration registration,
-  ) {
-    if (side == _BarSide.trailing) return registration.actionItems;
-    final leading = registration.leadingItems;
-    if (!registration.showsBackButton) return leading;
-    return [_backItem(context, registration), ...leading];
-  }
+  /// The direction groups run in.
+  final Axis axis;
 
   @override
   Widget build(BuildContext context) {
@@ -648,16 +935,10 @@ class _PinnedSide extends StatelessWidget {
 
     // Groups follow the forward choreography: on a pop the roles swap, so
     // the same forward morph plays toward the destination's clusters.
-    final fromGroups =
-        groupGlassNavBarItems(_itemsFor(context, state.flowFrom));
-    final toGroups = groupGlassNavBarItems(_itemsFor(context, state.flowTo));
+    final fromGroups = groupsFor(context, state.flowFrom);
+    final toGroups = groupsFor(context, state.flowTo);
     final count = math.max(fromGroups.length, toGroups.length);
     if (count == 0) return const SizedBox.shrink();
-
-    // Anchored at the box's left edge when this side sits on the left, so each
-    // cluster grows away from the bar edge it is pinned to.
-    final ltr = Directionality.of(context) == TextDirection.ltr;
-    final anchoredAtStart = (side == _BarSide.leading) == ltr;
 
     // Under a presentation only the group the sheet came out of is still the
     // shell's; the route has the rest. See [GlassNavPinnedState.presenting].
@@ -678,14 +959,15 @@ class _PinnedSide extends StatelessWidget {
 
     return Transform.scale(
       scale: coverageScale,
-      alignment: side == _BarSide.leading
-          ? AlignmentDirectional.centerStart
-          : AlignmentDirectional.centerEnd,
+      alignment: scaleAlignment,
       child: IgnorePointer(
         ignoring: !state.settled,
-        child: Row(
+        child: Flex(
+          direction: axis,
           mainAxisSize: MainAxisSize.min,
-          spacing: GlassNavPinnedMetrics.groupGap,
+          spacing: axis == Axis.vertical
+              ? GlassVerticalBarMetrics.spacing
+              : GlassNavPinnedMetrics.groupGap,
           children: [
             for (var i = 0; i < count; i++)
               if (holdsPresenting(groupAt(toGroups, i)) &&
@@ -876,8 +1158,9 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
     required this.widthT,
     required this.positionT,
     required this.morphScale,
-    required this.height,
+    required this.crossExtent,
     required this.anchoredAtStart,
+    this.axis = Axis.horizontal,
     required super.children,
   });
 
@@ -893,15 +1176,19 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
   /// Uniform gel scale applied to the cluster's real geometry.
   final double morphScale;
 
-  /// Fixed cluster height, before the gel scale.
-  final double height;
+  /// Fixed thickness across the cluster, before the gel scale.
+  final double crossExtent;
 
-  /// Whether items are placed relative to the box's left edge.
+  /// Whether items are placed relative to the box's left edge — its top edge
+  /// in the vertical strip.
   ///
-  /// The cluster's width changes across a morph, so only the anchored edge
+  /// The cluster's length changes across a morph, so only the anchored edge
   /// holds still — items measured from the other one would drift as the shell
   /// resized around them.
   final bool anchoredAtStart;
+
+  /// The direction items run in.
+  final Axis axis;
 
   @override
   RenderObject createRenderObject(BuildContext context) => _RenderPinnedCluster(
@@ -909,8 +1196,9 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
         widthT: widthT,
         positionT: positionT,
         morphScale: morphScale,
-        clusterHeight: height,
+        crossExtent: crossExtent,
         anchoredAtStart: anchoredAtStart,
+        axis: axis,
       );
 
   @override
@@ -923,8 +1211,9 @@ class _PinnedCluster extends MultiChildRenderObjectWidget {
       ..widthT = widthT
       ..positionT = positionT
       ..morphScale = morphScale
-      ..clusterHeight = height
-      ..anchoredAtStart = anchoredAtStart;
+      ..crossExtent = crossExtent
+      ..anchoredAtStart = anchoredAtStart
+      ..axis = axis;
   }
 }
 
@@ -937,14 +1226,16 @@ class _RenderPinnedCluster extends RenderBox
     required double widthT,
     required double positionT,
     required double morphScale,
-    required double clusterHeight,
+    required double crossExtent,
     required bool anchoredAtStart,
+    required Axis axis,
   })  : _orders = orders,
         _widthT = widthT,
         _positionT = positionT,
         _morphScale = morphScale,
-        _clusterHeight = clusterHeight,
-        _anchoredAtStart = anchoredAtStart;
+        _crossExtent = crossExtent,
+        _anchoredAtStart = anchoredAtStart,
+        _axis = axis;
 
   List<_SlotOrder> _orders;
   set orders(List<_SlotOrder> value) {
@@ -984,10 +1275,10 @@ class _RenderPinnedCluster extends RenderBox
   @override
   bool get alwaysNeedsCompositing => _morphScale != 1.0;
 
-  double _clusterHeight;
-  set clusterHeight(double value) {
-    if (_clusterHeight == value) return;
-    _clusterHeight = value;
+  double _crossExtent;
+  set crossExtent(double value) {
+    if (_crossExtent == value) return;
+    _crossExtent = value;
     markNeedsLayout();
   }
 
@@ -997,6 +1288,26 @@ class _RenderPinnedCluster extends RenderBox
     _anchoredAtStart = value;
     markNeedsLayout();
   }
+
+  Axis _axis;
+  set axis(Axis value) {
+    if (_axis == value) return;
+    _axis = value;
+    markNeedsLayout();
+  }
+
+  bool get _vertical => _axis == Axis.vertical;
+
+  /// Only the cross axis is imposed; children size themselves along the main
+  /// one.
+  BoxConstraints get _childConstraints => _vertical
+      ? BoxConstraints.tightFor(width: _crossExtent)
+      : BoxConstraints.tightFor(height: _crossExtent);
+
+  double _mainOf(Size size) => _vertical ? size.height : size.width;
+
+  Size _sized(double main, double cross) =>
+      _vertical ? Size(cross, main) : Size(main, cross);
 
   @override
   void setupParentData(RenderBox child) {
@@ -1008,21 +1319,18 @@ class _RenderPinnedCluster extends RenderBox
   @override
   void performLayout() {
     final slotCount = _orders.length;
-    // Measured natural width of each slot on each side.
+    // Measured natural length of each slot on each side, along the main axis.
     final fromWidths = List<double?>.filled(slotCount, null);
     final toWidths = List<double?>.filled(slotCount, null);
-
-    // Children size themselves; only the height is imposed.
-    final childConstraints = BoxConstraints.tightFor(height: _clusterHeight);
 
     var child = firstChild;
     while (child != null) {
       final data = child.parentData! as _ClusterParentData;
-      child.layout(childConstraints, parentUsesSize: true);
+      child.layout(_childConstraints, parentUsesSize: true);
       if (data.isFrom) {
-        fromWidths[data.slot] = child.size.width;
+        fromWidths[data.slot] = _mainOf(child.size);
       } else {
-        toWidths[data.slot] = child.size.width;
+        toWidths[data.slot] = _mainOf(child.size);
       }
       child = data.nextSibling;
     }
@@ -1078,15 +1386,15 @@ class _RenderPinnedCluster extends RenderBox
     // re-renders at the true inflated size, and paint scales the children to
     // fill it, so shell and glyphs stretch as one body.
     final width = lerpDouble(fromTotal, toTotal, _widthT)!;
-    final scaled = Size(width * _morphScale, _clusterHeight * _morphScale);
+    final scaled = _sized(width * _morphScale, _crossExtent * _morphScale);
     size = constraints.constrain(scaled);
-    // The bar hosts this cluster in an unbounded row, so the constraint never
-    // bites there; anywhere it did, paint would scale past the box (the
-    // shell's ClipRect contains it, but the layout would be lying).
+    // The bar hosts this cluster in an unbounded row or column, so the
+    // constraint never bites there; anywhere it did, paint would scale past
+    // the box (the shell's ClipRect contains it, but the layout would be
+    // lying).
     assert(
-      size == constraints.constrain(Size(scaled.width, scaled.height)) &&
-          (constraints.biggest.width.isInfinite ||
-              scaled.width <= constraints.maxWidth + 0.001),
+      _mainOf(scaled) <=
+          (_vertical ? constraints.maxHeight : constraints.maxWidth) + 0.001,
       'The gel scale needs an unbounded main axis: a clamped box would paint '
       'outside itself.',
     );
@@ -1108,11 +1416,13 @@ class _RenderPinnedCluster extends RenderBox
         widthOf(slot, from: false),
         _positionT,
       )!;
-      final x = _anchoredAtStart ? edge : width - edge - slotWidth;
-      data.offset = Offset(
-        x + (slotWidth - child.size.width) / 2.0,
-        (_clusterHeight - child.size.height) / 2.0,
-      );
+      final main = (_anchoredAtStart ? edge : width - edge - slotWidth) +
+          (slotWidth - _mainOf(child.size)) / 2.0;
+      if (_vertical) {
+        data.offset = Offset((_crossExtent - child.size.width) / 2.0, main);
+      } else {
+        data.offset = Offset(main, (_crossExtent - child.size.height) / 2.0);
+      }
       child = data.nextSibling;
     }
   }
@@ -1124,12 +1434,11 @@ class _RenderPinnedCluster extends RenderBox
     final slotCount = _orders.length;
     final fromWidths = List<double?>.filled(slotCount, null);
     final toWidths = List<double?>.filled(slotCount, null);
-    final childConstraints = BoxConstraints.tightFor(height: _clusterHeight);
 
     var child = firstChild;
     while (child != null) {
       final data = child.parentData! as _ClusterParentData;
-      final width = child.getDryLayout(childConstraints).width;
+      final width = _mainOf(child.getDryLayout(_childConstraints));
       if (data.isFrom) {
         fromWidths[data.slot] = width;
       } else {
@@ -1156,7 +1465,7 @@ class _RenderPinnedCluster extends RenderBox
       _widthT,
     )!;
     return constraints
-        .constrain(Size(width * _morphScale, _clusterHeight * _morphScale));
+        .constrain(_sized(width * _morphScale, _crossExtent * _morphScale));
   }
 
   /// The paint transform of the gel: a uniform scale about the box origin.
@@ -1568,7 +1877,8 @@ class _PinnedGroupState extends State<_PinnedGroup> {
               child: _ClusterItem(
                 item: fromItem,
                 enabled: false,
-                slotWidth: fromGroup.slotWidth,
+                slotExtent: fromGroup.slotExtent,
+                axis: fromGroup.axis,
                 tintColor: fromItem.tintColor,
               ),
             ));
@@ -1588,7 +1898,8 @@ class _PinnedGroupState extends State<_PinnedGroup> {
             child: _ClusterItem(
               item: fromItem,
               enabled: false,
-              slotWidth: fromGroup.slotWidth,
+              slotExtent: fromGroup.slotExtent,
+              axis: fromGroup.axis,
               tintColor: fromItem.tintColor,
             ),
           ));
@@ -1610,7 +1921,8 @@ class _PinnedGroupState extends State<_PinnedGroup> {
               child: _ClusterItem(
                 item: toItem,
                 enabled: state.settled,
-                slotWidth: toGroup.slotWidth,
+                slotExtent: toGroup.slotExtent,
+                axis: toGroup.axis,
                 tintColor: toItem.tintColor,
                 onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
                 onSheetTap: _presentSheet,
@@ -1632,7 +1944,8 @@ class _PinnedGroupState extends State<_PinnedGroup> {
             child: _ClusterItem(
               item: toItem,
               enabled: state.settled,
-              slotWidth: toGroup.slotWidth,
+              slotExtent: toGroup.slotExtent,
+              axis: toGroup.axis,
               tintColor: toItem.tintColor,
               onMenuTap: identical(toItem, menuItem) ? _menu.open : null,
               onSheetTap: _presentSheet,
@@ -1649,8 +1962,10 @@ class _PinnedGroupState extends State<_PinnedGroup> {
       widthT: widthT,
       positionT: clampedT,
       morphScale: morphScale,
-      height: lerpDouble(fromGroup.height, toGroup.height, clampedT)!,
+      crossExtent:
+          lerpDouble(fromGroup.crossExtent, toGroup.crossExtent, clampedT)!,
       anchoredAtStart: widget.anchoredAtStart,
+      axis: toGroup.axis,
       children: children,
     );
 
@@ -1666,6 +1981,9 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // shell is anchored top-edge at its bar corner, and natively the swell
     // moves both edges outward, so half of any growth is walked back.
     final f = morphScale <= 0.01 ? 0.0 : (1.0 - 1.0 / morphScale) / 2.0;
+    // The strip centres each group across its column, so there only the
+    // main axis needs walking back.
+    final vertical = toGroup.axis == Axis.vertical;
     return GlassMaterializeEffect(
       progress: phase,
       // The window this group traverses is the incoming one exactly when it is
@@ -1675,11 +1993,16 @@ class _PinnedGroupState extends State<_PinnedGroup> {
           ? GlassMaterializeProfile.entrance
           : GlassMaterializeProfile.exit,
       // It swells from the bar edge its cluster is pinned to.
-      alignment:
-          widget.anchoredAtStart ? Alignment.centerLeft : Alignment.centerRight,
+      alignment: vertical
+          ? Alignment.topCenter
+          : widget.anchoredAtStart
+              ? Alignment.centerLeft
+              : Alignment.centerRight,
       scaleFrom: GlassNavPinnedMetrics.materializeScaleFrom,
       child: FractionalTranslation(
-        translation: Offset(widget.anchoredAtStart ? -f : f, -f),
+        translation: vertical
+            ? Offset(0, -f)
+            : Offset(widget.anchoredAtStart ? -f : f, -f),
         // The sheet morphs the whole shell, as the menu does — see
         // [GlassBarItem.sheet] — so the trigger wraps the shell and not the
         // tapped item's slot.
@@ -1805,7 +2128,8 @@ class _ClusterItem extends StatelessWidget {
   const _ClusterItem({
     required this.item,
     required this.enabled,
-    required this.slotWidth,
+    required this.slotExtent,
+    this.axis = Axis.horizontal,
     this.tintColor,
     this.onMenuTap,
     this.onSheetTap,
@@ -1820,8 +2144,12 @@ class _ClusterItem extends StatelessWidget {
   /// or black so content remains readable over the coloured glass capsule.
   final Color? tintColor;
 
-  /// Width an icon is padded to, matching the height of the group it sits in.
-  final double slotWidth;
+  /// Length an icon is padded to along the bar, matching the group it sits
+  /// in.
+  final double slotExtent;
+
+  /// The direction the group runs in.
+  final Axis axis;
 
   /// Opens the capsule's pull-down.
   ///
@@ -1841,19 +2169,14 @@ class _ClusterItem extends StatelessWidget {
     final item = this.item;
     final interactive = enabled && item.enabled;
 
+    Widget slot(Widget icon) => axis == Axis.vertical
+        ? SizedBox(height: slotExtent, child: Center(child: icon))
+        : SizedBox(width: slotExtent, child: Center(child: icon));
+
     Widget content = switch (item) {
-      GlassBarIconItem(:final icon) => SizedBox(
-          width: slotWidth,
-          child: Center(child: icon),
-        ),
-      GlassBarMenuItem(:final icon) => SizedBox(
-          width: slotWidth,
-          child: Center(child: icon),
-        ),
-      GlassBarSheetItem(:final icon) => SizedBox(
-          width: slotWidth,
-          child: Center(child: icon),
-        ),
+      GlassBarIconItem(:final icon) => slot(icon),
+      GlassBarMenuItem(:final icon) => slot(icon),
+      GlassBarSheetItem(:final icon) => slot(icon),
       GlassBarCustomItem(:final child) => child,
     };
 

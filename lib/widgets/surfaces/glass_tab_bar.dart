@@ -17,6 +17,9 @@ import 'shared/tab_bar_types.dart';
 import '../../src/widgets/surfaces/dynamic_preferred_size.dart';
 import '../../src/widgets/surfaces/tab_bar_bottom_layout.dart';
 import '../../src/widgets/surfaces/tab_bar_searchable_layout.dart';
+import '../../src/widgets/surfaces/tab_bar_vertical_layout.dart';
+import 'glass_navigation_shell.dart';
+import 'glass_vertical_bar.dart';
 
 export 'shared/glass_bar_minimize_behavior.dart';
 export 'shared/glass_search_bar_config.dart';
@@ -1190,6 +1193,16 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   @override
   Listenable? get preferredSizeListenable => minimizeController;
 
+  /// Whether this bar moves into iPhone Duo's vertical bar strip where a
+  /// [GlassNavigationShell] has resolved one ([GlassVerticalBar.maybeOf]).
+  ///
+  /// True for [GlassTabBar.bottom] and [GlassTabBar.minimizable]. The inline
+  /// placement is part of the content rather than a bar; the searchable
+  /// placement does not follow yet.
+  bool get followsVerticalBar =>
+      _placement == _GlassTabBarPlacement.bottom ||
+      _placement == _GlassTabBarPlacement.minimizable;
+
   @override
   Size get preferredSize {
     final minimized = _effectiveMinimized;
@@ -1270,6 +1283,12 @@ class _GlassTabBarState extends State<GlassTabBar> {
 
   @override
   Widget build(BuildContext context) {
+    // In iPhone Duo's vertical bar strip the bottom placements become an
+    // icon-only capsule at the bottom of the strip.
+    final verticalBar =
+        widget.followsVerticalBar ? GlassVerticalBar.maybeOf(context) : null;
+    if (verticalBar != null) return _buildVertical(context, verticalBar);
+
     // Dispatch to the correct rendering engine based on placement.
     switch (widget._placement) {
       case _GlassTabBarPlacement.bottom:
@@ -1281,6 +1300,24 @@ class _GlassTabBarState extends State<GlassTabBar> {
       case _GlassTabBarPlacement.inline:
         return _buildInline(context);
     }
+  }
+
+  /// Dispatches to [TabBarVerticalLayout] — the bar in iPhone Duo's vertical
+  /// bar strip.
+  Widget _buildVertical(BuildContext context, GlassVerticalBarData bar) {
+    return TabBarVerticalLayout(
+      bar: bar,
+      tabs: widget.tabs,
+      selectedIndex: widget.selectedIndex,
+      onTabSelected: widget.onTabSelected,
+      settings: widget.settings,
+      quality: widget.quality,
+      indicatorColor: widget.indicatorColor,
+      selectedIconColor: widget.selectedIconColor,
+      unselectedIconColor: widget.unselectedIconColor,
+      iconSize: widget.iconSize,
+      platformViewBackdrop: widget.platformViewBackdrop,
+    );
   }
 
   /// Dispatches to [TabBarBottomLayout] — the iOS 26-style bottom placement engine.

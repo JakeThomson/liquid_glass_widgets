@@ -299,6 +299,56 @@ The same effect is available on any glass, in or out of a bar, as
 `FadeTransition`-style explicit form, which also works as an
 `AnimatedSwitcher.transitionBuilder`).
 
+## iPhone Duo vertical bars
+
+On iPhone Duo an app built against the iOS 27.1 SDK gets vertical bars: always
+on the outer display, and on the inner display in landscape. The back button,
+bar items and tab bar leave the top and bottom edges and stack in an 84pt strip
+beside the status bar. UIKit only moves the bars a container owns, and a
+`FlutterViewController` owns none, so the shell stands in for the container:
+it resolves the strip and the package's bars follow it, with nothing to change
+in a screen.
+
+| Bar | In the strip |
+|---|---|
+| `GlassAppBar.pinned` / `GlassPinnedBarChrome` | Back button, then the leading and trailing groups in order, stacked from the top of the strip. The title stays in a row at the top of the content, beside any item that stays horizontal |
+| `GlassBarItem` | `.icon`, `.menu` and `.sheet` go vertical; `.custom` stays in the horizontal row. `axisBehavior` overrides either way, mirroring SwiftUI's `axisBehavior(_:)` |
+| `GlassTabBar.bottom` / `.minimizable` | An icon-only capsule at the bottom of the strip |
+| `GlassToolbar` | Its items stack at the bottom of the strip; spacers collapse to the strip's gap |
+
+```dart
+GlassNavigationShell(
+  verticalBarBehavior: GlassVerticalBarBehavior.automatic, // .disabled keeps horizontal bars
+  verticalBarCompression: GlassVerticalBarCompression.automatic,
+  child: child!,
+)
+
+final edge = GlassVerticalBar.edgeOf(context); // null where bars are horizontal
+```
+
+The strip is read from `MediaQuery.viewPadding`: a zero top inset with exactly
+one lateral inset is the strip, on that side, and the insets are physical, so
+it keeps its side under RTL. Where the strip runs out of height, the chrome
+collapses the groups that no longer fit into a ••• menu, and the tab bar
+collapses to its selected tab — on its own in outer landscape, or always with
+`GlassVerticalBarCompression.prefersBarItems`. A bar the app draws in the strip
+reserves its height with `GlassNavigationShellState.reserveVerticalBarBottom`,
+as the package's tab bar and toolbar do.
+
+`GlassVerticalBarBehavior.disabled` keeps the package's bars horizontal, but
+the system still reserves the strip. To give the width back, override
+`preferredVerticalBarBehavior` in a `FlutterViewController` subclass:
+
+```swift
+class HorizontalBarsFlutterViewController: FlutterViewController {
+  @available(iOS 27.1, *)
+  override var preferredVerticalBarBehavior: UIVerticalBarBehavior { .disabled }
+}
+```
+
+`example/lib/harnesses/duo_bars_harness.dart` rebuilds the native reference
+screens with the package's bars, for comparing the two on the simulator.
+
 ## Direction
 
 `GlassAppBar.pinned` is deliberately the opt-in, not the default — but that
@@ -338,6 +388,14 @@ that future.
   a *different* navigator from the route that owns the chrome — a
   `useRootNavigator: true` dialog raised from inside a nested stack — is not
   seen as covering it, for the same reason.
+- On iPhone Duo, where the first control in the strip starts depends on the
+  status cluster and the camera, which Flutter does not report yet: until
+  `displayFeatures` is populated on iOS (flutter/flutter#193025) it comes from
+  a table of the postures measured on the iOS 27.1 simulator. For the same
+  reason inner portrait keeps its bar a row below the status bar rather than
+  beside it, and a half-folded display does not move sheets and dialogs into
+  one half. `GlassTabBar.searchable`, modal sheets, popovers and the Reduce
+  Transparency strip background do not follow the strip yet.
 - RTL layouts are untested. The clusters themselves are now placed with
   `Positioned.directional` and anchored to the logical edge, but item order
   within a cluster is not mirrored.

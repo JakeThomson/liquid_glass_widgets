@@ -294,6 +294,8 @@ GlassAppBar.pinned(
 
 > **Note:** Without `GlassNavigationShell`, `GlassAppBar.pinned` falls back gracefully — items render inside the bar in-route, so all screens work either way.
 
+> **iPhone Duo:** Under the shell, pinned bars, `GlassTabBar.bottom` and `GlassToolbar` move into the vertical bar strip on their own. Use `GlassBarItem.custom(axisBehavior: GlassBarItemAxisBehavior.verticalPreferred)` for custom content that should go with them, and read `GlassVerticalBar.maybeOf(context)` to fit a bar the package does not draw.
+
 ---
 
 ## 7. Common Agent Pitfalls (Checklist before outputting code)

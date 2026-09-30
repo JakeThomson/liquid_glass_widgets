@@ -1,3 +1,17 @@
+# 1.9.0
+
+## Features
+
+- **Vertical bars on iPhone Duo (#348):** Under a `GlassNavigationShell`, the pinned chrome, `GlassTabBar.bottom` and `GlassToolbar` now move into the 84pt strip iOS 27.1 reserves on the outer display and on the inner display in landscape, laid out to the native strip's measured geometry. The title stays in a row at the top of the content, and `GlassBarItem.axisBehavior` decides which items go vertical. Where the strip runs short, the chrome overflows into a ••• menu and the tab bar collapses to its selected tab. The strip is read from `MediaQuery.viewPadding` and published as `GlassVerticalBar`; `GlassNavigationShell.verticalBarBehavior` and `verticalBarCompression` mirror UIKit's `preferredVerticalBarBehavior` and `verticalBarCompressionBehavior`. Nothing changes on any other device.
+
+  ```dart
+  GlassNavigationShell(
+    verticalBarBehavior: GlassVerticalBarBehavior.automatic,
+    verticalBarCompression: GlassVerticalBarCompression.automatic,
+    child: child!,
+  )
+  ```
+
 # 1.8.1
 
 ## Bug Fixes

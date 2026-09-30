@@ -12,6 +12,10 @@ import '../shared/glass_content_aware_scope.dart';
 import '../shared/glass_isolation_scope.dart';
 import '../shared/glass_page.dart';
 import '../shared/glass_scroll_edge_effect.dart';
+import 'glass_app_bar.dart';
+import 'glass_tab_bar.dart';
+import 'glass_toolbar.dart';
+import 'glass_vertical_bar.dart';
 
 /// A one-stop-shop scaffold that replaces the manual assembly of [GlassPage],
 /// [Scaffold], [GlassScrollEdgeEffect], and a [Stack] for proper z-ordering.
@@ -428,19 +432,36 @@ class GlassScaffold extends StatelessWidget {
     final topPad = mediaQuery.padding.top;
     final botPad = mediaQuery.padding.bottom;
 
+    // In iPhone Duo's vertical bar strip a pinned app bar keeps only its
+    // title row, and the package's bottom bars leave the bottom edge for the
+    // strip — so neither covers what its preferred size says it does.
+    final verticalBar = GlassVerticalBar.maybeOf(context);
+    final bar = appBar;
+    final appBarInStrip =
+        verticalBar != null && bar is GlassAppBar && bar.pinnedActions != null;
+    final bottom = bottomBar;
+    final bottomBarInStrip = verticalBar != null &&
+        (bottom is GlassToolbar ||
+            (bottom is GlassTabBar && bottom.followsVerticalBar));
+
     // Resolve effective bar heights.
     // If appBar implements PreferredSizeWidget, use its preferred height;
     // otherwise fall back to the explicit appBarHeight parameter.
-    final effectiveAppBarHeight = appBar is PreferredSizeWidget
-        ? (appBar! as PreferredSizeWidget).preferredSize.height
-        : appBarHeight;
-    final effectiveBottomBarHeight = bottomBar is PreferredSizeWidget
-        ? (bottomBar as PreferredSizeWidget).preferredSize.height
-        : (bottomBar != null ? (bottomBarHeight ?? 60.0) : 0.0);
+    final effectiveAppBarHeight = appBarInStrip
+        ? GlassVerticalBarMetrics.edgeMargin + GlassVerticalBarMetrics.rowHeight
+        : appBar is PreferredSizeWidget
+            ? (appBar! as PreferredSizeWidget).preferredSize.height
+            : appBarHeight;
+    final effectiveBottomBarHeight = bottomBarInStrip
+        ? 0.0
+        : bottomBar is PreferredSizeWidget
+            ? (bottomBar as PreferredSizeWidget).preferredSize.height
+            : (bottomBar != null ? (bottomBarHeight ?? 60.0) : 0.0);
 
     // Resolve edge fade toggles.
     final doFadeTop = topEdgeFade ?? (edgeFade && appBar != null);
-    final doFadeBottom = bottomEdgeFade ?? (edgeFade && bottomBar != null);
+    final doFadeBottom =
+        bottomEdgeFade ?? (edgeFade && bottomBar != null && !bottomBarInStrip);
 
     // Calculate fade heights.
     // Only include appBarHeight when an appBar is present — without one, the

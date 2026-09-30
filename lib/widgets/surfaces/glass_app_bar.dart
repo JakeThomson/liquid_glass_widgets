@@ -10,6 +10,7 @@ import 'glass_bar_item.dart';
 import 'glass_large_title.dart' show GlassLargeTitleController;
 import 'glass_navigation_shell.dart';
 import 'glass_pinned_bar_chrome.dart';
+import 'glass_vertical_bar.dart';
 
 /// A navigation bar layout widget following Apple's iOS 26 design patterns.
 ///
@@ -256,6 +257,10 @@ class GlassAppBar extends StatelessWidget
   bool shouldFullyObstruct(BuildContext context) => backgroundColor.a >= 1.0;
 
   /// Padding around the app bar content.
+  ///
+  /// A [GlassAppBar.pinned] bar in iPhone Duo's vertical bar strip lays its
+  /// title row out to [GlassVerticalBarMetrics] instead, so it lines up with
+  /// the chrome the shell draws there.
   final EdgeInsetsGeometry padding;
 
   /// Default glass settings for buttons inside this app bar.
@@ -326,15 +331,30 @@ class GlassAppBar extends StatelessWidget
         ? actions
         : (chrome.actions.isEmpty ? null : chrome.actions);
 
+    // In iPhone Duo's vertical bar strip only the title stays behind, leading
+    // in a row at the top of the content, beside whatever items stay
+    // horizontal. Only a pinned bar moves: UIKit moves the bars a container
+    // owns, and the shell is this bar's container.
+    final verticalBar =
+        chrome == null ? null : GlassVerticalBar.maybeOf(context);
+
     final Widget toolbarRow = SafeArea(
       bottom: false,
       child: Padding(
-        padding: padding,
+        padding: verticalBar == null
+            ? padding
+            : const EdgeInsetsDirectional.only(
+                start: GlassVerticalBarMetrics.titleInset,
+                end: GlassVerticalBarMetrics.rowInset,
+                top: GlassVerticalBarMetrics.edgeMargin,
+              ),
         child: SizedBox(
-          height: toolbarHeight,
+          height: verticalBar == null
+              ? toolbarHeight
+              : GlassVerticalBarMetrics.rowHeight,
           child: CustomMultiChildLayout(
             delegate: _ToolbarLayout(
-              centerTitle: centerTitle,
+              centerTitle: centerTitle && verticalBar == null,
               textDirection: Directionality.of(context),
             ),
             children: [
