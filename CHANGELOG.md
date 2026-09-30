@@ -2,9 +2,11 @@
 
 ## Bug Fixes
 
-- **`GlassScrollEdgeEffect` stale texture on theme switch (fixes #352):** Recaptures background when brightness or `fadeColor` changes; stale in-flight captures are discarded via a generation counter.
-- **Pinned navigation chrome `buttonSettings` and inset on pop (fixes #351):** Resolves `buttonSettings` and `horizontalInset` against `flowTo` so pop transitions adopt the destination route's look from the first frame rather than snapping at animation completion.
-- **`GlassButton` / `GlassIconButton` isolated semantics node (fixes #354):** `GlassFocusRegion` now emits `container: true` when a button role or label is present, and `GlassButton` routes its tap through `semanticOnTap` with the `GestureDetector` excluded from semantics. Label, button role, and tap action now land on one isolated node rather than merging into an ancestor boundary or splitting across two nodes.
+- **`GlassScrollEdgeEffect` stale texture on theme switch (fixes #352):** Recaptures the background when brightness or `fadeColor` changes; stale in-flight captures are discarded via a generation counter.
+- **Pinned navigation chrome `buttonSettings` and inset on pop (fixes #351):** `buttonSettings` and `horizontalInset` now adopt the destination route's values from the first frame of a pop transition, rather than snapping at completion.
+- **`GlassButton` / `GlassIconButton` isolated semantics node (fixes #354):** The button label, role, and tap action now land on a single isolated semantics node. Previously they merged into an ancestor boundary or split across two nodes.
+- **Glow layout crash during route transitions (fixes #355):** Eliminates `StateError: RenderBox was not laid out` crashes that occurred when a glow animation updated in the same frame a route transition wrapper (e.g. `SlideTransition`) was inserted above the route.
+- **Interactive widget `CurvedAnimation` and `ValueNotifier` disposal (fixes #356):** All interactive and overlay widgets now correctly dispose their `CurvedAnimation` instances and `ValueNotifier`s on unmount, preventing listener leaks and `leak_tracker` failures in widget tests.
 
 # 1.8.0
 

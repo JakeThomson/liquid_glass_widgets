@@ -616,7 +616,7 @@ class GlassButton extends StatefulWidget {
 class _GlassButtonState extends State<GlassButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _saturationController;
-  late final Animation<double> _saturationAnimation;
+  late final CurvedAnimation _saturationAnimation;
   final ValueNotifier<bool> _isHovered = ValueNotifier(false);
   final ValueNotifier<bool> _isFocused = ValueNotifier(false);
 
@@ -658,6 +658,7 @@ class _GlassButtonState extends State<GlassButton>
 
   @override
   void dispose() {
+    _saturationAnimation.dispose();
     _saturationController.dispose();
     _isHovered.dispose();
     _isFocused.dispose();

@@ -5,7 +5,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
   // ── Animation Controllers ─────────────────────────────────────────────────
   late AnimationController _animationController;
   late AnimationController _saturationController;
-  late Animation<double> _saturationAnimation;
+  late CurvedAnimation _saturationAnimation;
   final _progressNotifier = _ProgressNotifier();
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -139,6 +139,7 @@ class _GlassModalSheetState extends State<GlassModalSheet>
     _animationController.removeListener(_onPositionTick);
     _animationController.dispose();
     _progressNotifier.dispose();
+    _saturationAnimation.dispose();
     _saturationController.dispose();
     _scrollController.dispose();
     _currentStateNotifier.dispose();

@@ -272,6 +272,154 @@ void main() {
       expect(ro.touchPosition, const Offset(20, 20));
       expect(ro.touchIntensity, greaterThan(0.0));
     });
+
+    testWidgets(
+        'issue #355: upward propagation does not throw when glow updates in the frame a FractionalTranslation wrapper is inserted',
+        (tester) async {
+      final ro = _TestLiquidGlassRenderObject(
+        link: GeometryRenderLink(),
+        renderShader: null,
+        settings: const LiquidGlassSettings(),
+        devicePixelRatio: 1.0,
+      );
+
+      final layerKey = GlobalKey<GlassGlowLayerState>();
+      final subtreeKey = GlobalKey();
+      bool insertWrapper = false;
+
+      late StateSetter setParentState;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              setParentState = setState;
+              Widget content = KeyedSubtree(
+                key: subtreeKey,
+                child: _TestLiquidGlassWidget(
+                  renderObject: ro,
+                  child: GlassGlowLayer(
+                    key: layerKey,
+                    child: const GlassGlow(
+                      child: SizedBox(width: 100, height: 100),
+                    ),
+                  ),
+                ),
+              );
+
+              if (insertWrapper) {
+                content = FractionalTranslation(
+                  translation: const Offset(0.25, 0),
+                  child: content,
+                );
+              }
+
+              return Center(child: content);
+            },
+          ),
+        ),
+      );
+
+      // Settle initial frame so ro and glowLayer have size and layout.
+      await tester.pumpAndSettle();
+      expect(ro.hasSize, isTrue);
+
+      // In a single frame, insert the FractionalTranslation wrapper AND update the glow.
+      // This causes the newly inserted RenderFractionalTranslation to be attached without layout,
+      // while the child rebuilds and calls updateRenderObject on _RenderGlassGlowLayer.
+      setParentState(() {
+        insertWrapper = true;
+      });
+      layerKey.currentState!.updateTouch(
+        const Offset(20, 20),
+        radius: 1.0,
+        color: const Color(0x99FFFFFF),
+      );
+
+      // Pump the build phase. Prior to fixing #355, this threw:
+      // StateError: Bad state: RenderBox was not laid out: RenderFractionalTranslation
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(tester.takeException(), isNull);
+      expect(ro.touchPosition, const Offset(20, 20));
+      expect(ro.touchIntensity, greaterThan(0.0));
+    });
+
+    testWidgets(
+        'issue #355: upward propagation does not throw when an unlaid-out RenderBox is between glow layer and glass layer',
+        (tester) async {
+      final ro = _TestLiquidGlassRenderObject(
+        link: GeometryRenderLink(),
+        renderShader: null,
+        settings: const LiquidGlassSettings(),
+        devicePixelRatio: 1.0,
+      );
+
+      final layerKey = GlobalKey<GlassGlowLayerState>();
+      final subtreeKey = GlobalKey();
+      bool insertWrapper = false;
+
+      late StateSetter setParentState;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: _TestLiquidGlassWidget(
+              renderObject: ro,
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  setParentState = setState;
+                  Widget content = KeyedSubtree(
+                    key: subtreeKey,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 30, top: 40),
+                      child: GlassGlowLayer(
+                        key: layerKey,
+                        child: const GlassGlow(
+                          child: SizedBox(width: 100, height: 100),
+                        ),
+                      ),
+                    ),
+                  );
+
+                  if (insertWrapper) {
+                    content = FractionalTranslation(
+                      translation: const Offset(0.25, 0),
+                      child: content,
+                    );
+                  }
+
+                  return SizedBox(width: 200, height: 200, child: content);
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(ro.hasSize, isTrue);
+
+      // Insert FractionalTranslation BETWEEN ro and GlassGlowLayer, while updating touch
+      setParentState(() {
+        insertWrapper = true;
+      });
+      layerKey.currentState!.updateTouch(
+        const Offset(20, 20),
+        radius: 1.0,
+        color: const Color(0x99FFFFFF),
+      );
+
+      // Build frame: FractionalTranslation has not been laid out yet. Must not throw!
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // Advance layout and post-frame callback
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull);
+      expect(ro.touchIntensity, greaterThan(0.0));
+    });
   });
 }
 

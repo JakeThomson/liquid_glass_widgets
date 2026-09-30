@@ -174,6 +174,7 @@ class _GlassSwitchState extends State<GlassSwitch>
 
   late AnimationController _positionController;
   late AnimationController _thicknessController;
+  late CurvedAnimation _positionCurve;
   late Animation<double> _positionAnimation;
   late Animation<double> _thicknessAnimation;
   late bool _isMovingForward; // Track direction of animation
@@ -210,16 +211,15 @@ class _GlassSwitchState extends State<GlassSwitch>
     _thicknessController = AnimationController(
         duration: const Duration(milliseconds: 380), vsync: this);
 
+    _positionCurve = CurvedAnimation(
+      parent: _positionController,
+      curve: Curves.easeInOutCubic, // Match the growth momentum
+      reverseCurve: Curves.easeInOutCubic,
+    );
     _positionAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _positionController,
-        curve: Curves.easeInOutCubic, // Match the growth momentum
-        reverseCurve: Curves.easeInOutCubic,
-      ),
-    );
+    ).animate(_positionCurve);
 
     // Pulse animation (0 -> 1 -> 0)
     // Synchronized to grow and settle as the toggle jumps
@@ -315,8 +315,11 @@ class _GlassSwitchState extends State<GlassSwitch>
 
   @override
   void dispose() {
+    _positionCurve.dispose();
     _positionController.dispose();
     _thicknessController.dispose();
+    _isHovered.dispose();
+    _isFocused.dispose();
     super.dispose();
   }
 

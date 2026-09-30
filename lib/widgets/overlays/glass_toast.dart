@@ -408,7 +408,9 @@ class _GlassToastOverlay extends StatefulWidget {
 class _GlassToastOverlayState extends State<_GlassToastOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  late CurvedAnimation _slideCurve;
   late Animation<Offset> _slideAnimation;
+  late CurvedAnimation _fadeCurve;
   late Animation<double> _fadeAnimation;
   Timer? _dismissTimer;
 
@@ -424,24 +426,26 @@ class _GlassToastOverlayState extends State<_GlassToastOverlay>
 
     // Slide animation based on position
     final Offset slideBegin = _getSlideOffset();
-    _slideAnimation = Tween<Offset>(
-      begin: slideBegin,
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
+    _slideCurve = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutCubic,
       reverseCurve: Curves.easeInCubic,
-    ));
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: slideBegin,
+      end: Offset.zero,
+    ).animate(_slideCurve);
 
     // Fade animation
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
+    _fadeCurve = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.0, 0.5),
       reverseCurve: const Interval(0.5, 1.0),
-    ));
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(_fadeCurve);
 
     // Start entrance animation
     _controller.forward();
@@ -472,6 +476,8 @@ class _GlassToastOverlayState extends State<_GlassToastOverlay>
   @override
   void dispose() {
     _dismissTimer?.cancel();
+    _slideCurve.dispose();
+    _fadeCurve.dispose();
     _controller.dispose();
     super.dispose();
   }

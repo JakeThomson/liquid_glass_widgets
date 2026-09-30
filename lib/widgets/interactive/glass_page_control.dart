@@ -183,7 +183,7 @@ class GlassPageControl extends StatefulWidget {
 class _GlassPageControlState extends State<GlassPageControl>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _animation;
+  late CurvedAnimation _animation;
   int _previousPage = 0;
 
   // Active/inactive dot colors are resolved at build time from
@@ -214,10 +214,14 @@ class _GlassPageControlState extends State<GlassPageControl>
     if (oldWidget.animationDuration != widget.animationDuration) {
       _controller.duration = widget.animationDuration;
     }
+    if (oldWidget.animationCurve != widget.animationCurve) {
+      _animation.curve = widget.animationCurve;
+    }
   }
 
   @override
   void dispose() {
+    _animation.dispose();
     _controller.dispose();
     super.dispose();
   }
