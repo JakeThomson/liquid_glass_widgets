@@ -130,6 +130,7 @@ class GlassNavigationShell extends StatefulWidget {
     required this.child,
     this.enabled = true,
     this.effectTransition = GlassEffectTransition.materialize,
+    this.swipeCommitTransition = GlassSwipeCommitTransition.effect,
   });
 
   /// The subtree containing the [Navigator], typically the `child` handed to
@@ -154,6 +155,12 @@ class GlassNavigationShell extends StatefulWidget {
   /// two routes: with a knob on each bar, a push between routes that disagree
   /// would have no answer for which one wins.
   final GlassEffectTransition effectTransition;
+
+  /// How the chrome transitions once an interactive back-swipe commits.
+  ///
+  /// Defaults to [GlassSwipeCommitTransition.effect], which plays
+  /// [effectTransition] as for any other pop.
+  final GlassSwipeCommitTransition swipeCommitTransition;
 
   /// The nearest enclosing shell, or null if there is none.
   static GlassNavigationShellState? maybeOf(BuildContext context) {
@@ -734,6 +741,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
         popping: true,
         topRoute: exiting.topRoute,
         transition: exiting.transition,
+        crossFade: widget.swipeCommitTransition ==
+            GlassSwipeCommitTransition.crossFade,
       );
     }
 
