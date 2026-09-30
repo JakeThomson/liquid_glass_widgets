@@ -1,11 +1,13 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../src/widgets/surfaces/vertical_bar_title_row.dart';
 import '../interactive/glass_button.dart';
 import '../interactive/glass_button_group.dart';
 import '../overlays/glass_modal_sheet.dart';
 import 'glass_app_bar.dart' show DefaultButtonSettings, GlassAppBar;
 import 'glass_bar_item.dart';
+import 'glass_large_title.dart';
 import 'glass_navigation_shell.dart';
 import 'glass_vertical_bar.dart';
 import 'shared/glass_nav_pinned_host.dart'
@@ -153,6 +155,7 @@ class GlassPinnedBarChrome extends StatefulWidget {
     this.buttonSettings,
     this.horizontalInset,
     this.platformViewBackdrop = false,
+    this.largeTitleController,
     this.enabled = true,
   });
 
@@ -216,6 +219,15 @@ class GlassPinnedBarChrome extends StatefulWidget {
   /// capsule over one has nothing to refract; the flag routes it to the live
   /// `BackdropFilter` instead, as [GlassButton.platformViewBackdrop] does.
   final bool platformViewBackdrop;
+
+  /// The large title this bar collapses with, if it has one.
+  ///
+  /// Pass the controller the bar shares with its [GlassLargeTitle]. In
+  /// iPhone Duo's vertical bar strip the title row holds the large title, so
+  /// the items that stay horizontal beside it scroll away with it, and the
+  /// strip hides with the rest of the bar while the title's search is open.
+  /// Elsewhere it is not read.
+  final GlassLargeTitleController? largeTitleController;
 
   /// Whether this bar participates in pinning at all.
   ///
@@ -318,6 +330,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         buttonSettings: widget.buttonSettings,
         horizontalInset: widget.horizontalInset,
         platformViewBackdrop: widget.platformViewBackdrop,
+        largeTitleController: widget.largeTitleController,
       ),
     );
   }
@@ -610,24 +623,28 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       start: trailingStrip ? null : columnOffset,
       end: trailingStrip ? columnOffset : null,
       width: columnWidth,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: GlassVerticalBarMetrics.spacing,
-        children: [
-          if (_showsBack)
-            _buildBackButton(
-              context,
-              backSize: GlassVerticalBarMetrics.controlExtent,
-            ),
-          for (final group in fitGlassNavStripGroups(
-            [
-              ..._stripGroups(widget.leading, vertical: true),
-              ..._stripGroups(widget.actions, vertical: true),
-            ],
-            available,
-          ))
-            _buildGroup(group),
-        ],
+      child: VerticalBarTitleRow(
+        controller: widget.largeTitleController,
+        collapses: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: GlassVerticalBarMetrics.spacing,
+          children: [
+            if (_showsBack)
+              _buildBackButton(
+                context,
+                backSize: GlassVerticalBarMetrics.controlExtent,
+              ),
+            for (final group in fitGlassNavStripGroups(
+              [
+                ..._stripGroups(widget.leading, vertical: true),
+                ..._stripGroups(widget.actions, vertical: true),
+              ],
+              available,
+            ))
+              _buildGroup(group),
+          ],
+        ),
       ),
     );
   }

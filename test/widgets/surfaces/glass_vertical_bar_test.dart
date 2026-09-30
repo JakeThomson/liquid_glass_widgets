@@ -440,6 +440,302 @@ void main() {
     });
   });
 
+  group('GlassTabBar.searchable in the strip', () {
+    testDuo('puts search in the capsule, after the tabs', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _SearchableTabsScreen()));
+      await settle(tester);
+
+      expect(find.byType(TabBarVerticalLayout), findsOneWidget);
+      // Four tabs and search: 6 + 5 × 50 + 6, ending 24pt above the bottom.
+      final search = tester.getCenter(find.byIcon(CupertinoIcons.search));
+      expect(search.dx, closeTo(418, 0.01));
+      expect(search.dy, 678 - 24 - 6 - 25);
+      final profile = tester.getCenter(
+        find.byIcon(CupertinoIcons.person_crop_circle),
+      );
+      expect(profile.dy, search.dy - 50);
+    });
+
+    testDuo('opens its field across the top of the content', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _SearchableTabsScreen()));
+      await settle(tester);
+      expect(find.byType(GlassTextField), findsNothing);
+
+      await tester.tap(find.byIcon(CupertinoIcons.search));
+      await settle(tester);
+
+      final field = tester.getRect(find.byType(GlassTextField));
+      expect(field.left, 20);
+      expect(field.top, 24);
+      expect(field.height, 44);
+      // Then the ✕, 10pt on, ending at the strip.
+      final close = tester.getRect(
+        find.ancestor(
+          of: find.byIcon(CupertinoIcons.xmark),
+          matching: find.byType(GlassButton),
+        ),
+      );
+      expect(close.left, field.right + 10);
+      expect(close.right, 466 - 84);
+      expect(close.width, 44);
+    });
+
+    testDuo('keeps the title beside its field on the inner display',
+        (tester) async {
+      setScreen(
+        tester,
+        size: const Size(951, 669),
+        padding: const EdgeInsets.fromLTRB(0, 0, 84, 34),
+      );
+      await tester.pumpWidget(shellApp(const _SearchableTabsScreen()));
+      await settle(tester);
+      await tester.tap(find.byIcon(CupertinoIcons.search));
+      await settle(tester);
+
+      // A regular width: a 280pt field and a 48pt ✕ at the row's end.
+      final field = tester.getRect(find.byType(GlassTextField));
+      expect(field.width, 280);
+      expect(field.height, 48);
+      final close = tester.getRect(
+        find.ancestor(
+          of: find.byIcon(CupertinoIcons.xmark),
+          matching: find.byType(GlassButton),
+        ),
+      );
+      expect(close.left, field.right + 12);
+      expect(close.right, 951 - 84);
+      expect(close.width, 48);
+    });
+
+    testDuo('closes on the ✕ and on choosing a tab', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _SearchableTabsScreen()));
+      await settle(tester);
+
+      await tester.tap(find.byIcon(CupertinoIcons.search));
+      await settle(tester);
+      await tester.tap(find.byIcon(CupertinoIcons.xmark));
+      await settle(tester);
+      expect(find.byType(GlassTextField), findsNothing);
+      expect(find.text('Home body'), findsOneWidget);
+
+      await tester.tap(find.byIcon(CupertinoIcons.search));
+      await settle(tester);
+      expect(find.text('Search body'), findsOneWidget);
+      await tester.tap(find.byIcon(CupertinoIcons.book));
+      await settle(tester);
+      expect(find.byType(GlassTextField), findsNothing);
+      expect(find.text('Library body'), findsOneWidget);
+    });
+  });
+
+  group('large titles in the strip', () {
+    /// The title the app bar draws in the strip's row.
+    Finder rowTitle() => find.descendant(
+          of: find.byType(GlassAppBar),
+          matching: find.text('Mailboxes'),
+        );
+
+    testDuo('lifts the title into the row, at 28pt', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _LargeTitleScreen()));
+      await settle(tester);
+
+      expect(find.text('Mailboxes'), findsOneWidget);
+      final title = tester.getRect(rowTitle());
+      expect(title.left, 20);
+      expect(title.center.dy, closeTo(24 + 24, 0.5));
+      expect(
+        tester
+            .widget<RichText>(
+              find.descendant(of: rowTitle(), matching: find.byType(RichText)),
+            )
+            .text
+            .style!
+            .fontSize,
+        28,
+      );
+      // The content starts below the row, as natively.
+      expect(tester.getTopLeft(find.text('Row 0')).dy, 82);
+    });
+
+    testDuo('keeps the row against the strip in right to left', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(
+        const _LargeTitleScreen(),
+        textDirection: TextDirection.rtl,
+      ));
+      await settle(tester);
+
+      // The strip stays on the right, where the title now starts: it ends
+      // against the strip, and the item that stays horizontal crosses to the
+      // other side of the content.
+      expect(tester.getRect(rowTitle()).right, 466 - 84 - 2);
+      expect(pinned(tester, CupertinoIcons.pencil).dx, lessThan(466 / 2));
+    });
+
+    testDuo('scrolls the row away with the content', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _LargeTitleScreen()));
+      await settle(tester);
+      final state = tester.state<_LargeTitleScreenState>(
+        find.byType(_LargeTitleScreen),
+      );
+      final title = tester.getRect(rowTitle());
+      final edit = pinned(tester, CupertinoIcons.pencil);
+
+      state.title.scrollController.jumpTo(29);
+      await tester.pump();
+      expect(tester.getRect(rowTitle()).top, title.top - 29);
+      expect(pinned(tester, CupertinoIcons.pencil).dy, edit.dy - 29);
+      // The strip itself stays put.
+      expect(pinned(tester, CupertinoIcons.add).dy, 170 + 24);
+
+      state.title.scrollController.jumpTo(200);
+      await tester.pump();
+      final opacities = tester
+          .widgetList<Opacity>(
+            find.ancestor(of: rowTitle(), matching: find.byType(Opacity)),
+          )
+          .map((opacity) => opacity.opacity);
+      expect(opacities, contains(0.0));
+    });
+
+    testDuo('turns its search bar into a magnifier at the bottom of the strip',
+        (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(
+        shellApp(const _LargeTitleScreen(searchable: true)),
+      );
+      await settle(tester);
+
+      expect(find.byType(GlassSearchBar), findsNothing);
+      final search = tester.getCenter(find.byIcon(CupertinoIcons.search));
+      expect(
+          search,
+          offsetMoreOrLessEquals(
+            const Offset(418, 678 - 24 - 24),
+            epsilon: 0.01,
+          ));
+      final shell = tester.state<GlassNavigationShellState>(
+        find.byType(GlassNavigationShell),
+      );
+      expect(shell.verticalBarBottom, 48 + 24);
+    });
+
+    testDuo('opens the search along the bottom and hides the bar',
+        (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(
+        shellApp(const _LargeTitleScreen(searchable: true)),
+      );
+      await settle(tester);
+      final state = tester.state<_LargeTitleScreenState>(
+        find.byType(_LargeTitleScreen),
+      );
+
+      await tester.tap(find.byIcon(CupertinoIcons.search));
+      await settle(tester);
+
+      expect(state.title.isSearchPresented, isTrue);
+      final field = tester.getRect(find.byType(GlassSearchBar));
+      expect(field.left, 20);
+      expect(field.right, 466 - 84);
+      expect(field.bottom, 678 - 24);
+      expect(
+        tester.getCenter(find.byIcon(CupertinoIcons.xmark)),
+        offsetMoreOrLessEquals(
+          const Offset(418, 678 - 24 - 24),
+          epsilon: 0.01,
+        ),
+      );
+      // The field takes focus as it opens.
+      expect(
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<GlassSearchBar>(),
+        isNotNull,
+      );
+      // The navigation bar hides, and the content moves into its place.
+      final hidden = tester
+          .widgetList<AnimatedOpacity>(find.ancestor(
+            of: find.byIcon(CupertinoIcons.add),
+            matching: find.byType(AnimatedOpacity),
+          ))
+          .map((opacity) => opacity.opacity);
+      expect(hidden, contains(0.0));
+      expect(tester.getTopLeft(find.text('Row 0')).dy, 24);
+
+      await tester.tap(find.byIcon(CupertinoIcons.xmark));
+      await settle(tester);
+      expect(state.title.isSearchPresented, isFalse);
+      expect(find.byType(GlassSearchBar), findsNothing);
+      expect(tester.getTopLeft(find.text('Row 0')).dy, 82);
+    });
+
+    testDuo('caps the search field on the inner display', (tester) async {
+      setScreen(
+        tester,
+        size: const Size(951, 669),
+        padding: const EdgeInsets.fromLTRB(0, 0, 84, 34),
+      );
+      await tester.pumpWidget(
+        shellApp(const _LargeTitleScreen(searchable: true)),
+      );
+      await settle(tester);
+      await tester.tap(find.byIcon(CupertinoIcons.search));
+      await settle(tester);
+
+      final field = tester.getRect(find.byType(GlassSearchBar));
+      expect(field.width, 372);
+      expect(field.right, 951 - 84);
+    });
+
+    testDuo('closes the search on leaving the strip', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(
+        shellApp(const _LargeTitleScreen(searchable: true)),
+      );
+      await settle(tester);
+      final state = tester.state<_LargeTitleScreenState>(
+        find.byType(_LargeTitleScreen),
+      );
+      await tester.tap(find.byIcon(CupertinoIcons.search));
+      await settle(tester);
+      expect(state.title.isSearchPresented, isTrue);
+
+      // Unfolded to inner portrait, where bars are horizontal.
+      setScreen(
+        tester,
+        size: const Size(669, 951),
+        padding: const EdgeInsets.fromLTRB(0, 82, 0, 34),
+      );
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      // ignore: avoid_print
+      print(
+          'same state: ${identical(state, tester.state(find.byType(_LargeTitleScreen)))} presented: ${state.title.isSearchPresented} bar: ${GlassVerticalBar.maybeOf(tester.element(find.byType(GlassLargeTitle)))}');
+      expect(state.title.isSearchPresented, isFalse);
+      expect(find.byType(GlassSearchBar), findsOneWidget);
+    });
+
+    testDuo('stays in the scroll view on a regular iPhone', (tester) async {
+      setScreen(
+        tester,
+        size: const Size(402, 874),
+        padding: const EdgeInsets.fromLTRB(0, 62, 0, 34),
+      );
+      await tester.pumpWidget(
+        shellApp(const _LargeTitleScreen(searchable: true)),
+      );
+      await settle(tester);
+
+      expect(find.text('Mailboxes'), findsNWidgets(2));
+      expect(find.byType(GlassSearchBar), findsOneWidget);
+    });
+  });
+
   group('GlassScaffold in the strip', () {
     testDuo('drops the bottom fade for a bar that left the bottom edge',
         (tester) async {
@@ -453,6 +749,24 @@ void main() {
       expect(effect.fadeBottom, isFalse);
       // The pinned bar's title row, 24pt down and 48pt tall, plus the fade.
       expect(effect.topFadeHeight, 24 + 48 + 20);
+    });
+
+    testDuo('shrinks the top fade as a large title scrolls away',
+        (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _LargeTitleScreen()));
+      await settle(tester);
+      final state = tester.state<_LargeTitleScreenState>(
+        find.byType(_LargeTitleScreen),
+      );
+      double fade() => tester
+          .widget<GlassScrollEdgeEffect>(find.byType(GlassScrollEdgeEffect))
+          .topFadeHeight;
+
+      expect(fade(), 24 + 48 + 20);
+      state.title.scrollController.jumpTo(200);
+      await tester.pump();
+      expect(fade(), 24 + 48 + 20 - 58);
     });
   });
 
@@ -545,5 +859,102 @@ class _TabsScreenState extends State<_TabsScreen> {
           ],
         ),
         body: Center(child: Text('${_titles[_tab]} body')),
+      );
+}
+
+class _SearchableTabsScreen extends StatefulWidget {
+  const _SearchableTabsScreen();
+
+  @override
+  State<_SearchableTabsScreen> createState() => _SearchableTabsScreenState();
+}
+
+class _SearchableTabsScreenState extends State<_SearchableTabsScreen> {
+  static const _titles = ['Home', 'Library', 'Radio', 'Profile'];
+  int _tab = 0;
+  bool _searching = false;
+
+  @override
+  Widget build(BuildContext context) => GlassScaffold(
+        bottomBar: GlassTabBar.searchable(
+          selectedIndex: _tab,
+          onTabSelected: (i) => setState(() => _tab = i),
+          isSearchActive: _searching,
+          searchConfig: GlassSearchBarConfig(
+            onSearchToggle: (active) => setState(() => _searching = active),
+          ),
+          tabs: const [
+            GlassTab(icon: Icon(CupertinoIcons.house), label: 'Home'),
+            GlassTab(icon: Icon(CupertinoIcons.book), label: 'Library'),
+            GlassTab(
+              icon: Icon(CupertinoIcons.dot_radiowaves_left_right),
+              label: 'Radio',
+            ),
+            GlassTab(
+              icon: Icon(CupertinoIcons.person_crop_circle),
+              label: 'Profile',
+            ),
+          ],
+        ),
+        body: Center(
+          child: Text(_searching ? 'Search body' : '${_titles[_tab]} body'),
+        ),
+      );
+}
+
+class _LargeTitleScreen extends StatefulWidget {
+  const _LargeTitleScreen({this.searchable = false});
+
+  final bool searchable;
+
+  @override
+  State<_LargeTitleScreen> createState() => _LargeTitleScreenState();
+}
+
+class _LargeTitleScreenState extends State<_LargeTitleScreen> {
+  final title = GlassLargeTitleController();
+
+  @override
+  void dispose() {
+    title.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => GlassScaffold(
+        appBar: GlassAppBar.pinned(
+          title: const Text('Mailboxes'),
+          largeTitleController: title,
+          leading: [
+            GlassBarItem.custom(
+              child: const Icon(CupertinoIcons.pencil),
+              label: 'Edit',
+              onTap: () {},
+            ),
+          ],
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'Add',
+              onTap: () {},
+            ),
+          ],
+        ),
+        body: CustomScrollView(
+          controller: title.scrollController,
+          slivers: [
+            GlassLargeTitle(
+              text: 'Mailboxes',
+              controller: title,
+              searchBar:
+                  widget.searchable ? const GlassSearchBar(height: 48) : null,
+            ),
+            SliverList.builder(
+              itemCount: 40,
+              itemBuilder: (context, i) =>
+                  SizedBox(height: 60, child: Text('Row $i')),
+            ),
+          ],
+        ),
       );
 }

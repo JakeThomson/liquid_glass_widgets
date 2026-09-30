@@ -1196,12 +1196,10 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   /// Whether this bar moves into iPhone Duo's vertical bar strip where a
   /// [GlassNavigationShell] has resolved one ([GlassVerticalBar.maybeOf]).
   ///
-  /// True for [GlassTabBar.bottom] and [GlassTabBar.minimizable]. The inline
-  /// placement is part of the content rather than a bar; the searchable
-  /// placement does not follow yet.
-  bool get followsVerticalBar =>
-      _placement == _GlassTabBarPlacement.bottom ||
-      _placement == _GlassTabBarPlacement.minimizable;
+  /// True for [GlassTabBar.bottom], [GlassTabBar.minimizable] and
+  /// [GlassTabBar.searchable], whose search becomes the last slot of the
+  /// capsule. The inline placement is part of the content rather than a bar.
+  bool get followsVerticalBar => _placement != _GlassTabBarPlacement.inline;
 
   @override
   Size get preferredSize {
@@ -1305,6 +1303,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
   /// Dispatches to [TabBarVerticalLayout] — the bar in iPhone Duo's vertical
   /// bar strip.
   Widget _buildVertical(BuildContext context, GlassVerticalBarData bar) {
+    final searchable = widget._placement == _GlassTabBarPlacement.searchable;
     return TabBarVerticalLayout(
       bar: bar,
       tabs: widget.tabs,
@@ -1317,6 +1316,13 @@ class _GlassTabBarState extends State<GlassTabBar> {
       unselectedIconColor: widget.unselectedIconColor,
       iconSize: widget.iconSize,
       platformViewBackdrop: widget.platformViewBackdrop,
+      searchConfig: searchable ? widget.searchConfig : null,
+      // An active bar that keeps its search pill compact is minimized rather
+      // than searching — Apple Music's mini mode — and the strip has no
+      // minimized form of its own.
+      isSearchActive: searchable &&
+          widget.isSearchActive &&
+          widget.searchConfig!.expandWhenActive,
     );
   }
 

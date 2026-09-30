@@ -7,6 +7,7 @@ import '../../src/engine/liquid_glass_settings.dart';
 import '../effects/glass_materialize.dart';
 import '../overlays/glass_modal_sheet.dart';
 import 'glass_bar_item.dart';
+import 'glass_large_title.dart';
 import 'glass_vertical_bar.dart';
 import 'shared/glass_nav_pinned_host.dart';
 
@@ -30,6 +31,7 @@ class GlassNavBarRegistration {
     this.presentSheet,
     this.horizontalInset,
     this.platformViewBackdrop = false,
+    this.largeTitleController,
   });
 
   /// The trailing cluster items for this route.
@@ -83,6 +85,14 @@ class GlassNavBarRegistration {
   /// routes the shell's copy there, exactly as [GlassButton.platformViewBackdrop]
   /// does for the bar's own.
   final bool platformViewBackdrop;
+
+  /// The large title this route's bar collapses with, if any.
+  ///
+  /// Only read in iPhone Duo's vertical bar strip, where the title row holds
+  /// the large title: the items that stay horizontal share that row, so they
+  /// scroll away with the title, and the whole chrome hides while the title's
+  /// search is open ([GlassLargeTitleController.isSearchPresented]).
+  final GlassLargeTitleController? largeTitleController;
 
   /// The tappable items in [actions], with spacers removed.
   List<GlassBarActionItem> get actionItems =>

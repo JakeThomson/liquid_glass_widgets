@@ -18,6 +18,8 @@
 
   Thanks to [@DFelten](https://github.com/DFelten) for the contribution (#360).
 
+- **Search and large titles in iPhone Duo's strip (#366):** `GlassTabBar.searchable` now joins the strip's capsule with search as its last slot, and opens its field in the row at the top of the content. A `GlassLargeTitle` moves into that row at 28pt, drawn by the `GlassAppBar.pinned` sharing its controller, and scrolls away with the content; its `searchBar` becomes a magnifier at the bottom of the strip, which opens the field along the bottom of the content and hides the bar, as `searchable` does natively. The row's insets are physical, as natively, so in a right-to-left app the title ends against the strip.
+
 ## Bug Fixes
 
 - **`GlassMenu` pointer events after unmount (fixes #363, PR #364):** Ignore events from active menu and continuous-swipe pointers after disposal, preventing unmounted context and disposed notifier errors when a route is removed during a gesture.

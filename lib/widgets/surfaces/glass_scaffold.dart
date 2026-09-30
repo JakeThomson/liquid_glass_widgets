@@ -6,6 +6,7 @@ import '../../theme/glass_theme.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../src/widgets/surfaces/dynamic_preferred_size.dart';
+import '../../src/widgets/surfaces/vertical_bar_title_row.dart';
 import '../../types/glass_quality.dart';
 import '../../theme/glass_theme_data.dart';
 import '../shared/glass_content_aware_scope.dart';
@@ -477,17 +478,38 @@ class GlassScaffold extends StatelessWidget {
 
     // Wrap with edge fading if enabled.
     if (extendBody && (doFadeTop || doFadeBottom)) {
-      bodyContent = GlassScrollEdgeEffect(
-        topFadeHeight: topFadeHeight,
-        bottomFadeHeight: bottomFadeHeight,
-        fadeTop: doFadeTop,
-        fadeBottom: doFadeBottom,
-        style: edgeStyle,
-        maxSigma: maxSigma,
-        // Pass the explicit background colour so the async-capture fallback
-        // gradient uses the correct colour in dark mode instead of defaulting
-        // to CupertinoTheme.scaffoldBackgroundColor (which is near-black).
-        fadeColor: backgroundColor,
+      Widget edgeEffect(double topFadeHeight, Widget child) =>
+          GlassScrollEdgeEffect(
+            topFadeHeight: topFadeHeight,
+            bottomFadeHeight: bottomFadeHeight,
+            fadeTop: doFadeTop,
+            fadeBottom: doFadeBottom,
+            style: edgeStyle,
+            maxSigma: maxSigma,
+            // Pass the explicit background colour so the async-capture
+            // fallback gradient uses the correct colour in dark mode instead
+            // of defaulting to CupertinoTheme.scaffoldBackgroundColor (which
+            // is near-black).
+            fadeColor: backgroundColor,
+            child: child,
+          );
+
+      // In the strip a large title's row scrolls away, and hides while its
+      // search is open, so the fade under it goes with it. Built the same way
+      // either side of a posture change, so the body is never remounted.
+      final largeTitle = appBarInStrip ? bar.largeTitleController : null;
+      bodyContent = ListenableBuilder(
+        listenable: Listenable.merge([largeTitle]),
+        builder: (context, child) => edgeEffect(
+          largeTitle == null
+              ? topFadeHeight
+              : topFadeHeight -
+                  VerticalBarTitleRow.collapseExtent *
+                      (largeTitle.isSearchPresented
+                          ? 1.0
+                          : largeTitle.collapseProgress),
+          child!,
+        ),
         child: bodyContent,
       );
     }
@@ -585,9 +607,14 @@ class GlassScaffold extends StatelessWidget {
       // 3. Bottom bar (above body — painted after body in Stack).
       // SafeArea ensures the bar is never obscured by the Android system
       // navigation bar or the iOS home indicator on any device.
+      //
+      // A bar in iPhone Duo's vertical bar strip gets the full height: it
+      // aligns itself to the bottom of the strip, and a searchable tab bar
+      // opens its field at the top of the content.
       if (bottomBar != null)
         Positioned(
           key: const ValueKey('glass_scaffold_bottom_bar'),
+          top: bottomBarInStrip ? 0 : null,
           left: 0,
           right: 0,
           bottom: 0,
