@@ -3,30 +3,43 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() {
-  testWidgets('active menu pointer can end after menu unmounts',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: GlassMenu(
-            trigger: const SizedBox(width: 60, height: 40, child: Text('Open')),
-            items: [GlassMenuItem(title: 'Action', onTap: () {})],
+  for (final fromTrigger in [false, true]) {
+    for (final cancel in [false, true]) {
+      testWidgets(
+          'active ${fromTrigger ? 'trigger' : 'menu'} pointer can '
+          '${cancel ? 'cancel' : 'end'} after menu unmounts', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: GlassMenu(
+                enableContinuousSwipe: fromTrigger,
+                trigger:
+                    const SizedBox(width: 60, height: 40, child: Text('Open')),
+                items: [GlassMenuItem(title: 'Action', onTap: () {})],
+              ),
+            ),
           ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
+        );
+        if (!fromTrigger) {
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+        }
 
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.text('Action')),
-    );
-    await tester.pump();
-    await tester.pumpWidget(const SizedBox.shrink());
-    await gesture.moveBy(const Offset(0, 5));
-    await gesture.up();
-    expect(tester.takeException(), isNull);
-  });
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.text(fromTrigger ? 'Open' : 'Action')),
+        );
+        await tester.pump();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await gesture.moveBy(const Offset(0, 5));
+        if (cancel) {
+          await gesture.cancel();
+        } else {
+          await gesture.up();
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
 
   testWidgets('GlassMenu toggles and renders items',
       (WidgetTester tester) async {

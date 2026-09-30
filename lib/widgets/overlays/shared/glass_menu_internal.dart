@@ -418,6 +418,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _handleTriggerPointerMove(PointerMoveEvent event) {
+    // Flutter retains the pointer hit-test path until the gesture ends.
     if (!mounted) return;
     if (!widget.enableContinuousSwipe) return;
     if (event.pointer != _swipePointerId) return;
@@ -716,7 +717,6 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   /// their state transition while the menu is still visible.
   void _fireItemTap(GlassMenuItem item) {
     item.onTap();
-    if (!mounted) return;
     final delay = item.closeDelay;
     if (delay == null || delay == Duration.zero) {
       _closeMenu();
