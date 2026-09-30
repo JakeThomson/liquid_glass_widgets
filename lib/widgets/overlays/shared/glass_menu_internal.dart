@@ -418,6 +418,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _handleTriggerPointerMove(PointerMoveEvent event) {
+    if (!mounted) return;
     if (!widget.enableContinuousSwipe) return;
     if (event.pointer != _swipePointerId) return;
     // Continuous swipe has no meaning on scrollable menus: arming would block
@@ -509,6 +510,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _handleTriggerPointerUp(PointerUpEvent event) {
+    if (!mounted) return;
     if (!widget.enableContinuousSwipe) return;
     if (event.pointer != _swipePointerId) return;
 
@@ -544,6 +546,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   }
 
   void _handleTriggerPointerCancel(PointerCancelEvent event) {
+    if (!mounted) return;
     if (!widget.enableContinuousSwipe) return;
     if (event.pointer != _swipePointerId) return;
 
@@ -713,6 +716,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   /// their state transition while the menu is still visible.
   void _fireItemTap(GlassMenuItem item) {
     item.onTap();
+    if (!mounted) return;
     final delay = item.closeDelay;
     if (delay == null || delay == Duration.zero) {
       _closeMenu();
@@ -1178,6 +1182,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                           ),
                           Listener(
                             onPointerDown: (event) {
+                              if (!mounted) return;
                               _isDragging = true;
                               _isDraggingNotifier.value = true;
                               _hasStretched = false;
@@ -1188,11 +1193,13 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                               _updateHoveredIndex(event.localPosition);
                             },
                             onPointerMove: (event) {
+                              if (!mounted) return;
                               if (_isDragging) {
                                 _updateHoveredIndex(event.localPosition);
                               }
                             },
                             onPointerUp: (event) {
+                              if (!mounted) return;
                               if (_isDragging) {
                                 final currentOffset =
                                     _scrollController.hasClients
@@ -1222,6 +1229,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                               }
                             },
                             onPointerCancel: (_) {
+                              if (!mounted) return;
                               _isDragging = false;
                               _isDraggingNotifier.value = false;
                               _hoveredIndex = null;
