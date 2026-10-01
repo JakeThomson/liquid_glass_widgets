@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SemanticsAction;
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -1546,5 +1548,76 @@ void main() {
     expect(shape.borderRadius, greaterThanOrEqualTo(10.0));
 
     await tester.pumpAndSettle();
+  });
+
+  group('non-scrollable menu row activation', () {
+    Future<(GlassMenuController, List<String>)> openMenu(
+        WidgetTester tester) async {
+      final controller = GlassMenuController();
+      final tapped = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(
+                  left: 40,
+                  top: 80,
+                  child: GlassMenu(
+                    controller: controller,
+                    menuAlignment: GlassMenuAlignment.topLeft,
+                    trigger: const SizedBox(width: 8, height: 8),
+                    items: [
+                      GlassMenuItem(
+                          title: 'Copy', onTap: () => tapped.add('Copy')),
+                      GlassMenuItem(
+                          title: 'Cut', onTap: () => tapped.add('Cut')),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      controller.open();
+      await tester.pumpAndSettle();
+      return (controller, tapped);
+    }
+
+    testWidgets('a screen-reader tap activates the row', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final (controller, tapped) = await openMenu(tester);
+
+      final node = tester.getSemantics(find.bySemanticsLabel('Copy').first);
+      node.owner!.performAction(node.id, SemanticsAction.tap);
+      await tester.pumpAndSettle();
+
+      expect(tapped, ['Copy']);
+      expect(controller.isOpen, isFalse);
+      semantics.dispose();
+    });
+
+    testWidgets('Enter on a focused row activates it', (tester) async {
+      final (controller, tapped) = await openMenu(tester);
+
+      Focus.of(tester.element(find.text('Copy'))).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(tapped, ['Copy']);
+      expect(controller.isOpen, isFalse);
+    });
+
+    testWidgets('a touch tap still activates the row exactly once',
+        (tester) async {
+      final (_, tapped) = await openMenu(tester);
+
+      await tester.tap(find.text('Copy'));
+      await tester.pumpAndSettle();
+
+      expect(tapped, ['Copy']);
+    });
   });
 }
