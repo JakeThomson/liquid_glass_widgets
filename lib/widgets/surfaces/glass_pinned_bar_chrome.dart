@@ -436,11 +436,14 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         return GlassButtonGroup.icons(
           platformViewBackdrop: widget.platformViewBackdrop,
           settings: groupSettings,
+          borderRadius: GlassNavPinnedMetrics.capsuleRadius,
+          iconSize: GlassNavPinnedMetrics.iconSize,
+          itemPadding: EdgeInsets.zero,
           items: [
             for (final item in group.items)
               if (item is GlassBarMenuItem)
                 GlassButtonGroupItem.menu(
-                  icon: item.icon,
+                  icon: _slot(group, item),
                   menuItems: item.menuItems,
                   menuAlignment: item.menuAlignment,
                   menuWidth: item.menuWidth,
@@ -449,7 +452,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
                 )
               else
                 GlassButtonGroupItem(
-                  icon: item.content,
+                  icon: _slot(group, item),
                   onTap: tapOf(item),
                   label: item.label,
                   enabled: item.enabled,
@@ -471,24 +474,22 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       child: ExcludeSemantics(
         child: Opacity(
           opacity: 0.0,
-          child: SizedBox(
-            height: group.height,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final item in group.items)
-                  if (item is GlassBarCustomItem)
-                    item.child
-                  else
-                    SizedBox(
-                      width: group.slotWidth,
-                      child: Center(child: item.content),
-                    ),
-              ],
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [for (final item in group.items) _slot(group, item)],
           ),
         ),
       ),
+    );
+  }
+
+  /// One item as the pinned cluster lays it out: icons in a square slot of
+  /// the group's height, custom content at its own width.
+  Widget _slot(GlassNavBarGroup group, GlassBarActionItem item) {
+    return SizedBox(
+      width: item is GlassBarCustomItem ? null : group.slotWidth,
+      height: group.height,
+      child: Center(child: item.content),
     );
   }
 
