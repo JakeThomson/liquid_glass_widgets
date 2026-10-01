@@ -511,15 +511,20 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
     );
   }
 
-  /// One item as the pinned cluster lays it out: icons in a slot of the
-  /// group's [GlassNavBarGroup.slotExtent] along the bar, custom content at
-  /// its own length, and both at the group's thickness across it.
+  /// One item as the pinned cluster lays it out: icons in a slot matching
+  /// the group's extent, custom content at its own size.
   Widget _slot(GlassNavBarGroup group, GlassBarActionItem item) {
-    final length = item is GlassBarCustomItem ? null : group.slotExtent;
-    final vertical = group.axis == Axis.vertical;
     return SizedBox(
-      width: vertical ? group.crossExtent : length,
-      height: vertical ? length : group.crossExtent,
+      width: item is GlassBarCustomItem
+          ? null
+          : (group.axis == Axis.horizontal
+              ? group.slotExtent
+              : group.crossExtent),
+      height: item is GlassBarCustomItem
+          ? null
+          : (group.axis == Axis.vertical
+              ? group.slotExtent
+              : group.crossExtent),
       child: Center(child: item.content),
     );
   }

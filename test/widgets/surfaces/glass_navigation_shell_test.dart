@@ -553,6 +553,88 @@ void main() {
           reason: 'without the opt-in a swipe plays the materialize as before');
     });
 
+    testWidgets(
+        'popping to a route with no pinned bar dissolves items without glyph blur (follow-up to #351)',
+        (tester) async {
+      Finder pinnedAdd() => find.descendant(
+            of: find.byType(GlassNavPinnedHost),
+            matching: find.byIcon(CupertinoIcons.add),
+          );
+
+      await tester.pumpWidget(shellApp(const _Screen(
+        title: 'Root',
+        actions: null,
+      )));
+      await settle(tester);
+
+      await _push(
+        tester,
+        _Screen(
+          title: 'Detail',
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              onTap: () {},
+            ),
+          ],
+        ),
+      );
+      await settle(tester);
+
+      expect(capsulePhase(tester), 1.0);
+      expect(pinnedAdd(), findsOneWidget);
+
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.pop();
+      await tester.pump();
+
+      // Over the pop transition, while the capsule is dematerializing, the
+      // outgoing items should fade with the capsule glass (clusterPhaseAt)
+      // and must never apply glyph blur (outSigma == 0).
+      var testedFrames = 0;
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final phase = capsulePhase(tester);
+        if (phase > 0.0 && phase < 1.0) {
+          testedFrames++;
+          final clusterChildFinder = find.descendant(
+            of: find.byType(GlassNavPinnedHost),
+            matching: find.byWidgetPredicate(
+              (w) => w.runtimeType.toString() == '_ClusterChild',
+            ),
+          );
+          expect(
+            clusterChildFinder,
+            findsWidgets,
+            reason: 'items remain mounted while capsule is dissolving',
+          );
+          for (final element in clusterChildFinder.evaluate()) {
+            final child = element.widget;
+            final blurSigma = (child as dynamic).blurSigma as double;
+            final opacity = (child as dynamic).opacity as double;
+            expect(
+              blurSigma,
+              0.0,
+              reason:
+                  'glyph blur must remain 0 when dissolving with no destination',
+            );
+            expect(
+              opacity,
+              closeTo(phase, 1e-4),
+              reason: 'item opacity must track capsule glass phase',
+            );
+          }
+        }
+      }
+
+      expect(testedFrames, greaterThan(0),
+          reason: 'transition must have dematerializing frames');
+
+      await settle(tester);
+      expect(pinnedAdd(), findsNothing);
+      expect(capsulePhase(tester), 0.0);
+    });
+
     testWidgets('a cancelled back-swipe leaves the chrome exactly as it was',
         (tester) async {
       await tester.pumpWidget(shellApp(_Screen(

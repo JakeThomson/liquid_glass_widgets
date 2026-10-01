@@ -264,7 +264,11 @@ To achieve the signature iOS 26 navigation bar transition — where the capsule 
 
 ```dart
 CupertinoApp(
-  builder: (context, child) => GlassNavigationShell(child: child!),
+  builder: (context, child) => GlassNavigationShell(
+    swipeCommitTransition: GlassSwipeCommitTransition.crossFade, // optional: plain cross-fade on back-swipe
+    verticalBarBehavior: GlassVerticalBarBehavior.automatic,     // optional: iPhone Duo vertical strip
+    child: child!,
+  ),
   home: const HomeScreen(),
 )
 ```
