@@ -346,15 +346,15 @@ class GlassAppBar extends StatelessWidget
         padding: verticalBar == null
             ? padding
             : verticalBar.edge == GlassVerticalBarEdge.trailing
-                ? const EdgeInsetsDirectional.only(
-                    start: GlassVerticalBarMetrics.titleInset,
+                ? EdgeInsetsDirectional.only(
+                    start: verticalBar.titleInset,
                     end: GlassVerticalBarMetrics.rowInset,
-                    top: GlassVerticalBarMetrics.edgeMargin,
+                    top: verticalBar.rowTop,
                   )
-                : const EdgeInsetsDirectional.only(
+                : EdgeInsetsDirectional.only(
                     start: GlassVerticalBarMetrics.rowInset,
-                    end: GlassVerticalBarMetrics.titleInset,
-                    top: GlassVerticalBarMetrics.edgeMargin,
+                    end: verticalBar.titleInset,
+                    top: verticalBar.rowTop,
                   ),
         child: SizedBox(
           height: verticalBar == null

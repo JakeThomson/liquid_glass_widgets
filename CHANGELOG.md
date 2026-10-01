@@ -20,6 +20,8 @@
 
 - **Search and large titles in iPhone Duo's strip (#366):** `GlassTabBar.searchable` now joins the strip's capsule with search as its last slot, and opens its field in the row at the top of the content. A `GlassLargeTitle` moves into that row at 28pt, drawn by the `GlassAppBar.pinned` sharing its controller, and scrolls away with the content; its `searchBar` becomes a magnifier at the bottom of the strip, which opens the field along the bottom of the content and hides the bar, as `searchable` does natively. The row's insets are physical, as natively, so in a right-to-left app the title ends against the strip.
 
+- **Sheets, popovers and Reduce Transparency in iPhone Duo's strip (#367):** A `GlassModalSheet` now takes the strip's place where it covers it, as natively: on the outer display its `GlassAppBar.pinned` stacks down a strip of its own, and the sheet rises to 8pt from the top with its margins kept. On the inner display it is a 653pt card with a horizontal bar, placed by the new `placement` (`GlassSheetPlacement`, mirroring `presentationPlacement(_:)`); `.trailing` docks it over the strip and moves its bar into it. A `GlassMenu` or `GlassPopover` opened from the strip opens towards the content, centred on its item. Under Reduce Transparency the strip and the title row turn opaque behind a hairline. A pinned bar inside a presented route no longer registers with the shell, since the presentation is its container.
+
 ## Bug Fixes
 
 - **`GlassMenu` pointer events after unmount (fixes #363, PR #364):** Ignore events from active menu and continuous-swipe pointers after disposal, preventing unmounted context and disposed notifier errors when a route is removed during a gesture.

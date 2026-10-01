@@ -613,7 +613,16 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     final menuHeight = _calculateMenuHeight();
 
     // 1. Determine base alignment (Auto vs Manual)
-    if (widget.menuAlignment == null ||
+    final stripAlignment = verticalBarPresentationAlignment(
+      context,
+      position & _triggerSize!,
+    );
+    if ((widget.menuAlignment == null ||
+            widget.menuAlignment == GlassMenuAlignment.none) &&
+        stripAlignment != null) {
+      // From iPhone Duo's vertical bar strip: towards the content.
+      _morphAlignment = stripAlignment;
+    } else if (widget.menuAlignment == null ||
         widget.menuAlignment == GlassMenuAlignment.none) {
       // Horizontal alignment: left vs right half
       final isRightHalf = screenWidth.isFinite && position.dx > screenWidth / 2;
@@ -652,8 +661,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
       final double safeTop = widget.menuPadding.top + mqPadding.top;
       final double safeBottom = widget.menuPadding.bottom + mqPadding.bottom;
-      final double safeLeft = widget.menuPadding.left + mqPadding.left;
-      final double safeRight = widget.menuPadding.right + mqPadding.right;
+      // The strip's inset is no bar to a menu opened out of the strip, which
+      // natively lies over the item it came from.
+      final double safeLeft = widget.menuPadding.left +
+          (stripAlignment == null ? mqPadding.left : 0.0);
+      final double safeRight = widget.menuPadding.right +
+          (stripAlignment == null ? mqPadding.right : 0.0);
 
       // Calculate global menu position
       final double targetX =

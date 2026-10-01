@@ -106,6 +106,7 @@ export 'widgets/overlays/glass_modal_sheet.dart'
         GlassSheetState,
         GlassSheetMode,
         GlassSheetDetent, // the `detents` set on GlassModalSheet / .show()
+        GlassSheetPlacement, // the `placement` on GlassModalSheet / .show()
         GlassFillTransition,
         GlassModalSheetController,
         GlassMorphTrigger, // wraps a trigger a sheet morphs out of
