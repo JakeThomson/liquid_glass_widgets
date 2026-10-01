@@ -6,6 +6,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../../src/renderer/liquid_glass_renderer.dart';
+import '../../../src/widgets/surfaces/vertical_bar_title_row.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/glass_spring.dart';
 import '../../effects/glass_materialize.dart';
@@ -522,32 +523,40 @@ class GlassNavPinnedHost extends StatelessWidget {
           start: trailingStrip ? null : columnOffset,
           end: trailingStrip ? columnOffset : null,
           width: columnWidth,
-          child: _PinnedSide(
-            state: state,
-            groupsFor: stripGroups,
-            anchoredAtStart: true,
-            axis: Axis.vertical,
-            scaleAlignment: Alignment.topCenter,
-            coverageScale: coverageScale,
+          child: VerticalBarTitleRow(
+            controller: state.to.largeTitleController,
+            collapses: false,
+            child: _PinnedSide(
+              state: state,
+              groupsFor: stripGroups,
+              anchoredAtStart: true,
+              axis: Axis.vertical,
+              scaleAlignment: Alignment.topCenter,
+              coverageScale: coverageScale,
+            ),
           ),
         ),
         Positioned.directional(
           textDirection: textDirection,
           top: GlassVerticalBarMetrics.edgeMargin,
           height: GlassVerticalBarMetrics.rowHeight,
-          start: trailingStrip
-              ? null
-              : bar.width + GlassVerticalBarMetrics.rowInset,
+          // The row's end: against the strip where the strip is trailing, and
+          // across the content from it where it is leading.
           end: trailingStrip
               ? bar.width + GlassVerticalBarMetrics.rowInset
-              : null,
-          child: Center(
-            child: _PinnedSide(
-              state: state,
-              groupsFor: rowGroups,
-              anchoredAtStart: textDirection == TextDirection.rtl,
-              scaleAlignment: AlignmentDirectional.centerEnd,
-              coverageScale: coverageScale,
+              : GlassVerticalBarMetrics.titleInset,
+          // The row the title shares, so a large title takes it along as it
+          // scrolls away.
+          child: VerticalBarTitleRow(
+            controller: state.to.largeTitleController,
+            child: Center(
+              child: _PinnedSide(
+                state: state,
+                groupsFor: rowGroups,
+                anchoredAtStart: textDirection == TextDirection.rtl,
+                scaleAlignment: AlignmentDirectional.centerEnd,
+                coverageScale: coverageScale,
+              ),
             ),
           ),
         ),

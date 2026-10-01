@@ -96,14 +96,16 @@ abstract final class GlassVerticalBarMetrics {
   /// not go vertical, at the top of the content area.
   static const double rowHeight = 48.0;
 
-  /// Distance from the start of the content to the title in the horizontal
-  /// row.
+  /// Distance from the screen edge away from the strip to the horizontal row:
+  /// to the title in a left-to-right app with the strip on the right, and to
+  /// the items that stay horizontal in a right-to-left one.
   static const double titleInset = 20.0;
 
-  /// Gap between the strip and the end of the horizontal row's items.
+  /// Gap between the strip and the horizontal row.
   ///
-  /// Natively the items that stay horizontal sit almost against the strip,
-  /// where a horizontal bar would inset them by its full margin.
+  /// Natively the row runs almost against the strip, where a horizontal bar
+  /// would inset it by its full margin. Like [titleInset] it is physical: in a
+  /// right-to-left app the title, not the items, ends against the strip.
   static const double rowInset = 2.0;
 }
 

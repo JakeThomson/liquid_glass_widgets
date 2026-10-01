@@ -27,14 +27,18 @@
 //     <bundle id> data)/tmp/duo_harness.env"
 //   xcrun simctl launch --terminate-running-process <udid> <bundle id>
 //
-// Scenarios: nav, navbottom, tabsnav, root, axis, alert (a dialog over the
-// detail screen, 1.5s in) and push (the detail screen pushed 1s in and
-// popped 2.5s later, to record the morph). A `DIRECTION=rtl` line lays
-// the app out right to left, `BARS=disabled` sets
+// Scenarios: nav, navbottom, tabs, tabsnav, root, search, axis, alert (a
+// dialog over the detail screen, 1.5s in) and push (the detail screen pushed
+// 1s in and popped 2.5s later, to record the morph). A `DIRECTION=rtl` line
+// lays the app out right to left, `BARS=disabled` sets
 // GlassVerticalBarBehavior.disabled on the shell, `COMPRESSION=` one of
 // GlassVerticalBarCompression's names sets that, and
 // `ORIENT=portrait|landscapeLeft|landscapeRight` locks the orientation, as the
-// native scenarios' `-orient` does.
+// native scenarios' `-orient` does. As the native launch arguments of the same
+// names: `SEARCHTAB=YES` gives the tabs scenario a search tab
+// (GlassTabBar.searchable) and `TAB=search` opens on it; `SEARCH=active` opens
+// the search 1s in; and `SCROLL=<row>` scrolls a large-title screen 1s in, to
+// bring that row to the top.
 library;
 
 import 'dart:io' show Directory, File;
@@ -62,6 +66,9 @@ final Map<String, String> _env = () {
 final String _scenario = _env['SCENARIO'] ?? 'nav';
 final bool _rtl = _env['DIRECTION'] == 'rtl';
 final bool _barsDisabled = _env['BARS'] == 'disabled';
+final bool _searchTab = _env['SEARCHTAB'] == 'YES';
+final bool _searchActive = _env['SEARCH'] == 'active';
+final int _scrollTo = int.tryParse(_env['SCROLL'] ?? '') ?? 0;
 final GlassVerticalBarCompression _compression =
     GlassVerticalBarCompression.values.firstWhere(
   (value) => value.name == _env['COMPRESSION'],
@@ -113,6 +120,8 @@ class _App extends StatelessWidget {
   /// underneath, so the back button is showing.
   static List<Route<void>> _initialRoutes() => switch (_scenario) {
         'root' => [_route(const _RootScreen())],
+        'search' => [_route(const _RootScreen(searchable: true))],
+        'tabs' => [_route(const _TabsScreen(pushed: false))],
         'tabsnav' => [_route(const _TabsScreen())],
         'navbottom' => [
             _route(const _ListScreen(title: 'Inbox')),
@@ -146,60 +155,87 @@ Route<void> _route(Widget page) =>
 
 /// Forty coloured rows, as the native DemoList draws them.
 class _Rows extends StatelessWidget {
-  const _Rows({required this.title});
+  const _Rows({required this.title, this.stripTop = 82});
 
   final String title;
+
+  /// Where the content starts in the strip layout.
+  final double stripTop;
 
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
     // Natively the content starts 82pt down in the strip layout, below the
-    // title row, and under the navigation bar otherwise.
-    final top =
-        GlassVerticalBar.maybeOf(context) == null ? padding.top + 44 + 8 : 82.0;
+    // title row, and under the navigation bar otherwise. DemoList pads it by
+    // another 16pt, less the row's own 6pt.
+    final top = GlassVerticalBar.maybeOf(context) == null
+        ? padding.top + 44 + 8
+        : stripTop + 10;
     return ListView.builder(
       padding: EdgeInsets.only(top: top, bottom: 120),
       itemCount: 40,
-      itemBuilder: (context, i) => SafeArea(
-        top: false,
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Row(children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color:
-                    HSVColor.fromAHSV(1, (i % 12) * 30.0, 0.7, 0.9).toColor(),
-                borderRadius: BorderRadius.circular(10),
-              ),
+      itemBuilder: (context, i) => _Row(title: title, index: i),
+    );
+  }
+}
+
+/// One coloured row.
+class _Row extends StatelessWidget {
+  const _Row({required this.title, required this.index});
+
+  final String title;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final i = index;
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: HSVColor.fromAHSV(1, (i % 12) * 30.0, 0.7, 0.9).toColor(),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$title row ${i + 1}',
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: CupertinoColors.label,
-                    ),
+          ),
+          const SizedBox(width: 12),
+          // SwiftUI's headline and subheadline: their tracking, and the line
+          // heights the native rows measure at.
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 2,
+              children: [
+                Text(
+                  '$title row ${i + 1}',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    height: 22 / 17,
+                    letterSpacing: -0.43,
+                    fontWeight: FontWeight.w600,
+                    color: CupertinoColors.label,
                   ),
-                  const Text(
-                    'Secondary text that fills the width of the row',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: CupertinoColors.secondaryLabel,
-                    ),
+                ),
+                // A non-breaking space for iOS's line breaking, which keeps a
+                // lone word off the last line.
+                const Text(
+                  'Secondary text that fills the width of the\u00a0row',
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 18.4 / 15,
+                    letterSpacing: -0.23,
+                    color: CupertinoColors.secondaryLabel,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ]),
-        ),
+          ),
+        ]),
       ),
     );
   }
@@ -380,8 +416,36 @@ class _BottomBarScreen extends StatelessWidget {
   }
 }
 
-class _RootScreen extends StatelessWidget {
-  const _RootScreen();
+/// A root screen with a large title, as a SwiftUI NavigationStack root has by
+/// default: the native `root` scenario, and `search` with a `searchable`
+/// field.
+class _RootScreen extends StatefulWidget {
+  const _RootScreen({this.searchable = false});
+
+  final bool searchable;
+
+  @override
+  State<_RootScreen> createState() => _RootScreenState();
+}
+
+class _RootScreenState extends State<_RootScreen> {
+  final _title = GlassLargeTitleController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.searchable && _searchActive) {
+      Future<void>.delayed(const Duration(seconds: 1), () {
+        if (mounted) _title.reportSearchPresented(true);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => GlassScaffold(
@@ -389,6 +453,7 @@ class _RootScreen extends StatelessWidget {
         appBar: GlassAppBar.pinned(
           title: const Text('Mailboxes'),
           buttonSettings: _glass,
+          largeTitleController: _title,
           leading: [
             GlassBarItem.custom(
               child: const Padding(
@@ -407,8 +472,108 @@ class _RootScreen extends StatelessWidget {
             ),
           ],
         ),
-        body: const _Rows(title: 'Mail'),
+        body: _LargeTitleRows(
+          title: 'Mailboxes',
+          rowTitle: 'Mail',
+          controller: _title,
+          searchable: widget.searchable,
+        ),
       );
+}
+
+/// The forty rows under a [GlassLargeTitle], as a NavigationStack root lays
+/// them out.
+class _LargeTitleRows extends StatefulWidget {
+  const _LargeTitleRows({
+    required this.title,
+    required this.rowTitle,
+    required this.controller,
+    this.searchable = false,
+  });
+
+  final String title;
+  final String rowTitle;
+  final GlassLargeTitleController controller;
+  final bool searchable;
+
+  @override
+  State<_LargeTitleRows> createState() => _LargeTitleRowsState();
+}
+
+class _LargeTitleRowsState extends State<_LargeTitleRows> {
+  final _rowKeys = List.generate(40, (_) => GlobalKey());
+
+  @override
+  void initState() {
+    super.initState();
+    if (_scrollTo <= 0) return;
+    // As the native `-scroll`: the row reaches the top of the content, which
+    // is the edge margin once the title row has scrolled away.
+    Future<void>.delayed(const Duration(seconds: 1), () {
+      final row = _rowKeys[_scrollTo].currentContext;
+      if (!mounted || row == null || !row.mounted) return;
+      final scroll = widget.controller.scrollController;
+      final box = row.findRenderObject()! as RenderBox;
+      final top = box.localToGlobal(Offset.zero).dy + scroll.offset;
+      final inset = GlassVerticalBar.maybeOf(context) == null
+          ? MediaQuery.paddingOf(context).top + 44
+          : GlassVerticalBarMetrics.edgeMargin;
+      // The row's own 6pt padding is spacing between rows natively.
+      scroll.animateTo(
+        top + 6 - inset,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.paddingOf(context);
+    final vertical = GlassVerticalBar.maybeOf(context) != null;
+    return DefaultButtonSettings(
+      settings: _glass,
+      child: CustomScrollView(
+        controller: widget.controller.scrollController,
+        slivers: [
+          // Clears a horizontal navigation bar. The strip's title row is the
+          // large title's own to place.
+          if (!vertical)
+            SliverToBoxAdapter(child: SizedBox(height: padding.top + 44)),
+          GlassLargeTitle(
+            text: widget.title,
+            controller: widget.controller,
+            // In the strip the field is 48pt, with a label-coloured magnifier
+            // and 17pt text, as native draws it there.
+            searchBar: widget.searchable
+                ? vertical
+                    ? const GlassSearchBar(
+                        height: 48,
+                        searchIconColor: CupertinoColors.label,
+                        textStyle: TextStyle(fontSize: 17),
+                        placeholderStyle: TextStyle(
+                          fontSize: 17,
+                          color: CupertinoColors.secondaryLabel,
+                        ),
+                      )
+                    : const GlassSearchBar(height: 36)
+                : null,
+          ),
+          SliverPadding(
+            // DemoList's 16pt vertical padding, less the row's own 6pt.
+            padding: const EdgeInsets.only(top: 10, bottom: 120),
+            sliver: SliverList.builder(
+              itemCount: 40,
+              itemBuilder: (context, i) => KeyedSubtree(
+                key: _rowKeys[i],
+                child: _Row(title: widget.rowTitle, index: i),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Title-only, custom and icon items with each axis behaviour, as the native
@@ -486,9 +651,13 @@ class _AxisScreen extends StatelessWidget {
       );
 }
 
-/// Four tabs, each its own navigation stack opened on a pushed detail screen.
+/// Four tabs, each its own navigation stack: opened on a pushed detail screen
+/// (`tabsnav`), or on a root screen with a large title (`tabs`). `SEARCHTAB`
+/// adds the search tab, as GlassTabBar.searchable.
 class _TabsScreen extends StatefulWidget {
-  const _TabsScreen();
+  const _TabsScreen({this.pushed = true});
+
+  final bool pushed;
 
   @override
   State<_TabsScreen> createState() => _TabsScreenState();
@@ -496,41 +665,123 @@ class _TabsScreen extends StatefulWidget {
 
 class _TabsScreenState extends State<_TabsScreen> {
   static const _titles = ['Home', 'Library', 'Radio', 'Profile'];
+  static const _tabs = [
+    GlassTab(icon: Icon(CupertinoIcons.house_fill), label: 'Home'),
+    GlassTab(icon: Icon(CupertinoIcons.book_fill), label: 'Library'),
+    GlassTab(
+      icon: Icon(CupertinoIcons.dot_radiowaves_left_right),
+      label: 'Radio',
+    ),
+    GlassTab(
+      icon: Icon(CupertinoIcons.person_crop_circle_fill),
+      label: 'Profile',
+    ),
+  ];
+
   int _tab = 0;
+  bool _searching = _searchTab && _env['TAB'] == 'search';
+
+  @override
+  void initState() {
+    super.initState();
+    if (_searchTab && _searchActive && !_searching) {
+      Future<void>.delayed(const Duration(seconds: 1), () {
+        if (mounted) setState(() => _searching = true);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) => GlassScaffold(
         backgroundColor: CupertinoColors.white,
-        bottomBar: GlassTabBar.bottom(
-          settings: _glass,
-          selectedIndex: _tab,
-          onTabSelected: (i) => setState(() => _tab = i),
-          // The native TabView's selected tab takes the app's tint.
-          selectedIconColor: CupertinoColors.systemBlue,
-          tabs: const [
-            GlassTab(icon: Icon(CupertinoIcons.house_fill), label: 'Home'),
-            GlassTab(icon: Icon(CupertinoIcons.book_fill), label: 'Library'),
-            GlassTab(
-              icon: Icon(CupertinoIcons.dot_radiowaves_left_right),
-              label: 'Radio',
-            ),
-            GlassTab(
-              icon: Icon(CupertinoIcons.person_crop_circle_fill),
-              label: 'Profile',
-            ),
-          ],
-        ),
-        body: IndexedStack(
-          index: _tab,
-          children: [
-            for (final title in _titles)
-              Navigator(
+        bottomBar: _searchTab
+            ? GlassTabBar.searchable(
+                settings: _glass,
+                selectedIndex: _tab,
+                onTabSelected: (i) => setState(() => _tab = i),
+                selectedIconColor: CupertinoColors.systemBlue,
+                isSearchActive: _searching,
+                searchConfig: GlassSearchBarConfig(
+                  onSearchToggle: (active) =>
+                      setState(() => _searching = active),
+                ),
+                tabs: _tabs,
+              )
+            : GlassTabBar.bottom(
+                settings: _glass,
+                selectedIndex: _tab,
+                onTabSelected: (i) => setState(() => _tab = i),
+                // The native TabView's selected tab takes the app's tint.
+                selectedIconColor: CupertinoColors.systemBlue,
+                tabs: _tabs,
+              ),
+        // Only the selected tab is built: the shell ranks the routes of one
+        // Navigator, and the stacks of the tabs behind would keep their
+        // chrome registered.
+        body: _searching
+            // The search tab's screen. In a compact width the open field takes
+            // its title's row; in a regular width the title stays beside it.
+            ? MediaQuery.sizeOf(context).width < 800
+                ? const GlassScaffold(
+                    backgroundColor: CupertinoColors.white,
+                    body: _Rows(title: 'Search', stripTop: 78),
+                  )
+                : const _TabRootScreen(title: 'Search', adds: false)
+            : Navigator(
+                key: ValueKey(_tab),
                 onGenerateInitialRoutes: (_, __) => [
-                  _route(_ListScreen(title: title)),
-                  _route(const _DetailScreen()),
+                  if (widget.pushed) ...[
+                    _route(_ListScreen(title: _titles[_tab])),
+                    _route(const _DetailScreen()),
+                  ] else
+                    _route(_TabRootScreen(title: _titles[_tab])),
                 ],
               ),
+      );
+}
+
+/// A tab's root screen, with a large title and an add button.
+class _TabRootScreen extends StatefulWidget {
+  const _TabRootScreen({required this.title, this.adds = true});
+
+  final String title;
+
+  /// Whether the screen has the add button; the search tab's has none.
+  final bool adds;
+
+  @override
+  State<_TabRootScreen> createState() => _TabRootScreenState();
+}
+
+class _TabRootScreenState extends State<_TabRootScreen> {
+  final _title = GlassLargeTitleController();
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => GlassScaffold(
+        backgroundColor: CupertinoColors.white,
+        appBar: GlassAppBar.pinned(
+          title: Text(widget.title),
+          buttonSettings: _glass,
+          largeTitleController: _title,
+          actions: [
+            if (widget.adds)
+              GlassBarItem.icon(
+                icon: const Icon(CupertinoIcons.add),
+                label: 'Add',
+                onTap: () {},
+              ),
           ],
+        ),
+        body: _LargeTitleRows(
+          title: widget.title,
+          rowTitle: widget.title,
+          controller: _title,
         ),
       );
 }

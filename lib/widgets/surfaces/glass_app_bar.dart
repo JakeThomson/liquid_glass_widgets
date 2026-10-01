@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
+import '../../src/widgets/surfaces/vertical_bar_title_row.dart';
 import '../../types/glass_quality.dart';
 import '../interactive/glass_button.dart';
 import '../shared/glass_isolation_scope.dart';
@@ -313,6 +314,7 @@ class GlassAppBar extends StatelessWidget
             pinnedLeadingItemsSupplementBackButton,
         onBack: onBack,
         buttonSettings: buttonSettings,
+        largeTitleController: largeTitleController,
         builder: (context, chrome) => _buildBar(context, chrome: chrome),
       );
     }
@@ -338,16 +340,22 @@ class GlassAppBar extends StatelessWidget
     final verticalBar =
         chrome == null ? null : GlassVerticalBar.maybeOf(context);
 
-    final Widget toolbarRow = SafeArea(
+    Widget toolbarRow = SafeArea(
       bottom: false,
       child: Padding(
         padding: verticalBar == null
             ? padding
-            : const EdgeInsetsDirectional.only(
-                start: GlassVerticalBarMetrics.titleInset,
-                end: GlassVerticalBarMetrics.rowInset,
-                top: GlassVerticalBarMetrics.edgeMargin,
-              ),
+            : verticalBar.edge == GlassVerticalBarEdge.trailing
+                ? const EdgeInsetsDirectional.only(
+                    start: GlassVerticalBarMetrics.titleInset,
+                    end: GlassVerticalBarMetrics.rowInset,
+                    top: GlassVerticalBarMetrics.edgeMargin,
+                  )
+                : const EdgeInsetsDirectional.only(
+                    start: GlassVerticalBarMetrics.rowInset,
+                    end: GlassVerticalBarMetrics.titleInset,
+                    top: GlassVerticalBarMetrics.edgeMargin,
+                  ),
         child: SizedBox(
           height: verticalBar == null
               ? toolbarHeight
@@ -365,7 +373,7 @@ class GlassAppBar extends StatelessWidget
                 ),
               LayoutId(
                 id: _ToolbarSlot.title,
-                child: _buildTitle(context),
+                child: _buildTitle(context, inStrip: verticalBar != null),
               ),
               if (effectiveActions != null)
                 LayoutId(
@@ -381,6 +389,15 @@ class GlassAppBar extends StatelessWidget
         ),
       ),
     );
+
+    // A large title in the strip's row takes the row with it as the content
+    // scrolls, and hides it while its search is open.
+    if (verticalBar != null) {
+      toolbarRow = VerticalBarTitleRow(
+        controller: largeTitleController,
+        child: toolbarRow,
+      );
+    }
 
     Widget content = ColoredBox(
       color: backgroundColor,
@@ -425,11 +442,23 @@ class GlassAppBar extends StatelessWidget
   ///
   /// With a controller the result is wrapped in a [ListenableBuilder] so only
   /// the title opacity rebuilds on scroll, not the entire bar.
-  Widget _buildTitle(BuildContext context) {
+  ///
+  /// In iPhone Duo's vertical bar strip ([inStrip]) a large title is drawn
+  /// here rather than in the scroll view, in the large title's weight at
+  /// [VerticalBarTitleRow.largeTitleFontSize], and there is no inline title to
+  /// fade in: natively the row scrolls away with the content and nothing
+  /// replaces it.
+  Widget _buildTitle(BuildContext context, {bool inStrip = false}) {
+    final largeInStrip = inStrip && largeTitleController != null;
+    final textTheme = CupertinoTheme.of(context).textTheme;
     final Widget styledTitle = title == null
         ? const SizedBox.shrink()
         : DefaultTextStyle(
-            style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+            style: largeInStrip
+                ? textTheme.navLargeTitleTextStyle.copyWith(
+                    fontSize: VerticalBarTitleRow.largeTitleFontSize,
+                  )
+                : textTheme.navTitleTextStyle,
             // iOS navigation titles are a single truncated line — they never
             // wrap, however little room the bar items leave them.
             maxLines: 1,
@@ -438,7 +467,7 @@ class GlassAppBar extends StatelessWidget
             child: Semantics(header: true, child: title),
           );
 
-    if (largeTitleController == null) return styledTitle;
+    if (largeTitleController == null || largeInStrip) return styledTitle;
 
     return ListenableBuilder(
       listenable: largeTitleController!,
