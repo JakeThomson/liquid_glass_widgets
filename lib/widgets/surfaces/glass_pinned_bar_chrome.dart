@@ -463,21 +463,14 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
           platformViewBackdrop: widget.platformViewBackdrop,
           settings: groupSettings,
           direction: group.axis,
-          // In the strip, sized to the numbers the pinned host draws to; a
-          // horizontal group keeps the padding it has always had.
-          itemPadding: group.axis == Axis.vertical
-              ? EdgeInsets.symmetric(
-                  horizontal:
-                      (group.crossExtent - GlassNavPinnedMetrics.iconSize) / 2,
-                  vertical:
-                      (group.slotExtent - GlassNavPinnedMetrics.iconSize) / 2,
-                )
-              : const EdgeInsets.all(12),
+          borderRadius: GlassNavPinnedMetrics.capsuleRadius,
+          iconSize: GlassNavPinnedMetrics.iconSize,
+          itemPadding: EdgeInsets.zero,
           items: [
             for (final item in group.items)
               if (item is GlassBarMenuItem)
                 GlassButtonGroupItem.menu(
-                  icon: item.icon,
+                  icon: _slot(group, item),
                   menuItems: item.menuItems,
                   menuAlignment: item.menuAlignment,
                   menuWidth: item.menuWidth,
@@ -486,7 +479,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
                 )
               else
                 GlassButtonGroupItem(
-                  icon: item.content,
+                  icon: _slot(group, item),
                   onTap: tapOf(item),
                   label: item.label,
                   enabled: item.enabled,
@@ -508,30 +501,26 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       child: ExcludeSemantics(
         child: Opacity(
           opacity: 0.0,
-          child: SizedBox(
-            height: group.axis == Axis.horizontal ? group.crossExtent : null,
-            width: group.axis == Axis.vertical ? group.crossExtent : null,
-            child: Flex(
-              direction: group.axis,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final item in group.items)
-                  if (item is GlassBarCustomItem)
-                    item.child
-                  else
-                    SizedBox(
-                      width: group.axis == Axis.horizontal
-                          ? group.slotExtent
-                          : null,
-                      height:
-                          group.axis == Axis.vertical ? group.slotExtent : null,
-                      child: Center(child: item.content),
-                    ),
-              ],
-            ),
+          child: Flex(
+            direction: group.axis,
+            mainAxisSize: MainAxisSize.min,
+            children: [for (final item in group.items) _slot(group, item)],
           ),
         ),
       ),
+    );
+  }
+
+  /// One item as the pinned cluster lays it out: icons in a slot of the
+  /// group's [GlassNavBarGroup.slotExtent] along the bar, custom content at
+  /// its own length, and both at the group's thickness across it.
+  Widget _slot(GlassNavBarGroup group, GlassBarActionItem item) {
+    final length = item is GlassBarCustomItem ? null : group.slotExtent;
+    final vertical = group.axis == Axis.vertical;
+    return SizedBox(
+      width: vertical ? group.crossExtent : length,
+      height: vertical ? length : group.crossExtent,
+      child: Center(child: item.content),
     );
   }
 

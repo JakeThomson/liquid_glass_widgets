@@ -258,6 +258,7 @@ class GlassNavPinnedState {
     this.popping = false,
     required this.topRoute,
     this.transition = GlassEffectTransition.materialize,
+    this.crossFade = false,
     this.presenting,
     this.holdForSheet,
   });
@@ -313,6 +314,9 @@ class GlassNavPinnedState {
   /// Set from [GlassNavigationShell.effectTransition]; the host downgrades
   /// it to [GlassEffectTransition.identity] under reduce motion.
   final GlassEffectTransition transition;
+
+  /// Whether this frame belongs to [GlassSwipeCommitTransition.crossFade].
+  final bool crossFade;
 
   /// The [GlassBarItem.sheet] whose sheet is up out of the hoisted chrome, or
   /// null.
@@ -1723,8 +1727,9 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     final morphing = fromItems.isNotEmpty && toItems.isNotEmpty;
     final changes = fromItems.length != toItems.length ||
         slots.any((s) => s.isEnter || s.isExit || s.crossFades);
-    final morphScale = !morphing || !changes || state.settled
-        ? 1.0
+    final morphScale =
+        !morphing || !changes || state.settled || state.crossFade
+            ? 1.0
         : 1.0 +
             GlassNavPinnedMetrics.swellPulseAt(morphT) -
             GlassNavPinnedMetrics.squeezeScale * overshoot;
@@ -1784,19 +1789,26 @@ class _PinnedGroupState extends State<_PinnedGroup> {
 
     // Cross-fade window for a matched item whose content changed, and
     // entering / exiting items during a morph.
-    final q = ((morphT - GlassNavPinnedMetrics.crossFadeStart) /
-            (GlassNavPinnedMetrics.crossFadeEnd -
-                GlassNavPinnedMetrics.crossFadeStart))
-        .clamp(0.0, 1.0);
+    final q = state.crossFade
+        ? p.clamp(0.0, 1.0)
+        : ((morphT - GlassNavPinnedMetrics.crossFadeStart) /
+                (GlassNavPinnedMetrics.crossFadeEnd -
+                    GlassNavPinnedMetrics.crossFadeStart))
+            .clamp(0.0, 1.0);
 
     // Glyph blur, the other half of the native read. An outgoing glyph blurs
     // away as it fades; an incoming one arrives soft and sharpens last. Item
     // contents are not glass, so filtering them is safe — the shell itself
     // never animates opacity.
-    final outSigma =
-        state.settled ? 0.0 : GlassNavPinnedMetrics.outgoingSigmaAt(morphT);
-    final inSigma =
-        state.settled ? 0.0 : GlassNavPinnedMetrics.incomingSigmaAt(morphT);
+    final outSigma = state.settled || state.crossFade
+        ? 0.0
+        : GlassNavPinnedMetrics.outgoingSigmaAt(morphT);
+    final inSigma = state.settled || state.crossFade
+        ? 0.0
+        : GlassNavPinnedMetrics.incomingSigmaAt(morphT);
+
+    // In the plain cross-fade glyphs fade with their group's glass.
+    final fadesWithGroup = state.crossFade && !morphing;
 
     // An item whose content is itself glass cannot be faded or blurred from
     // outside: painted under an opacity or image-filter layer it has no
@@ -1871,7 +1883,11 @@ class _PinnedGroupState extends State<_PinnedGroup> {
             children.add(clusterChild(
               slot: i,
               isFrom: true,
-              opacity: state.settled ? 1.0 : (1.0 - q),
+              opacity: state.settled
+                  ? 1.0
+                  : fadesWithGroup
+                      ? phase
+                      : (1.0 - q),
               blurSigma: outSigma,
               item: fromItem,
               child: _ClusterItem(
@@ -1915,7 +1931,11 @@ class _PinnedGroupState extends State<_PinnedGroup> {
             children.add(clusterChild(
               slot: i,
               isFrom: false,
-              opacity: state.settled ? 1.0 : q,
+              opacity: state.settled
+                  ? 1.0
+                  : fadesWithGroup
+                      ? phase
+                      : q,
               blurSigma: inSigma,
               item: toItem,
               child: _ClusterItem(
@@ -1986,6 +2006,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     final vertical = toGroup.axis == Axis.vertical;
     return GlassMaterializeEffect(
       progress: phase,
+      plain: state.crossFade,
       // The window this group traverses is the incoming one exactly when it is
       // the incoming route that has it; the profile follows from the same
       // fact, so a pop reverses both together.

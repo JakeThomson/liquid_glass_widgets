@@ -433,6 +433,25 @@ void main() {
       expect(find.byIcon(CupertinoIcons.back), findsNothing);
     });
 
+    testWidgets('the in-route capsule matches the one the shell draws',
+        (tester) async {
+      // Larger than the default icon, which happened to fit the padded slot.
+      const screen = _MaterialBarScreen(
+        title: 'Inbox',
+        actionIcon: CupertinoIcons.add,
+        actionIconSize: 30,
+      );
+      await tester.pumpWidget(shellApp(screen));
+      await settle(tester);
+      final pinned = tester.getSize(inHost(find.byType(GlassButton)).first);
+
+      await tester.pumpWidget(shellApp(screen, shell: false));
+      await settle(tester);
+      final inRoute = tester.getSize(inBar(find.byType(GlassButtonGroup)));
+
+      expect(inRoute, pinned);
+    });
+
     testWidgets('an unsupported device falls back in-route', (tester) async {
       GlassNavigationShellState.debugPinningSupported = false;
       await tester.pumpWidget(shellApp(const _MaterialBarScreen(
@@ -499,10 +518,12 @@ class _MaterialBarScreen extends StatelessWidget {
     this.horizontalInset,
     this.platformViewBackdrop = false,
     this.buttonSettings,
+    this.actionIconSize,
   });
 
   final String title;
   final IconData actionIcon;
+  final double? actionIconSize;
   final VoidCallback? onBack;
   final bool backButton;
   final bool enabled;
@@ -514,7 +535,10 @@ class _MaterialBarScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassPinnedBarChrome(
       actions: [
-        GlassBarItem.icon(icon: Icon(actionIcon), onTap: () {}),
+        GlassBarItem.icon(
+          icon: Icon(actionIcon, size: actionIconSize),
+          onTap: () {},
+        ),
       ],
       backButton: backButton,
       onBack: onBack,

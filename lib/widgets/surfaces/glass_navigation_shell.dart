@@ -132,6 +132,7 @@ class GlassNavigationShell extends StatefulWidget {
     required this.child,
     this.enabled = true,
     this.effectTransition = GlassEffectTransition.materialize,
+    this.swipeCommitTransition = GlassSwipeCommitTransition.effect,
     this.verticalBarBehavior = GlassVerticalBarBehavior.automatic,
     this.verticalBarCompression = GlassVerticalBarCompression.automatic,
   });
@@ -158,6 +159,12 @@ class GlassNavigationShell extends StatefulWidget {
   /// two routes: with a knob on each bar, a push between routes that disagree
   /// would have no answer for which one wins.
   final GlassEffectTransition effectTransition;
+
+  /// How the chrome transitions once an interactive back-swipe commits.
+  ///
+  /// Defaults to [GlassSwipeCommitTransition.effect], which plays
+  /// [effectTransition] as for any other pop.
+  final GlassSwipeCommitTransition swipeCommitTransition;
 
   /// Whether bars move into iPhone Duo's vertical bar strip.
   ///
@@ -759,6 +766,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
         popping: true,
         topRoute: exiting.topRoute,
         transition: exiting.transition,
+        crossFade: widget.swipeCommitTransition ==
+            GlassSwipeCommitTransition.crossFade,
       );
     }
 
