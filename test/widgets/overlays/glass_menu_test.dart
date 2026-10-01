@@ -1547,4 +1547,53 @@ void main() {
 
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+      'a slide-to-select released over the gap between two rows activates a '
+      'row', (tester) async {
+    final controller = GlassMenuController();
+    final tapped = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Positioned(
+                left: 40,
+                top: 80,
+                child: GlassMenu(
+                  controller: controller,
+                  menuAlignment: GlassMenuAlignment.topLeft,
+                  trigger: const SizedBox(width: 8, height: 8),
+                  items: [
+                    GlassMenuItem(
+                        title: 'Copy', onTap: () => tapped.add('Copy')),
+                    GlassMenuItem(title: 'Cut', onTap: () => tapped.add('Cut')),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    controller.open();
+    await tester.pumpAndSettle();
+
+    // Rows are separated by a 2px gap; just below the midpoint between the
+    // two row centres lies inside it.
+    final copy = tester.getCenter(find.text('Copy'));
+    final cut = tester.getCenter(find.text('Cut'));
+    final gesture = await tester.startGesture(copy);
+    await tester.pump();
+    await gesture.moveTo(cut);
+    await tester.pump();
+    await gesture.moveTo(Offset(copy.dx, (copy.dy + cut.dy) / 2 + 0.5));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(tapped, hasLength(1));
+    expect(controller.isOpen, isFalse);
+  });
 }
