@@ -34,6 +34,7 @@ For historical version notes (0.14 → 1.0), see [`CHANGELOG.md`](../CHANGELOG.m
 | Collapsed tab native press | ✅ Done (1.5.0 WIP) | Native press growth & lift on collapsed search button (#272) |
 | Light-mode golden tests | ✅ Done (1.5.0 WIP) | `goldenTestLight()` + 5 targeted golden files |
 | `reduceTransparency` native detection | ⏳ Upstream | Awaiting [Flutter #190318](https://github.com/flutter/flutter/issues/190318); currently approximated via `highContrast` |
+| iPhone Duo fold and status cluster | ⏳ Upstream | Awaiting [Flutter #193025](https://github.com/flutter/flutter/pull/193025); the vertical bar strip's ends come from a table of measured postures until then |
 | Example app covers all widgets | ⚠️ Partial | Not verified against current widget catalogue |
 | Platform testing matrix complete | ⚠️ Partial | iOS + Android confirmed; Web, Windows, macOS need QA |
 

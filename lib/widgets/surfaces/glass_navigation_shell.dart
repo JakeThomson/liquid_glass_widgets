@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter/widgets.dart';
 
@@ -6,6 +7,7 @@ import '../../src/engine/liquid_glass_settings.dart';
 import '../effects/glass_materialize.dart';
 import '../overlays/glass_modal_sheet.dart';
 import 'glass_bar_item.dart';
+import 'glass_vertical_bar.dart';
 import 'shared/glass_nav_pinned_host.dart';
 
 /// What a single route contributes to the pinned navigation chrome.
@@ -131,6 +133,8 @@ class GlassNavigationShell extends StatefulWidget {
     this.enabled = true,
     this.effectTransition = GlassEffectTransition.materialize,
     this.swipeCommitTransition = GlassSwipeCommitTransition.effect,
+    this.verticalBarBehavior = GlassVerticalBarBehavior.automatic,
+    this.verticalBarCompression = GlassVerticalBarCompression.automatic,
   });
 
   /// The subtree containing the [Navigator], typically the `child` handed to
@@ -161,6 +165,27 @@ class GlassNavigationShell extends StatefulWidget {
   /// Defaults to [GlassSwipeCommitTransition.effect], which plays
   /// [effectTransition] as for any other pop.
   final GlassSwipeCommitTransition swipeCommitTransition;
+
+  /// Whether bars move into iPhone Duo's vertical bar strip.
+  ///
+  /// Defaults to [GlassVerticalBarBehavior.automatic]: where the device
+  /// reserves a strip, the pinned chrome stacks in it — back button first,
+  /// then the leading and trailing groups in order — and the title stays in a
+  /// horizontal row at the top of the content, beside any item that stays
+  /// horizontal (see [GlassBarActionItem.axisBehavior]). [GlassTabBar.bottom]
+  /// and [GlassToolbar] follow, from the bottom of the strip up. Read the
+  /// result with [GlassVerticalBar.maybeOf].
+  ///
+  /// Only the shell's own subtree follows, and only while [enabled]: UIKit
+  /// moves the bars a container owns and no others.
+  final GlassVerticalBarBehavior verticalBarBehavior;
+
+  /// What gives way when the vertical bar strip runs out of height.
+  ///
+  /// Defaults to [GlassVerticalBarCompression.automatic]. Set on the shell
+  /// because the choice is between the tab bar and the pinned chrome, which
+  /// only the shell sees together.
+  final GlassVerticalBarCompression verticalBarCompression;
 
   /// The nearest enclosing shell, or null if there is none.
   static GlassNavigationShellState? maybeOf(BuildContext context) {
@@ -928,13 +953,65 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     super.dispose();
   }
 
+  // ---------------------------------------------------------------------------
+  // Vertical bar strip
+  // ---------------------------------------------------------------------------
+
+  /// Height each bar at the bottom of the strip takes, keyed by its owner.
+  final Map<Object, double> _verticalBarBottom = <Object, double>{};
+
+  /// How much of the vertical bar strip, measured from the bottom of the
+  /// screen, the bars stacked there take — a tab bar, a toolbar.
+  ///
+  /// The pinned chrome is laid out in what is left above it, and overflows
+  /// into a ••• menu where that is not enough. Zero with nothing reserved.
+  double get verticalBarBottom => _verticalBarBottom.values
+      .fold(0.0, (max, extent) => extent > max ? extent : max);
+
+  /// Reserves [extent] of the strip's bottom for [owner], replacing any
+  /// earlier reservation it made.
+  ///
+  /// Called by the package's tab bar and toolbar while they lay out in the
+  /// strip. A bar drawn there by the app reserves its own height, plus the
+  /// strip's [GlassVerticalBarData.bottom], the same way.
+  void reserveVerticalBarBottom(Object owner, double extent) {
+    if (_verticalBarBottom[owner] == extent) return;
+    _verticalBarBottom[owner] = extent;
+    _scheduleNotify();
+  }
+
+  /// Drops [owner]'s reservation.
+  void releaseVerticalBarBottom(Object owner) {
+    if (_verticalBarBottom.remove(owner) != null) _scheduleNotify();
+  }
+
+  /// The strip this shell's bars lay out in, or null where they are
+  /// horizontal.
+  ///
+  /// Read from the insets the shell itself sees, which is above any [SafeArea]
+  /// a page puts around its content. See [GlassVerticalBar.resolve].
+  GlassVerticalBarData? _resolveVerticalBar(BuildContext context) {
+    if (!isActive ||
+        widget.verticalBarBehavior == GlassVerticalBarBehavior.disabled) {
+      return null;
+    }
+    return GlassVerticalBar.resolve(
+      viewPadding: MediaQuery.viewPaddingOf(context),
+      size: MediaQuery.sizeOf(context),
+      platform: defaultTargetPlatform,
+      textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+      compression: widget.verticalBarCompression,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final verticalBar = _resolveVerticalBar(context);
     return _GlassNavigationShellScope(
       state: this,
       child: Stack(
         children: [
-          widget.child,
+          GlassVerticalBar(data: verticalBar, child: widget.child),
           // The chrome gets an Overlay of its own because it deliberately sits
           // above the app's Navigator, and therefore outside the Navigator's
           // Overlay — a GlassBarItem.menu portals to the root overlay, and up
@@ -951,7 +1028,10 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
                 builder: (context, _) {
                   final state = resolveState();
                   if (state == null) return const SizedBox.shrink();
-                  return GlassNavPinnedHost(state: state);
+                  return GlassVerticalBar(
+                    data: verticalBar,
+                    child: GlassNavPinnedHost(state: state),
+                  );
                 },
               ),
             ),

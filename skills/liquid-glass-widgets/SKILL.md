@@ -264,7 +264,11 @@ To achieve the signature iOS 26 navigation bar transition — where the capsule 
 
 ```dart
 CupertinoApp(
-  builder: (context, child) => GlassNavigationShell(child: child!),
+  builder: (context, child) => GlassNavigationShell(
+    swipeCommitTransition: GlassSwipeCommitTransition.crossFade, // optional: plain cross-fade on back-swipe
+    verticalBarBehavior: GlassVerticalBarBehavior.automatic,     // optional: iPhone Duo vertical strip
+    child: child!,
+  ),
   home: const HomeScreen(),
 )
 ```
@@ -293,6 +297,8 @@ GlassAppBar.pinned(
 ```
 
 > **Note:** Without `GlassNavigationShell`, `GlassAppBar.pinned` falls back gracefully — items render inside the bar in-route, so all screens work either way.
+
+> **iPhone Duo:** Under the shell, pinned bars, `GlassTabBar.bottom` and `GlassToolbar` move into the vertical bar strip on their own. Use `GlassBarItem.custom(axisBehavior: GlassBarItemAxisBehavior.verticalPreferred)` for custom content that should go with them, and read `GlassVerticalBar.maybeOf(context)` to fit a bar the package does not draw.
 
 ---
 

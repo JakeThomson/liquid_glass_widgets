@@ -7,8 +7,13 @@ import '../overlays/glass_modal_sheet.dart';
 import 'glass_app_bar.dart' show DefaultButtonSettings, GlassAppBar;
 import 'glass_bar_item.dart';
 import 'glass_navigation_shell.dart';
+import 'glass_vertical_bar.dart';
 import 'shared/glass_nav_pinned_host.dart'
-    show GlassNavBarGroup, GlassNavPinnedMetrics, groupGlassNavBarItems;
+    show
+        GlassNavBarGroup,
+        GlassNavPinnedMetrics,
+        fitGlassNavStripGroups,
+        groupGlassNavBarItems;
 
 /// The bar chrome to render this frame, handed to a
 /// [GlassPinnedBarChrome.builder].
@@ -34,6 +39,10 @@ class GlassPinnedBarChromeData {
   /// A single widget rather than a list, so it drops into `AppBar.leading` and
   /// [GlassAppBar.leading] unchanged; where a back button and leading items
   /// both show, it is the [Row] holding the two.
+  ///
+  /// Always null in iPhone Duo's vertical bar strip
+  /// ([GlassVerticalBar.maybeOf]), where the back button and every item that
+  /// goes vertical leave the bar for the strip.
   final Widget? leading;
 
   /// The trailing slot: the actions capsule, its placeholder, or empty where
@@ -43,6 +52,10 @@ class GlassPinnedBarChromeData {
   /// and [GlassAppBar.actions] unchanged; it holds one entry per shell the
   /// items resolve to — one for a plain run, more where an item asks for its
   /// own background with [GlassBarItemBackground].
+  ///
+  /// In iPhone Duo's vertical bar strip it holds the items that stay
+  /// horizontal instead, leading and trailing alike, which natively gather at
+  /// the top-trailing corner of the content beside the title.
   final List<Widget> actions;
 
   /// Whether the shell has taken this route's chrome.
@@ -119,6 +132,13 @@ typedef GlassPinnedBarChromeBuilder = Widget Function(
 /// Where there is no shell — or the device cannot render the effect — the
 /// slots simply keep the real buttons, so a bar written this way works either
 /// way with no fallback of its own.
+///
+/// On iPhone Duo, where the shell has resolved a vertical bar strip
+/// ([GlassVerticalBar]), the slots keep only the items that stay horizontal,
+/// and everything else — the back button first — stacks in the strip. The
+/// shell draws the strip while it has the chrome; while it has handed the
+/// chrome back, this widget draws it, above its own route and below whatever
+/// is presented over it.
 class GlassPinnedBarChrome extends StatefulWidget {
   /// Creates a registrant that pins [leading], [actions] and an automatic
   /// back button.
@@ -217,6 +237,10 @@ class GlassPinnedBarChrome extends StatefulWidget {
 }
 
 class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
+  /// Shows the in-route strip in the route's own overlay, so it paints above
+  /// the page and below anything presented over it.
+  final OverlayPortalController _strip = OverlayPortalController()..show();
+
   GlassNavigationShellState? _shell;
   ModalRoute<dynamic>? _route;
   bool _handedOver = false;
@@ -355,10 +379,12 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   }
 
   /// The back button, or the space it occupied once the shell has it.
-  Widget _buildBackButton(BuildContext context) {
-    const backSize = GlassNavPinnedMetrics.backDiameter;
+  Widget _buildBackButton(
+    BuildContext context, {
+    double backSize = GlassNavPinnedMetrics.backDiameter,
+  }) {
     if (_handedOver) {
-      return const SizedBox(width: backSize, height: backSize);
+      return SizedBox(width: backSize, height: backSize);
     }
     return GlassButton(
       icon: const Icon(CupertinoIcons.back),
@@ -417,7 +443,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: item.enabled ? tapOf(item) : null,
-              child: SizedBox(height: group.height, child: item.content),
+              child: SizedBox(height: group.crossExtent, child: item.content),
             ),
           );
         }
@@ -436,6 +462,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         return GlassButtonGroup.icons(
           platformViewBackdrop: widget.platformViewBackdrop,
           settings: groupSettings,
+          direction: group.axis,
           borderRadius: GlassNavPinnedMetrics.capsuleRadius,
           iconSize: GlassNavPinnedMetrics.iconSize,
           itemPadding: EdgeInsets.zero,
@@ -474,7 +501,8 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       child: ExcludeSemantics(
         child: Opacity(
           opacity: 0.0,
-          child: Row(
+          child: Flex(
+            direction: group.axis,
             mainAxisSize: MainAxisSize.min,
             children: [for (final item in group.items) _slot(group, item)],
           ),
@@ -483,12 +511,20 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
     );
   }
 
-  /// One item as the pinned cluster lays it out: icons in a square slot of
-  /// the group's height, custom content at its own width.
+  /// One item as the pinned cluster lays it out: icons in a slot matching
+  /// the group's extent, custom content at its own size.
   Widget _slot(GlassNavBarGroup group, GlassBarActionItem item) {
     return SizedBox(
-      width: item is GlassBarCustomItem ? null : group.slotWidth,
-      height: group.height,
+      width: item is GlassBarCustomItem
+          ? null
+          : (group.axis == Axis.horizontal
+              ? group.slotExtent
+              : group.crossExtent),
+      height: item is GlassBarCustomItem
+          ? null
+          : (group.axis == Axis.vertical
+              ? group.slotExtent
+              : group.crossExtent),
       child: Center(child: item.content),
     );
   }
@@ -520,6 +556,82 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
     return [for (final group in groups) _buildGroup(group)];
   }
 
+  /// The groups one side's items resolve to in the vertical strip layout:
+  /// those that go into the strip, or those that stay in the horizontal row.
+  List<GlassNavBarGroup> _stripGroups(
+    List<GlassBarItem> items, {
+    required bool vertical,
+  }) {
+    return groupGlassNavBarItems(
+      items
+          .whereType<GlassBarActionItem>()
+          .where((item) => item.goesVertical == vertical)
+          .toList(),
+      axis: vertical ? Axis.vertical : Axis.horizontal,
+    );
+  }
+
+  /// The horizontal row's slot in the strip layout: the items that stay
+  /// horizontal, leading before trailing.
+  List<Widget> _buildRowActions() {
+    return [
+      for (final group in [
+        ..._stripGroups(widget.leading, vertical: false),
+        ..._stripGroups(widget.actions, vertical: false),
+      ])
+        _buildGroup(group),
+    ];
+  }
+
+  /// The strip, drawn in-route while the shell does not have the chrome.
+  ///
+  /// Laid out to the pinned host's numbers, so the hand-over either way is
+  /// invisible: a column [GlassVerticalBarMetrics.inset] wider than a control
+  /// on each side, starting at the strip's inner edge, overflowing into the
+  /// same ••• menu where the bars below leave too little room.
+  Widget _buildStrip(BuildContext context, GlassVerticalBarData bar) {
+    const columnWidth = GlassVerticalBarMetrics.controlExtent +
+        2 * GlassVerticalBarMetrics.inset;
+    final columnOffset = bar.width - columnWidth;
+    final trailingStrip = bar.edge == GlassVerticalBarEdge.trailing;
+    final reserved = _shell?.verticalBarBottom ?? 0.0;
+    final available = MediaQuery.sizeOf(context).height -
+        bar.top -
+        (reserved > 0
+            ? reserved + GlassVerticalBarMetrics.spacing
+            : bar.bottom) -
+        (_showsBack
+            ? GlassVerticalBarMetrics.controlExtent +
+                GlassVerticalBarMetrics.spacing
+            : 0.0);
+    return Positioned.directional(
+      textDirection: Directionality.of(context),
+      top: bar.top,
+      start: trailingStrip ? null : columnOffset,
+      end: trailingStrip ? columnOffset : null,
+      width: columnWidth,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: GlassVerticalBarMetrics.spacing,
+        children: [
+          if (_showsBack)
+            _buildBackButton(
+              context,
+              backSize: GlassVerticalBarMetrics.controlExtent,
+            ),
+          for (final group in fitGlassNavStripGroups(
+            [
+              ..._stripGroups(widget.leading, vertical: true),
+              ..._stripGroups(widget.actions, vertical: true),
+            ],
+            available,
+          ))
+            _buildGroup(group),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Checked here rather than in the pinned host so the in-route fallback
@@ -532,14 +644,25 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       'GlassBarItemBackground.separate already gives one item its own shell.',
     );
 
+    final verticalBar = GlassVerticalBar.maybeOf(context);
     Widget bar = widget.builder(
       context,
       GlassPinnedBarChromeData(
-        leading: _buildLeading(context),
-        actions: _buildActions(),
+        leading: verticalBar == null ? _buildLeading(context) : null,
+        actions: verticalBar == null ? _buildActions() : _buildRowActions(),
         hoisted: _handedOver,
         presenting: _presenting,
       ),
+    );
+
+    // Unconditional, as the group wrappers are: inserting the portal when the
+    // shell hands the chrome back would remount the bar.
+    bar = OverlayPortal(
+      controller: _strip,
+      overlayChildBuilder: (context) => verticalBar == null || _handedOver
+          ? const SizedBox.shrink()
+          : _buildStrip(context, verticalBar),
+      child: bar,
     );
 
     final settings = widget.buttonSettings;

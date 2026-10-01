@@ -1,8 +1,33 @@
-# Unreleased
+# 1.9.0
+
+## Features
+
+- **Vertical bars on iPhone Duo (#348, PR #365):** Under a `GlassNavigationShell`, the pinned chrome, `GlassTabBar.bottom` and `GlassToolbar` now move into the 84pt strip iOS 27.1 reserves on the outer display and on the inner display in landscape, laid out to the native strip's measured geometry. The title stays in a row at the top of the content, and `GlassBarItem.axisBehavior` decides which items go vertical. Where the strip runs short, the chrome overflows into a ••• menu and the tab bar collapses to its selected tab. The strip is read from `MediaQuery.viewPadding` and published as `GlassVerticalBar`; `GlassNavigationShell.verticalBarBehavior` and `verticalBarCompression` mirror UIKit's `preferredVerticalBarBehavior` and `verticalBarCompressionBehavior`. Nothing changes on any other device.
+
+  ```dart
+  GlassNavigationShell(
+    verticalBarBehavior: GlassVerticalBarBehavior.automatic,
+    verticalBarCompression: GlassVerticalBarCompression.automatic,
+    child: child!,
+  )
+  ```
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#365).
+
+- **Plain cross-fade for pinned chrome after committed back-swipe (PR #360):** Added `swipeCommitTransition` to `GlassNavigationShell` (`GlassSwipeCommitTransition.crossFade` vs `GlassSwipeCommitTransition.effect`) to perform a plain cross-fade without capsule swell, scale, or blur after an interactive back-swipe commits.
+
+  Thanks to [@DFelten](https://github.com/DFelten) for the contribution (#360).
 
 ## Bug Fixes
 
-- **`GlassMenu` pointer events after unmount:** Ignore events from active menu and continuous-swipe pointers after disposal, preventing unmounted context and disposed notifier errors when a route is removed during a gesture.
+- **`GlassMenu` pointer events after unmount (fixes #363, PR #364):** Ignore events from active menu and continuous-swipe pointers after disposal, preventing unmounted context and disposed notifier errors when a route is removed during a gesture.
+
+  Thanks to [@yairsts](https://github.com/yairsts) for the fix (#364).
+
+- **In-route bar items slot size (PR #362):** Size in-route bar items in `GlassPinnedBarChrome` to match the pinned cluster's slot geometry even with custom icon sizes.
+
+  Thanks to [@DFelten](https://github.com/DFelten) for the fix (#362).
+
 
 # 1.8.1
 
