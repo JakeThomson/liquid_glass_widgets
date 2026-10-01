@@ -28,6 +28,8 @@
 
   Thanks to [@DFelten](https://github.com/DFelten) for the fix (#362).
 
+- **Pinned chrome icons blur on pop to a route with no pinned bar (follow-up to #351):** When popping from a route with a pinned capsule to a route with no pinned bar, item icons no longer blur out on the first frame while the glass capsule stays visible. Items now dissolve together with the capsule glass, matching native iOS behaviour.
+
 
 # 1.8.1
 

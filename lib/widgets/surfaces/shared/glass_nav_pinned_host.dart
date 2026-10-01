@@ -1795,19 +1795,23 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                     GlassNavPinnedMetrics.crossFadeStart))
             .clamp(0.0, 1.0);
 
+    final noDestination = toItems.isEmpty && !morphing;
+
     // Glyph blur, the other half of the native read. An outgoing glyph blurs
     // away as it fades; an incoming one arrives soft and sharpens last. Item
     // contents are not glass, so filtering them is safe — the shell itself
-    // never animates opacity.
-    final outSigma = state.settled || state.crossFade
+    // never animates opacity. Groups without a destination dissolve as a
+    // unit instead, with no independent glyph blur.
+    final outSigma = state.settled || state.crossFade || noDestination
         ? 0.0
         : GlassNavPinnedMetrics.outgoingSigmaAt(morphT);
-    final inSigma = state.settled || state.crossFade
+    final inSigma = state.settled || state.crossFade || noDestination
         ? 0.0
         : GlassNavPinnedMetrics.incomingSigmaAt(morphT);
 
-    // In the plain cross-fade glyphs fade with their group's glass.
-    final fadesWithGroup = state.crossFade && !morphing;
+    // In the plain cross-fade or when dissolving without a destination,
+    // glyphs fade with their group's glass.
+    final fadesWithGroup = (state.crossFade || noDestination) && !morphing;
 
     // An item whose content is itself glass cannot be faded or blurred from
     // outside: painted under an opacity or image-filter layer it has no
@@ -1876,8 +1880,9 @@ class _PinnedGroupState extends State<_PinnedGroup> {
         if (toItem == null) {
           // Exiting item: smoothly fade out with (1 - q) across the transition window.
           // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
-          final visible =
-              state.settled ? !showsIncoming : (morphing || q < 1.0);
+          final visible = state.settled
+              ? !showsIncoming
+              : (morphing || (fadesWithGroup ? phase > 0.0 : q < 1.0));
           if (visible) {
             children.add(clusterChild(
               slot: i,
@@ -1925,7 +1930,9 @@ class _PinnedGroupState extends State<_PinnedGroup> {
         if (fromItem == null) {
           // Entering item: smoothly fade in with q across the transition window.
           // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
-          final visible = state.settled ? showsIncoming : (morphing || q > 0.0);
+          final visible = state.settled
+              ? showsIncoming
+              : (morphing || (fadesWithGroup ? phase > 0.0 : q > 0.0));
           if (visible) {
             children.add(clusterChild(
               slot: i,
