@@ -28,8 +28,10 @@
 //   xcrun simctl launch --terminate-running-process <udid> <bundle id>
 //
 // Scenarios: nav, navbottom, tabs, tabsnav, root, search, axis, alert (a
-// dialog over the detail screen, 1.5s in) and push (the detail screen pushed
-// 1s in and popped 2.5s later, to record the morph). A `DIRECTION=rtl` line
+// dialog over the detail screen, 1.5s in), popover (a popover from the
+// strip's compose button, 1.5s in), sheet (a sheet over a root screen, 1s in)
+// and push (the detail screen pushed 1s in and popped 2.5s later, to record
+// the morph). A `DIRECTION=rtl` line
 // lays the app out right to left, `BARS=disabled` sets
 // GlassVerticalBarBehavior.disabled on the shell, `COMPRESSION=` one of
 // GlassVerticalBarCompression's names sets that, and
@@ -37,8 +39,11 @@
 // native scenarios' `-orient` does. As the native launch arguments of the same
 // names: `SEARCHTAB=YES` gives the tabs scenario a search tab
 // (GlassTabBar.searchable) and `TAB=search` opens on it; `SEARCH=active` opens
-// the search 1s in; and `SCROLL=<row>` scrolls a large-title screen 1s in, to
-// bring that row to the top.
+// the search 1s in; `SCROLL=<row>` scrolls a large-title screen 1s in, to
+// bring that row to the top; and `DETENT=medium` and
+// `PLACEMENT=leading|center|trailing` present the sheet that way.
+// `REDUCETRANSPARENCY=YES` turns on the package's stand-in for Reduce
+// Transparency, which the native screens are shot with from DeviceHub.
 library;
 
 import 'dart:io' show Directory, File;
@@ -69,6 +74,12 @@ final bool _barsDisabled = _env['BARS'] == 'disabled';
 final bool _searchTab = _env['SEARCHTAB'] == 'YES';
 final bool _searchActive = _env['SEARCH'] == 'active';
 final int _scrollTo = int.tryParse(_env['SCROLL'] ?? '') ?? 0;
+final bool _mediumDetent = _env['DETENT'] == 'medium';
+final bool _reduceTransparency = _env['REDUCETRANSPARENCY'] == 'YES';
+final GlassSheetPlacement _placement = GlassSheetPlacement.values.firstWhere(
+  (value) => value.name == _env['PLACEMENT'],
+  orElse: () => GlassSheetPlacement.automatic,
+);
 final GlassVerticalBarCompression _compression =
     GlassVerticalBarCompression.values.firstWhere(
   (value) => value.name == _env['COMPRESSION'],
@@ -102,12 +113,20 @@ class _App extends StatelessWidget {
         theme: const CupertinoThemeData(brightness: Brightness.light),
         builder: (context, child) => Directionality(
           textDirection: _rtl ? TextDirection.rtl : TextDirection.ltr,
-          child: GlassNavigationShell(
-            verticalBarBehavior: _barsDisabled
-                ? GlassVerticalBarBehavior.disabled
-                : GlassVerticalBarBehavior.automatic,
-            verticalBarCompression: _compression,
-            child: child!,
+          // The package reads Reduce Transparency from highContrast until
+          // Flutter surfaces it (flutter/flutter#190318).
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              highContrast:
+                  _reduceTransparency || MediaQuery.highContrastOf(context),
+            ),
+            child: GlassNavigationShell(
+              verticalBarBehavior: _barsDisabled
+                  ? GlassVerticalBarBehavior.disabled
+                  : GlassVerticalBarBehavior.automatic,
+              verticalBarCompression: _compression,
+              child: child!,
+            ),
           ),
         ),
         // A navigator is only built with a route source; every route this
@@ -120,6 +139,11 @@ class _App extends StatelessWidget {
   /// underneath, so the back button is showing.
   static List<Route<void>> _initialRoutes() => switch (_scenario) {
         'root' => [_route(const _RootScreen())],
+        'sheet' => [_route(const _SheetScreen())],
+        'popover' => [
+            _route(const _ListScreen(title: 'Inbox')),
+            _route(const _DetailScreen(popover: true)),
+          ],
         'search' => [_route(const _RootScreen(searchable: true))],
         'tabs' => [_route(const _TabsScreen(pushed: false))],
         'tabsnav' => [_route(const _TabsScreen())],
@@ -155,12 +179,22 @@ Route<void> _route(Widget page) =>
 
 /// Forty coloured rows, as the native DemoList draws them.
 class _Rows extends StatelessWidget {
-  const _Rows({required this.title, this.stripTop = 82});
+  const _Rows({
+    required this.title,
+    this.stripTop = 82,
+    this.barTop = 44 + 8,
+    this.count = 40,
+  });
 
   final String title;
 
   /// Where the content starts in the strip layout.
   final double stripTop;
+
+  /// Where the content starts below a horizontal bar, under the top inset.
+  final double barTop;
+
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -169,11 +203,11 @@ class _Rows extends StatelessWidget {
     // title row, and under the navigation bar otherwise. DemoList pads it by
     // another 16pt, less the row's own 6pt.
     final top = GlassVerticalBar.maybeOf(context) == null
-        ? padding.top + 44 + 8
+        ? padding.top + barTop
         : stripTop + 10;
     return ListView.builder(
       padding: EdgeInsets.only(top: top, bottom: 120),
-      itemCount: 40,
+      itemCount: count,
       itemBuilder: (context, i) => _Row(title: title, index: i),
     );
   }
@@ -323,20 +357,33 @@ List<GlassBarItem> _detailActions() => [
     ];
 
 class _DetailScreen extends StatefulWidget {
-  const _DetailScreen({this.alert = false});
+  const _DetailScreen({this.alert = false, this.popover = false});
 
   /// Whether to present a dialog over the screen 1.5s in, as the native
   /// `alert` scenario does.
   final bool alert;
+
+  /// Whether the compose button opens a popover, 1.5s in, as in the native
+  /// `popover` scenario.
+  final bool popover;
 
   @override
   State<_DetailScreen> createState() => _DetailScreenState();
 }
 
 class _DetailScreenState extends State<_DetailScreen> {
+  /// Opens the compose popover; see [_ComposePopover].
+  VoidCallback? _openPopover;
+
   @override
   void initState() {
     super.initState();
+    if (widget.popover) {
+      Future<void>.delayed(
+        const Duration(milliseconds: 1500),
+        () => _openPopover?.call(),
+      );
+    }
     if (!widget.alert) return;
     Future<void>.delayed(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
@@ -363,9 +410,173 @@ class _DetailScreenState extends State<_DetailScreen> {
         appBar: GlassAppBar.pinned(
           title: const Text('Detail'),
           buttonSettings: _glass,
-          actions: _detailActions(),
+          actions: [
+            if (widget.popover)
+              GlassBarItem.custom(
+                child: _ComposePopover(
+                  onReady: (open) => _openPopover = open,
+                ),
+                label: 'Compose',
+                background: GlassBarItemBackground.separate,
+                axisBehavior: GlassBarItemAxisBehavior.verticalPreferred,
+              )
+            else
+              _detailActions().first,
+            ..._detailActions().skip(1),
+          ],
         ),
         body: const _Rows(title: 'Detail'),
+      );
+}
+
+/// The compose button with a popover, as the native `popover` scenario
+/// declares it.
+///
+/// Flutter has no popover bar item, so this is a custom item holding a
+/// [GlassPopover], squeezed into the strip as natively.
+class _ComposePopover extends StatelessWidget {
+  const _ComposePopover({required this.onReady});
+
+  /// Receives the callback that opens the popover.
+  final ValueChanged<VoidCallback> onReady;
+
+  @override
+  Widget build(BuildContext context) => GlassPopover(
+        settings: _glass,
+        // The native popover's frame: a 68pt capsule around one line of body
+        // text, 18pt in from each end.
+        popoverWidth: 282,
+        popoverHeight: 68,
+        popoverBorderRadius: 34,
+        triggerBuilder: (context, toggle) {
+          // The shell draws the strip's copy; the bar keeps an unpainted one
+          // to measure, which is not the one to open.
+          if (context.findAncestorWidgetOfExactType<Opacity>()?.opacity != 0) {
+            onReady(toggle);
+          }
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: toggle,
+            child: const SizedBox.square(
+              dimension: 48,
+              child: Icon(CupertinoIcons.square_pencil),
+            ),
+          );
+        },
+        contentBuilder: (context, close) => const Center(
+          child: Text(
+            'Popover from a vertical bar item',
+            maxLines: 1,
+            style: TextStyle(
+              fontSize: 17,
+              letterSpacing: -0.43,
+              color: CupertinoColors.label,
+            ),
+          ),
+        ),
+      );
+}
+
+/// The native `sheet` scenario: a root screen that presents a sheet 1s in.
+class _SheetScreen extends StatefulWidget {
+  const _SheetScreen();
+
+  @override
+  State<_SheetScreen> createState() => _SheetScreenState();
+}
+
+class _SheetScreenState extends State<_SheetScreen> {
+  final _title = GlassLargeTitleController();
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      GlassModalSheet.show<void>(
+        context: context,
+        initialState:
+            _mediumDetent ? GlassSheetState.half : GlassSheetState.full,
+        // The native medium detent on the outer display, in portrait.
+        halfSize: 398,
+        detents: _mediumDetent
+            ? const {GlassSheetDetent.medium, GlassSheetDetent.large}
+            : const {GlassSheetDetent.large},
+        placement: _placement,
+        // The iOS 27 material, frosted as heavily as the sheet's default: the
+        // material's own blur is measured on controls.
+        settings: _glass.copyWith(blur: 10),
+        // As natively: a 20% dim, and a grabber only where there is a detent
+        // to drag to.
+        barrierColor: const Color(0x33000000),
+        showDragIndicator: _mediumDetent,
+        builder: (_) => const _SheetBody(),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => GlassScaffold(
+        backgroundColor: CupertinoColors.white,
+        appBar: GlassAppBar.pinned(
+          title: const Text('Notes'),
+          buttonSettings: _glass,
+          largeTitleController: _title,
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              label: 'New',
+              onTap: () {},
+            ),
+          ],
+        ),
+        body: _LargeTitleRows(
+          title: 'Notes',
+          rowTitle: 'Notes',
+          controller: _title,
+        ),
+      );
+}
+
+/// The sheet's own navigation stack: an inline title, cancel and done.
+class _SheetBody extends StatelessWidget {
+  const _SheetBody();
+
+  @override
+  Widget build(BuildContext context) => GlassScaffold(
+        backgroundColor: const Color(0x00000000),
+        statusBarStyle: GlassStatusBarStyle.none,
+        appBar: GlassAppBar.pinned(
+          title: const Text('New Note'),
+          buttonSettings: _glass,
+          // A sheet's horizontal bar, 16pt in from its edges.
+          toolbarHeight: 48,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          leading: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.xmark),
+              label: 'Cancel',
+              background: GlassBarItemBackground.separate,
+              onTap: () => Navigator.of(context).maybePop(),
+            ),
+          ],
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.checkmark),
+              label: 'Done',
+              background: GlassBarItemBackground.separate,
+              tintColor: CupertinoColors.systemBlue,
+              onTap: () => Navigator.of(context).maybePop(),
+            ),
+          ],
+        ),
+        body: const _Rows(title: 'Sheet', count: 12, stripTop: 74, barTop: 84),
       );
 }
 
