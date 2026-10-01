@@ -713,9 +713,6 @@ void main() {
       );
       await settle(tester);
       expect(tester.takeException(), isNull);
-      // ignore: avoid_print
-      print(
-          'same state: ${identical(state, tester.state(find.byType(_LargeTitleScreen)))} presented: ${state.title.isSearchPresented} bar: ${GlassVerticalBar.maybeOf(tester.element(find.byType(GlassLargeTitle)))}');
       expect(state.title.isSearchPresented, isFalse);
       expect(find.byType(GlassSearchBar), findsOneWidget);
     });
