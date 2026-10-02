@@ -317,6 +317,8 @@ in a screen.
 | `GlassTabBar.searchable` | The same capsule, with search as its last slot. The field it opens stays horizontal, in the row at the top of the content: in place of the title on the outer display, beside it on the inner one |
 | `GlassLargeTitle` | The title moves into the row at the top of the content at 28pt, drawn by the `GlassAppBar.pinned` sharing its controller, and scrolls away with the content. A `searchBar` becomes a magnifier at the bottom of the strip, which opens the field along the bottom of the content and hides the bar |
 | `GlassToolbar` | Its items stack at the bottom of the strip; spacers collapse to the strip's gap |
+| `GlassModalSheet` | Takes the strip's place where it covers it: its `GlassAppBar.pinned` stacks down a strip of its own on the outer display, and at `GlassSheetPlacement.trailing` on the inner display, where it is otherwise a 653pt card with a horizontal bar |
+| `GlassMenu` / `GlassPopover` | Opened from the strip, they open towards the content, centred on their item |
 
 ```dart
 GlassNavigationShell(

@@ -8,7 +8,8 @@ class _SheetLayout extends StatelessWidget {
   final double stretch;
   final double interactionStretch;
   final double resistance;
-  final double hPad;
+  final double left;
+  final double right;
   final double effectiveBottom;
   final double effectiveHeight;
   final double topRadius;
@@ -57,7 +58,8 @@ class _SheetLayout extends StatelessWidget {
     required this.stretch,
     required this.interactionStretch,
     required this.resistance,
-    required this.hPad,
+    required this.left,
+    required this.right,
     required this.effectiveBottom,
     required this.effectiveHeight,
     required this.topRadius,
@@ -112,8 +114,8 @@ class _SheetLayout extends StatelessWidget {
     );
 
     return Positioned(
-      left: hPad,
-      right: hPad,
+      left: left,
+      right: right,
       bottom: effectiveBottom,
       height: effectiveHeight,
       child: Listener(
@@ -869,6 +871,11 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// Corner radius for 'peek' state.
   final double? peekBottomRadius;
 
+  /// Where the sheet sits across a screen with room beside it.
+  ///
+  /// See [GlassModalSheet.placement].
+  final GlassSheetPlacement placement;
+
   /// Creates a [GlassModalSheetScaffold].
   const GlassModalSheetScaffold({
     super.key,
@@ -923,6 +930,7 @@ class GlassModalSheetScaffold extends StatelessWidget {
     this.peekWidth,
     this.peekTopBorderRadius,
     this.peekBottomRadius,
+    this.placement = GlassSheetPlacement.automatic,
   }) : assert(
             detents.length > 0,
             'GlassModalSheetScaffold needs at least one detent — add medium '
@@ -994,6 +1002,7 @@ class GlassModalSheetScaffold extends StatelessWidget {
           peekWidth: peekWidth,
           peekTopBorderRadius: peekTopBorderRadius,
           peekBottomRadius: peekBottomRadius,
+          placement: placement,
           child: sheet,
         ),
       ],

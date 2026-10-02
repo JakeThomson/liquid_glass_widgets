@@ -634,7 +634,16 @@ class _GlassPopoverState extends State<GlassPopover>
     final popoverHeight = _effectivePopoverHeight(insets);
 
     // 1. Determine alignment (auto vs. manual)
-    if (widget.alignment == null ||
+    final stripAlignment = verticalBarPresentationAlignment(
+      context,
+      position & _triggerSize!,
+    );
+    if ((widget.alignment == null ||
+            widget.alignment == GlassMenuAlignment.none) &&
+        stripAlignment != null) {
+      // From iPhone Duo's vertical bar strip: towards the content.
+      _morphAlignment = stripAlignment;
+    } else if (widget.alignment == null ||
         widget.alignment == GlassMenuAlignment.none) {
       final isRightHalf = screenWidth.isFinite && position.dx > screenWidth / 2;
 
@@ -660,8 +669,12 @@ class _GlassPopoverState extends State<GlassPopover>
     if (widget.autoAdjustToScreen) {
       final double safeTop = widget.screenPadding.top + insets.top;
       final double safeBottom = widget.screenPadding.bottom + insets.bottom;
-      final double safeLeft = widget.screenPadding.left + insets.left;
-      final double safeRight = widget.screenPadding.right + insets.right;
+      // The strip's inset is no bar to a popover opened out of the strip,
+      // which natively lies over the item it came from.
+      final double safeLeft = widget.screenPadding.left +
+          (stripAlignment == null ? insets.left : 0.0);
+      final double safeRight = widget.screenPadding.right +
+          (stripAlignment == null ? insets.right : 0.0);
 
       final double targetX =
           position.dx + (1 + _morphAlignment.x) * _triggerSize!.width / 2;
