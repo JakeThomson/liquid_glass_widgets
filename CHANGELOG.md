@@ -48,9 +48,6 @@
 
 - **`GlassPinnedBarChrome` action items order in RTL (fixes #374):** Keep action items in consistent visual order when a modal sheet triggers hand-over under RTL layout.
 
-  Thanks to [@mszzarei](https://github.com/mszzarei) for the bug report (#374).
-
-
 # 1.8.1
 
 ## Bug Fixes
