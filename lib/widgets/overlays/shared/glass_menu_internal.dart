@@ -1438,7 +1438,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       final item = widget.items[i];
       final itemHeight = _getScaledItemHeight(item, context);
 
-      if (y >= currentOffset && y <= currentOffset + itemHeight) {
+      // Each row also owns half of the 2px gap on either side, so the hit
+      // zones are contiguous and a release between two rows activates the
+      // nearer one instead of nothing.
+      if (y >= currentOffset - 1.0 && y < currentOffset + itemHeight + 1.0) {
         if (item is GlassMenuItem && item.enabled) {
           return i;
         }
