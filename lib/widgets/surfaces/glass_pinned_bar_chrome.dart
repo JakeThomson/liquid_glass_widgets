@@ -141,6 +141,11 @@ typedef GlassPinnedBarChromeBuilder = Widget Function(
 /// shell draws the strip while it has the chrome; while it has handed the
 /// chrome back, this widget draws it, above its own route and below whatever
 /// is presented over it.
+///
+/// A bar inside a presented route — a [GlassModalSheet]'s — never registers:
+/// the presentation comes up over the stack the shell pins across, so it is
+/// the bar's container, and the bar draws its own chrome there. In the strip
+/// layout it follows the sheet's own strip.
 class GlassPinnedBarChrome extends StatefulWidget {
   /// Creates a registrant that pins [leading], [actions] and an automatic
   /// back button.
@@ -308,7 +313,14 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
     // skipping those builds would strand the route unregistered for the whole
     // transition. Which route is on top is decided by the shell's ordering
     // instead. (Inactive branches of a nested navigator are a known gap.)
-    if (!widget.enabled || shell == null || route == null || !shell.isActive) {
+    // A bar in a presented route — a modal sheet's — is inside the
+    // presentation, which comes up over the stack the shell pins across: the
+    // presentation is its container, and the bar draws its own chrome.
+    if (!widget.enabled ||
+        shell == null ||
+        route == null ||
+        route is PopupRoute ||
+        !shell.isActive) {
       // Drop any stale registration, then draw the chrome in-route again.
       _release();
       if (_handedOver || _presenting != null) {
@@ -602,7 +614,16 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   /// invisible: a column [GlassVerticalBarMetrics.inset] wider than a control
   /// on each side, starting at the strip's inner edge, overflowing into the
   /// same ••• menu where the bars below leave too little room.
-  Widget _buildStrip(BuildContext context, GlassVerticalBarData bar) {
+  ///
+  /// Placed against the bar itself rather than the overlay, through
+  /// [layout]. A screen's bar spans the screen from its top, so the two agree;
+  /// a modal sheet's spans the sheet, so its strip stays on the sheet as the
+  /// sheet presents, drags and dismisses.
+  Widget _buildStrip(
+    BuildContext context,
+    GlassVerticalBarData bar,
+    OverlayChildLayoutInfo layout,
+  ) {
     const columnWidth = GlassVerticalBarMetrics.controlExtent +
         2 * GlassVerticalBarMetrics.inset;
     final columnOffset = bar.width - columnWidth;
@@ -617,7 +638,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
             ? GlassVerticalBarMetrics.controlExtent +
                 GlassVerticalBarMetrics.spacing
             : 0.0);
-    return Positioned.directional(
+    final strip = Positioned.directional(
       textDirection: Directionality.of(context),
       top: bar.top,
       start: trailingStrip ? null : columnOffset,
@@ -647,6 +668,20 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         ),
       ),
     );
+    return Stack(
+      children: [
+        Positioned(
+          left: 0,
+          top: 0,
+          width: layout.childSize.width,
+          height: layout.overlaySize.height,
+          child: Transform(
+            transform: layout.childPaintTransform,
+            child: Stack(clipBehavior: Clip.none, children: [strip]),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -674,11 +709,12 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
 
     // Unconditional, as the group wrappers are: inserting the portal when the
     // shell hands the chrome back would remount the bar.
-    bar = OverlayPortal(
+    bar = OverlayPortal.overlayChildLayoutBuilder(
       controller: _strip,
-      overlayChildBuilder: (context) => verticalBar == null || _handedOver
-          ? const SizedBox.shrink()
-          : _buildStrip(context, verticalBar),
+      overlayChildBuilder: (context, layout) =>
+          verticalBar == null || _handedOver
+              ? const SizedBox.shrink()
+              : _buildStrip(context, verticalBar, layout),
       child: bar,
     );
 
