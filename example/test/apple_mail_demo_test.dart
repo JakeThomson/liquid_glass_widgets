@@ -238,6 +238,7 @@ void main() {
 
     // Tap the menu item row to toggle to iOS 26
     await tester.tap(find.text('iOS 27 Glass'));
+    await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
     expect(kMailUseIos27.value, isFalse);

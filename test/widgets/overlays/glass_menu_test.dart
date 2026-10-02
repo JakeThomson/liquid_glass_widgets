@@ -1619,6 +1619,7 @@ void main() {
 
       expect(tapped, ['Copy']);
     });
+  });
 
   testWidgets(
       'a slide-to-select released over the gap between two rows activates a '

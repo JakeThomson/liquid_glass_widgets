@@ -22,15 +22,21 @@
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#370).
 
-- **Sheets, popovers and Reduce Transparency in iPhone Duo's strip (#367):** A `GlassModalSheet` now takes the strip's place where it covers it, as natively: on the outer display its `GlassAppBar.pinned` stacks down a strip of its own, and the sheet rises to 8pt from the top with its margins kept. On the inner display it is a 653pt card with a horizontal bar, placed by the new `placement` (`GlassSheetPlacement`, mirroring `presentationPlacement(_:)`); `.trailing` docks it over the strip and moves its bar into it. A `GlassMenu` or `GlassPopover` opened from the strip opens towards the content, centred on its item. Under Reduce Transparency the strip and the title row turn opaque behind a hairline. A pinned bar inside a presented route no longer registers with the shell, since the presentation is its container.
+- **Sheets, popovers and Reduce Transparency in iPhone Duo's strip (#367, PR #371):** A `GlassModalSheet` now takes the strip's place where it covers it, as natively: on the outer display its `GlassAppBar.pinned` stacks down a strip of its own, and the sheet rises to 8pt from the top with its margins kept. On the inner display it is a 653pt card with a horizontal bar, placed by the new `placement` (`GlassSheetPlacement`, mirroring `presentationPlacement(_:)`); `.trailing` docks it over the strip and moves its bar into it. A `GlassMenu` or `GlassPopover` opened from the strip opens towards the content, centred on its item. Under Reduce Transparency the strip and the title row turn opaque behind a hairline. A pinned bar inside a presented route no longer registers with the shell, since the presentation is its container.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#371).
 
 ## Bug Fixes
 
-- **`GlassMenu` pointer events after unmount (fixes #363, PR #364):** Ignore events from active menu and continuous-swipe pointers after disposal, preventing unmounted context and disposed notifier errors when a route is removed during a gesture.
+- **`GlassMenu` slide-to-select released between two rows (PR #375):** Releasing over the 2px gap between two rows activated nothing and left the menu open. Each row's hit zone now includes half of the gap on either side, so a release there activates the nearer row.
+
+  Thanks to [@F1orian](https://github.com/F1orian) for the fix (#375).
 
 - **`GlassMenu` keyboard and screen-reader activation (PR #376):** On menus that don't scroll, pressing Enter or Space on a focused row, or activating it with VoiceOver or TalkBack, did nothing; only touch worked. These now activate the row, and a touch tap still activates it exactly once.
 
-- **`GlassMenu` slide-to-select released between two rows (PR #375):** Releasing over the 2px gap between two rows activated nothing and left the menu open. Each row's hit zone now includes half of the gap on either side, so a release there activates the nearer row.
+  Thanks to [@F1orian](https://github.com/F1orian) for the fix (#376).
+
+- **`GlassMenu` pointer events after unmount (fixes #363, PR #364):** Ignore events from active menu and continuous-swipe pointers after disposal, preventing unmounted context and disposed notifier errors when a route is removed during a gesture.
 
   Thanks to [@yairsts](https://github.com/yairsts) for the fix (#364).
 
@@ -39,6 +45,10 @@
   Thanks to [@DFelten](https://github.com/DFelten) for the fix (#362).
 
 - **Pinned chrome icons blur on pop to a route with no pinned bar (follow-up to #351):** When popping from a route with a pinned capsule to a route with no pinned bar, item icons no longer blur out on the first frame while the glass capsule stays visible. Items now dissolve together with the capsule glass, matching native iOS behaviour.
+
+- **Action items flipping order in RTL on modal sheet presentation (fixes #374):** In RTL layout, opening a modal sheet under `GlassAppBar.pinned` caused action items to swap visual order during hand-over to in-route chrome. Button groups now maintain consistent item order across hoisted and in-route states.
+
+  Thanks to [@mszzarei](https://github.com/mszzarei) for the report and fix (#374).
 
 
 # 1.8.1

@@ -451,67 +451,85 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   /// what lets a capsule emptied while the bar was drawn in-route stay emptied
   /// through a hoist. At rest it paints through a zero translation and a full
   /// opacity, neither of which pushes a layer.
+  ///
+  /// Groups enforce [TextDirection.ltr] internally so items within a capsule
+  /// maintain the exact same horizontal sequence whether rendered by the
+  /// shell host or handed over in-route under RTL (fixes #374). Ambient
+  /// directionality is restored for individual item content.
   Widget _buildGroup(GlassNavBarGroup group) {
-    return GlassMorphTrigger(
-      builder: (context, anchor) {
-        if (_isPlaceholder(group)) return _measuringGroup(group);
+    final ambientDirection = Directionality.of(context);
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: GlassMorphTrigger(
+        builder: (context, anchor) {
+          if (_isPlaceholder(group)) {
+            return _measuringGroup(group, ambientDirection);
+          }
 
-        VoidCallback tapOf(GlassBarActionItem item) => item is GlassBarSheetItem
-            ? () => item.onPresent(anchor)
-            : item.onTap;
+          VoidCallback tapOf(GlassBarActionItem item) =>
+              item is GlassBarSheetItem
+                  ? () => item.onPresent(anchor)
+                  : item.onTap;
 
-        if (!group.glass) {
-          final item = group.items.single;
-          return Semantics(
-            button: true,
-            label: item.label,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: item.enabled ? tapOf(item) : null,
-              child: SizedBox(height: group.crossExtent, child: item.content),
-            ),
-          );
-        }
-        // For a single-item separate group with a tintColor, fill the capsule
-        // using GlassBodyMode.clear — direct alpha-composite tinting that
-        // preserves the exact design-token hex while retaining the specular
-        // and Fresnel rim, matching iOS 26's coloured bar button behaviour.
-        final tintColor =
-            group.items.length == 1 ? group.items.first.tintColor : null;
-        final groupSettings = tintColor != null
-            ? LiquidGlassSettings(
-                glassColor: tintColor,
-                bodyMode: GlassBodyMode.clear,
-              )
-            : null;
-        return GlassButtonGroup.icons(
-          platformViewBackdrop: widget.platformViewBackdrop,
-          settings: groupSettings,
-          direction: group.axis,
-          borderRadius: GlassNavPinnedMetrics.capsuleRadius,
-          iconSize: GlassNavPinnedMetrics.iconSize,
-          itemPadding: EdgeInsets.zero,
-          items: [
-            for (final item in group.items)
-              if (item is GlassBarMenuItem)
-                GlassButtonGroupItem.menu(
-                  icon: _slot(group, item),
-                  menuItems: item.menuItems,
-                  menuAlignment: item.menuAlignment,
-                  menuWidth: item.menuWidth,
-                  menuHeight: item.menuHeight,
-                  label: item.label,
-                )
-              else
-                GlassButtonGroupItem(
-                  icon: _slot(group, item),
-                  onTap: tapOf(item),
-                  label: item.label,
-                  enabled: item.enabled,
+          if (!group.glass) {
+            final item = group.items.single;
+            return Semantics(
+              button: true,
+              label: item.label,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: item.enabled ? tapOf(item) : null,
+                child: SizedBox(
+                  height: group.crossExtent,
+                  child: Directionality(
+                    textDirection: ambientDirection,
+                    child: item.content,
+                  ),
                 ),
-          ],
-        );
-      },
+              ),
+            );
+          }
+          // For a single-item separate group with a tintColor, fill the capsule
+          // using GlassBodyMode.clear — direct alpha-composite tinting that
+          // preserves the exact design-token hex while retaining the specular
+          // and Fresnel rim, matching iOS 26's coloured bar button behaviour.
+          final tintColor =
+              group.items.length == 1 ? group.items.first.tintColor : null;
+          final groupSettings = tintColor != null
+              ? LiquidGlassSettings(
+                  glassColor: tintColor,
+                  bodyMode: GlassBodyMode.clear,
+                )
+              : null;
+          return GlassButtonGroup.icons(
+            platformViewBackdrop: widget.platformViewBackdrop,
+            settings: groupSettings,
+            direction: group.axis,
+            borderRadius: GlassNavPinnedMetrics.capsuleRadius,
+            iconSize: GlassNavPinnedMetrics.iconSize,
+            itemPadding: EdgeInsets.zero,
+            items: [
+              for (final item in group.items)
+                if (item is GlassBarMenuItem)
+                  GlassButtonGroupItem.menu(
+                    icon: _slot(group, item, ambientDirection),
+                    menuItems: item.menuItems,
+                    menuAlignment: item.menuAlignment,
+                    menuWidth: item.menuWidth,
+                    menuHeight: item.menuHeight,
+                    label: item.label,
+                  )
+                else
+                  GlassButtonGroupItem(
+                    icon: _slot(group, item, ambientDirection),
+                    onTap: tapOf(item),
+                    label: item.label,
+                    enabled: item.enabled,
+                  ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -521,7 +539,10 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   /// measures exactly what the pinned cluster measures — including custom
   /// items of arbitrary width. A fixed width per item would only be correct
   /// for icons, and would mis-constrain a centred title.
-  Widget _measuringGroup(GlassNavBarGroup group) {
+  Widget _measuringGroup(
+    GlassNavBarGroup group,
+    TextDirection ambientDirection,
+  ) {
     return IgnorePointer(
       child: ExcludeSemantics(
         child: Opacity(
@@ -529,7 +550,10 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
           child: Flex(
             direction: group.axis,
             mainAxisSize: MainAxisSize.min,
-            children: [for (final item in group.items) _slot(group, item)],
+            children: [
+              for (final item in group.items)
+                _slot(group, item, ambientDirection),
+            ],
           ),
         ),
       ),
@@ -538,7 +562,11 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
 
   /// One item as the pinned cluster lays it out: icons in a slot matching
   /// the group's extent, custom content at its own size.
-  Widget _slot(GlassNavBarGroup group, GlassBarActionItem item) {
+  Widget _slot(
+    GlassNavBarGroup group,
+    GlassBarActionItem item,
+    TextDirection ambientDirection,
+  ) {
     return SizedBox(
       width: item is GlassBarCustomItem
           ? null
@@ -550,7 +578,12 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
           : (group.axis == Axis.vertical
               ? group.slotExtent
               : group.crossExtent),
-      child: Center(child: item.content),
+      child: Center(
+        child: Directionality(
+          textDirection: ambientDirection,
+          child: item.content,
+        ),
+      ),
     );
   }
 
