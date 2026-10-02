@@ -46,9 +46,9 @@
 
 - **Pinned chrome icons blur on pop to a route with no pinned bar (follow-up to #351):** When popping from a route with a pinned capsule to a route with no pinned bar, item icons no longer blur out on the first frame while the glass capsule stays visible. Items now dissolve together with the capsule glass, matching native iOS behaviour.
 
-- **Action items flipping order in RTL on modal sheet presentation (fixes #374):** In RTL layout, opening a modal sheet under `GlassAppBar.pinned` caused action items to swap visual order during hand-over to in-route chrome. Button groups now maintain consistent item order across hoisted and in-route states.
+- **`GlassPinnedBarChrome` action items order in RTL (fixes #374):** Keep action items in consistent visual order when a modal sheet triggers hand-over under RTL layout.
 
-  Thanks to [@mszzarei](https://github.com/mszzarei) for the report and fix (#374).
+  Thanks to [@mszzarei](https://github.com/mszzarei) for the bug report (#374).
 
 
 # 1.8.1
