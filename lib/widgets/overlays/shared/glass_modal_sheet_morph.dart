@@ -335,6 +335,11 @@ class SheetMorphGeometry {
   ///     to the base margins; [peekWidth] centres a fixed-width floor.
   ///   • [GlassSheetState.hidden] — collapses to a zero-height line at the
   ///     bottom edge; never a morph destination, but kept total for callers.
+  ///
+  /// [stripPlacement] is the sheet's placement in iPhone Duo's vertical bar
+  /// strip layout, and null elsewhere. There the large detent keeps its
+  /// margins, and in a [regularWidth] every detent is a card placed as the
+  /// sheet places itself.
   static Rect restingRect({
     required GlassSheetState state,
     required SheetGeometry geometry,
@@ -346,6 +351,9 @@ class SheetMorphGeometry {
     double? peekHorizontalMargin,
     double? peekBottomMargin,
     double? peekWidth,
+    GlassSheetPlacement? stripPlacement,
+    bool regularWidth = false,
+    TextDirection textDirection = TextDirection.ltr,
   }) {
     final screenHeight = screenSize.height;
     final screenWidth = screenSize.width;
@@ -363,7 +371,7 @@ class SheetMorphGeometry {
       case GlassSheetState.full:
         // Expanded: margins are gone and the sheet sinks by `extraHeight` so
         // its bottom corners run off screen instead of floating.
-        hPad = 0.0;
+        hPad = stripPlacement == null ? 0.0 : horizontalMargin;
         bottom = -(bottomInset + bottomRadius);
         break;
       case GlassSheetState.peek:
@@ -385,10 +393,19 @@ class SheetMorphGeometry {
     // A sheet narrower than its own margins (tiny test surfaces, extreme
     // margins) would invert the rect; clamp so the frame stays well-formed.
     final safeHPad = hPad.clamp(0.0, screenWidth / 2.0);
+    final insets = stripPlacement == null
+        ? EdgeInsets.symmetric(horizontal: safeHPad)
+        : _stripSheetInsets(
+            screenSize: screenSize,
+            regularWidth: regularWidth,
+            margin: safeHPad,
+            placement: stripPlacement,
+            textDirection: textDirection,
+          );
     return Rect.fromLTRB(
-      safeHPad,
+      insets.left,
       top,
-      screenWidth - safeHPad,
+      screenWidth - insets.right,
       math.max(top, screenHeight - bottom),
     );
   }
@@ -839,6 +856,7 @@ class GlassSheetMorphPresenter extends StatefulWidget {
     required this.platformViewBackdrop,
     required this.child,
     this.barrierColor,
+    this.placement = GlassSheetPlacement.automatic,
   });
 
   /// The presenting route's animation. Watched for [AnimationStatus.reverse]
@@ -877,6 +895,9 @@ class GlassSheetMorphPresenter extends StatefulWidget {
 
   /// See [GlassModalSheet.bottomMargin].
   final double bottomMargin;
+
+  /// See [GlassModalSheet.placement].
+  final GlassSheetPlacement placement;
 
   /// See [GlassModalSheet.topBorderRadius].
   final double? topBorderRadius;
@@ -1492,6 +1513,10 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
       peekHorizontalMargin: widget.peekHorizontalMargin,
       peekBottomMargin: widget.peekBottomMargin,
       peekWidth: widget.peekWidth,
+      stripPlacement:
+          GlassVerticalBar.maybeOf(context) == null ? null : widget.placement,
+      regularWidth: VerticalBarTitleRow.regularWidth(context),
+      textDirection: Directionality.of(context),
     );
   }
 

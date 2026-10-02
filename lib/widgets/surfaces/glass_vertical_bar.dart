@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../overlays/glass_modal_sheet.dart';
 import 'glass_navigation_shell.dart';
 
 /// Whether a [GlassNavigationShell] moves its bars into iPhone Duo's vertical
@@ -107,6 +108,14 @@ abstract final class GlassVerticalBarMetrics {
   /// would inset it by its full margin. Like [titleInset] it is physical: in a
   /// right-to-left app the title, not the items, ends against the strip.
   static const double rowInset = 2.0;
+
+  /// Distance from the strip's inner edge to where its background starts
+  /// under Reduce Transparency.
+  ///
+  /// The strip is otherwise clear. With Reduce Transparency on it gets an
+  /// opaque background, which natively starts 5pt into the strip — 7pt short
+  /// of its controls — behind a hairline divider.
+  static const double backgroundInset = 5.0;
 }
 
 /// The vertical bar strip a [GlassNavigationShell] resolved for the current
@@ -120,6 +129,8 @@ class GlassVerticalBarData {
     required this.top,
     this.bottom = GlassVerticalBarMetrics.edgeMargin,
     this.collapsesTabBar = false,
+    this.rowTop = GlassVerticalBarMetrics.edgeMargin,
+    this.titleInset = GlassVerticalBarMetrics.titleInset,
   });
 
   /// The side of the screen the strip is on.
@@ -150,6 +161,18 @@ class GlassVerticalBarData {
   /// Resolved from the shell's [GlassVerticalBarCompression] and the posture.
   final bool collapsesTabBar;
 
+  /// Distance from the top to the horizontal row that keeps the title.
+  ///
+  /// [GlassVerticalBarMetrics.edgeMargin] on a screen. A modal sheet's own
+  /// strip measures it from the sheet's top edge, 16pt down.
+  final double rowTop;
+
+  /// Distance from the edge away from the strip to the horizontal row.
+  ///
+  /// [GlassVerticalBarMetrics.titleInset] on a screen. A modal sheet's own
+  /// strip measures it from the sheet's edge, 16pt in.
+  final double titleInset;
+
   @override
   bool operator ==(Object other) =>
       other is GlassVerticalBarData &&
@@ -157,14 +180,18 @@ class GlassVerticalBarData {
       other.width == width &&
       other.top == top &&
       other.bottom == bottom &&
-      other.collapsesTabBar == collapsesTabBar;
+      other.collapsesTabBar == collapsesTabBar &&
+      other.rowTop == rowTop &&
+      other.titleInset == titleInset;
 
   @override
-  int get hashCode => Object.hash(edge, width, top, bottom, collapsesTabBar);
+  int get hashCode => Object.hash(
+      edge, width, top, bottom, collapsesTabBar, rowTop, titleInset);
 
   @override
   String toString() => 'GlassVerticalBarData(${edge.name}, width: $width, '
-      'top: $top, bottom: $bottom, collapsesTabBar: $collapsesTabBar)';
+      'top: $top, bottom: $bottom, collapsesTabBar: $collapsesTabBar, '
+      'rowTop: $rowTop, titleInset: $titleInset)';
 }
 
 /// Tells the bars below a [GlassNavigationShell] whether to lay out
@@ -178,8 +205,10 @@ class GlassVerticalBarData {
 /// reserved all the same, so the shell stands in for the container and
 /// publishes the strip here for the package's bars to follow.
 ///
-/// Installed by [GlassNavigationShell]; read it to fit a bar the package does
-/// not draw:
+/// Installed by [GlassNavigationShell], and again by a [GlassModalSheet] for
+/// its content: the sheet's own strip where the sheet covers the screen's,
+/// and null where its bar stays horizontal. Read it to fit a bar the package
+/// does not draw:
 ///
 /// ```dart
 /// final edge = GlassVerticalBar.edgeOf(context); // null: bars are horizontal

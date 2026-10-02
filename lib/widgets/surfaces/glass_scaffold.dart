@@ -6,9 +6,11 @@ import '../../theme/glass_theme.dart';
 
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../src/widgets/surfaces/dynamic_preferred_size.dart';
+import '../../src/widgets/surfaces/vertical_bar_background.dart';
 import '../../src/widgets/surfaces/vertical_bar_title_row.dart';
 import '../../types/glass_quality.dart';
 import '../../theme/glass_theme_data.dart';
+import '../shared/glass_accessibility_scope.dart';
 import '../shared/glass_content_aware_scope.dart';
 import '../shared/glass_isolation_scope.dart';
 import '../shared/glass_page.dart';
@@ -449,7 +451,7 @@ class GlassScaffold extends StatelessWidget {
     // If appBar implements PreferredSizeWidget, use its preferred height;
     // otherwise fall back to the explicit appBarHeight parameter.
     final effectiveAppBarHeight = appBarInStrip
-        ? GlassVerticalBarMetrics.edgeMargin + GlassVerticalBarMetrics.rowHeight
+        ? verticalBar.rowTop + GlassVerticalBarMetrics.rowHeight
         : appBar is PreferredSizeWidget
             ? (appBar! as PreferredSizeWidget).preferredSize.height
             : appBarHeight;
@@ -540,6 +542,19 @@ class GlassScaffold extends StatelessWidget {
 
       // 2. Body overlays (between body and bars — e.g. floating play pill).
       if (bodyOverlays != null) ...bodyOverlays!,
+
+      // 2a. Under Reduce Transparency, the strip and the title row turn
+      // opaque behind the bars in iPhone Duo's vertical bar strip.
+      if ((appBarInStrip || bottomBarInStrip) &&
+          GlassAccessibilityData.of(context).reduceTransparency)
+        Positioned.fill(
+          key: const ValueKey('glass_scaffold_vertical_bar_background'),
+          child: VerticalBarBackground(
+            bar: verticalBar,
+            titleRow: appBarInStrip,
+            controller: appBarInStrip ? bar.largeTitleController : null,
+          ),
+        ),
 
       // 2b. Fixed header — fades on scroll (e.g. "Listen Now" in Apple Music).
       // IgnorePointer is only active when opacity == 0 (fully faded) so that

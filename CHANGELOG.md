@@ -22,6 +22,8 @@
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#370).
 
+- **Sheets, popovers and Reduce Transparency in iPhone Duo's strip (#367):** A `GlassModalSheet` now takes the strip's place where it covers it, as natively: on the outer display its `GlassAppBar.pinned` stacks down a strip of its own, and the sheet rises to 8pt from the top with its margins kept. On the inner display it is a 653pt card with a horizontal bar, placed by the new `placement` (`GlassSheetPlacement`, mirroring `presentationPlacement(_:)`); `.trailing` docks it over the strip and moves its bar into it. A `GlassMenu` or `GlassPopover` opened from the strip opens towards the content, centred on its item. Under Reduce Transparency the strip and the title row turn opaque behind a hairline. A pinned bar inside a presented route no longer registers with the shell, since the presentation is its container.
+
 ## Bug Fixes
 
 - **`GlassMenu` pointer events after unmount (fixes #363, PR #364):** Ignore events from active menu and continuous-swipe pointers after disposal, preventing unmounted context and disposed notifier errors when a route is removed during a gesture.
