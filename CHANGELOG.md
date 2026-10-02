@@ -27,6 +27,9 @@
 ## Bug Fixes
 
 - **`GlassMenu` pointer events after unmount (fixes #363, PR #364):** Ignore events from active menu and continuous-swipe pointers after disposal, preventing unmounted context and disposed notifier errors when a route is removed during a gesture.
+
+- **`GlassMenu` keyboard and screen-reader activation (PR #376):** On menus that don't scroll, pressing Enter or Space on a focused row, or activating it with VoiceOver or TalkBack, did nothing; only touch worked. These now activate the row, and a touch tap still activates it exactly once.
+
 - **`GlassMenu` slide-to-select released between two rows (PR #375):** Releasing over the 2px gap between two rows activated nothing and left the menu open. Each row's hit zone now includes half of the gap on either side, so a release there activates the nearer row.
 
   Thanks to [@yairsts](https://github.com/yairsts) for the fix (#364).

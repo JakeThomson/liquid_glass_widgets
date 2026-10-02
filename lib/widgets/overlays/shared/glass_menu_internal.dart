@@ -42,6 +42,11 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
   late final ValueNotifier<bool> _isDraggingNotifier;
   List<Widget>? _cachedWrappedItems;
 
+  /// True while a pointer-up on the menu body is being dispatched. A row's
+  /// tap recogniser fires later in the same dispatch, and this tells it that
+  /// the body Listener has already handled the touch.
+  bool _bodyPointerUpHandled = false;
+
   @override
   void didUpdateWidget(GlassMenu oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -1213,6 +1218,10 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
                             },
                             onPointerUp: (event) {
                               if (!mounted) return;
+                              _bodyPointerUpHandled = true;
+                              scheduleMicrotask(
+                                () => _bodyPointerUpHandled = false,
+                              );
                               if (_isDragging) {
                                 final currentOffset =
                                     _scrollController.hasClients
@@ -1347,11 +1356,19 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
               isSelected: isSelected,
               isPressed: isPressed,
               onTap: () {
+                if (!item.enabled) return;
                 // For scrollable menus, we delegate taps to the native GestureDetector
                 // so it can properly participate in the gesture arena with the ScrollView.
-                if (_isScrollable && item.enabled) {
+                if (_isScrollable) {
                   _fireItemTap(item);
+                  return;
                 }
+                // Non-scrollable menus activate touches from the body
+                // Listener (slide-to-select), which runs first and marks the
+                // pointer-up as handled. An onTap without a pointer-up behind
+                // it is a keyboard or screen-reader activation.
+                if (_bodyPointerUpHandled) return;
+                _fireItemTap(item);
               },
             );
           },
