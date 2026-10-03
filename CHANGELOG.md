@@ -1,3 +1,11 @@
+# Unreleased
+
+## Features
+
+- **Layered `GlassMenu` submenus (PR #386):** `GlassMenuItem.submenu` opens a native iOS-style card over its parent. The parent recedes to 0.971× and dims its rows to 50%; the full-width card's bold header repeats the source row's icon and title with a downward chevron and sits on that row. Selecting the header, or tapping or gliding onto the exposed parent, collapses one level. Submenus nest, only the top card is interactive or exposed to semantics, and Reduce Motion makes transitions instant. The card's rows arrive with its material while the parent rows it covers cross-fade away, and closing reverses this; the fade drives the glass visibility channel, so the card keeps blurring its backdrop. `GlassMenu.onLevelChanged` reports the depth and the whole stack's extent so an owner can make room for a card that overhangs the parent, and `GlassMenu.maxStackHeight` constrains the stack, scrolling a card that would not otherwise fit. `GlassMenuController.submenuDepth` reports the current depth.
+
+  Thanks to [@F1orian](https://github.com/F1orian) for the contribution (#386).
+
 # 1.10.0
 
 ## Features
