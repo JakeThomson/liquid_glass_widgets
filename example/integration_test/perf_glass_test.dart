@@ -34,6 +34,7 @@ const _onlyConfigs = String.fromEnvironment('BENCH_CONFIGS');
 const _onlyScenes = String.fromEnvironment('BENCH_SCENES');
 const _pauseMs = int.fromEnvironment('BENCH_PAUSE_MS', defaultValue: 0);
 const _overlay = bool.fromEnvironment('BENCH_OVERLAY');
+const _noBarGroup = bool.fromEnvironment('BENCH_NO_BAR_GROUP');
 
 /// A glass configuration under test.
 class _Config {
@@ -60,6 +61,8 @@ final _configs = <_Config>[
     _ios27.copyWith(frostWeight: 1),
   ),
   _Config('ios27', GlassQuality.premium, _ios27),
+  // No blur under the frost: the ghost runs at its floor sigma.
+  _Config('ios27_noblur', GlassQuality.premium, _ios27.copyWith(blur: 0)),
   const _Config(
     'ios26_group',
     GlassQuality.premium,
@@ -132,6 +135,7 @@ class _BenchScreen extends StatelessWidget {
         child: SafeArea(
           bottom: false,
           child: GlassAppBar(
+            groupBackdrop: !_noBarGroup,
             title: Text(config.name, style: TextStyle(color: ink)),
             actions: [
               for (final icon in const [
@@ -211,6 +215,7 @@ class _BenchScreen extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         top: false,
         child: GlassTabBar.bottom(
+          groupBackdrop: !_noBarGroup,
           tabs: const [
             GlassTab(icon: Icon(CupertinoIcons.house), label: 'Home'),
             GlassTab(icon: Icon(CupertinoIcons.news), label: 'News'),
