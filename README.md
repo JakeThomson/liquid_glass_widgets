@@ -640,30 +640,29 @@ Each value maps to a fixed power-of-2 exponent. The GPU uses a zero-transcendent
 5. **Minimal quality for shader-dense screens** — use `GlassQuality.minimal` for background panels and list cards to fire zero custom shader invocations during scroll, then keep `standard` or `premium` only on the focal element
 6. **Accessibility fallbacks are zero-cost** — when High Contrast is active (the iOS signal the library reads), the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
 
-### Grouping glass bars: `GlassBackdropGroup`
+### Grouping glass: `GlassBackdropGroup`
 
 On Impeller every `BackdropFilter` ends the render pass and copies the whole
 screen, however small the glass, and premium glass has two of them per surface
-(three with the iOS 27 frost). Wrap glass that sits side by side over your
-content, like the controls of an app bar, a toolbar or a tab bar, in a
-`GlassBackdropGroup`: the surfaces then share one backdrop read for their blur
-and frost, like SwiftUI's `GlassEffectContainer`.
+(three with the iOS 27 frost). Glass in a `GlassBackdropGroup` shares one
+backdrop read for its blur and frost, like SwiftUI's `GlassEffectContainer`.
+
+`GlassTabBar` and `GlassAppBar` do this for their own glass already
+(`groupBackdrop`, default `true`). Around other glass that sits side by side
+over your content, like a toolbar of your own, add a group yourself:
 
 ```dart
 GlassBackdropGroup(
-  child: Scaffold(
-    appBar: ..., // glass buttons
-    bottomNavigationBar: GlassTabBar.bottom(...),
-    body: ...,
-  ),
+  child: Row(children: [GlassButton(...), GlassButton(...)]),
 )
 ```
 
 Glass in a group doesn't see other glass of the same group: a surface lying
 over another one shows the content behind both in its frost. Keep overlapping
-or nested glass (buttons on a glass sheet or card) out of the group. On an
-iPhone Air with `ios27Light`, scrolling under an app bar with three buttons, a
-floating button and a tab bar went from 15.6 ms to 6.8 ms GPU time (p90).
+glass out of the group with `GlassBackdropGroup(enabled: false, ...)`. Glass
+under a fade or inside another glass surface leaves the group on its own. On an
+iPhone Air with `ios27Light`, opening a sheet under an app bar with three
+buttons and a tab bar went from 23.6 ms to 9.3 ms average GPU time per frame.
 
 ### Stepping down without losing the iOS 27 look
 

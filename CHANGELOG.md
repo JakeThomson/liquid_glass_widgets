@@ -2,16 +2,31 @@
 
 ## Performance
 
-- **`GlassBackdropGroup` (#357):** New opt-in widget. On Impeller every `BackdropFilter` ends
-  the render pass and copies the whole screen, and premium glass has two of them per surface
-  (three with the iOS 27 frost and its weight). Inside a `GlassBackdropGroup` the blur and
-  frost passes of all surfaces share one backdrop read, and where their settings match the
-  engine runs the filter once for all of them; only the refraction pass stays per surface.
-  Same idea as SwiftUI's `GlassEffectContainer`. Measured on an iPhone Air (iOS 27, profile)
-  with `ios27Light` on an app bar with three buttons, a floating button and a tab bar: GPU
-  time p90 while scrolling 15.6 → 6.8 ms (back to 120 fps), opening a sheet 26.4 → 13.7 ms.
-  Glass in a group doesn't see other glass of the same group, so it's meant for glass side by
-  side over content (bars, toolbars), not for glass lying over glass.
+- **`GlassBackdropGroup` (#357):** On Impeller every `BackdropFilter` ends the render pass and
+  copies the whole screen, and premium glass has two of them per surface (three with the iOS
+  27 frost and its weight). Inside a `GlassBackdropGroup` the blur and frost passes of all
+  surfaces share one backdrop read, and where their settings match the engine runs the filter
+  once for all of them; only the refraction pass stays per surface. Same idea as SwiftUI's
+  `GlassEffectContainer`. A member drawn into a render pass of its own (under a fade, a shader
+  mask, a save-layer clip or inside another glass surface) leaves the group while it is, since
+  Impeller would hand it the wrong pass; a group with a single member changes nothing.
+  `enabled: false` keeps a subtree out of an outer group.
+- **`GlassTabBar` and `GlassAppBar` group their glass by default (#359):** new `groupBackdrop`
+  (default `true`). The tab bar's pill, extra button, search and minimize pills share one
+  backdrop read, and so do the app bar's buttons. The selected-tab indicator (`GlassEffect`,
+  also in the segmented control, switch and slider) lies over the glass it moves on and stays
+  out of every group. Measured on an iPhone Air (iOS 27, profile, median of 3 alternating runs
+  with cool-downs) with `ios27Light`, an app bar with three buttons, a floating button and a
+  tab bar: opening and closing a sheet 23.6 → 9.3 ms average GPU time per frame, 25.5 → 9.1 ms
+  raster p90, 312 → 499 frames in the same time. Rendering is unchanged (pixel diff of the
+  dragged indicator, grouped vs. not: at most 1/255).
+- **Frost rows shifted, not rebuilt:** The frost's pixel rows were rebuilt on every frame glass
+  moved on screen (glass cards in a scrolling list, a sheet sliding in). They are now built
+  once per size and scale and shifted by the glass's row phase.
+- **Fewer ghost taps at the floor sigma:** When the blur runs as its own pass or is 0, the
+  frost's ghost takes 6 backdrop taps instead of 45, within 0.03/255 of the full loop. With
+  `ios27Light` at `blur: 0`: scrolling 20.9 → 17.5 ms and glass cards 59.7 → 50.0 ms average
+  GPU time per frame.
 - **Cheaper iOS 27 material on premium (#357):** The render shader skips frost and light work
   that has no visible effect: the 45-tap ghost under a fully opaque cloud (`frostOpacity: 1`),
   the bilinear backdrop sample in the frosted body away from the hairline (1 texel instead of
