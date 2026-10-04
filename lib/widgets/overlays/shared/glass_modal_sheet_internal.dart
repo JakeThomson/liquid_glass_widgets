@@ -945,6 +945,11 @@ class GlassModalSheetScaffold extends StatelessWidget {
           child: mode == GlassSheetMode.dismissible
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
+                  // A pointer convenience over the whole page: as a semantic
+                  // tap it would merge into whatever node encloses the body.
+                  // Screen readers dismiss through the sheet's drag handle,
+                  // which carries its own tap action.
+                  excludeFromSemantics: true,
                   onTap: () {
                     controller?.snapToState(GlassSheetState.hidden);
                   },

@@ -388,6 +388,10 @@ class _GlassMenuItemState extends State<GlassMenuItem>
         onTapCancel: widget.enabled ? () => isPressed.value = false : null,
         onTap: widget.enabled ? widget.onTap : null,
         behavior: HitTestBehavior.opaque,
+        // The tap lives on the GlassFocusRegion node with the label (via
+        // semanticOnTap); a second one here landed on a separate, unnamed
+        // node, as GlassButton documents.
+        excludeFromSemantics: true,
         child: content,
       ),
     );

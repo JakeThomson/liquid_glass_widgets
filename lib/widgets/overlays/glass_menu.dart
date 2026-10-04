@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import '../../utils/glass_localizations.dart';
 import '../../utils/glass_morph_controller.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../src/widgets/surfaces/vertical_bar_presentation.dart';
@@ -85,6 +86,14 @@ class GlassMenu extends StatefulWidget {
   /// If your trigger is interactive (like a [GlassButton]), use [triggerBuilder]
   /// instead to manually handle the tap event.
   final Widget? trigger;
+
+  /// What the [trigger] opens, announced by screen readers (for example
+  /// "More actions").
+  ///
+  /// The [trigger] is exposed as a button. A text trigger names itself, so
+  /// this matters most for an icon. Not used with [triggerBuilder], whose
+  /// widget carries its own semantics.
+  final String? semanticLabel;
 
   /// A builder for the trigger widget that provides access to the menu toggle callback.
   ///
@@ -325,6 +334,7 @@ class GlassMenu extends StatefulWidget {
     this.morphSpeed = MorphSpeed.normal,
     this.enableContinuousSwipe = false,
     this.continuousSwipeSlop = 10.0,
+    this.semanticLabel,
   }) : assert(trigger != null || triggerBuilder != null,
             'Either trigger or triggerBuilder must be provided');
 

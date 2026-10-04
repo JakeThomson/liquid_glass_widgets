@@ -117,6 +117,7 @@ class GlassChip extends StatelessWidget {
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
+    this.deleteSemanticLabel,
   }) : deleteIcon = deleteIcon ?? const Icon(CupertinoIcons.xmark_circle_fill);
 
   // ===========================================================================
@@ -134,6 +135,13 @@ class GlassChip extends StatelessWidget {
 
   /// Semantic label for screen readers. Defaults to [label].
   final String? semanticLabel;
+
+  /// Screen reader label of the delete button (for example "Remove Flutter").
+  ///
+  /// The delete button is always its own button node, so it can be reached
+  /// apart from the chip; this names it. Without a label it is announced by
+  /// its role alone.
+  final String? deleteSemanticLabel;
 
   /// Optional leading icon widget.
   final Widget? icon;
@@ -310,14 +318,21 @@ class GlassChip extends StatelessWidget {
           // Delete button
           if (onDeleted != null) ...[
             SizedBox(width: spacing),
-            GestureDetector(
-              onTap: onDeleted,
-              child: IconTheme(
-                data: IconThemeData(
-                  color: effectiveIconColor,
-                  size: deleteIconSize,
+            // A node of its own: without it the delete tap merged into the
+            // chip's text node, so activating the chip's name could delete it.
+            Semantics(
+              container: true,
+              button: true,
+              label: deleteSemanticLabel,
+              child: GestureDetector(
+                onTap: onDeleted,
+                child: IconTheme(
+                  data: IconThemeData(
+                    color: effectiveIconColor,
+                    size: deleteIconSize,
+                  ),
+                  child: deleteIcon,
                 ),
-                child: deleteIcon,
               ),
             ),
           ],

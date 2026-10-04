@@ -328,9 +328,16 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
 
         final Widget triggerChild = widget.triggerBuilder != null
             ? widget.triggerBuilder!(context, _toggleMenu)
-            : GestureDetector(
-                onTap: _toggleMenu,
-                child: widget.trigger,
+            // A plain trigger (an icon, a text) gets the button role here;
+            // its text, if any, merges into this node as the name.
+            : Semantics(
+                container: true,
+                button: true,
+                label: widget.semanticLabel,
+                child: GestureDetector(
+                  onTap: _toggleMenu,
+                  child: widget.trigger,
+                ),
               );
 
         // Composed with any enclosing scope rather than replacing it. The
@@ -898,10 +905,19 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
         // Invisible full-screen tap-to-close barrier
         if (clampedValue > 0.3 && widget.showDismissBarrier)
           Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
+            // Named like Flutter's own menu barrier so a screen reader can
+            // close the menu as well as a pointer can.
+            child: Semantics(
+              container: true,
+              label: glassCupertinoLocalizationsOf(context).menuDismissLabel,
+              onDismiss: _closeMenu,
               onTap: _closeMenu,
-              child: Container(color: const Color(0x00000000)),
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                excludeFromSemantics: true,
+                onTap: _closeMenu,
+                child: Container(color: const Color(0x00000000)),
+              ),
             ),
           ),
 

@@ -1,3 +1,9 @@
+# Unreleased
+
+## Bug Fixes
+
+- **Screen reader, text size and Reduce Motion pass:** Several controls were plain gesture detectors that VoiceOver and TalkBack could not name or reach. `GlassPicker`, the trigger of `GlassMenu` and `GlassPopover`, the tappable suffix of `GlassTextField`, the delete button of `GlassChip`, and the search, clear, microphone and cancel circles of `GlassTabBar.searchable` are now buttons with a name, and their semantic tap does what a finger does. The chip's delete tap no longer sits on the chip's own text, where activating the name could delete the chip, and `GlassMenuItem`, `GlassActionSheet` rows and `GlassButtonGroup` items keep a single tap action on the labelled node. The menu and popover barriers can be dismissed by a screen reader, a toast offers a dismiss action and reads its message once. Labels for controls the package draws itself come from the app's `CupertinoLocalizations`, and new optional parameters let apps set their own: `GlassPicker.semanticLabel`, `GlassMenu.semanticLabel`, `GlassPopover.semanticLabel`, `GlassTextField.suffixSemanticLabel`, `GlassChip.deleteSemanticLabel`, `GlassPasswordField.showPasswordSemanticLabel` / `hidePasswordSemanticLabel`, `GlassSearchBar.clearButtonSemanticLabel` / `cancelButtonSemanticLabel`, and `GlassSearchBarConfig.clearButtonSemanticLabel` / `micButtonSemanticLabel` / `cancelButtonSemanticLabel`. `GlassPicker` (and its sheet title) now treats its height as a minimum, so a large system text size grows the field instead of clipping the value. Under Reduce Motion, `GlassToast` fades in place without sliding, `GlassPageControl` moves its dot at once, and the pills of `GlassTabBar.searchable` take their new size and position without the spring. Nothing changes visually at the default text size with animations on.
+
 # 1.9.0
 
 ## Features
