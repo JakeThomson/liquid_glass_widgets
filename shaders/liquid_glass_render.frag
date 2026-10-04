@@ -257,16 +257,37 @@ vec3 frostAt(vec2 p, vec2 q, vec2 invSize) {
     float slope = uFrost.w - 1.0;
     vec3 acc = vec3(0.0);
     float wsum = 0.0;
-    for (int j = -2; j <= 2; j++) {
-        float y = cy + 2.0 * float(j);
-        float dy = y + 0.5 - p.y;
-        float wy = exp(-dy * dy * inv2s2);
-        for (int i = 0; i < 9; i++) {
-            float x = base.x + float(i - 4);
-            vec3 c = texelAt(vec2(x, y), invSize);
-            float w = wy * wx[i] * (1.0 + slope * dot(c, LUMA_WEIGHTS));
-            acc += w * c;
-            wsum += w;
+    if (uFrost.z <= 0.3) {
+        // At the floor sigma of 0.3 px only the three columns around p on
+        // the two even rows either side of it carry weight: every other tap
+        // weighs under 4e-6 of the centre, so these 6 taps come out within
+        // 0.03/255 of all 45, with the luminance weighting at its extremes
+        // (frost_ghost_taps_test.dart). That is the sigma whenever the blur
+        // runs as its own pass or is 0. uFrost.z is uniform.
+        for (int j = 0; j <= 1; j++) {
+            float y = cy + 2.0 * float(j);
+            float dy = y + 0.5 - p.y;
+            float wy = exp(-dy * dy * inv2s2);
+            for (int i = 3; i <= 5; i++) {
+                float x = base.x + float(i - 4);
+                vec3 c = texelAt(vec2(x, y), invSize);
+                float w = wy * wx[i] * (1.0 + slope * dot(c, LUMA_WEIGHTS));
+                acc += w * c;
+                wsum += w;
+            }
+        }
+    } else {
+        for (int j = -2; j <= 2; j++) {
+            float y = cy + 2.0 * float(j);
+            float dy = y + 0.5 - p.y;
+            float wy = exp(-dy * dy * inv2s2);
+            for (int i = 0; i < 9; i++) {
+                float x = base.x + float(i - 4);
+                vec3 c = texelAt(vec2(x, y), invSize);
+                float w = wy * wx[i] * (1.0 + slope * dot(c, LUMA_WEIGHTS));
+                acc += w * c;
+                wsum += w;
+            }
         }
     }
     vec3 ghost = acc / max(wsum, 1e-5);
