@@ -15,6 +15,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
 import '../renderer/glass_backdrop_group.dart';
+import '../renderer/glass_backdrop_group_boundary.dart';
 import '../renderer/glass_frost_budget.dart';
 import '../renderer/glass_materialize_scope.dart';
 import '../renderer/liquid_glass_push_back_scope.dart';
@@ -496,6 +497,41 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     markNeedsPaint();
   }
 
+  /// The group this layer shares the backdrop read with, while it does.
+  RenderGlassBackdropGroupBoundary? _group;
+
+  /// Whether the last paint shared the group's backdrop read.
+  @visibleForTesting
+  bool get debugSharesBackdrop => _sharesBackdrop;
+  bool _sharesBackdrop = false;
+
+  /// Runs the group check [paintLiquidGlass] runs; see there.
+  @visibleForTesting
+  bool debugResolveSharing() => _resolveSharing();
+
+  /// Joins or leaves the enclosing group for this paint, and says whether
+  /// the blur and frost share its backdrop read: only with another member
+  /// in it, and only while no render pass of its own opens between this
+  /// layer and the group (see [opensRenderPassBelow]).
+  bool _resolveSharing() {
+    final group = sharedBackdrop && backdropKey != null
+        ? enclosingBackdropGroup(this)
+        : null;
+    if (!identical(group, _group)) {
+      _group?.leave(this);
+      _group = group;
+    }
+    group?.join(this);
+    return _sharesBackdrop = group != null && group.memberCount >= 2;
+  }
+
+  @override
+  void detach() {
+    _group?.leave(this);
+    _group = null;
+    super.detach();
+  }
+
   // ── Baked shadow ────────────────────────────────────────────────────────
   // The shadows drawn once into an image while the geometry holds still, so
   // a resting surface doesn't pay a saveLayer and a blur for them on every
@@ -667,6 +703,7 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
     Rect boundingBox,
   ) {
     if (!attached) return;
+    final shared = _resolveSharing();
 
     // ── Pass 0: SDF Shadows ──────────────────────────────────────────────────
     if (shadows.isNotEmpty && geometryImage != null) {
@@ -703,8 +740,10 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       }
 
       final blurLayer = (_blurLayerHandle.layer ??= BackdropFilterLayer())
-        ..backdropKey =
-            backdropKey // Scoped to this LiquidGlassLayer's BackdropGroup
+        // Outside a group the key is this layer's own BackdropGroup. A group
+        // member that does not share this frame (alone, or in a render pass
+        // of its own) must not use the group's key.
+        ..backdropKey = shared || !sharedBackdrop ? backdropKey : null
         ..filter = _cachedBlur!;
 
       _clipPathLayerHandle.layer = context.pushClipPath(
@@ -783,7 +822,6 @@ class RenderLiquidGlassLayer extends LiquidGlassRenderObject
       // own first: it goes ahead of the blur in the same filter. Alone that
       // costs more than the two passes; shared, the engine runs the filter
       // once for every surface with the same settings.
-      final shared = sharedBackdrop && backdropKey != null;
       ImageFilter frostFilter = _cachedFrost!;
       if (shared && weighted) {
         frostFilter = _cachedSharedFrost ??= ImageFilter.compose(

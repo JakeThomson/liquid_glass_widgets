@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 
+import '../../src/renderer/glass_backdrop_group.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../src/widgets/surfaces/vertical_bar_title_row.dart';
 import '../../types/glass_quality.dart';
@@ -110,6 +111,7 @@ class GlassAppBar extends StatelessWidget
     this.buttonSettings,
     this.largeTitleController,
     this.bottom,
+    this.groupBackdrop = true,
   })  : pinnedActions = null,
         pinnedLeading = const <GlassBarItem>[],
         pinnedBackButton = true,
@@ -155,6 +157,7 @@ class GlassAppBar extends StatelessWidget
     this.buttonSettings,
     this.largeTitleController,
     this.bottom,
+    this.groupBackdrop = true,
   })  : pinnedActions = actions,
         pinnedLeading = leading,
         pinnedBackButton = backButton,
@@ -288,6 +291,13 @@ class GlassAppBar extends StatelessWidget
   /// )
   /// ```
   final LiquidGlassSettings? buttonSettings;
+
+  /// Whether the bar's glass, its leading and action buttons and the glass
+  /// in [bottom], reads the backdrop together in one [GlassBackdropGroup].
+  /// On Impeller with premium glass that saves a full-screen backdrop copy
+  /// per button. Defaults to true; set false when glass in the bar lies over
+  /// other glass of the bar. See [GlassBackdropGroup].
+  final bool groupBackdrop;
 
   /// Optional controller that drives the inline title opacity.
   ///
@@ -426,7 +436,7 @@ class GlassAppBar extends StatelessWidget
     return GlassIsolationScope(
       isolated: true,
       defaultQuality: GlassQuality.premium,
-      child: content,
+      child: GlassBackdropGroup(enabled: groupBackdrop, child: content),
     );
   }
 
