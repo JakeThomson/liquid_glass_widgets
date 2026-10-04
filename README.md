@@ -657,6 +657,10 @@ GlassBackdropGroup(
 )
 ```
 
+A bar inside a group of your own joins it rather than starting its own, so one
+`GlassBackdropGroup` around an app bar and a tab bar gives both a single read.
+`groupBackdrop: false` keeps a bar out of every group.
+
 Glass in a group doesn't see other glass of the same group: a surface lying
 over another one shows the content behind both in its frost. Keep overlapping
 glass out of the group with `GlassBackdropGroup(enabled: false, ...)`. Glass

@@ -295,8 +295,10 @@ class GlassAppBar extends StatelessWidget
   /// Whether the bar's glass, its leading and action buttons and the glass
   /// in [bottom], reads the backdrop together in one [GlassBackdropGroup].
   /// On Impeller with premium glass that saves a full-screen backdrop copy
-  /// per button. Defaults to true; set false when glass in the bar lies over
-  /// other glass of the bar. See [GlassBackdropGroup].
+  /// per button. Inside a [GlassBackdropGroup] of your own the bar joins
+  /// that group instead of starting one. Defaults to true; set false to keep
+  /// the bar out of any group, e.g. when glass in the bar lies over other
+  /// glass of the bar.
   final bool groupBackdrop;
 
   /// Optional controller that drives the inline title opacity.
@@ -436,7 +438,11 @@ class GlassAppBar extends StatelessWidget
     return GlassIsolationScope(
       isolated: true,
       defaultQuality: GlassQuality.premium,
-      child: GlassBackdropGroup(enabled: groupBackdrop, child: content),
+      child: GlassBackdropGroup(
+        enabled: groupBackdrop,
+        joinEnclosing: true,
+        child: content,
+      ),
     );
   }
 

@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
+import '../../renderer/glass_backdrop_group.dart';
 import '../../renderer/liquid_glass_renderer.dart';
 import '../../types/glass_interaction_behavior.dart';
 import '../../../types/glass_quality.dart';
@@ -819,7 +820,15 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                               ignoring: !_pillShown,
                               child: Transform.scale(
                                 scale: pillScale,
-                                child: pillChild,
+                                // While the keyboard is up or moving, the
+                                // pill spans the bar and rides above the tab
+                                // pill, which paints after it: glass over
+                                // glass, so it leaves the bar's group.
+                                child: GlassBackdropGroup(
+                                  enabled: !_controller.searchFocused &&
+                                      !keyboardPresent,
+                                  child: pillChild,
+                                ),
                               ),
                             ),
                           );
@@ -1159,7 +1168,12 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeOut,
                           opacity: widget.bottomAccessoryEnabled ? 1.0 : 0.0,
-                          child: widget.bottomAccessory,
+                          // The accessory overlaps the pill's top edge, so
+                          // glass in it stays out of the bar's group.
+                          child: GlassBackdropGroup(
+                            enabled: false,
+                            child: widget.bottomAccessory!,
+                          ),
                         ),
                       );
                     },

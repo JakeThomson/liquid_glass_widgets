@@ -16,18 +16,49 @@ import '../engine/render_liquid_glass_geometry.dart';
 /// its own a member folds its frost weight into the frost filter for nothing,
 /// which costs more than the separate pass.
 class GlassBackdropGroupBoundary extends SingleChildRenderObjectWidget {
-  /// Marks the start of a group around [child].
-  const GlassBackdropGroupBoundary({super.key, super.child});
+  /// Marks the start of a group around [child], or, with [startsGroup]
+  /// false, a group that joins the one further up.
+  const GlassBackdropGroupBoundary({
+    this.startsGroup = true,
+    super.key,
+    super.child,
+  });
+
+  /// Whether the group starts here. False when it joins an enclosing group,
+  /// whose boundary then counts the members.
+  final bool startsGroup;
 
   @override
   RenderGlassBackdropGroupBoundary createRenderObject(BuildContext context) =>
-      RenderGlassBackdropGroupBoundary();
+      RenderGlassBackdropGroupBoundary(startsGroup: startsGroup);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    RenderGlassBackdropGroupBoundary renderObject,
+  ) {
+    renderObject.startsGroup = startsGroup;
+  }
 }
 
 /// The render object of a [GlassBackdropGroupBoundary].
 class RenderGlassBackdropGroupBoundary extends RenderProxyBox {
+  /// Creates the boundary of a group, see [startsGroup].
+  RenderGlassBackdropGroupBoundary({bool startsGroup = true})
+      : _startsGroup = startsGroup;
+
   final Set<RenderObject> _members = {};
   bool _repaintScheduled = false;
+
+  /// Whether the group starts here, or joins the one further up.
+  bool get startsGroup => _startsGroup;
+  bool _startsGroup;
+  set startsGroup(bool value) {
+    if (_startsGroup == value) return;
+    _startsGroup = value;
+    // The members move to the other boundary when they next paint.
+    _repaintMembers();
+  }
 
   /// How many glass layers share the group's backdrop read right now.
   int get memberCount => _members.length;
@@ -69,11 +100,14 @@ class RenderGlassBackdropGroupBoundary extends RenderProxyBox {
 
 /// The group [member] belongs to, or null when there is none between it and
 /// the root, or when a render pass of its own opens between the two (see
-/// [opensRenderPassBelow]).
+/// [opensRenderPassBelow]). Boundaries that join an enclosing group are
+/// passed on the way up.
 RenderGlassBackdropGroupBoundary? enclosingBackdropGroup(RenderObject member) {
   RenderObject? node = member.parent;
   while (node != null) {
-    if (node is RenderGlassBackdropGroupBoundary) return node;
+    if (node is RenderGlassBackdropGroupBoundary && node.startsGroup) {
+      return node;
+    }
     if (opensRenderPassBelow(node)) return null;
     node = node.parent;
   }

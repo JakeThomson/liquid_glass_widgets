@@ -16,8 +16,10 @@ import 'glass_backdrop_group_boundary.dart';
 /// improving rendering performance".
 ///
 /// `GlassTabBar` and `GlassAppBar` group their own glass already (see their
-/// `groupBackdrop`). Around other glass that sits side by side over content,
-/// like a toolbar of your own, add one yourself:
+/// `groupBackdrop`), and join a group of yours when they sit inside one, so
+/// a group around both bars makes them share one read. Around other glass
+/// that sits side by side over content, like a toolbar of your own, add one
+/// yourself:
 ///
 /// ```dart
 /// GlassBackdropGroup(
@@ -48,6 +50,7 @@ class GlassBackdropGroup extends StatefulWidget {
   const GlassBackdropGroup({
     required this.child,
     this.enabled = true,
+    this.joinEnclosing = false,
     super.key,
   });
 
@@ -58,6 +61,12 @@ class GlassBackdropGroup extends StatefulWidget {
   /// out of an enclosing group, e.g. an indicator that lies over the bar it
   /// belongs to.
   final bool enabled;
+
+  /// Whether [child] joins an enabled group further up instead of starting
+  /// a group of its own. Without one it starts its own, as usual. The bars
+  /// set this, so a [GlassBackdropGroup] around several bars makes them one
+  /// group.
+  final bool joinEnclosing;
 
   /// The key the premium glass under [context] shares its backdrop read
   /// through, or null outside a [GlassBackdropGroup] or inside a disabled one.
@@ -73,11 +82,20 @@ class _GlassBackdropGroupState extends State<GlassBackdropGroup> {
   final BackdropKey _key = BackdropKey();
 
   @override
-  Widget build(BuildContext context) => _GlassBackdropGroupScope(
-        backdropKey: widget.enabled ? _key : null,
-        // Always there, so switching [enabled] keeps the subtree's state.
-        child: GlassBackdropGroupBoundary(child: widget.child),
-      );
+  Widget build(BuildContext context) {
+    final enclosing = widget.enabled && widget.joinEnclosing
+        ? GlassBackdropGroup.keyOf(context)
+        : null;
+    return _GlassBackdropGroupScope(
+      backdropKey: widget.enabled ? enclosing ?? _key : null,
+      // Always there, so switching [enabled] or joining keeps the subtree's
+      // state. A boundary that joins lets its members walk on up.
+      child: GlassBackdropGroupBoundary(
+        startsGroup: enclosing == null,
+        child: widget.child,
+      ),
+    );
+  }
 }
 
 class _GlassBackdropGroupScope extends InheritedWidget {

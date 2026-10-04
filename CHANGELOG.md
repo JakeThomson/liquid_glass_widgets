@@ -15,7 +15,11 @@
   (default `true`). The tab bar's pill, extra button, search and minimize pills share one
   backdrop read, and so do the app bar's buttons. The selected-tab indicator (`GlassEffect`,
   also in the segmented control, switch and slider) lies over the glass it moves on and stays
-  out of every group. Measured on an iPhone Air (iOS 27, profile, median of 3 alternating runs
+  out of every group, and so do the searchable bar's search pill while the keyboard is up or
+  moving (it then lies over the tab pill) and its bottom accessory. Inside a
+  `GlassBackdropGroup` of the app's own a bar joins that group instead of starting one
+  (`joinEnclosing`), so one group around app bar and tab bar makes them share a single read;
+  `groupBackdrop: false` keeps a bar out of every group. Measured on an iPhone Air (iOS 27, profile, median of 3 alternating runs
   with cool-downs) with `ios27Light`, an app bar with three buttons, a floating button and a
   tab bar: opening and closing a sheet 23.6 → 9.3 ms average GPU time per frame, 25.5 → 9.1 ms
   raster p90, 312 → 499 frames in the same time. Rendering is unchanged (pixel diff of the

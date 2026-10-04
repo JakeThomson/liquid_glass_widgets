@@ -4,6 +4,8 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:liquid_glass_widgets/src/engine/liquid_glass_layer.dart';
 import 'package:liquid_glass_widgets/src/engine/rendering/liquid_glass_render_object.dart';
 import 'package:liquid_glass_widgets/src/renderer/glass_backdrop_group_boundary.dart';
+import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_searchable_internal.dart'
+    show SearchPill;
 
 /// A premium glass layer as the engine builds it, joined to the enclosing
 /// group like LiquidGlassLayer does. Offstage in the tests: what is checked
@@ -210,15 +212,13 @@ void main() {
       GlassTab(icon: Icon(CupertinoIcons.home), label: 'Home'),
       GlassTab(icon: Icon(CupertinoIcons.search), label: 'Search'),
     ];
-    expect(
-      (await barGroup(GlassTabBar.bottom(
-        tabs: tabs,
-        selectedIndex: 0,
-        onTabSelected: (_) {},
-      )))
-          .enabled,
-      isTrue,
-    );
+    final tabBarGroup = await barGroup(GlassTabBar.bottom(
+      tabs: tabs,
+      selectedIndex: 0,
+      onTabSelected: (_) {},
+    ));
+    expect(tabBarGroup.enabled, isTrue);
+    expect(tabBarGroup.joinEnclosing, isTrue);
     expect(
       (await barGroup(GlassTabBar.bottom(
         tabs: tabs,
@@ -229,10 +229,9 @@ void main() {
           .enabled,
       isFalse,
     );
-    expect(
-      (await barGroup(const GlassAppBar(title: Text('Title')))).enabled,
-      isTrue,
-    );
+    final appBarGroup = await barGroup(const GlassAppBar(title: Text('Title')));
+    expect(appBarGroup.enabled, isTrue);
+    expect(appBarGroup.joinEnclosing, isTrue);
     expect(
       (await barGroup(const GlassAppBar(
         title: Text('Title'),
@@ -241,5 +240,134 @@ void main() {
           .enabled,
       isFalse,
     );
+  });
+
+  group('joining an enclosing group', () {
+    const a = Key('a'), b = Key('b');
+
+    RenderGlassBackdropGroupBoundary boundary(WidgetTester tester, int i) =>
+        tester.renderObject<RenderGlassBackdropGroupBoundary>(
+          find.byType(GlassBackdropGroupBoundary, skipOffstage: false).at(i),
+        );
+
+    // Two bars' groups side by side, optionally inside one of the app's own.
+    Future<void> pump(WidgetTester tester,
+            {bool outer = true, bool second = true}) =>
+        tester.pumpWidget(Offstage(
+          child: GlassBackdropGroup(
+            enabled: outer,
+            child: Column(children: [
+              const GlassBackdropGroup(
+                joinEnclosing: true,
+                child: _Member(key: a),
+              ),
+              GlassBackdropGroup(
+                enabled: second,
+                joinEnclosing: true,
+                child: const _Member(key: b),
+              ),
+            ]),
+          ),
+        ));
+
+    testWidgets('makes two bars one group', (tester) async {
+      await pump(tester);
+      expect(_layer(tester, a).backdropKey, isNotNull);
+      expect(
+        identical(_layer(tester, a).backdropKey, _layer(tester, b).backdropKey),
+        isTrue,
+      );
+      _layer(tester, a).debugResolveSharing();
+      expect(_layer(tester, b).debugResolveSharing(), isTrue);
+      expect(_layer(tester, a).debugResolveSharing(), isTrue);
+      expect(boundary(tester, 0).memberCount, 2);
+      expect(boundary(tester, 1).memberCount, 0);
+      expect(boundary(tester, 2).memberCount, 0);
+    });
+
+    testWidgets('starts a group of its own without one', (tester) async {
+      await pump(tester, outer: false);
+      expect(_layer(tester, a).backdropKey, isNotNull);
+      expect(
+        identical(_layer(tester, a).backdropKey, _layer(tester, b).backdropKey),
+        isFalse,
+      );
+      // Each bar alone in its group: nothing to share with.
+      expect(_layer(tester, a).debugResolveSharing(), isFalse);
+      expect(boundary(tester, 1).memberCount, 1);
+    });
+
+    testWidgets('a disabled bar stays out of the enclosing group',
+        (tester) async {
+      await pump(tester, second: false);
+      expect(_layer(tester, b).backdropKey, isNull);
+      expect(_layer(tester, a).debugResolveSharing(), isFalse);
+      expect(boundary(tester, 0).memberCount, 1);
+    });
+
+    testWidgets('members move when the enclosing group goes away',
+        (tester) async {
+      await pump(tester);
+      _layer(tester, a).debugResolveSharing();
+      _layer(tester, b).debugResolveSharing();
+      expect(boundary(tester, 0).memberCount, 2);
+
+      await pump(tester, outer: false);
+      _layer(tester, a).debugResolveSharing();
+      _layer(tester, b).debugResolveSharing();
+      expect(boundary(tester, 0).memberCount, 0);
+      expect(boundary(tester, 1).memberCount, 1);
+      expect(boundary(tester, 2).memberCount, 1);
+    });
+  });
+
+  group('GlassTabBar.searchable keeps glass that lies over the bar out', () {
+    // No page scaffold: it would take the keyboard's inset away from the bar.
+    Widget bar({Widget? accessory}) => CupertinoApp(
+          home: ColoredBox(
+            color: const Color(0xFFFFFFFF),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: GlassTabBar.searchable(
+                tabs: const [
+                  GlassTab(icon: Icon(CupertinoIcons.home), label: 'Home'),
+                  GlassTab(icon: Icon(CupertinoIcons.person), label: 'Me'),
+                ],
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+                bottomAccessory: accessory,
+                bottomAccessoryHeight: accessory == null ? null : 48,
+              ),
+            ),
+          ),
+        );
+
+    GlassBackdropGroup nearestGroup(WidgetTester tester, Finder of) =>
+        tester.widget<GlassBackdropGroup>(
+          find
+              .ancestor(of: of, matching: find.byType(GlassBackdropGroup))
+              .first,
+        );
+
+    testWidgets('the search pill only while the keyboard is down',
+        (tester) async {
+      await tester.pumpWidget(bar());
+      await tester.pump();
+      final search = find.byType(SearchPill);
+      expect(nearestGroup(tester, search).enabled, isTrue);
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pump();
+      expect(nearestGroup(tester, search).enabled, isFalse);
+    });
+
+    testWidgets('the bottom accessory', (tester) async {
+      const accessory = Key('accessory');
+      await tester.pumpWidget(bar(accessory: const SizedBox(key: accessory)));
+      await tester.pump();
+      expect(nearestGroup(tester, find.byKey(accessory)).enabled, isFalse);
+    });
   });
 }
