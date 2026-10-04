@@ -1,4 +1,4 @@
-# 1.9.0
+# Unreleased
 
 ## Performance
 
@@ -30,6 +30,29 @@
 
 ## Features
 
+- **`GlassAdaptiveScope.frostStep`** (also on `GlassAdaptiveScopeConfig`): opt-in step through
+  premium without frost. The first step down from premium only switches the frost off,
+  standing a regular blur in for it, and keeps the premium lens, rim and highlight; the next
+  step goes to standard, and recovery takes the same steps back. `GlassAdaptiveScopeData`
+  gains `frostEnabled`. Default off.
+
+## Bug Fixes
+
+- **iOS 27 settings on the standard path:** The lightweight shader draws neither the frost nor
+  the rim light, and the presets turn the iOS 26 highlight off, so `ios27Light` and
+  `ios27Dark` came out flat and nearly clear on standard (and on web). The frost is now stood
+  in for by the regular blur and the rim light by the highlight at its default strength.
+- **`LiquidGlassWidgets.wrap()` passes the warm-up thresholds on:** `warmupPremiumThresholdMs`
+  and `warmupStandardThresholdMs` from `GlassAdaptiveScopeConfig` never reached the scope, and
+  the config's `==` and `hashCode` ignored them.
+- **Docs:** The adaptive scope degrades after 2 windows (not 3) and caps explicit `quality:`
+  parameters too; `docs/ARCHITECTURE.md` no longer claims resting premium glass skips live
+  backdrop passes.
+
+# 1.9.0
+
+## Features
+
 - **Vertical bars on iPhone Duo (#348, PR #365):** Under a `GlassNavigationShell`, the pinned chrome, `GlassTabBar.bottom` and `GlassToolbar` now move into the 84pt strip iOS 27.1 reserves on the outer display and on the inner display in landscape, laid out to the native strip's measured geometry. The title stays in a row at the top of the content, and `GlassBarItem.axisBehavior` decides which items go vertical. Where the strip runs short, the chrome overflows into a ••• menu and the tab bar collapses to its selected tab. The strip is read from `MediaQuery.viewPadding` and published as `GlassVerticalBar`; `GlassNavigationShell.verticalBarBehavior` and `verticalBarCompression` mirror UIKit's `preferredVerticalBarBehavior` and `verticalBarCompressionBehavior`. Nothing changes on any other device.
 
   ```dart
@@ -54,12 +77,6 @@
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#371).
 
-- **`GlassAdaptiveScope.frostStep`** (also on `GlassAdaptiveScopeConfig`): opt-in step through
-  premium without frost. The first step down from premium only switches the frost off,
-  standing a regular blur in for it, and keeps the premium lens, rim and highlight; the next
-  step goes to standard, and recovery takes the same steps back. `GlassAdaptiveScopeData`
-  gains `frostEnabled`. Default off.
-
 ## Bug Fixes
 
 - **`GlassMenu` slide-to-select released between two rows (PR #375):** Releasing over the 2px gap between two rows activated nothing and left the menu open. Each row's hit zone now includes half of the gap on either side, so a release there activates the nearer row.
@@ -81,17 +98,6 @@
 - **Pinned chrome icons blur on pop to a route with no pinned bar (follow-up to #351):** When popping from a route with a pinned capsule to a route with no pinned bar, item icons no longer blur out on the first frame while the glass capsule stays visible. Items now dissolve together with the capsule glass, matching native iOS behaviour.
 
 - **`GlassPinnedBarChrome` action items order in RTL (fixes #374):** Keep action items in consistent visual order when a modal sheet triggers hand-over under RTL layout.
-
-- **iOS 27 settings on the standard path:** The lightweight shader draws neither the frost nor
-  the rim light, and the presets turn the iOS 26 highlight off, so `ios27Light` and
-  `ios27Dark` came out flat and nearly clear on standard (and on web). The frost is now stood
-  in for by the regular blur and the rim light by the highlight at its default strength.
-- **`LiquidGlassWidgets.wrap()` passes the warm-up thresholds on:** `warmupPremiumThresholdMs`
-  and `warmupStandardThresholdMs` from `GlassAdaptiveScopeConfig` never reached the scope, and
-  the config's `==` and `hashCode` ignored them.
-- **Docs:** The adaptive scope degrades after 2 windows (not 3) and caps explicit `quality:`
-  parameters too; `docs/ARCHITECTURE.md` no longer claims resting premium glass skips live
-  backdrop passes.
 
 # 1.8.1
 
