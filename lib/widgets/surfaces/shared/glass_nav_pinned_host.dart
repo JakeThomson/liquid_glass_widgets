@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../src/widgets/surfaces/vertical_bar_title_row.dart';
+import '../../../theme/glass_theme_helpers.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/glass_spring.dart';
 import '../../effects/glass_materialize.dart';
@@ -15,6 +16,7 @@ import '../../interactive/glass_button.dart';
 import '../../overlays/glass_menu.dart';
 import '../../overlays/glass_menu_item.dart';
 import '../../overlays/glass_modal_sheet.dart';
+import '../../shared/adaptive_liquid_glass_layer.dart';
 import '../../shared/glass_accessibility_scope.dart';
 import '../../shared/glass_isolation_scope.dart';
 import '../glass_app_bar.dart';
@@ -1021,46 +1023,137 @@ class _PinnedSide extends StatelessWidget {
         .transform(GlassNavPinnedMetrics.morphProgressAt(state.flowProgress))
         .clamp(0.0, 1.0);
 
+    // A group only one route has buds out of a neighbour both routes have,
+    // as iOS 27 grows it out of the shell beside it, and merges back into it
+    // on the way out. Both shells draw into the run's layer for the length of
+    // the transition, so their glass joins while they overlap and parts as
+    // they separate. Not under the plain cross-fade or reduce motion, where
+    // the group materializes on its own, and only between shells drawing the
+    // run's own material: grouped glass takes the layer's settings.
+    final budding = !state.settled &&
+        !state.crossFade &&
+        presenting == null &&
+        state.transition != GlassEffectTransition.identity &&
+        !GlassAccessibilityData.of(context).reduceMotion;
+    bool buds(GlassNavBarGroup group) =>
+        group.glass && group.items.every((item) => item.tintColor == null);
+
+    // The neighbour a group buds from: the one beyond it, which it pushes
+    // away, or else the one nearer the edge.
+    _Shell? partnerOf(_Shell shell) {
+      if (!budding || (shell.from != null) == (shell.to != null)) return null;
+      final entering = shell.from == null;
+      if (!buds(entering ? shell.to! : shell.from!)) return null;
+      final place = entering ? shell.toPlace! : shell.fromPlace!;
+      for (final offset in const [1, -1]) {
+        for (final other in shells) {
+          final from = other.from;
+          final to = other.to;
+          if (from == null || to == null || !buds(from) || !buds(to)) continue;
+          if ((entering ? other.toPlace : other.fromPlace) == place + offset) {
+            return other;
+          }
+        }
+      }
+      return null;
+    }
+
+    final partners = {for (final shell in shells) shell: partnerOf(shell)};
+    final reshaping = partners.values.whereType<_Shell>().toSet();
+
     final children = <Widget>[];
     for (final shell in shells) {
       if (!holdsPresenting(shell.to)) continue;
-      final phase = _groupPhaseAt(context, state, shell.from, shell.to);
-      if (phase <= 0.0) continue;
-      children.add(_RunChild(
-        key: keyOf(shell),
-        fromPlace: shell.fromPlace,
-        toPlace: shell.toPlace,
+      final partner = partners[shell];
+      final Widget group;
+      if (partner == null) {
+        final phase = _groupPhaseAt(context, state, shell.from, shell.to);
+        if (phase <= 0.0) continue;
         // The room leads the glass: a shell has made most of its room while
         // it is still faint, so it is never drawn over a neighbour at any
         // strength that shows.
-        presence: Curves.easeOutQuint.transform(phase),
-        child: _PinnedGroup(
-          state: state,
-          from: shell.from,
-          to: shell.to,
-          anchoredAtStart: anchoredAtStart,
-        ),
-      ));
+        final room = Curves.easeOutQuint.transform(phase);
+        group = _RunChild(
+          key: keyOf(shell),
+          fromPlace: shell.fromPlace,
+          toPlace: shell.toPlace,
+          fromRoom: room,
+          toRoom: room,
+          child: _PinnedGroup(
+            state: state,
+            from: shell.from,
+            to: shell.to,
+            anchoredAtStart: anchoredAtStart,
+            reshapes: reshaping.contains(shell),
+            grouped: reshaping.contains(shell),
+          ),
+        );
+      } else {
+        // A bud starts inside its partner, flush with the end it leaves
+        // from, and takes its full room on the route that has it, so the
+        // partner moves aside from the first frame; a merge runs the other
+        // way.
+        final entering = shell.from == null;
+        group = _RunChild(
+          key: keyOf(shell),
+          fromPlace: entering ? partner.fromPlace : shell.fromPlace,
+          toPlace: entering ? shell.toPlace : partner.toPlace,
+          fromRoom: entering ? 0.0 : 1.0,
+          toRoom: entering ? 1.0 : 0.0,
+          flushFar: entering
+              ? shell.toPlace! > partner.toPlace!
+              : shell.fromPlace! > partner.fromPlace!,
+          child: _PinnedGroup(
+            state: state,
+            from: shell.from,
+            to: shell.to,
+            anchoredAtStart: anchoredAtStart,
+            buds: true,
+            grouped: true,
+          ),
+        );
+      }
+      children.add(group);
     }
+
+    Widget run = _PinnedRun(
+      axis: axis,
+      anchoredAtStart: anchoredAtStart,
+      spacing: axis == Axis.vertical
+          ? GlassVerticalBarMetrics.spacing
+          : GlassNavPinnedMetrics.groupGap,
+      positionT: positionT,
+      children: children,
+    );
+
+    // Unconditional, so no shell remounts when a bud starts: with no grouped
+    // shell in it the layer has nothing to draw and paints straight through.
+    // The blend rises and falls with the parting: none while the bud is still
+    // inside its partner, where it would swell the partner's end, the most as
+    // a bridge between them, and none again by the time they reach their
+    // places.
+    run = AdaptiveLiquidGlassLayer(
+      settings: GlassThemeHelpers.resolveSettings(
+        context,
+        explicit: DefaultButtonSettings.of(context),
+      ),
+      quality: GlassThemeHelpers.resolveQuality(context),
+      blendAmount: _budBlend * math.sin(math.pi * positionT),
+      platformViewBackdrop: state.flowTo.platformViewBackdrop,
+      child: run,
+    );
 
     return Transform.scale(
       scale: coverageScale,
       alignment: scaleAlignment,
-      child: IgnorePointer(
-        ignoring: !state.settled,
-        child: _PinnedRun(
-          axis: axis,
-          anchoredAtStart: anchoredAtStart,
-          spacing: axis == Axis.vertical
-              ? GlassVerticalBarMetrics.spacing
-              : GlassNavPinnedMetrics.groupGap,
-          positionT: positionT,
-          children: children,
-        ),
-      ),
+      child: IgnorePointer(ignoring: !state.settled, child: run),
     );
   }
 }
+
+/// How far apart, in logical pixels, a bud and its partner blend at the height
+/// of their parting.
+const double _budBlend = 20.0;
 
 /// One shell [_PinnedSide] draws: a group on either route or both, and where
 /// each sits counted from the pinned edge.
@@ -1079,9 +1172,15 @@ class _RunParentData extends ContainerBoxParentData<RenderBox> {
   /// Place on the incoming route, counted from the pinned edge.
   int? toPlace;
 
-  /// How much of its room the shell takes in the run, from 0 as it starts to
-  /// materialize to 1 once it is solid.
-  double presence = 1.0;
+  /// How much of its room the shell takes in the outgoing run, from 0 to 1.
+  double fromRoom = 1.0;
+
+  /// How much of its room the shell takes in the incoming run, from 0 to 1.
+  double toRoom = 1.0;
+
+  /// Whether, sharing a place with the shell it buds from or merges into, the
+  /// shell sits flush with that shell's far end rather than its near one.
+  bool flushFar = false;
 }
 
 /// Lays a run's shells out at the places [_RunChild] gives them, interpolated
@@ -1210,16 +1309,27 @@ class _RenderPinnedRun extends RenderBox
     }
 
     // How far a shell sits from the anchored edge on one route: the room
-    // taken by every shell nearer the edge there, each scaled by its phase.
+    // taken by every shell nearer the edge there, each scaled by how much of
+    // it that shell takes. A shell that takes none there is budding from, or
+    // merging into, the shell whose place it shares, and sits inside it.
     double? distanceOn(int index, {required bool from}) {
       int? placeOf(_RunParentData data) => from ? data.fromPlace : data.toPlace;
+      double roomOf(_RunParentData data) => from ? data.fromRoom : data.toRoom;
       final place = placeOf(datas[index]);
       if (place == null) return null;
       var distance = 0.0;
       for (var j = 0; j < datas.length; j++) {
         final other = placeOf(datas[j]);
         if (other == null || other >= place) continue;
-        distance += (_mainOf(sizes[j]) + _spacing) * datas[j].presence;
+        distance += (_mainOf(sizes[j]) + _spacing) * roomOf(datas[j]);
+      }
+      if (roomOf(datas[index]) == 0.0 && datas[index].flushFar) {
+        for (var j = 0; j < datas.length; j++) {
+          if (j == index || placeOf(datas[j]) != place) continue;
+          if (roomOf(datas[j]) == 0.0) continue;
+          distance += _mainOf(sizes[j]) - _mainOf(sizes[index]);
+          break;
+        }
       }
       return distance;
     }
@@ -1291,26 +1401,34 @@ class _RunChild extends ParentDataWidget<_RunParentData> {
     super.key,
     required this.fromPlace,
     required this.toPlace,
-    required this.presence,
+    required this.fromRoom,
+    required this.toRoom,
+    this.flushFar = false,
     required super.child,
   });
 
   final int? fromPlace;
   final int? toPlace;
-  final double presence;
+  final double fromRoom;
+  final double toRoom;
+  final bool flushFar;
 
   @override
   void applyParentData(RenderObject renderObject) {
     final data = renderObject.parentData! as _RunParentData;
     if (data.fromPlace == fromPlace &&
         data.toPlace == toPlace &&
-        data.presence == presence) {
+        data.fromRoom == fromRoom &&
+        data.toRoom == toRoom &&
+        data.flushFar == flushFar) {
       return;
     }
     data
       ..fromPlace = fromPlace
       ..toPlace = toPlace
-      ..presence = presence;
+      ..fromRoom = fromRoom
+      ..toRoom = toRoom
+      ..flushFar = flushFar;
     final parent = renderObject.parent;
     if (parent is RenderObject) parent.markNeedsLayout();
   }
@@ -2002,6 +2120,9 @@ class _PinnedGroup extends StatefulWidget {
     required this.from,
     required this.to,
     required this.anchoredAtStart,
+    this.buds = false,
+    this.reshapes = false,
+    this.grouped = false,
   });
 
   final GlassNavPinnedState state;
@@ -2014,6 +2135,23 @@ class _PinnedGroup extends StatefulWidget {
 
   /// Whether items are placed relative to the box's left edge.
   final bool anchoredAtStart;
+
+  /// Whether this group, which only one route has, buds out of a neighbour or
+  /// merges back into it rather than materializing on its own.
+  ///
+  /// Its glass stays solid throughout, hidden inside the neighbour's until
+  /// they part, and only its items fade.
+  final bool buds;
+
+  /// Whether a group is budding out of this one or merging into it.
+  ///
+  /// The shell reshapes around the bud, so its items blur through the morph
+  /// as they would if they had changed.
+  final bool reshapes;
+
+  /// Whether the shell draws into the run's shared layer rather than one of
+  /// its own, so its glass can join a neighbour's.
+  final bool grouped;
 
   @override
   State<_PinnedGroup> createState() => _PinnedGroupState();
@@ -2101,7 +2239,8 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // frozen while its neighbours morph.
     final overshoot = (springT - 1.0).clamp(0.0, 1.0);
     final morphing = fromItems.isNotEmpty && toItems.isNotEmpty;
-    final changes = fromItems.length != toItems.length ||
+    final changes = widget.reshapes ||
+        fromItems.length != toItems.length ||
         slots.any((s) => s.isEnter || s.isExit || s.crossFades);
     final morphScale = !morphing || !changes || state.settled || state.crossFade
         ? 1.0
@@ -2120,12 +2259,14 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // Drives the materialize window for a group that only one route has. The
     // side has already dropped groups whose phase is zero, so this is only
     // ever a partial phase or a full one.
-    final phase = GlassNavPinnedHost.phaseFor(
-      context,
-      state,
-      inFrom: fromItems.isNotEmpty,
-      inTo: toItems.isNotEmpty,
-    );
+    final phase = widget.buds
+        ? 1.0
+        : GlassNavPinnedHost.phaseFor(
+            context,
+            state,
+            inFrom: fromItems.isNotEmpty,
+            inTo: toItems.isNotEmpty,
+          );
 
     // Geometry for a side that does not exist comes from the side that does,
     // so an entering or exiting group holds its shape rather than resizing.
@@ -2171,7 +2312,9 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                     GlassNavPinnedMetrics.crossFadeStart))
             .clamp(0.0, 1.0);
 
-    final noDestination = toItems.isEmpty && !morphing;
+    // A bud's items fade on the item windows, as an item entering or leaving
+    // a shell does, since its glass never dissolves.
+    final noDestination = toItems.isEmpty && !morphing && !widget.buds;
 
     // Glyph blur, the other half of the native read. An outgoing glyph blurs
     // away as it fades; an incoming one arrives soft and sharpens last. Item
@@ -2256,9 +2399,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
         if (toItem == null) {
           // Exiting item: smoothly fade out with (1 - q) across the transition window.
           // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
+          // A bud is the same: its partner makes room for it from the start.
           final visible = state.settled
               ? !showsIncoming
-              : (morphing || (fadesWithGroup ? phase > 0.0 : q < 1.0));
+              : (morphing ||
+                  widget.buds ||
+                  (fadesWithGroup ? phase > 0.0 : q < 1.0));
           if (visible) {
             children.add(clusterChild(
               slot: i,
@@ -2306,9 +2452,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
         if (fromItem == null) {
           // Entering item: smoothly fade in with q across the transition window.
           // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
+          // A bud is the same: its partner makes room for it from the start.
           final visible = state.settled
               ? showsIncoming
-              : (morphing || (fadesWithGroup ? phase > 0.0 : q > 0.0));
+              : (morphing ||
+                  widget.buds ||
+                  (fadesWithGroup ? phase > 0.0 : q > 0.0));
           if (visible) {
             children.add(clusterChild(
               slot: i,
@@ -2341,7 +2490,13 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                 : crossFades
                     ? (state.settled ? 1.0 : q)
                     : 1.0,
-            blurSigma: crossFades ? inSigma : 0.0,
+            // Reshaping, the item blurs on the way into the morph and
+            // sharpens on the way out, as the shell's do natively.
+            blurSigma: crossFades
+                ? inSigma
+                : widget.reshapes
+                    ? math.min(outSigma, inSigma)
+                    : 0.0,
             item: toItem,
             child: _ClusterItem(
               item: toItem,
@@ -2484,7 +2639,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
       width: null,
       height: null,
       stretch: stretch,
-      useOwnLayer: true,
+      useOwnLayer: !widget.grouped,
       canRequestFocus: false,
       excludeFromSemantics: true,
       settings: settings,

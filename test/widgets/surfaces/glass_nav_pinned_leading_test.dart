@@ -555,6 +555,9 @@ void main() {
   });
 
   group('spacers', () {
+    // How far a capsule moves when a menu is set apart beside it.
+    const travel = GlassNavPinnedMetrics.slot + GlassNavPinnedMetrics.groupGap;
+
     testWidgets('a spacer splits a leading run into two shells',
         (tester) async {
       await tester.pumpWidget(shellApp(_Screen(
@@ -618,9 +621,9 @@ void main() {
       for (var frame = 0; frame < 40; frame++) {
         await tester.pump(const Duration(milliseconds: 16));
         expect(tester.element(capsule()), same(element));
-        // It travels, rather than jumping a whole shell at the swap.
+        // It travels, rather than covering the whole distance in one frame.
         final edge = tester.getTopRight(capsule()).dx;
-        expect((edge - last).abs(), lessThan(GlassNavPinnedMetrics.slot / 2));
+        expect((edge - last).abs(), lessThan(travel));
         last = edge;
       }
 
@@ -628,7 +631,148 @@ void main() {
       expect(tester.element(capsule()), same(element));
       expect(
         tester.getTopRight(capsule()).dx,
-        before - GlassNavPinnedMetrics.slot - GlassNavPinnedMetrics.groupGap,
+        before - travel,
+      );
+    });
+
+    testWidgets('a capsule set apart buds out of its neighbour',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          _icon(CupertinoIcons.add, id: 'add'),
+          _icon(CupertinoIcons.search, id: 'search'),
+        ],
+      )));
+      await settle(tester);
+
+      Finder shell(IconData icon) => find.ancestor(
+            of: inHost(find.byIcon(icon)),
+            matching: find.byType(GlassButton),
+          );
+      bool ownLayer(IconData icon) =>
+          tester.widget<GlassButton>(shell(icon)).useOwnLayer;
+      expect(ownLayer(CupertinoIcons.add), isTrue);
+
+      await _push(
+          tester,
+          _Screen(
+            title: 'Detail',
+            backButton: false,
+            actions: [
+              _icon(CupertinoIcons.add, id: 'add'),
+              _icon(CupertinoIcons.search, id: 'search'),
+              const GlassBarItem.spacer(),
+              _icon(CupertinoIcons.ellipsis, id: 'more'),
+            ],
+          ));
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // The menu's shell is there from the first frame, inside the capsule it
+      // buds from, and the two draw into one layer so their glass joins.
+      expect(
+        tester
+            .getRect(shell(CupertinoIcons.add))
+            .overlaps(tester.getRect(shell(CupertinoIcons.ellipsis))),
+        isTrue,
+      );
+      expect(ownLayer(CupertinoIcons.add), isFalse);
+      expect(ownLayer(CupertinoIcons.ellipsis), isFalse);
+
+      // At rest they have parted, and each has its own layer again.
+      await settle(tester);
+      expect(
+        tester
+            .getRect(shell(CupertinoIcons.add))
+            .overlaps(tester.getRect(shell(CupertinoIcons.ellipsis))),
+        isFalse,
+      );
+      expect(ownLayer(CupertinoIcons.add), isTrue);
+      expect(ownLayer(CupertinoIcons.ellipsis), isTrue);
+    });
+
+    testWidgets('a capsule set apart merges back on the way out',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [_icon(CupertinoIcons.add, id: 'add')],
+      )));
+      await settle(tester);
+      await _push(
+          tester,
+          _Screen(
+            title: 'Detail',
+            backButton: false,
+            actions: [
+              _icon(CupertinoIcons.add, id: 'add'),
+              const GlassBarItem.spacer(),
+              _icon(CupertinoIcons.ellipsis, id: 'more'),
+            ],
+          ));
+      await settle(tester);
+
+      Finder shell(IconData icon) => find.ancestor(
+            of: inHost(find.byIcon(icon)),
+            matching: find.byType(GlassButton),
+          );
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Late in the pop the menu's shell is inside the capsule it is merging
+      // into, both still in the shared layer.
+      expect(
+        tester
+            .getRect(shell(CupertinoIcons.add))
+            .overlaps(tester.getRect(shell(CupertinoIcons.ellipsis))),
+        isTrue,
+      );
+      expect(
+        tester.widget<GlassButton>(shell(CupertinoIcons.ellipsis)).useOwnLayer,
+        isFalse,
+      );
+
+      await settle(tester);
+      expect(inHost(find.byIcon(CupertinoIcons.ellipsis)), findsNothing);
+    });
+
+    testWidgets('under reduce motion a capsule set apart materializes',
+        (tester) async {
+      await tester.pumpWidget(CupertinoApp(
+        builder: (context, child) => GlassAccessibilityScope(
+          reduceMotion: true,
+          child: GlassNavigationShell(child: child!),
+        ),
+        home: _Screen(
+          title: 'Root',
+          actions: [_icon(CupertinoIcons.add, id: 'add')],
+        ),
+      ));
+      await settle(tester);
+
+      await _push(
+          tester,
+          _Screen(
+            title: 'Detail',
+            backButton: false,
+            actions: [
+              _icon(CupertinoIcons.add, id: 'add'),
+              const GlassBarItem.spacer(),
+              _icon(CupertinoIcons.ellipsis, id: 'more'),
+            ],
+          ));
+      await tester.pump(const Duration(milliseconds: 16));
+
+      // Nothing buds: the menu is not drawn until the switch.
+      expect(inHost(find.byIcon(CupertinoIcons.ellipsis)), findsNothing);
+      expect(
+        tester
+            .widget<GlassButton>(find.ancestor(
+              of: inHost(find.byIcon(CupertinoIcons.add)),
+              matching: find.byType(GlassButton),
+            ))
+            .useOwnLayer,
+        isTrue,
       );
     });
 
@@ -661,7 +805,7 @@ void main() {
       for (var frame = 0; frame < 40; frame++) {
         await tester.pump(const Duration(milliseconds: 16));
         final edge = tester.getTopRight(capsule()).dx;
-        expect((edge - last).abs(), lessThan(GlassNavPinnedMetrics.slot / 2));
+        expect((edge - last).abs(), lessThan(travel));
         last = edge;
       }
 
@@ -669,7 +813,7 @@ void main() {
       expect(inHost(find.byIcon(CupertinoIcons.ellipsis)), findsNothing);
       expect(
         tester.getTopRight(capsule()).dx,
-        before + GlassNavPinnedMetrics.slot + GlassNavPinnedMetrics.groupGap,
+        before + travel,
       );
     });
   });

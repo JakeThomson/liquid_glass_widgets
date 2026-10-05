@@ -10,7 +10,7 @@
 
 - **`GlassMenu` slide-to-select driven by your own gesture code (discussion #369):** `GlassMenuController.glideTo`, `endGlide` and `cancelGlide` let the code that owns a finger drive slide-to-select when the menu never receives that pointer itself, for example a long-press recogniser that opened the menu with `open()`. The item under the finger highlights with a selection haptic, and `endGlide` activates it as a tap would; with nothing highlighted, the menu stays open. Menus that don't call these methods are unchanged.
 
-- **`GlassBarItem.spacer()` (#245):** A spacer now splits a pinned bar's run of shared items into separate capsules, as `ToolbarSpacer(.fixed)` does natively, where it used to assert. Across a transition each capsule follows its items, matched by `id` and otherwise by position, so a capsule the destination adds or drops moves its neighbours aside or closes up behind it, rather than one capsule morphing into another.
+- **`GlassBarItem.spacer()` (#245):** A spacer now splits a pinned bar's run of shared items into separate capsules, as `ToolbarSpacer(.fixed)` does natively, where it used to assert. Across a transition each capsule follows its items, matched by `id` and otherwise by position, rather than one capsule morphing into another. A capsule the destination adds beside one buds out of it through a liquid bridge, as on iOS 27, and one it drops merges back in.
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution.
 

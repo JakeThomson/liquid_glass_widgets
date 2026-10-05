@@ -144,8 +144,11 @@ bar.
 - **`GlassBarItem.spacer()` splits a capsule.** It mirrors SwiftUI's
   `ToolbarSpacer(.fixed)` and UIKit's `fixedSpace`: the shared items on either
   side of it form separate capsules, the standard gap apart. Across a route
-  change a capsule follows its items, so a capsule the destination adds beside
-  it moves it aside rather than taking its place.
+  change a capsule follows its items, and a capsule the destination adds
+  beside it buds out of it, joined by a liquid bridge until they part, as iOS
+  27 grows one shell out of another; one it drops merges back in. Under reduce
+  motion, the plain cross-fade, or a tinted item, the new capsule materializes
+  on its own instead.
 - **`id` mirrors `UIBarButtonItem.identifier`.** Items sharing an `id` across
   two routes are treated as the same item and hold their position while
   everything around them morphs. Without an `id`, items are matched
