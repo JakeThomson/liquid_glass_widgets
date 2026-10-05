@@ -4,6 +4,8 @@ import 'package:flutter/material.dart'
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_searchable_internal.dart'
+    show SearchPill;
 
 import '../shared/test_helpers.dart';
 
@@ -291,6 +293,17 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Details'), findsOneWidget);
+
+      // The barrier closes the popover for a screen reader too.
+      final dismissLabel =
+          const DefaultCupertinoLocalizations().modalBarrierDismissLabel;
+      performOnOverlay(
+        tester,
+        find.bySemanticsLabel(dismissLabel),
+        SemanticsAction.dismiss,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Details'), findsNothing);
       handle.dispose();
     });
   });
@@ -398,6 +411,59 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Saved'), findsNothing);
       handle.dispose();
+    });
+
+    testWidgets('GlassTabBar.searchable pills jump instead of springing',
+        (tester) async {
+      var searching = false;
+      var showPill = true;
+      late StateSetter setBar;
+      await tester.pumpWidget(createTestApp(
+        child: GlassAccessibilityScope(
+          reduceMotion: true,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              setBar = setState;
+              return GlassTabBar.searchable(
+                tabs: const [
+                  GlassTab(label: 'Home', icon: Icon(CupertinoIcons.home)),
+                  GlassTab(label: 'Library', icon: Icon(CupertinoIcons.book)),
+                ],
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                isSearchActive: searching,
+                maskingQuality: MaskingQuality.off,
+                searchConfig: GlassSearchBarConfig(
+                  onSearchToggle: (_) {},
+                  showPill: showPill,
+                ),
+              );
+            },
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Opening search retargets the tab and search pills. Their new widths
+      // and positions land in the frame after the retarget, with no spring
+      // left to run. (The bar's height has its own animation, which this
+      // does not cover, so only the horizontal geometry is compared.)
+      setBar(() => searching = true);
+      await tester.pump();
+      await tester.pump();
+      final jumped = tester.getRect(find.byType(SearchPill));
+      await tester.pumpAndSettle();
+      final settled = tester.getRect(find.byType(SearchPill));
+      expect(jumped.left, settled.left);
+      expect(jumped.width, settled.width);
+
+      // Hiding the pill drops it at once rather than shrinking it away.
+      setBar(() {
+        searching = false;
+        showPill = false;
+      });
+      await tester.pump();
+      expect(find.byType(SearchPill), findsNothing);
     });
   });
 }

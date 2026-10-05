@@ -636,6 +636,36 @@ void main() {
       expect(toggled, isTrue);
       expect(toggleValue, isTrue);
     });
+
+    testWidgets(
+        'while active and still narrow, a tap on the circle does not '
+        'toggle search again', (tester) async {
+      var toggles = 0;
+      await tester.pumpWidget(
+        _wrap(
+          SearchPill(
+            config: GlassSearchBarConfig(
+              onSearchToggle: (_) => toggles++,
+              hintText: 'Search',
+            ),
+            // Active with expandWhenActive (the default), but below the
+            // 90px threshold, as during the morph into the field.
+            isActive: true,
+            barBorderRadius: 20,
+            quality: GlassQuality.minimal,
+            enableBackgroundAnimation: true,
+            backgroundPressScale: 1.06,
+          ),
+          width: 64,
+          height: 64,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('pill-collapsed')));
+      await tester.pump();
+      expect(toggles, 0);
+    });
   });
 
   group('SearchPill — expanded state (isActive=true, wide)', () {
