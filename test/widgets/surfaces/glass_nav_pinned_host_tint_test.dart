@@ -4,10 +4,11 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/shared/glass_nav_pinned_host.dart';
 
 class _Screen extends StatelessWidget {
-  const _Screen({required this.title, this.actions});
+  const _Screen({required this.title, this.actions, this.buttonSettings});
 
   final String title;
   final List<GlassBarItem>? actions;
+  final LiquidGlassSettings? buttonSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +18,7 @@ class _Screen extends StatelessWidget {
           ? GlassAppBar(title: Text(title))
           : GlassAppBar.pinned(
               title: Text(title),
+              buttonSettings: buttonSettings,
               actions: items,
             ),
       body: Center(child: Text('$title body')),
@@ -81,6 +83,46 @@ void main() {
       expect(shellButton.settings, isNotNull);
       expect(shellButton.settings!.glassColor, tint);
       expect(shellButton.settings!.bodyMode, GlassBodyMode.clear);
+    });
+
+    testWidgets('tinted shell keeps the bar\'s buttonSettings under its tint',
+        (tester) async {
+      const tint = Color(0xFF007AFF);
+
+      await tester.pumpWidget(
+        shellApp(
+          _Screen(
+            title: 'Tinted Screen',
+            buttonSettings: LiquidGlassSettings.ios27Light,
+            actions: [
+              GlassBarItem.icon(
+                icon: const Icon(CupertinoIcons.checkmark),
+                onTap: () {},
+                background: GlassBarItemBackground.separate,
+                tintColor: tint,
+              ),
+            ],
+          ),
+        ),
+      );
+      await settle(tester);
+
+      final shellButton = tester
+          .widgetList<GlassButton>(
+            find.descendant(
+              of: find.byType(GlassNavPinnedHost),
+              matching: find.byType(GlassButton),
+            ),
+          )
+          .first;
+
+      expect(
+        shellButton.settings,
+        LiquidGlassSettings.ios27Light.copyWith(
+          glassColor: tint,
+          bodyMode: GlassBodyMode.clear,
+        ),
+      );
     });
 
     testWidgets(

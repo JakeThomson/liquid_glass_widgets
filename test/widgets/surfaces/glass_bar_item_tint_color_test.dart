@@ -302,6 +302,43 @@ void main() {
       expect(buttonGroup.settings!.bodyMode, GlassBodyMode.clear);
     });
 
+    testWidgets('tinted group keeps buttonSettings under its tint',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            appBar: AppBar(
+              actions: [
+                GlassPinnedBarChrome(
+                  buttonSettings: LiquidGlassSettings.ios27Light,
+                  actions: [
+                    GlassBarItem.icon(
+                      icon: const Icon(CupertinoIcons.checkmark),
+                      onTap: () {},
+                      background: GlassBarItemBackground.separate,
+                      tintColor: testTintSecondary,
+                    ),
+                  ],
+                  builder: (context, chrome) => Row(children: chrome.actions),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final buttonGroup =
+          tester.widget<GlassButtonGroup>(find.byType(GlassButtonGroup));
+      expect(
+        buttonGroup.settings,
+        LiquidGlassSettings.ios27Light.copyWith(
+          glassColor: testTintSecondary,
+          bodyMode: GlassBodyMode.clear,
+        ),
+      );
+    });
+
     testWidgets(
         'renders GlassButtonGroup without settings when tintColor is null',
         (tester) async {
