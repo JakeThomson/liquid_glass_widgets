@@ -1,3 +1,9 @@
+# Unreleased
+
+## Features
+
+- **`GlassMenu` slide-to-select driven by your own gesture code (discussion #369):** `GlassMenuController.glideTo`, `endGlide` and `cancelGlide` let the code that owns a finger drive slide-to-select when the menu never receives that pointer itself, for example a long-press recogniser that opened the menu with `open()`. The item under the finger highlights with a selection haptic, and `endGlide` activates it as a tap would; with nothing highlighted, the menu stays open. Menus that don't call these methods are unchanged.
+
 # 1.9.0
 
 ## Features
