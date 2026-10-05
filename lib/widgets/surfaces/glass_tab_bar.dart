@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 
 import '../../constants/glass_defaults.dart';
+import '../../src/renderer/glass_backdrop_group.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../src/types/glass_interaction_behavior.dart';
@@ -202,6 +203,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
     EdgeInsetsGeometry tabPadding = const EdgeInsets.symmetric(horizontal: 4),
     double iconLabelSpacing = 4,
     bool enableBlend = true,
+    bool groupBackdrop = true,
     double blendAmount = 10,
     LiquidGlassSettings? settings,
     bool showIndicator = true,
@@ -260,6 +262,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
           tabPadding: tabPadding,
           iconLabelSpacing: iconLabelSpacing,
           enableBlend: enableBlend,
+          groupBackdrop: groupBackdrop,
           blendAmount: blendAmount,
           settings: settings,
           showIndicator: showIndicator,
@@ -347,6 +350,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
     double spacing = 4,
     double blendAmount = 10,
     bool enableBlend = true,
+    bool groupBackdrop = true,
     bool showIndicator = true,
     Color? indicatorColor,
     LiquidGlassSettings? indicatorSettings,
@@ -403,6 +407,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
           spacing: spacing,
           blendAmount: blendAmount,
           enableBlend: enableBlend,
+          groupBackdrop: groupBackdrop,
           showIndicator: showIndicator,
           indicatorColor: indicatorColor,
           indicatorSettings: indicatorSettings,
@@ -466,6 +471,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
     EdgeInsetsGeometry tabPadding = const EdgeInsets.symmetric(horizontal: 4),
     double iconLabelSpacing = 4,
     bool enableBlend = true,
+    bool groupBackdrop = true,
     double blendAmount = 10,
     LiquidGlassSettings? settings,
     bool showIndicator = true,
@@ -535,6 +541,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
           tabPadding: tabPadding,
           iconLabelSpacing: iconLabelSpacing,
           enableBlend: enableBlend,
+          groupBackdrop: groupBackdrop,
           blendAmount: blendAmount,
           settings: settings,
           showIndicator: showIndicator,
@@ -666,6 +673,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
     EdgeInsetsGeometry tabPadding = const EdgeInsets.symmetric(horizontal: 4),
     double iconLabelSpacing = 4,
     bool enableBlend = true,
+    bool groupBackdrop = true,
     double blendAmount = 10,
     LiquidGlassSettings? settings,
     bool showIndicator = true,
@@ -736,6 +744,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
           tabPadding: tabPadding,
           iconLabelSpacing: iconLabelSpacing,
           enableBlend: enableBlend,
+          groupBackdrop: groupBackdrop,
           blendAmount: blendAmount,
           settings: settings,
           showIndicator: showIndicator,
@@ -816,6 +825,7 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
       this.tabPadding = const EdgeInsets.symmetric(horizontal: 4),
       this.iconLabelSpacing = 4,
       this.enableBlend = true,
+      this.groupBackdrop = true,
       this.blendAmount = 10,
       this.showIndicator = true,
       this.magnification = 1.15,
@@ -1016,6 +1026,18 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
 
   /// Blend amount for the shared glass layer. Defaults to 10.
   final double blendAmount;
+
+  /// Whether the bar's glass reads the backdrop together, in one
+  /// [GlassBackdropGroup]: the pill, the extra button, the search and
+  /// minimize pills. The selected-tab indicator lies over the pill and stays
+  /// out of it, and so do the search pill while the keyboard moves it and
+  /// the bottom accessory. On Impeller with premium glass this saves a
+  /// full-screen backdrop copy per surface. Inside a [GlassBackdropGroup] of
+  /// your own the bar joins that group, so one group around an app bar and
+  /// a tab bar makes them share a single read. Defaults to true; set false
+  /// to keep the bar out of any group, e.g. when glass of your own lies over
+  /// it.
+  final bool groupBackdrop;
 
   /// Whether to show the draggable indicator. Defaults to true.
   final bool showIndicator;
@@ -1280,7 +1302,13 @@ class _GlassTabBarState extends State<GlassTabBar> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GlassBackdropGroup(
+        enabled: widget.groupBackdrop,
+        joinEnclosing: true,
+        child: Builder(builder: _buildPlacement),
+      );
+
+  Widget _buildPlacement(BuildContext context) {
     // In iPhone Duo's vertical bar strip the bottom placements become an
     // icon-only capsule at the bottom of the strip.
     final verticalBar =

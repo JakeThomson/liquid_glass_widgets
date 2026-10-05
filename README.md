@@ -640,6 +640,40 @@ Each value maps to a fixed power-of-2 exponent. The GPU uses a zero-transcendent
 5. **Minimal quality for shader-dense screens** — use `GlassQuality.minimal` for background panels and list cards to fire zero custom shader invocations during scroll, then keep `standard` or `premium` only on the focal element
 6. **Accessibility fallbacks are zero-cost** — when High Contrast is active (the iOS signal the library reads), the glass shader is bypassed entirely; `BackdropFilter` blur runs in Flutter's own paint layer with no custom shader overhead
 
+### Grouping glass: `GlassBackdropGroup`
+
+On Impeller every `BackdropFilter` ends the render pass and copies the whole
+screen, however small the glass, and premium glass has two of them per surface
+(three with the iOS 27 frost). Glass in a `GlassBackdropGroup` shares one
+backdrop read for its blur and frost, like SwiftUI's `GlassEffectContainer`.
+
+`GlassTabBar` and `GlassAppBar` do this for their own glass already
+(`groupBackdrop`, default `true`). Around other glass that sits side by side
+over your content, like a toolbar of your own, add a group yourself:
+
+```dart
+GlassBackdropGroup(
+  child: Row(children: [GlassButton(...), GlassButton(...)]),
+)
+```
+
+A bar inside a group of your own joins it rather than starting its own, so one
+`GlassBackdropGroup` around an app bar and a tab bar gives both a single read.
+`groupBackdrop: false` keeps a bar out of every group.
+
+Glass in a group doesn't see other glass of the same group: a surface lying
+over another one shows the content behind both in its frost. Keep overlapping
+glass out of the group with `GlassBackdropGroup(enabled: false, ...)`. Glass
+under a fade or inside another glass surface leaves the group on its own. On an
+iPhone Air with `ios27Light`, opening a sheet under an app bar with three
+buttons and a tab bar went from 23.6 ms to 9.3 ms average GPU time per frame.
+
+### Stepping down without losing the iOS 27 look
+
+`GlassAdaptiveScope(frostStep: true)` (or `GlassAdaptiveScopeConfig(frostStep:
+true)`) makes the first step down from premium switch off only the frost, the
+most expensive part of the iOS 27 material, before it goes to standard.
+
 ### Automatic Quality Adaptation *(experimental)*
 
 > 📊 **`GlassAdaptiveScope` is `@experimental`** — its timing thresholds need more real-device data to be finalised. If you use `adaptiveQuality: true`, please share your device model, Flutter version, and observed P75 ms in our [Threshold Calibration Discussion](https://github.com/sdegenaar/liquid_glass_widgets/discussions). See [`docs/ADAPTIVE_QUALITY.md`](docs/ADAPTIVE_QUALITY.md) for current threshold values and the reporting snippet.

@@ -62,11 +62,12 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   /// [LiquidGlassSettings.blur] runs as its own pass first.
   static const double frostGhostMaxSigma = 2.4;
 
-  // What [frostRowsPath] was last built for, so it is rebuilt only when the
-  // glass moves, resizes or changes pass.
-  Matrix4? _frostRowsTransform;
-  Rect? _frostRowsBounds;
-  Rect? _frostRowsPass;
+  // Built once per size and scale, shifted while the glass moves.
+  final FrostRows _frostRowsCache = FrostRows();
+
+  /// How many times the frost rows were built from scratch, for tests.
+  @visibleForTesting
+  int get debugFrostRowsBuilds => _frostRowsCache.builds;
 
   /// Cached light direction vector — updated only when [settings.lightAngle]
   /// changes. Avoids recomputing cos/sin on every setting change.
@@ -97,52 +98,14 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   /// inside the backdrop pass can override this to `true`.
   bool get encloseDirectChildrenInPass => false;
 
-  /// Builds [frostRowsPath]: one rect per odd pass-relative pixel row across
-  /// the glass's bounds, mapped back into local coordinates.
-  Path? _frostRows(Rect passPhysical, double dpr) {
-    final transform = getTransformTo(null);
-    if (frostRowsPath != null &&
-        transform == _frostRowsTransform &&
-        _paintBounds == _frostRowsBounds &&
-        passPhysical == _frostRowsPass) {
-      return frostRowsPath;
-    }
-    final storage = transform.storage;
-    // Only scale and translation keep a local rect on whole pixel rows.
-    const tolerance = 1e-6;
-    if (storage[1].abs() > tolerance ||
-        storage[4].abs() > tolerance ||
-        storage[3].abs() > tolerance ||
-        storage[7].abs() > tolerance ||
-        storage[0] == 0 ||
-        storage[5] == 0) {
-      return null;
-    }
-    final inverse = Matrix4.tryInvert(transform);
-    if (inverse == null) return null;
-    final screen = MatrixUtils.transformRect(transform, _paintBounds);
-    final top = (screen.top * dpr - passPhysical.top).floorToDouble();
-    final bottom = (screen.bottom * dpr - passPhysical.top).ceilToDouble();
-    final path = Path();
-    // Dart's % is Euclidean, so this is the first odd row at or below top.
-    for (var y = top % 2 == 1 ? top : top + 1; y < bottom; y += 2) {
-      path.addRect(
-        MatrixUtils.transformRect(
-          inverse,
-          Rect.fromLTRB(
-            screen.left - 1 / dpr,
-            (y + passPhysical.top) / dpr,
-            screen.right + 1 / dpr,
-            (y + 1 + passPhysical.top) / dpr,
-          ),
-        ),
+  /// Builds [frostRowsPath] for the glass's current bounds and screen
+  /// transform; see [FrostRows].
+  Path? _frostRows(Rect passPhysical, double dpr) => _frostRowsCache.rows(
+        transform: getTransformTo(null),
+        bounds: _paintBounds,
+        passPhysical: passPhysical,
+        dpr: dpr,
       );
-    }
-    _frostRowsTransform = transform;
-    _frostRowsBounds = _paintBounds;
-    _frostRowsPass = passPhysical;
-    return path;
-  }
 
   /// Screen-space (logical) rect of the nearest enclosing Impeller compositor
   /// pass that a [BackdropFilterLayer] in this subtree samples from, or null
@@ -348,6 +311,12 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   /// Whether the paint that settles a capped matte is already requested.
   bool _settleGeometryScheduled = false;
 
+  /// The shape transforms [_geometryImage] was rasterized with, relative to
+  /// this render object. A blend group that moved on screen only needs a new
+  /// matte if it moved relative to this layer, not when both moved together
+  /// (glass scrolling with its content, a sheet sliding in).
+  final List<Matrix4> _geometryImageTransforms = [];
+
   @override
   @mustCallSuper
   void attach(PipelineOwner owner) {
@@ -381,6 +350,18 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   // Reusable list to avoid per-frame allocations during paint traversal.
   final _shapesWithGeometry =
       <(RenderLiquidGlassGeometry, GeometryCache, Matrix4)>[];
+
+  bool _sameTransformsAsMatte() {
+    if (_geometryImageTransforms.length != _shapesWithGeometry.length) {
+      return false;
+    }
+    for (var i = 0; i < _shapesWithGeometry.length; i++) {
+      if (_shapesWithGeometry[i].$3 != _geometryImageTransforms[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   // MARK: Painting
 
@@ -444,8 +425,11 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       return;
     }
 
-    final rebuildGeometry =
-        needsGeometryUpdate || _geometryImage == null || link._dirty;
+    final rebuildGeometry = needsGeometryUpdate ||
+        _geometryImage == null ||
+        link._dirty ||
+        (link._transformDirty && !_sameTransformsAsMatte());
+    link._transformDirty = false;
     if (rebuildGeometry) {
       link.updateAllGeometries();
       link._dirty = false;
@@ -899,6 +883,9 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   }) {
     final matteDevicePixelRatio =
         _matteDevicePixelRatio(bounds.size, capped: capped);
+    _geometryImageTransforms
+      ..clear()
+      ..addAll([for (final (_, _, transform) in geometries) transform]);
 
     // Record canvas commands synchronously — pure CPU work.
     final (picture, localBounds, imageSize) =
@@ -1046,6 +1033,10 @@ class GeometryRenderLink {
 
   bool _dirty = false;
 
+  /// Set when a geometry's transform changed; the layer rebuilds its matte
+  /// only if the transform relative to it changed too.
+  bool _transformDirty = false;
+
   void updateAllGeometries() {
     for (final renderObject in _shapeGeometries) {
       renderObject.maybeRebuildGeometry();
@@ -1063,6 +1054,13 @@ class GeometryRenderLink {
   /// layer should integrate the updated result on the next paint.
   void notifyGeometryChanged(RenderLiquidGlassGeometry renderObject) {
     _dirty = true;
+  }
+
+  /// Signals that a geometry object moved on screen. The render layer
+  /// rebuilds its matte on the next paint only if the geometry moved
+  /// relative to the layer.
+  void notifyTransformChanged(RenderLiquidGlassGeometry renderObject) {
+    _transformDirty = true;
   }
 
   void unregisterGeometry(RenderLiquidGlassGeometry renderObject) {
@@ -1092,5 +1090,88 @@ class InheritedGeometryRenderLink extends InheritedWidget {
   @override
   bool updateShouldNotify(covariant InheritedGeometryRenderLink oldWidget) {
     return oldWidget.link != link;
+  }
+}
+
+/// The frost's pixel rows: one rect per odd pass-relative physical row across
+/// a glass's bounds, in its local coordinates.
+///
+/// The rows only depend on the glass's size and scale and on where its top
+/// edge falls between two pass rows (its phase, 0 to 2 physical px). So they
+/// are built once for phase 0, with a row beyond each edge, and a glass that
+/// moves (a scroll, a sheet sliding in) gets them shifted by its phase
+/// instead of rebuilt. Rows past the edges don't matter: the frost is clipped
+/// to the shape first.
+class FrostRows {
+  Path? _base;
+  Path? _shifted;
+  Rect? _bounds;
+  double _scaleX = 0;
+  double _scaleY = 0;
+  double _dpr = 0;
+  double _phase = -1;
+
+  /// How many times the rows were built from scratch.
+  int builds = 0;
+
+  /// The rows for a glass of [bounds] under [transform] (local to screen),
+  /// drawn into a pass at [passPhysical], or null when [transform] rotates,
+  /// skews or flips, and rows in local space would not land on pixel rows.
+  Path? rows({
+    required Matrix4 transform,
+    required Rect bounds,
+    required Rect passPhysical,
+    required double dpr,
+  }) {
+    final storage = transform.storage;
+    const tolerance = 1e-6;
+    final sx = storage[0];
+    final sy = storage[5];
+    if (storage[1].abs() > tolerance ||
+        storage[4].abs() > tolerance ||
+        storage[3].abs() > tolerance ||
+        storage[7].abs() > tolerance ||
+        sx <= 0 ||
+        sy <= 0) {
+      return null;
+    }
+    if (_base == null ||
+        bounds != _bounds ||
+        sx != _scaleX ||
+        sy != _scaleY ||
+        dpr != _dpr) {
+      _base = _build(bounds, sx, sy, dpr);
+      _bounds = bounds;
+      _scaleX = sx;
+      _scaleY = sy;
+      _dpr = dpr;
+      _shifted = null;
+    }
+    // Pass-relative physical y of the glass's top edge, modulo two rows.
+    // Dart's % is Euclidean, so the phase is in [0, 2).
+    final top = bounds.top * sy + storage[13];
+    final phase = (top * dpr - passPhysical.top) % 2;
+    if (_shifted == null || phase != _phase) {
+      _phase = phase;
+      _shifted = _base!.shift(Offset(0, -phase / (dpr * sy)));
+    }
+    return _shifted;
+  }
+
+  /// The odd rows of a glass whose top edge sits on an even pass row:
+  /// physical offsets -1, 1, 3, ... from the top edge, through one row past
+  /// the bottom.
+  Path _build(Rect bounds, double sx, double sy, double dpr) {
+    builds++;
+    final rowHeight = 1 / (dpr * sy);
+    final left = bounds.left - 1 / (dpr * sx);
+    final right = bounds.right + 1 / (dpr * sx);
+    final physicalHeight = bounds.height * sy * dpr;
+    final path = Path();
+    for (var offset = -1.0; offset <= physicalHeight + 1; offset += 2) {
+      final rowTop = bounds.top + offset * rowHeight;
+      path.addRect(Rect.fromLTRB(left, rowTop, right, rowTop + rowHeight));
+    }
+    return path;
   }
 }
