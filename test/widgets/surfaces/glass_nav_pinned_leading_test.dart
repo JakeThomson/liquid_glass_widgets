@@ -679,6 +679,17 @@ void main() {
       expect(ownLayer(CupertinoIcons.add), isFalse);
       expect(ownLayer(CupertinoIcons.ellipsis), isFalse);
 
+      // Mid-bud the capsule swells as it reshapes; the bud stays on its centre
+      // line rather than sinking with the swell.
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(
+        tester.getCenter(shell(CupertinoIcons.ellipsis)).dy,
+        moreOrLessEquals(
+          tester.getCenter(shell(CupertinoIcons.add)).dy,
+          epsilon: 0.5,
+        ),
+      );
+
       // At rest they have parted, and each has its own layer again.
       await settle(tester);
       expect(

@@ -1059,6 +1059,16 @@ class _PinnedSide extends StatelessWidget {
     }
 
     final partners = {for (final shell in shells) shell: partnerOf(shell)};
+
+    // A shell's thickness across a horizontal run at rest, interpolated as
+    // its group's is. See [_RunParentData.restCross].
+    double? restCrossOf(_Shell shell) => axis == Axis.vertical
+        ? null
+        : lerpDouble(
+            (shell.from ?? shell.to)!.crossExtent,
+            (shell.to ?? shell.from)!.crossExtent,
+            positionT,
+          );
     final reshaping = partners.values.whereType<_Shell>().toSet();
 
     final children = <Widget>[];
@@ -1079,6 +1089,7 @@ class _PinnedSide extends StatelessWidget {
           toPlace: shell.toPlace,
           fromRoom: room,
           toRoom: room,
+          restCross: restCrossOf(shell),
           child: _PinnedGroup(
             state: state,
             from: shell.from,
@@ -1103,6 +1114,7 @@ class _PinnedSide extends StatelessWidget {
           flushFar: entering
               ? shell.toPlace! > partner.toPlace!
               : shell.fromPlace! > partner.fromPlace!,
+          restCross: restCrossOf(shell),
           child: _PinnedGroup(
             state: state,
             from: shell.from,
@@ -1181,6 +1193,14 @@ class _RunParentData extends ContainerBoxParentData<RenderBox> {
   /// Whether, sharing a place with the shell it buds from or merges into, the
   /// shell sits flush with that shell's far end rather than its near one.
   bool flushFar = false;
+
+  /// The shell's thickness across the run at rest, without its gel swell.
+  ///
+  /// A shell in a horizontal bar walks back half of its swell itself, so it
+  /// is placed across the run by this rather than by its swollen size;
+  /// placed by that, the shells beside a swelling one would sink. Null in the
+  /// strip, where groups centre across their column as they are.
+  double? restCross;
 }
 
 /// Lays a run's shells out at the places [_RunChild] gives them, interpolated
@@ -1292,9 +1312,9 @@ class _RenderPinnedRun extends RenderBox
     }
   }
 
-  /// The run's size and each child's distance from the anchored edge, in
-  /// child order, given each child's size.
-  (Size, List<double>) _arrange(
+  /// The run's size, and each child's distance from the anchored edge and
+  /// offset across the run, in child order, given each child's size.
+  (Size, List<double>, List<double>) _arrange(
     BoxConstraints constraints,
     Size Function(RenderBox child) sizeOf,
   ) {
@@ -1334,7 +1354,15 @@ class _RenderPinnedRun extends RenderBox
       return distance;
     }
 
+    // Across the run every shell centres on the thickest one at rest, so a
+    // swelling shell and its neighbours share a centre line.
+    var rest = 0.0;
+    for (var i = 0; i < datas.length; i++) {
+      rest = math.max(rest, datas[i].restCross ?? _crossOf(sizes[i]));
+    }
+
     final distances = <double>[];
+    final offsets = <double>[];
     var main = 0.0;
     var cross = 0.0;
     for (var i = 0; i < datas.length; i++) {
@@ -1343,11 +1371,14 @@ class _RenderPinnedRun extends RenderBox
       final distance = lerpDouble(from ?? to, to ?? from, _positionT)!;
       distances.add(distance);
       main = math.max(main, distance + _mainOf(sizes[i]));
-      cross = math.max(cross, _crossOf(sizes[i]));
+      final offset = (rest - (datas[i].restCross ?? _crossOf(sizes[i]))) / 2.0;
+      offsets.add(offset);
+      cross = math.max(cross, offset + _crossOf(sizes[i]));
     }
     return (
       constraints.constrain(_vertical ? Size(cross, main) : Size(main, cross)),
       distances,
+      offsets,
     );
   }
 
@@ -1360,18 +1391,22 @@ class _RenderPinnedRun extends RenderBox
       child = childAfter(child);
     }
 
-    final (runSize, distances) = _arrange(constraints, (child) => child.size);
+    final (runSize, distances, offsets) =
+        _arrange(constraints, (child) => child.size);
     size = runSize;
 
     var i = 0;
     child = firstChild;
     while (child != null) {
       final data = child.parentData! as _RunParentData;
-      final distance = distances[i++];
+      final distance = distances[i];
       final main = _anchoredAtStart
           ? distance
           : _mainOf(size) - distance - _mainOf(child.size);
-      final cross = (_crossOf(size) - _crossOf(child.size)) / 2.0;
+      final cross = data.restCross == null
+          ? (_crossOf(size) - _crossOf(child.size)) / 2.0
+          : offsets[i];
+      i++;
       data.offset = _vertical ? Offset(cross, main) : Offset(main, cross);
       child = data.nextSibling;
     }
@@ -1404,6 +1439,7 @@ class _RunChild extends ParentDataWidget<_RunParentData> {
     required this.fromRoom,
     required this.toRoom,
     this.flushFar = false,
+    this.restCross,
     required super.child,
   });
 
@@ -1412,6 +1448,7 @@ class _RunChild extends ParentDataWidget<_RunParentData> {
   final double fromRoom;
   final double toRoom;
   final bool flushFar;
+  final double? restCross;
 
   @override
   void applyParentData(RenderObject renderObject) {
@@ -1420,7 +1457,8 @@ class _RunChild extends ParentDataWidget<_RunParentData> {
         data.toPlace == toPlace &&
         data.fromRoom == fromRoom &&
         data.toRoom == toRoom &&
-        data.flushFar == flushFar) {
+        data.flushFar == flushFar &&
+        data.restCross == restCross) {
       return;
     }
     data
@@ -1428,7 +1466,8 @@ class _RunChild extends ParentDataWidget<_RunParentData> {
       ..toPlace = toPlace
       ..fromRoom = fromRoom
       ..toRoom = toRoom
-      ..flushFar = flushFar;
+      ..flushFar = flushFar
+      ..restCross = restCross;
     final parent = renderObject.parent;
     if (parent is RenderObject) parent.markNeedsLayout();
   }
