@@ -14,6 +14,7 @@ import '../../renderer/liquid_glass_renderer.dart';
 import '../../types/glass_interaction_behavior.dart';
 import '../../../types/glass_quality.dart';
 import '../../../widgets/shared/adaptive_liquid_glass_layer.dart';
+import '../../../widgets/shared/glass_accessibility_scope.dart';
 import '../../../widgets/shared/glass_content_aware_scope.dart';
 import '../../../theme/glass_theme_data.dart';
 import '../../../theme/glass_theme.dart';
@@ -390,6 +391,11 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
         ? old.searchConfig!.showPill
         : old.trailingButton != null;
     if (oldPillShown != _pillShown) {
+      // Reduce Motion: the pill appears and goes without the spring.
+      if (GlassAccessibilityData.of(context).reduceMotion) {
+        _pillScaleCtrl.value = _pillShown ? 1.0 : 0.0;
+        return;
+      }
       _pillScaleCtrl.animateWith(
         SearchableBottomBarController.makeSpring(
           spring: widget.springDescription ?? TabBarSearchableLayout._kSpring,
@@ -647,9 +653,23 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                     final toTabW = targetTabW;
                     final toLeft = targetSearchLeft;
                     final toSearchW = targetSearchW;
+                    // Read during build: the callback below runs after the
+                    // frame, where an inherited lookup no longer belongs.
+                    final reduceMotion =
+                        GlassAccessibilityData.of(context).reduceMotion;
 
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!mounted) return;
+                      // Reduce Motion: the pills take their new widths and
+                      // positions at once instead of springing across.
+                      if (reduceMotion) {
+                        if (retarget.tabW) _tabWCtrl.value = toTabW;
+                        if (retarget.searchLeft) {
+                          _searchLeftCtrl.value = toLeft;
+                        }
+                        if (retarget.searchW) _searchWCtrl.value = toSearchW;
+                        return;
+                      }
                       final spring = widget.springDescription ??
                           TabBarSearchableLayout._kSpring;
                       // Read `from` and the in-flight velocity HERE, not during
@@ -948,6 +968,9 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                               passthroughOverPlatformView:
                                   widget.passthroughOverPlatformView,
                               isSearchActive: searching,
+                              collapsedSemanticLabel:
+                                  tabs[selectedIndex].semanticLabel ??
+                                      tabs[selectedIndex].label,
                               nativePressHighlight: nativePressHighlight,
                               interactionGlowColor:
                                   widget.interactionBehavior.hasGlow
@@ -1029,6 +1052,8 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                                 widget.searchConfig!.cancelButtonColor,
                             cancelIcon: widget.searchConfig!.cancelIcon,
                             cancelIconSize: widget.searchConfig!.cancelIconSize,
+                            semanticLabel:
+                                widget.searchConfig!.cancelButtonSemanticLabel,
                           ),
                         ),
                     ],

@@ -334,9 +334,16 @@ class _GlassPopoverState extends State<GlassPopover>
     // the builder closure) so it is stable across animation ticks.
     final Widget triggerContent = widget.triggerBuilder != null
         ? widget.triggerBuilder!(context, _togglePopover)
-        : GestureDetector(
-            onTap: _togglePopover,
-            child: widget.trigger,
+        // A plain trigger (an icon, a text) gets the button role here; its
+        // text, if any, merges into this node as the name.
+        : Semantics(
+            container: true,
+            button: true,
+            label: widget.semanticLabel,
+            child: GestureDetector(
+              onTap: _togglePopover,
+              child: widget.trigger,
+            ),
           );
 
     return AnimatedBuilder(
@@ -854,10 +861,20 @@ class _GlassPopoverState extends State<GlassPopover>
             // ── Tap-to-close barrier ─────────────────────────────────────────
             if (clampedValue > 0.3 && widget.barrierDismissible)
               Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
+                // Named like Flutter's ModalBarrier so a screen reader can
+                // close the popover as well as a pointer can.
+                child: Semantics(
+                  container: true,
+                  label: glassCupertinoLocalizationsOf(context)
+                      .modalBarrierDismissLabel,
+                  onDismiss: _closePopover,
                   onTap: _closePopover,
-                  child: const ColoredBox(color: Color(0x00000000)),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    excludeFromSemantics: true,
+                    onTap: _closePopover,
+                    child: const ColoredBox(color: Color(0x00000000)),
+                  ),
                 ),
               ),
 

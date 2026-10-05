@@ -54,6 +54,9 @@ class GlassSearchBarConfig {
     this.onSearchFocusChanged,
     this.onSearchFieldTap,
     this.onCancelTap,
+    this.clearButtonSemanticLabel,
+    this.micButtonSemanticLabel,
+    this.cancelButtonSemanticLabel,
   });
 
   /// Called with `true` when search is activated, `false` when dismissed.
@@ -348,4 +351,23 @@ class GlassSearchBarConfig {
   ///
   /// When null (the default), the standard dismiss behaviour runs unchanged.
   final VoidCallback? onCancelTap;
+
+  // ── Accessibility ───────────────────────────────────────────────────────────
+
+  /// Screen reader label of the clear (×) button inside the expanded field.
+  ///
+  /// Defaults to the app's [CupertinoLocalizations.clearButtonLabel].
+  final String? clearButtonSemanticLabel;
+
+  /// Screen reader label of the microphone button (for example "Dictate").
+  ///
+  /// The button is exposed whenever [onMicTap] is set. Flutter has no
+  /// localized string for dictation, so without this label it is announced
+  /// by its role alone.
+  final String? micButtonSemanticLabel;
+
+  /// Screen reader label of the dismiss (×) pill beside the search field.
+  ///
+  /// Defaults to the app's [CupertinoLocalizations.cancelButtonLabel].
+  final String? cancelButtonSemanticLabel;
 }

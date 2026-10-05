@@ -127,8 +127,15 @@ void main() {
       );
       await tester.pump();
 
+      // The collapsed search pill is a 'Search' button as well (named by the
+      // config's hint text), so pick the tab: the node with a selected state.
       tester.semantics.performAction(
-        find.semantics.byLabel('Search'),
+        find.semantics.byPredicate(
+          (node) =>
+              node.label == 'Search' &&
+              // ignore: deprecated_member_use
+              node.hasFlag(SemanticsFlag.hasSelectedState),
+        ),
         SemanticsAction.tap,
       );
       await tester.pump();
