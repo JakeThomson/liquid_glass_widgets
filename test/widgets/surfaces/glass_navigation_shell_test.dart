@@ -1524,13 +1524,29 @@ void main() {
       expect(const GlassAppBar(actions: [SizedBox()]).pinnedActions, isNull);
     });
 
-    testWidgets('spacers are rejected until multi-capsule rendering lands',
+    testWidgets('a spacer splits the actions into two capsules',
         (tester) async {
-      await tester.pumpWidget(shellApp(const _Screen(
+      await tester.pumpWidget(shellApp(_Screen(
         title: 'Root',
-        actions: [GlassBarItem.spacer()],
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+          GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.search), onTap: () {}),
+          const GlassBarItem.spacer(),
+          GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.ellipsis), onTap: () {}),
+        ],
       )));
-      expect(tester.takeException(), isAssertionError);
+      await settle(tester);
+
+      final shells = find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.byType(GlassButton),
+      );
+      expect(shells, findsNWidgets(2));
+      expect(
+          tester.getSize(shells.first).width, GlassNavPinnedMetrics.slot * 2);
+      expect(tester.getSize(shells.last).width, GlassNavPinnedMetrics.slot);
     });
 
     testWidgets('pinning stays active at GlassQuality.minimal', (tester) async {

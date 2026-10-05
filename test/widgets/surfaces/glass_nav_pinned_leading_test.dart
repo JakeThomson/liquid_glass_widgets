@@ -554,16 +554,129 @@ void main() {
     });
   });
 
-  group('API guards', () {
-    testWidgets('spacers are rejected in leading too', (tester) async {
-      await tester.pumpWidget(shellApp(const _Screen(
+  group('spacers', () {
+    testWidgets('a spacer splits a leading run into two shells',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
         title: 'Root',
-        leading: [GlassBarItem.spacer()],
+        leading: [
+          _icon(CupertinoIcons.sidebar_left),
+          _icon(CupertinoIcons.slider_horizontal_3),
+          const GlassBarItem.spacer(),
+          _icon(CupertinoIcons.xmark),
+        ],
       )));
-      expect(tester.takeException(), isA<AssertionError>());
+      await settle(tester);
+
+      final shells = inHost(find.byType(GlassButton));
+      expect(shells, findsNWidgets(2));
+      expect(
+        tester.getSize(shells.first),
+        const Size(GlassNavPinnedMetrics.slot * 2, GlassNavPinnedMetrics.slot),
+      );
+      expect(
+        tester.getTopLeft(shells.last).dx - tester.getTopRight(shells.first).dx,
+        GlassNavPinnedMetrics.groupGap,
+      );
+    });
+
+    testWidgets('a capsule follows its items to a new place', (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          _icon(CupertinoIcons.add, id: 'add'),
+          _icon(CupertinoIcons.search, id: 'search'),
+        ],
+      )));
+      await settle(tester);
+
+      Finder capsule() => find.ancestor(
+            of: inHost(find.byIcon(CupertinoIcons.add)),
+            matching: find.byType(GlassButton),
+          );
+      final element = tester.element(capsule());
+      final before = tester.getTopRight(capsule()).dx;
+
+      // The destination sets a menu apart at the trailing edge. Paired by
+      // position, the capsule would morph into the menu's circle and a second
+      // one would materialize beside it; paired by its items, it moves aside
+      // for the menu instead.
+      await _push(
+          tester,
+          _Screen(
+            title: 'Detail',
+            backButton: false,
+            actions: [
+              _icon(CupertinoIcons.add, id: 'add'),
+              _icon(CupertinoIcons.search, id: 'search'),
+              const GlassBarItem.spacer(),
+              _icon(CupertinoIcons.ellipsis, id: 'more'),
+            ],
+          ));
+
+      var last = before;
+      for (var frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.element(capsule()), same(element));
+        // It travels, rather than jumping a whole shell at the swap.
+        final edge = tester.getTopRight(capsule()).dx;
+        expect((edge - last).abs(), lessThan(GlassNavPinnedMetrics.slot / 2));
+        last = edge;
+      }
+
+      await settle(tester);
+      expect(tester.element(capsule()), same(element));
+      expect(
+        tester.getTopRight(capsule()).dx,
+        before - GlassNavPinnedMetrics.slot - GlassNavPinnedMetrics.groupGap,
+      );
+    });
+
+    testWidgets('a shell that dissolves closes its gap as it goes',
+        (tester) async {
+      await tester.pumpWidget(shellApp(_Screen(
+        title: 'Root',
+        actions: [
+          _icon(CupertinoIcons.add, id: 'add'),
+          const GlassBarItem.spacer(),
+          _icon(CupertinoIcons.ellipsis, id: 'more'),
+        ],
+      )));
+      await settle(tester);
+      Finder capsule() => find.ancestor(
+            of: inHost(find.byIcon(CupertinoIcons.add)),
+            matching: find.byType(GlassButton),
+          );
+      final before = tester.getTopRight(capsule()).dx;
+
+      await _push(
+          tester,
+          _Screen(
+            title: 'Detail',
+            backButton: false,
+            actions: [_icon(CupertinoIcons.add, id: 'add')],
+          ));
+
+      var last = before;
+      for (var frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final edge = tester.getTopRight(capsule()).dx;
+        expect((edge - last).abs(), lessThan(GlassNavPinnedMetrics.slot / 2));
+        last = edge;
+      }
+
+      await settle(tester);
+      expect(inHost(find.byIcon(CupertinoIcons.ellipsis)), findsNothing);
+      expect(
+        tester.getTopRight(capsule()).dx,
+        before + GlassNavPinnedMetrics.slot + GlassNavPinnedMetrics.groupGap,
+      );
     });
   });
 }
+
+GlassBarItem _icon(IconData icon, {Object? id}) =>
+    GlassBarItem.icon(icon: Icon(icon), id: id, onTap: () {});
 
 /// A custom item that is a glass surface in its own right.
 GlassBarItem _ownCapsule({Object? id, String label = 'capsule'}) =>
