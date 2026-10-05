@@ -114,21 +114,29 @@ RenderGlassBackdropGroupBoundary? enclosingBackdropGroup(RenderObject member) {
   return null;
 }
 
-/// Whether [node] draws its subtree into a save layer of its own, which on
-/// Impeller is a render pass of its own.
+/// Whether [node] draws, or may start drawing, its subtree into a save layer
+/// of its own, which on Impeller is a render pass of its own.
 ///
 /// These are the framework's save layers that can stand between glass and
-/// its group: opacity between 0 and 1, a shader mask, a backdrop filter, a
-/// clip with [Clip.antiAliasWithSaveLayer], and the content of a glass
-/// surface, which is drawn inside that surface's backdrop filters.
+/// its group: an opacity, a shader mask, a backdrop filter, a clip with
+/// [Clip.antiAliasWithSaveLayer], and the content of a glass surface, which
+/// is drawn inside that surface's backdrop filters.
+///
+/// An opacity counts at any value, 1 included. A member only checks this
+/// path when it paints, and glass paints below a repaint boundary: when a
+/// fade starts after the first paint (1 → 0.99), the framework re-composites
+/// the member's cached layer inside the new opacity layer without painting
+/// it again, so a member that joined at 1 would keep the group's key in the
+/// wrong pass.
 bool opensRenderPassBelow(RenderObject node) {
-  bool partial(double opacity) => opacity > 0 && opacity < 1;
   bool saves(Clip clip) => clip == Clip.antiAliasWithSaveLayer;
   return switch (node) {
-    RenderOpacity(:final opacity) => partial(opacity),
-    RenderAnimatedOpacityMixin(:final opacity) => partial(opacity.value),
-    RenderSliverOpacity(:final opacity) => partial(opacity),
-    RenderShaderMask() || RenderBackdropFilter() => true,
+    RenderOpacity() ||
+    RenderAnimatedOpacityMixin() ||
+    RenderSliverOpacity() ||
+    RenderShaderMask() ||
+    RenderBackdropFilter() =>
+      true,
     RenderLiquidGlassGeometry() => true,
     RenderClipRect(:final clipBehavior) => saves(clipBehavior),
     RenderClipRRect(:final clipBehavior) => saves(clipBehavior),

@@ -34,13 +34,20 @@ import 'glass_backdrop_group_boundary.dart';
 ///   of the same group shows the content behind both instead of the glass
 ///   below it, and so does anything painted between the two. Keep
 ///   overlapping glass out of the group, with `enabled: false` around it.
-///   Glass inside the content of another glass surface, or under a fade, a
-///   shader mask or a save-layer clip, leaves the group on its own, since
-///   it is drawn into a render pass of its own.
+///   Glass inside the content of another glass surface, or under an
+///   `Opacity`, `FadeTransition` or `AnimatedOpacity` (at any value, fully
+///   opaque included), a shader mask or a save-layer clip, stays out of the
+///   group on its own, since it is or may be drawn into a render pass of its
+///   own.
 /// - **The frost doesn't see what the glass paints inside itself.** The
 ///   frost's cloud is blurred from the shared read, so content a glass
 ///   surface draws into its own glass layer isn't part of it. The sharp
 ///   content itself is unaffected.
+///
+/// Wrap the glass of one screen, such as its bars, rather than a `Navigator`
+/// or a tab stack: glass on routes or tabs that are kept alive offstage
+/// still counts as a member, so a surface that is alone on screen may take
+/// the shared path for nothing.
 ///
 /// A group with a single surface in it changes nothing. Without Impeller
 /// (web, Skia) the group has no effect.

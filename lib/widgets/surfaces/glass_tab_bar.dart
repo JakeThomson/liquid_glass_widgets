@@ -1028,10 +1028,11 @@ class GlassTabBar extends StatefulWidget with GlassDynamicPreferredSize {
   final double blendAmount;
 
   /// Whether the bar's glass reads the backdrop together, in one
-  /// [GlassBackdropGroup]: the pill, the extra button, the search and
-  /// minimize pills. The selected-tab indicator lies over the pill and stays
-  /// out of it, and so do the search pill while the keyboard moves it and
-  /// the bottom accessory. On Impeller with premium glass this saves a
+  /// [GlassBackdropGroup]: the pill, the search and minimize pills. The
+  /// selected-tab indicator lies over the pill and stays out of it, and so
+  /// do the search pill while the keyboard moves it, the searchable bar's
+  /// extra button (it fades out when search opens) and the bottom
+  /// accessory. On Impeller with premium glass this saves a
   /// full-screen backdrop copy per surface. Inside a [GlassBackdropGroup] of
   /// your own the bar joins that group, so one group around an app bar and
   /// a tab bar makes them share a single read. Defaults to true; set false

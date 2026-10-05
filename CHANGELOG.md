@@ -1,73 +1,3 @@
-# Unreleased
-
-## Performance
-
-- **`GlassBackdropGroup` (#357):** On Impeller every `BackdropFilter` ends the render pass and
-  copies the whole screen, and premium glass has two of them per surface (three with the iOS
-  27 frost and its weight). Inside a `GlassBackdropGroup` the blur and frost passes of all
-  surfaces share one backdrop read, and where their settings match the engine runs the filter
-  once for all of them; only the refraction pass stays per surface. Same idea as SwiftUI's
-  `GlassEffectContainer`. A member drawn into a render pass of its own (under a fade, a shader
-  mask, a save-layer clip or inside another glass surface) leaves the group while it is, since
-  Impeller would hand it the wrong pass; a group with a single member changes nothing.
-  `enabled: false` keeps a subtree out of an outer group.
-- **`GlassTabBar` and `GlassAppBar` group their glass by default (#359):** new `groupBackdrop`
-  (default `true`). The tab bar's pill, extra button, search and minimize pills share one
-  backdrop read, and so do the app bar's buttons. The selected-tab indicator (`GlassEffect`,
-  also in the segmented control, switch and slider) lies over the glass it moves on and stays
-  out of every group, and so do the searchable bar's search pill while the keyboard is up or
-  moving (it then lies over the tab pill) and its bottom accessory. Inside a
-  `GlassBackdropGroup` of the app's own a bar joins that group instead of starting one
-  (`joinEnclosing`), so one group around app bar and tab bar makes them share a single read;
-  `groupBackdrop: false` keeps a bar out of every group. Measured on an iPhone Air (iOS 27, profile, median of 3 alternating runs
-  with cool-downs) with `ios27Light`, an app bar with three buttons, a floating button and a
-  tab bar: opening and closing a sheet 23.6 → 9.3 ms average GPU time per frame, 25.5 → 9.1 ms
-  raster p90, 312 → 499 frames in the same time. Rendering is unchanged (pixel diff of the
-  dragged indicator, grouped vs. not: at most 1/255).
-- **Frost rows shifted, not rebuilt:** The frost's pixel rows were rebuilt on every frame glass
-  moved on screen (glass cards in a scrolling list, a sheet sliding in). They are now built
-  once per size and scale and shifted by the glass's row phase.
-- **Fewer ghost taps at the floor sigma:** When the blur runs as its own pass or is 0, the
-  frost's ghost takes 6 backdrop taps instead of 45, within 0.03/255 of the full loop. With
-  `ios27Light` at `blur: 0`: scrolling 20.9 → 17.5 ms and glass cards 59.7 → 50.0 ms average
-  GPU time per frame.
-- **Cheaper iOS 27 material on premium (#357):** The render shader skips frost and light work
-  that has no visible effect: the 45-tap ghost under a fully opaque cloud (`frostOpacity: 1`),
-  the bilinear backdrop sample in the frosted body away from the hairline (1 texel instead of
-  4, or 12 with chromatic aberration), and the iOS 26 light block when `lightIntensity` and
-  `ambientStrength` are both 0, as in `ios27Light` and `ios27Dark`. A squircle with equal top
-  and bottom radii is evaluated once in the geometry pass. Rendering is unchanged.
-- **Baked light-mode shadow:** The shadow under premium glass was a `saveLayer`, a blurred draw
-  and a cutout on every frame, also while only the backdrop moved. Once the geometry holds
-  still it is drawn once into an image and reused; while the shape animates it stays live.
-- **Moving glass keeps its matte:** A blend group that moved on screen rebuilt the whole
-  geometry matte with `toImageSync` on every frame, e.g. glass cards scrolling in a list or a
-  sheet sliding in. The matte is now rebuilt only when a shape moves relative to its layer.
-- **Benchmark:** `example/integration_test/perf_glass_test.dart` measures raster and GPU frame
-  times for standard, iOS 26 premium and the iOS 27 presets with and without frost, in profile
-  mode on a device.
-
-## Features
-
-- **`GlassAdaptiveScope.frostStep`** (also on `GlassAdaptiveScopeConfig`): opt-in step through
-  premium without frost. The first step down from premium only switches the frost off,
-  standing a regular blur in for it, and keeps the premium lens, rim and highlight; the next
-  step goes to standard, and recovery takes the same steps back. `GlassAdaptiveScopeData`
-  gains `frostEnabled`. Default off.
-
-## Bug Fixes
-
-- **iOS 27 settings on the standard path:** The lightweight shader draws neither the frost nor
-  the rim light, and the presets turn the iOS 26 highlight off, so `ios27Light` and
-  `ios27Dark` came out flat and nearly clear on standard (and on web). The frost is now stood
-  in for by the regular blur and the rim light by the highlight at its default strength.
-- **`LiquidGlassWidgets.wrap()` passes the warm-up thresholds on:** `warmupPremiumThresholdMs`
-  and `warmupStandardThresholdMs` from `GlassAdaptiveScopeConfig` never reached the scope, and
-  the config's `==` and `hashCode` ignored them.
-- **Docs:** The adaptive scope degrades after 2 windows (not 3) and caps explicit `quality:`
-  parameters too; `docs/ARCHITECTURE.md` no longer claims resting premium glass skips live
-  backdrop passes.
-
 # 1.9.0
 
 ## Features
@@ -96,6 +26,37 @@
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#371).
 
+- **`GlassAdaptiveScope.frostStep`** (also on `GlassAdaptiveScopeConfig`): opt-in step through
+  premium without frost. The first step down from premium only switches the frost off,
+  standing a regular blur in for it, and keeps the premium lens, rim and highlight; the next
+  step goes to standard, and recovery takes the same steps back. `GlassAdaptiveScopeData`
+  gains `frostEnabled`. Default off.
+
+## Performance
+
+- **`GlassBackdropGroup` (#357):** On Impeller every `BackdropFilter` copies the whole
+  screen, and premium glass uses two or three per surface. Glass inside a group shares one
+  backdrop read for its blur and frost; refraction stays per surface. Same idea as SwiftUI's
+  `GlassEffectContainer`. Glass under an opacity, shader mask, save-layer clip or inside
+  another glass surface stays out on its own. Wrap a screen's bars rather than a `Navigator`.
+  No effect on web or Skia.
+- **`GlassTabBar` and `GlassAppBar` group their glass by default:** new `groupBackdrop`
+  (default `true`; set `false` to opt out). Inside your own `GlassBackdropGroup` the bars join
+  it. Glass that overlaps the bar (selected-tab indicator, search pill while the keyboard is
+  up, extra button, bottom accessory) stays out. iPhone Air, `ios27Light`, opening a sheet:
+  23.6 → 9.3 ms average GPU time per frame. No visible change.
+- **Cheaper iOS 27 material on premium:** The shader skips frost and light work that has no
+  visible effect, and the frost's ghost takes 6 taps instead of 45 at the floor sigma
+  (`ios27Light`, `blur: 0`, glass cards: 59.7 → 50.0 ms GPU).
+- **Less work for moving and resting glass:** Frost rows are shifted instead of rebuilt, the
+  geometry matte is kept when glass moves as a whole, and the light-mode shadow is baked into
+  an image once the shape holds still.
+- **Benchmark:** `example/integration_test/perf_glass_test.dart` measures raster and GPU frame
+  times on a device in profile mode.
+
+  Thanks to [@Ahmadre](https://github.com/Ahmadre) for the contribution (#357, PR #359), and
+  to [@JakeThomson](https://github.com/JakeThomson) for the review.
+
 ## Bug Fixes
 
 - **`GlassMenu` slide-to-select released between two rows (PR #375):** Releasing over the 2px gap between two rows activated nothing and left the menu open. Each row's hit zone now includes half of the gap on either side, so a release there activates the nearer row.
@@ -117,6 +78,17 @@
 - **Pinned chrome icons blur on pop to a route with no pinned bar (follow-up to #351):** When popping from a route with a pinned capsule to a route with no pinned bar, item icons no longer blur out on the first frame while the glass capsule stays visible. Items now dissolve together with the capsule glass, matching native iOS behaviour.
 
 - **`GlassPinnedBarChrome` action items order in RTL (fixes #374):** Keep action items in consistent visual order when a modal sheet triggers hand-over under RTL layout.
+
+- **iOS 27 presets on the standard path and web (visible change):** `ios27Light` and
+  `ios27Dark` came out flat and nearly clear on standard and on web, since the lightweight
+  shader draws neither the frost nor the rim light. They now get a regular blur in place of
+  the frost and the highlight in place of the rim light.
+- **`LiquidGlassWidgets.wrap()` passes the warm-up thresholds on:** `warmupPremiumThresholdMs`
+  and `warmupStandardThresholdMs` from `GlassAdaptiveScopeConfig` never reached the scope, and
+  the config's `==` and `hashCode` ignored them.
+- **Docs:** The adaptive scope degrades after 2 windows (not 3) and caps explicit `quality:`
+  parameters too; `docs/ARCHITECTURE.md` no longer claims resting premium glass skips live
+  backdrop passes.
 
 # 1.8.1
 

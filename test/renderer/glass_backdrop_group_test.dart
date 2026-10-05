@@ -113,8 +113,8 @@ void main() {
     });
 
     testWidgets(
-        'leave the group while a fade draws them into a pass of their '
-        'own, and come back after it', (tester) async {
+        'stay out of the group under an opacity, at any value, fully '
+        'opaque included', (tester) async {
       Future<void> fade(double opacity) => pump(
             tester,
             (m) => Opacity(opacity: opacity, child: m),
@@ -128,9 +128,43 @@ void main() {
           find.byType(GlassBackdropGroupBoundary, skipOffstage: false));
       expect(group.memberCount, 2);
 
+      // At 1 the opacity may start a fade without the member painting again
+      // (see opensRenderPassBelow), so it stays out.
       await fade(1);
-      expect(_layer(tester, c).debugResolveSharing(), isTrue);
-      expect(group.memberCount, 3);
+      expect(_layer(tester, c).debugResolveSharing(), isFalse);
+      expect(group.memberCount, 2);
+    });
+
+    testWidgets(
+        'a fade that starts after the first paint finds the member '
+        'already out of the group', (tester) async {
+      final controller = AnimationController(
+        vsync: const TestVSync(),
+        duration: const Duration(milliseconds: 200),
+        value: 1,
+      );
+      addTearDown(controller.dispose);
+      // As in LiquidGlassLayer: the glass layer paints below a repaint
+      // boundary, which a fade re-composites without painting it again.
+      await pump(
+        tester,
+        (m) => FadeTransition(
+          opacity: controller,
+          child: RepaintBoundary(child: m),
+        ),
+      );
+      for (final key in [a, b, c]) {
+        _layer(tester, key).debugResolveSharing();
+      }
+      expect(_layer(tester, c).debugSharesBackdrop, isFalse);
+
+      controller.value = 0.5;
+      await tester.pump();
+      // No repaint of c happened, and none was needed: it never held the
+      // group's key.
+      expect(_layer(tester, c).debugSharesBackdrop, isFalse);
+      // The two members outside the fade still share.
+      expect(_layer(tester, a).debugResolveSharing(), isTrue);
     });
 
     testWidgets('leave on detach', (tester) async {
@@ -159,8 +193,13 @@ void main() {
     testWidgets('are found between a member and its group', (tester) async {
       final opening = <String, Widget Function(Widget)>{
         'opacity': (c) => Opacity(opacity: 0.4, child: c),
+        'opaque opacity': (c) => Opacity(opacity: 1, child: c),
         'fade': (c) => FadeTransition(
               opacity: const AlwaysStoppedAnimation(0.5),
+              child: c,
+            ),
+        'fade at rest': (c) => FadeTransition(
+              opacity: const AlwaysStoppedAnimation(1),
               child: c,
             ),
         'shader mask': (c) => ShaderMask(
@@ -181,7 +220,6 @@ void main() {
       }
       final staying = <String, Widget Function(Widget)>{
         'nothing': (c) => c,
-        'opaque': (c) => Opacity(opacity: 1, child: c),
         'clip': (c) => ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: c,
