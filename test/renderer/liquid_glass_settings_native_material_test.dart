@@ -1,6 +1,6 @@
 // Tests for the iOS 27 material settings on LiquidGlassSettings — frost,
 // frostOpacity, frostClamp, frostWeight, blurWeight, rimShade, rimShadeEnds,
-// rimLight and lensModel: defaults that leave rendering stock, copyWith,
+// rimLight, bodyShade and lensModel: defaults that leave rendering stock, copyWith,
 // lerp, equality, preservation through copyWithPinch and a theme override,
 // the matching GlassThemeSettings overrides, and the ios27Light / ios27Dark
 // presets.
@@ -19,6 +19,7 @@ void main() {
     rimShade: 1,
     rimShadeEnds: 0.1,
     rimLight: 1.15,
+    bodyShade: 0.28,
     lensModel: GlassLensModel.paraxial,
   );
 
@@ -31,6 +32,7 @@ void main() {
     expect(s.rimShade, 1);
     expect(s.rimShadeEnds, 0.1);
     expect(s.rimLight, 1.15);
+    expect(s.bodyShade, 0.28);
     expect(s.lensModel, GlassLensModel.paraxial);
   }
 
@@ -45,6 +47,7 @@ void main() {
       expect(s.rimShade, 0);
       expect(s.rimShadeEnds, 0.2);
       expect(s.rimLight, 0);
+      expect(s.bodyShade, 0);
       expect(s.lensModel, GlassLensModel.spherical);
     });
 
@@ -53,6 +56,7 @@ void main() {
       expect(s.effectiveFrost, 7);
       expect(s.effectiveRimShade, 0.5);
       expect(s.effectiveRimLight, closeTo(0.575, 1e-10));
+      expect(s.effectiveBodyShade, closeTo(0.14, 1e-10));
     });
 
     group('copyWith', () {
@@ -74,6 +78,7 @@ void main() {
           rimShade: 1,
           rimShadeEnds: 0.1,
           rimLight: 1.15,
+          bodyShade: 0.28,
           lensModel: GlassLensModel.paraxial,
         );
         expectTuned(s);
@@ -98,6 +103,7 @@ void main() {
         expect(s.rimShade, closeTo(0.5, 1e-10));
         expect(s.rimShadeEnds, closeTo(0.15, 1e-10));
         expect(s.rimLight, closeTo(0.575, 1e-10));
+        expect(s.bodyShade, closeTo(0.14, 1e-10));
       });
 
       test('lensModel switches at the midpoint', () {
@@ -119,6 +125,7 @@ void main() {
           tuned.copyWith(rimShade: 0.45),
           tuned.copyWith(rimShadeEnds: 0),
           tuned.copyWith(rimLight: 1),
+          tuned.copyWith(bodyShade: 0),
           tuned.copyWith(lensModel: GlassLensModel.spherical),
         ];
         for (final v in variants) {
@@ -148,6 +155,7 @@ void main() {
       rimShade: 1,
       rimShadeEnds: 0.1,
       rimLight: 1.15,
+      bodyShade: 0.28,
       lensModel: GlassLensModel.paraxial,
     );
 
@@ -166,6 +174,7 @@ void main() {
         rimShade: 1,
         rimShadeEnds: 0.1,
         rimLight: 1.15,
+        bodyShade: 0.28,
         lensModel: GlassLensModel.paraxial,
       );
       expect(s, equals(theme));
@@ -182,6 +191,7 @@ void main() {
         rimShade: 0,
         rimShadeEnds: 0.2,
         rimLight: 0,
+        bodyShade: 0,
         lensModel: GlassLensModel.spherical,
       );
       final s = GlassThemeSettings.lerp(a, theme, 0.5)!;
@@ -193,6 +203,7 @@ void main() {
       expect(s.rimShade, closeTo(0.5, 1e-10));
       expect(s.rimShadeEnds, closeTo(0.15, 1e-10));
       expect(s.rimLight, closeTo(0.575, 1e-10));
+      expect(s.bodyShade, closeTo(0.14, 1e-10));
       expect(s.lensModel, GlassLensModel.paraxial);
       expect(GlassThemeSettings.lerp(a, theme, 0.49)!.lensModel,
           GlassLensModel.spherical);
@@ -208,6 +219,7 @@ void main() {
         theme.copyWith(rimShade: 0.45),
         theme.copyWith(rimShadeEnds: 0),
         theme.copyWith(rimLight: 1),
+        theme.copyWith(bodyShade: 0),
         theme.copyWith(lensModel: GlassLensModel.spherical),
       ];
       for (final v in variants) {
@@ -234,6 +246,7 @@ void main() {
       expect(s.frostClamp, lessThan(0));
       expect(s.frostWeight, lessThan(1));
       expect(s.rimShade, greaterThan(0));
+      expect(s.bodyShade, greaterThan(0));
       expect(s.lensModel, GlassLensModel.paraxial);
     });
   });

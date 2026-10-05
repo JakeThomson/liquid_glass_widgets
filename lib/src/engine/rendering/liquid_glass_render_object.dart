@@ -610,7 +610,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               ..setFloat(_touchIntensity.clamp(0.0, 1.0));
           })
           // Slots 37-39: uRimConfig (rimShade, rimLight, rimShadeEnds);
-          // slot 40: uLensModel.
+          // slot 40: uLensModel; slot 45: uBodyShade.
           ..setFloatUniforms(initialIndex: 37, (value) {
             value.setFloats([
               settings.effectiveRimShade,
@@ -622,6 +622,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
               settings.frostClamp.clamp(-1.0, 1.0),
               ghostSigma > frostGhostMaxSigma ? 0.0 : ghostSigma,
               max(settings.blurWeight, 0.0),
+              // Slot 45: uBodyShade.
+              settings.effectiveBodyShade.clamp(0.0, 1.0),
             ]);
           })
           ..setImageSampler(
@@ -785,7 +787,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setFloat(_touchIntensity.clamp(0.0, 1.0));
       })
       // Slots 37-39: uRimConfig (rimShade, rimLight, rimShadeEnds);
-      // slot 40: uLensModel.
+      // slot 40: uLensModel; slot 45: uBodyShade.
       ..setFloatUniforms(initialIndex: 37, (value) {
         value.setFloats([
           settings.effectiveRimShade,
@@ -795,6 +797,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           // Slots 41-44: uFrost. No frost on the capture path (no cloud
           // rows); every component is set so none is left stale.
           0.0, 0.0, 0.0, 1.0,
+          // Slot 45: uBodyShade.
+          settings.effectiveBodyShade.clamp(0.0, 1.0),
         ]);
       })
       // Slot 0: captured background image (replaces the BackdropFilter read).

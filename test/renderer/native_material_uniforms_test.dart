@@ -18,11 +18,11 @@ void main() {
     expect(() => shader.setFloat(index + 1, 0), throwsA(anything));
   });
 
-  test('uFrost ends the render shader float uniforms at slot 44', () async {
+  test('uBodyShade ends the render shader float uniforms at slot 45', () async {
     final shader =
         (await ui.FragmentProgram.fromAsset(ShaderKeys.liquidGlassRender))
             .fragmentShader();
-    shader.setFloat(44, 1);
-    expect(() => shader.setFloat(45, 0), throwsA(anything));
+    shader.setFloat(45, 1);
+    expect(() => shader.setFloat(46, 0), throwsA(anything));
   });
 }
