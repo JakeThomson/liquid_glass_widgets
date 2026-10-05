@@ -4,7 +4,7 @@ import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
 import '../interactive/glass_button.dart';
-import '../../utils/glass_localizations.dart';
+import '../../src/utils/glass_localizations.dart';
 import 'glass_text_field.dart';
 
 /// A glass morphism search bar following Apple's iOS 26 design patterns.

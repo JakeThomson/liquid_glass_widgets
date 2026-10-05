@@ -653,12 +653,16 @@ class _TabBarSearchableLayoutState extends State<TabBarSearchableLayout>
                     final toTabW = targetTabW;
                     final toLeft = targetSearchLeft;
                     final toSearchW = targetSearchW;
+                    // Read during build: the callback below runs after the
+                    // frame, where an inherited lookup no longer belongs.
+                    final reduceMotion =
+                        GlassAccessibilityData.of(context).reduceMotion;
 
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!mounted) return;
                       // Reduce Motion: the pills take their new widths and
                       // positions at once instead of springing across.
-                      if (GlassAccessibilityData.of(context).reduceMotion) {
+                      if (reduceMotion) {
                         if (retarget.tabW) _tabWCtrl.value = toTabW;
                         if (retarget.searchLeft) {
                           _searchLeftCtrl.value = toLeft;

@@ -14,7 +14,7 @@ import '../../../constants/glass_defaults.dart';
 import '../../renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/draggable_indicator_physics.dart';
-import '../../../utils/glass_localizations.dart';
+import '../../utils/glass_localizations.dart';
 import '../../../utils/glass_spring.dart';
 import '../../../theme/glass_theme.dart';
 import '../../../widgets/interactive/glass_button.dart';
