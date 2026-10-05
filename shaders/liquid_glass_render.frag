@@ -142,6 +142,11 @@ uniform float uLensModel;
 // it, which texelAt() takes back out.
 uniform vec4 uFrost;
 
+// Slot 45: uBodyShade — how far a bright backdrop is pulled down; 0, the
+// default, leaves this shader bit for bit unchanged. See
+// LiquidGlassSettings.bodyShade.
+uniform float uBodyShade;
+
 uniform sampler2D uBackgroundTexture;
 uniform sampler2D uGeometryTexture;
 
@@ -674,6 +679,15 @@ void main() {
         mix(1.0, smoothstep(WHITEN_LO, WHITEN_HI, whitenLuma), uWhitenGated);
     finalColor.rgb = mix(finalColor.rgb, vec3(1.0),
                          clamp(uWhiten, 0.0, 1.0) * whitenGate * (1.0 - hairline));
+    // iOS 27 body shade (uBodyShade): the dark material pulls a bright
+    // backdrop down, white to about 184/255, where its tint alone would lift
+    // it. Scaled by 1 - shade * luma^2, so darks keep the tint's lift. The
+    // hairline is shaded too, and the rim shade below then sits its fixed
+    // step under the darkened backdrop, as the native dark outline does.
+    if (uBodyShade > 0.0) {
+        float shadeLuma = dot(finalColor.rgb, LUMA_WEIGHTS);
+        finalColor.rgb *= 1.0 - uBodyShade * shadeLuma * shadeLuma;
+    }
     // Edge lighting — uses the true normal.xy (V1; was normalize(displacement))
     // The 40.0 constant was calibrated on a 3x Retina display.
     // We scale it by uEdgeConfig.z (which contains devicePixelRatio / 3.0) 
