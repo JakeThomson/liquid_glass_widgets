@@ -2661,9 +2661,11 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // GlassBodyMode.clear performs direct alpha-composite tinting, preserving
     // the exact design-token hex value while retaining specular and Fresnel
     // rim physics — matching iOS 26's Metal path for coloured bar buttons.
+    // The tint replaces the body colour only: it starts from the bar's button
+    // settings, so the capsule keeps the outline and rim its neighbours get.
     final settings = tintColor != null
-        ? LiquidGlassSettings(
-            glassColor: tintColor, bodyMode: GlassBodyMode.clear)
+        ? (DefaultButtonSettings.of(context) ?? const LiquidGlassSettings())
+            .copyWith(glassColor: tintColor, bodyMode: GlassBodyMode.clear)
         : null;
     return GlassButton.custom(
       onTap: () {},

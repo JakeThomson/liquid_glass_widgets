@@ -6,6 +6,8 @@
 
 - **`LiquidGlassSettings.ios27Dark` over bright backdrops (fixes #373):** From mid-grey up, `ios27Dark` lifted the backdrop and drew a light rim where the native dark material darkens it and keeps a dark outline, and over a white page it stayed white where native greys to about 184. The new `bodyShade` term pulls a bright backdrop down by its luminance squared, outline included; `ios27Dark` sets it to `0.28` and raises `rimShade` to `1`.
 
+- **Tinted `GlassBarItem` dropped the bar's `buttonSettings` (fixes #372):** A `GlassBarItem` with a `tintColor` built its capsule's settings from scratch, so under `LiquidGlassSettings.ios27Light` it lost the outline, rim light and shadow the untinted capsules beside it kept. The tint now replaces only the body colour of the bar's button settings, hoisted and in-route.
+
 ## Features
 
 - **`GlassMenu` slide-to-select driven by your own gesture code (discussion #369):** `GlassMenuController.glideTo`, `endGlide` and `cancelGlide` let the code that owns a finger drive slide-to-select when the menu never receives that pointer itself, for example a long-press recogniser that opened the menu with `open()`. The item under the finger highlights with a selection haptic, and `endGlide` activates it as a tap would; with nothing highlighted, the menu stays open. Menus that don't call these methods are unchanged.
