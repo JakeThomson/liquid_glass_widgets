@@ -22,9 +22,8 @@ class VerticalBarRegions extends ValueNotifier<List<DisplayFeature>> {
   /// The regions of the app's view.
   static final VerticalBarRegions instance = VerticalBarRegions._();
 
-  static const MethodChannel _channel = MethodChannel(
-    'liquid_glass_widgets/reserved_regions',
-  );
+  static const MethodChannel _channel =
+      MethodChannel('liquid_glass_widgets/reserved_regions');
 
   bool _observing = false;
 
@@ -58,16 +57,16 @@ class VerticalBarRegions extends ValueNotifier<List<DisplayFeature>> {
   }
 
   static List<DisplayFeature> _decode(Object? regions) => [
-    for (final region in (regions as List<Object?>? ?? const []))
-      DisplayFeature(
-        bounds: Rect.fromLTRB(
-          ((region as List<Object?>)[0]! as num).toDouble(),
-          (region[1]! as num).toDouble(),
-          (region[2]! as num).toDouble(),
-          (region[3]! as num).toDouble(),
-        ),
-        type: DisplayFeatureType.cutout,
-        state: DisplayFeatureState.unknown,
-      ),
-  ];
+        for (final region in (regions as List<Object?>? ?? const []))
+          DisplayFeature(
+            bounds: Rect.fromLTRB(
+              ((region as List<Object?>)[0]! as num).toDouble(),
+              (region[1]! as num).toDouble(),
+              (region[2]! as num).toDouble(),
+              (region[3]! as num).toDouble(),
+            ),
+            type: DisplayFeatureType.cutout,
+            state: DisplayFeatureState.unknown,
+          ),
+      ];
 }
