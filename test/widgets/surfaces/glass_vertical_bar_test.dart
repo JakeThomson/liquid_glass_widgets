@@ -461,6 +461,34 @@ void main() {
       expect(find.byIcon(CupertinoIcons.house), findsNothing);
     });
 
+    testDuo('brings its own layer outside a GlassScaffold', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(
+        Stack(
+          children: [
+            Positioned.fill(
+              child: GlassTabBar.bottom(
+                quality: GlassQuality.premium,
+                selectedIndex: 0,
+                onTabSelected: (_) {},
+                tabs: const [
+                  GlassTab(icon: Icon(CupertinoIcons.house), label: 'Home'),
+                  GlassTab(icon: Icon(CupertinoIcons.book), label: 'Library'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ));
+      await settle(tester);
+
+      final capsule = tester.widget<GlassButton>(find.descendant(
+        of: find.byType(TabBarVerticalLayout),
+        matching: find.byType(GlassButton),
+      ));
+      expect(capsule.useOwnLayer, isTrue);
+    });
+
     testDuo('stays horizontal on a regular iPhone', (tester) async {
       setScreen(
         tester,

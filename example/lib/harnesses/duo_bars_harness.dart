@@ -46,6 +46,8 @@
 // `PLACEMENT=leading|center|trailing` present the sheet that way.
 // `REDUCETRANSPARENCY=YES` turns on the package's stand-in for Reduce
 // Transparency, which the native screens are shot with from DeviceHub.
+// `SCAFFOLD=none` lays the tabs scenario's bar over its body in a plain Stack,
+// at GlassQuality.premium, rather than as a GlassScaffold's bottom bar.
 library;
 
 import 'dart:io' show Directory, File;
@@ -78,6 +80,7 @@ final bool _searchActive = _env['SEARCH'] == 'active';
 final int _scrollTo = int.tryParse(_env['SCROLL'] ?? '') ?? 0;
 final bool _mediumDetent = _env['DETENT'] == 'medium';
 final bool _reduceTransparency = _env['REDUCETRANSPARENCY'] == 'YES';
+final bool _noScaffold = _env['SCAFFOLD'] == 'none';
 final GlassSheetPlacement _placement = GlassSheetPlacement.values.firstWhere(
   (value) => value.name == _env['PLACEMENT'],
   orElse: () => GlassSheetPlacement.automatic,
@@ -987,52 +990,60 @@ class _TabsScreenState extends State<_TabsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => GlassScaffold(
-        backgroundColor: CupertinoColors.white,
-        bottomBar: _searchTab
-            ? GlassTabBar.searchable(
-                settings: _glass,
-                selectedIndex: _tab,
-                onTabSelected: (i) => setState(() => _tab = i),
-                selectedIconColor: CupertinoColors.systemBlue,
-                isSearchActive: _searching,
-                searchConfig: GlassSearchBarConfig(
-                  onSearchToggle: (active) =>
-                      setState(() => _searching = active),
-                ),
-                tabs: _tabs,
+  Widget build(BuildContext context) {
+    final bar = _searchTab
+        ? GlassTabBar.searchable(
+            settings: _glass,
+            quality: _noScaffold ? GlassQuality.premium : null,
+            selectedIndex: _tab,
+            onTabSelected: (i) => setState(() => _tab = i),
+            selectedIconColor: CupertinoColors.systemBlue,
+            isSearchActive: _searching,
+            searchConfig: GlassSearchBarConfig(
+              onSearchToggle: (active) => setState(() => _searching = active),
+            ),
+            tabs: _tabs,
+          )
+        : GlassTabBar.bottom(
+            settings: _glass,
+            quality: _noScaffold ? GlassQuality.premium : null,
+            selectedIndex: _tab,
+            onTabSelected: (i) => setState(() => _tab = i),
+            // The native TabView's selected tab takes the app's tint.
+            selectedIconColor: CupertinoColors.systemBlue,
+            tabs: _tabs,
+          );
+    // Only the selected tab is built: the shell ranks the routes of one
+    // Navigator, and the stacks of the tabs behind would keep their chrome
+    // registered.
+    final body = _searching
+        // The search tab's screen. In a compact width the open field takes
+        // its title's row; in a regular width the title stays beside it.
+        ? MediaQuery.sizeOf(context).width < 800
+            ? const GlassScaffold(
+                backgroundColor: CupertinoColors.white,
+                body: _Rows(title: 'Search', stripTop: 78),
               )
-            : GlassTabBar.bottom(
-                settings: _glass,
-                selectedIndex: _tab,
-                onTabSelected: (i) => setState(() => _tab = i),
-                // The native TabView's selected tab takes the app's tint.
-                selectedIconColor: CupertinoColors.systemBlue,
-                tabs: _tabs,
-              ),
-        // Only the selected tab is built: the shell ranks the routes of one
-        // Navigator, and the stacks of the tabs behind would keep their
-        // chrome registered.
-        body: _searching
-            // The search tab's screen. In a compact width the open field takes
-            // its title's row; in a regular width the title stays beside it.
-            ? MediaQuery.sizeOf(context).width < 800
-                ? const GlassScaffold(
-                    backgroundColor: CupertinoColors.white,
-                    body: _Rows(title: 'Search', stripTop: 78),
-                  )
-                : const _TabRootScreen(title: 'Search', adds: false)
-            : Navigator(
-                key: ValueKey(_tab),
-                onGenerateInitialRoutes: (_, __) => [
-                  if (widget.pushed) ...[
-                    _route(_ListScreen(title: _titles[_tab])),
-                    _route(const _DetailScreen()),
-                  ] else
-                    _route(_TabRootScreen(title: _titles[_tab])),
-                ],
-              ),
-      );
+            : const _TabRootScreen(title: 'Search', adds: false)
+        : Navigator(
+            key: ValueKey(_tab),
+            onGenerateInitialRoutes: (_, __) => [
+              if (widget.pushed) ...[
+                _route(_ListScreen(title: _titles[_tab])),
+                _route(const _DetailScreen()),
+              ] else
+                _route(_TabRootScreen(title: _titles[_tab])),
+            ],
+          );
+    if (_noScaffold) {
+      return Stack(children: [body, Positioned.fill(child: bar)]);
+    }
+    return GlassScaffold(
+      backgroundColor: CupertinoColors.white,
+      bottomBar: bar,
+      body: body,
+    );
+  }
 }
 
 /// A tab's root screen, with a large title and an add button.
