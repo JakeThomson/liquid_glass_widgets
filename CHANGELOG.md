@@ -1,5 +1,9 @@
 # Unreleased
 
+## Features
+
+- **`GlassVerticalBar.disabled` keeps a subtree's bars horizontal (fixes #ISSUE):** In a list/detail split on iPhone Duo the strip belongs to the column against it, as with `UISplitViewController`, and the other column keeps horizontal bars. Wrap that column in `GlassVerticalBar.disabled`. A pinned bar inside it draws its chrome in-route rather than handing it to the shell, which would pin it against the window, in the strip.
+
 ## Bug Fixes
 
 - **`GlassPinnedBarChrome` builder can now tell the package draws the strip (fixes #ISSUE):** On iPhone Duo, a `GlassPinnedBarChrome` the shell has not hoisted, such as one in a nested navigator, draws the vertical bar strip itself, but `builder` still got `hoisted: false`, so a bar drawing its own capsules from it showed the back button and actions twice. The new `GlassPinnedBarChromeData.inStrip` is true whenever the chrome is laid out for the strip, which the package draws whatever `hoisted` says.

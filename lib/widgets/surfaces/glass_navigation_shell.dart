@@ -976,6 +976,17 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
   // Vertical bar strip
   // ---------------------------------------------------------------------------
 
+  /// The strip resolved by the last build, or null.
+  GlassVerticalBarData? _verticalBar;
+
+  /// The strip this shell resolved for the screen, or null where its bars are
+  /// horizontal.
+  ///
+  /// A subtree can keep its own bars horizontal under it with
+  /// [GlassVerticalBar.disabled]; [GlassVerticalBar.maybeOf] answers for a
+  /// particular context.
+  GlassVerticalBarData? get verticalBar => _verticalBar;
+
   /// Height each bar at the bottom of the strip takes, keyed by its owner.
   final Map<Object, double> _verticalBarBottom = <Object, double>{};
 
@@ -1037,7 +1048,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
 
   @override
   Widget build(BuildContext context) {
-    final verticalBar = _resolveVerticalBar(context);
+    final verticalBar = _verticalBar = _resolveVerticalBar(context);
     return _GlassNavigationShellScope(
       state: this,
       child: Stack(
