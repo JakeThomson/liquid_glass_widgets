@@ -1,3 +1,9 @@
+# Unreleased
+
+## Features
+
+- **`GlassModalSheet.restingWidthOf` (fixes #402):** The width a sheet rests at, for content measured before the sheet is presented. In iPhone Duo's vertical bar strip layout a window 800pt wide or more lays every detent out as a card the display's shorter side wide, so content measured at the screen's width less the margins gained a wrapped row the sheet's height did not allow for.
+
 # 1.10.0
 
 ## Features

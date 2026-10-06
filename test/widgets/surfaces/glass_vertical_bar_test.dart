@@ -839,6 +839,37 @@ void main() {
       expect(frame.right, closeTo(466 - 8, 0.05));
     });
 
+    testDuo('rests at the width restingWidthOf reports', (tester) async {
+      setScreen(tester);
+      await present(tester, medium: true);
+
+      expect(
+        sheet(tester).width,
+        closeTo(
+          GlassModalSheet.restingWidthOf(
+              tester.element(find.text('Root body'))),
+          0.05,
+        ),
+      );
+      expect(sheet(tester).width, closeTo(466 - 2 * 8, 0.05));
+    });
+
+    testDuo('reports a card the shorter side wide in a regular width',
+        (tester) async {
+      setScreen(tester, size: innerLandscape, padding: innerLandscapePadding);
+      await present(tester, medium: true);
+
+      expect(
+        sheet(tester).width,
+        closeTo(
+          GlassModalSheet.restingWidthOf(
+              tester.element(find.text('Root body'))),
+          0.05,
+        ),
+      );
+      expect(sheet(tester).width, closeTo(669 - 2 * 8, 0.05));
+    });
+
     testDuo('moves its bar into its own strip on the outer display',
         (tester) async {
       setScreen(tester);
