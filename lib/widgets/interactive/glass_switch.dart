@@ -525,6 +525,7 @@ class _GlassSwitchState extends State<GlassSwitch>
         isHoveredNotifier: _isHovered,
         onKeyboardActivate: _activateFromKeyboard,
         child: GestureDetector(
+          excludeFromSemantics: true,
           // NOTE: We do NOT use onTap here. Having both onTap and onHorizontalDrag*
           // on the same GestureDetector creates a gesture arena conflict — Flutter
           // must choose one winner per touch, leading to missed interactions.

@@ -225,9 +225,11 @@ class LiquidGlassSettings {
   /// Measured against the native control on the same screen: the body tint
   /// and saturation, the [frost] and the copy of the content showing
   /// through it, the [rimShade] outline and [rimLight] highlight, and the
-  /// [GlassLensModel.paraxial] rim band. Tuned for [GlassQuality.premium];
-  /// the other paths ignore the new terms, which leaves a near-clear, milky
-  /// glass.
+  /// [GlassLensModel.paraxial] rim band. Tuned for [GlassQuality.premium],
+  /// which draws the full material. The standard path and web approximate it:
+  /// the regular blur stands in for the [frost] and the specular highlight for
+  /// the [rimLight], while the [rimShade] outline, [bodyShade] and the paraxial
+  /// lens band are premium-only.
   ///
   /// ```dart
   /// GlassButton(

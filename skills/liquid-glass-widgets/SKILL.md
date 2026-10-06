@@ -1,6 +1,6 @@
 ---
 name: liquid-glass-widgets
-description: "Mastery guide and architectural rules for liquid_glass_widgets. Trigger whenever generating, refactoring, or reviewing Flutter UI code using liquid glass, iOS 26 aesthetics, GlassScaffold, GlassTabBar, GlassModalSheet, or any Glass* components."
+description: "Mastery guide and architectural rules for liquid_glass_widgets. Trigger whenever generating, refactoring, or reviewing Flutter UI code using liquid glass, iOS 26/27 aesthetics, GlassScaffold, GlassTabBar, GlassModalSheet, or any Glass* components."
 ---
 
 # Liquid Glass Widgets — AI Agent Guide

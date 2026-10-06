@@ -813,6 +813,7 @@ void main() {
             hasEnabledState: true,
             isEnabled: true,
             hasTapAction: true,
+            hasFocusAction: true, // focus merges into the labelled node (#381)
             isFocusable: true,
           ),
         );

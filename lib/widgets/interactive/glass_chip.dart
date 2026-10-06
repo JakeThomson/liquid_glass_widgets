@@ -136,11 +136,11 @@ class GlassChip extends StatelessWidget {
   /// Semantic label for screen readers. Defaults to [label].
   final String? semanticLabel;
 
-  /// Screen reader label of the delete button (for example "Remove Flutter").
+  /// Screen reader label of the delete button.
   ///
   /// The delete button is always its own button node, so it can be reached
-  /// apart from the chip; this names it. Without a label it is announced by
-  /// its role alone.
+  /// apart from the chip; this names it. Defaults to "Remove" followed by
+  /// [semanticLabel] (or [label]), e.g. "Remove Flutter".
   final String? deleteSemanticLabel;
 
   /// Optional leading icon widget.
@@ -309,9 +309,12 @@ class GlassChip extends StatelessWidget {
             SizedBox(width: spacing),
           ],
 
-          // Label
+          // Label. The chip is named here rather than through
+          // GlassButton.label: an explicit button label replaces ALL of its
+          // content's semantics, which would also hide the delete button.
           Text(
             label,
+            semanticsLabel: semanticLabel ?? label,
             style: effectiveLabelStyle,
           ),
 
@@ -323,7 +326,7 @@ class GlassChip extends StatelessWidget {
             Semantics(
               container: true,
               button: true,
-              label: deleteSemanticLabel,
+              label: deleteSemanticLabel ?? 'Remove ${semanticLabel ?? label}',
               child: GestureDetector(
                 onTap: onDeleted,
                 child: IconTheme(
@@ -390,7 +393,7 @@ class GlassChip extends StatelessWidget {
           anchorStretchSettings: effectiveAnchorStretchSettings,
           focusNode: focusNode,
           autofocus: autofocus,
-          label: semanticLabel ?? label,
+          // No `label:` — the Text above names the chip (see comment there).
           width: double.infinity, // Expand to intrinsic width
           height: double.infinity, // Expand to intrinsic height
           child: contentWithSelection,

@@ -823,6 +823,8 @@ void main() {
               isEnabled: true,
               isFocusable: true,
               hasTapAction: true,
+              hasFocusAction:
+                  true, // focus merges into the labelled node (#381)
               hasToggledState: true,
               isToggled: true,
               label: 'Test Switch',

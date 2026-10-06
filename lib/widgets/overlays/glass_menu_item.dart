@@ -377,6 +377,9 @@ class _GlassMenuItemState extends State<GlassMenuItem>
       enabled: widget.enabled,
       isButton: true,
       semanticLabel: widget.title,
+      // The title label replaces the row's own text, so carry the subtitle
+      // as the value: announced after the title, on the same node.
+      semanticValue: widget.subtitle,
       isFocusedNotifier: isFocused,
       isHoveredNotifier: isHovered,
       onKeyboardActivate: _handleKeyboardActivate,

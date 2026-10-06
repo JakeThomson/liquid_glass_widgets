@@ -2,7 +2,7 @@
 
 # Liquid Glass Widgets
 
-Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur, physics-driven jelly animations, and dynamic lighting across every platform.
+Bring Apple's Liquid Glass to your Flutter app — from the iOS 26 original to the iOS 27 material — with real shader-based blur, physics-driven jelly animations, and dynamic lighting across every platform.
 
 [![pub package](https://img.shields.io/pub/v/liquid_glass_widgets.svg?label=pub.dev&labelColor=333940&logo=dart)](https://pub.dev/packages/liquid_glass_widgets)
 [![pub points](https://img.shields.io/pub/points/liquid_glass_widgets?label=pub%20points&labelColor=333940)](https://pub.dev/packages/liquid_glass_widgets/score)
@@ -26,7 +26,7 @@ Bring Apple's iOS 26 Liquid Glass to your Flutter app — real shader-based blur
 
 ```yaml
 dependencies:
-  liquid_glass_widgets: ^1.9.0
+  liquid_glass_widgets: ^1.10.0
 ```
 
 ```bash
@@ -153,6 +153,7 @@ Teach your AI agent the exact API patterns and architectural rules:
 ## Features
 
 - **Comprehensive glass widget library** — containers, interactive controls, inputs, feedback, overlays, and navigation surfaces (see [Widget Categories](#widget-categories))
+- **iOS 27 parity** — the `LiquidGlassSettings.ios27Light` / `ios27Dark` material (drawn in full on premium, approximated on standard and web), pinned navigation chrome that morphs between routes under `GlassNavigationShell`, `GlassBarItem.spacer()` capsule splits that bud and merge like `ToolbarSpacer(.fixed)`, and iPhone Duo's vertical bar strip. See [`docs/GLASS_NAVIGATION_TRANSITION.md`](docs/GLASS_NAVIGATION_TRANSITION.md)
 - **Liquid Morph Engine** — a standalone physics system powering iOS 26-style liquid morphing. `GlassMenu` morphs out of its trigger button, and `GlassModalSheet.show(morphFrom:)` presents a modal sheet out of a `GlassMorphTrigger` the same way — the trigger empties, a glass droplet inflates as it travels, and dismissing pours it back. See [`docs/LIQUID_MORPH_ENGINE.md`](docs/LIQUID_MORPH_ENGINE.md)
 - **Real frosted glass** — native two-pass Gaussian blur + shader refraction on Impeller; lightweight shader on Skia/Web
 - **Just works everywhere** — iOS, Android, macOS, Web, Windows, Linux; rendering path chosen automatically
@@ -373,7 +374,7 @@ GlassCard(
 
 > **Use Premium only for static, non-scrolling surfaces** (hero sections, feature cards). It may not render correctly inside `ListView` or `CustomScrollView` on Impeller. `GlassScaffold` automatically promotes app bars and bottom bars to premium quality via `GlassIsolationScope`.
 
-> **iOS 27 material**: `settings: LiquidGlassSettings.ios27Light` (or `ios27Dark`) gives premium glass the native `glassEffect(.regular)` look — the frost, hairline outline, rim light and folded lens band.
+> **iOS 27 material**: `settings: LiquidGlassSettings.ios27Light` (or `ios27Dark`) gives glass the native `glassEffect(.regular)` look. Premium draws the full material — the frost, hairline outline, rim light and folded lens band. Standard and web approximate it with the regular blur and specular highlight.
 
 ### Minimal — Shader-Free
 

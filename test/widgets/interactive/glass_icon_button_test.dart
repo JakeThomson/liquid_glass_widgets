@@ -274,6 +274,7 @@ void main() {
           label: 'Settings',
           isButton: true,
           hasTapAction: true,
+          hasFocusAction: true, // focus merges into the labelled node (#381)
           hasEnabledState: true,
           isEnabled: true,
           isFocusable: true,

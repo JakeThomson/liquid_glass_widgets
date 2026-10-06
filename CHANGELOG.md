@@ -1,20 +1,48 @@
-# Unreleased
-
-## Bug Fixes
-
-- **Screen reader, text size and Reduce Motion pass:** Several controls were plain gesture detectors that VoiceOver and TalkBack could not name or reach. `GlassPicker`, the trigger of `GlassMenu` and `GlassPopover`, the tappable suffix of `GlassTextField`, the delete button of `GlassChip`, and the search, clear, microphone and cancel circles of `GlassTabBar.searchable` are now buttons with a name, and their semantic tap does what a finger does. The chip's delete tap no longer sits on the chip's own text, where activating the name could delete the chip, and `GlassMenuItem`, `GlassActionSheet` rows and `GlassButtonGroup` items keep a single tap action on the labelled node. The menu and popover barriers can be dismissed by a screen reader, a toast offers a dismiss action and reads its message once. Labels for controls the package draws itself come from the app's `CupertinoLocalizations`, and new optional parameters let apps set their own: `GlassPicker.semanticLabel`, `GlassMenu.semanticLabel`, `GlassPopover.semanticLabel`, `GlassTextField.suffixSemanticLabel`, `GlassChip.deleteSemanticLabel`, `GlassPasswordField.showPasswordSemanticLabel` / `hidePasswordSemanticLabel`, `GlassSearchBar.clearButtonSemanticLabel` / `cancelButtonSemanticLabel`, and `GlassSearchBarConfig.clearButtonSemanticLabel` / `micButtonSemanticLabel` / `cancelButtonSemanticLabel`. `GlassPicker` (and its sheet title) now treats its height as a minimum, so a large system text size grows the field instead of clipping the value. Under Reduce Motion, `GlassToast` fades in place without sliding, `GlassPageControl` moves its dot at once, and the pills of `GlassTabBar.searchable` take their new size and position without the spring. Nothing changes visually at the default text size with animations on.
-
-- **`LiquidGlassSettings.ios27Dark` over bright backdrops (fixes #373):** From mid-grey up, `ios27Dark` lifted the backdrop and drew a light rim where the native dark material darkens it and keeps a dark outline, and over a white page it stayed white where native greys to about 184. The new `bodyShade` term pulls a bright backdrop down by its luminance squared, outline included; `ios27Dark` sets it to `0.28` and raises `rimShade` to `1`.
-
-- **Tinted `GlassBarItem` dropped the bar's `buttonSettings` (fixes #372):** A `GlassBarItem` with a `tintColor` built its capsule's settings from scratch, so under `LiquidGlassSettings.ios27Light` it lost the outline, rim light and shadow the untinted capsules beside it kept. The tint now replaces only the body colour of the bar's button settings, hoisted and in-route.
+# 1.10.0
 
 ## Features
 
-- **`GlassMenu` slide-to-select driven by your own gesture code (discussion #369):** `GlassMenuController.glideTo`, `endGlide` and `cancelGlide` let the code that owns a finger drive slide-to-select when the menu never receives that pointer itself, for example a long-press recogniser that opened the menu with `open()`. The item under the finger highlights with a selection haptic, and `endGlide` activates it as a tap would; with nothing highlighted, the menu stays open. Menus that don't call these methods are unchanged.
+- **`GlassBarItem.spacer()` multi-capsule rendering (#245, PR #390):** A spacer now splits a pinned bar's run of shared items into separate capsules, as `ToolbarSpacer(.fixed)` does natively, where it used to assert. Across a transition each capsule follows its items, matched by `id` and otherwise by position, rather than one capsule morphing into another. A capsule the destination adds beside one buds out of it through a liquid bridge, as on iOS 27, and one it drops merges back in.
 
-- **`GlassBarItem.spacer()` (#245):** A spacer now splits a pinned bar's run of shared items into separate capsules, as `ToolbarSpacer(.fixed)` does natively, where it used to assert. Across a transition each capsule follows its items, matched by `id` and otherwise by position, rather than one capsule morphing into another. A capsule the destination adds beside one buds out of it through a liquid bridge, as on iOS 27, and one it drops merges back in.
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#390).
 
-  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution.
+- **External slide-to-select on `GlassMenu` (discussion #369, PR #384):** Added `glideTo(Offset)`, `endGlide()`, and `cancelGlide()` to `GlassMenuController`. Enables external gesture recognizers (such as a long-press on an outer card) to drive menu item highlighting, selection haptics, and activation without needing direct touch ownership.
+
+  Thanks to [@F1orian](https://github.com/F1orian) for the contribution (#384).
+
+- **Dynamic sheet appearance with `expandedDarkColor` (PR #385):** Added optional `expandedDarkColor` parameter to `GlassModalSheet` and `GlassModalSheet.show` so presented full-height sheets and morph droplets dynamically follow system light/dark appearance switches while open.
+
+  Thanks to [@DFelten](https://github.com/DFelten) for the contribution (#385).
+
+- **Accessibility semantic label overrides (PR #387):** Added optional `semanticLabel` parameters across `GlassPicker`, `GlassMenu`, `GlassPopover`, `GlassTextField`, `GlassChip`, `GlassPasswordField`, `GlassSearchBar`, and `GlassSearchBarConfig` to allow custom screen reader announcements.
+
+  Thanks to [@Ahmadre](https://github.com/Ahmadre) for the contribution (#387).
+
+## Bug Fixes
+
+- **Tinted `GlassBarItem` dropped the bar's `buttonSettings` (fixes #372, PR #389):** A `GlassBarItem` with a `tintColor` built its capsule's settings from scratch, so under `LiquidGlassSettings.ios27Light` it lost the outline, rim light and shadow the untinted capsules beside it kept. The tint now replaces only the body colour of the bar's button settings, hoisted and in-route.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#389).
+
+- **`LiquidGlassSettings.ios27Dark` over bright backdrops (fixes #373, PR #388):** From mid-grey up, `ios27Dark` lifted the backdrop and drew a light rim where the native dark material darkens it and keeps a dark outline, and over a white page it stayed white where native greys to about 184. The new `bodyShade` term pulls a bright backdrop down by its luminance squared, outline included; `ios27Dark` sets it to `0.28` and raises `rimShade` to `1`.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#388).
+
+- **Screen reader, dynamic type, and Reduce Motion pass (PR #387):** Exposed missing button semantics and dismiss actions on menu/popover barriers and plain triggers; prevented chip delete buttons from merging into name text; allowed `GlassPicker` to grow with large system fonts; and honored Reduce Motion across toasts, page controls, and searchable tabs.
+
+  Thanks to [@Ahmadre](https://github.com/Ahmadre) for the contribution (#387).
+
+- **Controlled `GlassSwitch` state synchronization (PR #383):** Fixed visual state desynchronization when `widget.value` is unchanged or rejected by the parent. Reconciles the position controller to authoritative `widget.value` after gestures and settles thickness bloom correctly.
+
+  Thanks to [@sbezhuk](https://github.com/sbezhuk) for the fix (#383).
+
+- **One screen-reader node per control (issue #381):** Every interactive control now surfaces as a single semantics node carrying its label, role, state, tap and focus. Previously `GlassFocusRegion` split its focus semantics into a second node — unlabelled on switches, icon buttons, tabs, steppers and button groups (an extra TalkBack stop), and a repeat of the visible text on segments, chips and menu rows (read twice by VoiceOver). The drag detectors on `GlassSegmentedControl` and `GlassSwitch`, and the inner detector on `GlassListTile`, no longer add unlabelled scroll/tap nodes either.
+  - An explicit label (`GlassButton.label`, `GlassSegment.semanticLabel`, `GlassMenuItem.title`, …) now replaces the control's visible text instead of being announced alongside it, as `GlassButton.label` documents.
+  - `GlassMenuItem.subtitle` is announced as the row's value; `GlassListTile.onLongPress` is reachable by screen readers.
+  - `GlassChip`'s delete button defaults to "Remove ‹label›" instead of being unnamed.
+  - `canRequestFocus: false` is now honoured; it was silently overridden, so such controls still took keyboard focus.
+
+  Thanks to [@cosmeao](https://github.com/cosmeao) for the detailed report and reproduction (#381).
 
 # 1.9.0
 
