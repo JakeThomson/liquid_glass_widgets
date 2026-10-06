@@ -1,3 +1,9 @@
+# Unreleased
+
+## Features
+
+- **`GlassVerticalBar.disabled` keeps a subtree's bars horizontal (fixes #400):** In a list/detail split on iPhone Duo the strip belongs to the column against it, as with `UISplitViewController`, and the other column keeps horizontal bars. Wrap that column in `GlassVerticalBar.disabled`. A pinned bar inside it draws its chrome in-route rather than handing it to the shell, which would pin it against the window, in the strip.
+
 # 1.10.0
 
 ## Features
