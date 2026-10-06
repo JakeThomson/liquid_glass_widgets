@@ -5,11 +5,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
+
 import '../../src/renderer/glass_backdrop_group.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/scheduler.dart';
+
 import '../../theme/glass_theme.dart';
 import '../../widgets/interactive/liquid_glass_scope.dart';
 import 'inherited_liquid_glass.dart';
@@ -244,7 +246,8 @@ class _GlassEffectState extends State<GlassEffect>
     //     glass (e.g. GlassSwitch thumb). Capturing the background would let the
     //     green track bleed through as a dark/tinted frosted overlay, which
     //     contradicts the intended white glass bloom effect.
-    final bool shouldCapture = widget.interactionIntensity > 0.01 &&
+    final bool shouldCapture =
+        widget.interactionIntensity > 0.01 &&
         _effectiveKey != null &&
         widget.settings.blur > 0.0;
     if (shouldCapture) {
@@ -308,7 +311,10 @@ class _GlassEffectState extends State<GlassEffect>
   /// same 1/DPR² memory reduction, with a 1-frame delivery lag during a drag.
   /// An `_isCapturingAsync` guard prevents overlapping futures.
   void _captureBackground(
-      RenderRepaintBoundary boundary, Size size, Offset? pos) {
+    RenderRepaintBoundary boundary,
+    Size size,
+    Offset? pos,
+  ) {
     assert(() {
       if (boundary.size.isEmpty) {
         debugPrint(
@@ -329,7 +335,10 @@ class _GlassEffectState extends State<GlassEffect>
 
   /// Synchronous capture path for native (non-web) platforms.
   void _captureBackgroundSync(
-      RenderRepaintBoundary boundary, Size size, Offset? pos) {
+    RenderRepaintBoundary boundary,
+    Size size,
+    Offset? pos,
+  ) {
     try {
       // Capture at the device's physical pixel ratio so the background texture
       // has full-DPR resolution. This gives the bilinear filter in
@@ -364,14 +373,18 @@ class _GlassEffectState extends State<GlassEffect>
   /// is absent in the legacy HTML renderer. Using async at `pixelRatio: 1.0`
   /// still achieves the same memory reduction with an acceptable 1-frame lag.
   Future<void> _captureBackgroundAsync(
-      RenderRepaintBoundary boundary, Size size, Offset? pos) async {
+    RenderRepaintBoundary boundary,
+    Size size,
+    Offset? pos,
+  ) async {
     if (_isCapturingAsync) return; // prevent overlapping futures
     _isCapturingAsync = true;
     try {
       // Web: async at full DPR. Still a 1-frame lag during drag but now
       // provides full-resolution texels for the bilinear filter.
       final image = await boundary.toImage(
-          pixelRatio: _devicePixelRatio); // coverage:ignore-line
+        pixelRatio: _devicePixelRatio,
+      ); // coverage:ignore-line
       if (mounted) {
         setState(() {
           _backgroundImage?.dispose();
@@ -436,7 +449,8 @@ class _GlassEffectState extends State<GlassEffect>
     // 1. Detect Environment & Constraints
     final bool isImpeller = !kIsWeb && GlassEffect._canUseImpeller;
 
-    final bool avoidsRefraction = context
+    final bool avoidsRefraction =
+        context
             .dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>()
             ?.avoidsRefraction ??
         false;
@@ -750,24 +764,24 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     required double rimSmoothing,
     required double edgeAbsorption,
     EdgeInsets clipExpansion = EdgeInsets.zero,
-  })  : _shader = shader,
-        _settings = settings,
-        _shape = shape,
-        _interactionIntensity = interactionIntensity,
-        _densityFactor = densityFactor,
-        _backdropLuma = backdropLuma,
-        _backgroundImage = backgroundImage,
-        _backgroundKey = backgroundKey,
-        _devicePixelRatio = devicePixelRatio,
-        _ambientRim = ambientRim,
-        _baseAlphaMultiplier = baseAlphaMultiplier,
-        _edgeAlphaMultiplier = edgeAlphaMultiplier,
-        _rimThickness = rimThickness,
-        _rimSmoothing = rimSmoothing,
-        _edgeAbsorption = edgeAbsorption,
-        _clipExpansion = clipExpansion,
-        _cachedLightCos = math.cos(settings.lightAngle),
-        _cachedLightSin = -math.sin(settings.lightAngle);
+  }) : _shader = shader,
+       _settings = settings,
+       _shape = shape,
+       _interactionIntensity = interactionIntensity,
+       _densityFactor = densityFactor,
+       _backdropLuma = backdropLuma,
+       _backgroundImage = backgroundImage,
+       _backgroundKey = backgroundKey,
+       _devicePixelRatio = devicePixelRatio,
+       _ambientRim = ambientRim,
+       _baseAlphaMultiplier = baseAlphaMultiplier,
+       _edgeAlphaMultiplier = edgeAlphaMultiplier,
+       _rimThickness = rimThickness,
+       _rimSmoothing = rimSmoothing,
+       _edgeAbsorption = edgeAbsorption,
+       _clipExpansion = clipExpansion,
+       _cachedLightCos = math.cos(settings.lightAngle),
+       _cachedLightSin = -math.sin(settings.lightAngle);
 
   ui.FragmentShader _shader;
   set shader(ui.FragmentShader value) {
@@ -991,13 +1005,12 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
         Offset.zero & size,
         pillPath,
         (context, offset) {
-          context.pushLayer(
-            BackdropFilterLayer(filter: filter),
-            (context, offset) {
-              _paintGlassContent(context, offset);
-            },
+          context.pushLayer(BackdropFilterLayer(filter: filter), (
+            context,
             offset,
-          );
+          ) {
+            _paintGlassContent(context, offset);
+          }, offset);
         },
         clipBehavior: Clip.antiAlias,
         oldLayer: _clipPathLayerHandle.layer,
@@ -1034,8 +1047,9 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     Size bgSize = const Size(1, 1);
 
     if (_backgroundKey != null && _backgroundImage != null) {
-      final boundary = _backgroundKey!.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _backgroundKey!.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary != null) {
         // Get screen positions (localToGlobal gives logical coords)
         final bgGlobalPos = boundary.localToGlobal(Offset.zero);
@@ -1057,7 +1071,12 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     }
 
     _updateShaderUniforms(
-        size, physicalOrigin, uScale, bgRelativeOffset, bgSize);
+      size,
+      physicalOrigin,
+      uScale,
+      bgRelativeOffset,
+      bgSize,
+    );
 
     // 3. Set Sampler
     final imageToBind = _backgroundImage ?? GlassEffect.dummyImage;
@@ -1089,8 +1108,13 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     canvas.drawRect(expandedRect, paint);
   }
 
-  void _updateShaderUniforms(Size size, Offset physicalOrigin,
-      Offset physicalScale, Offset bgOrigin, Size bgSize) {
+  void _updateShaderUniforms(
+    Size size,
+    Offset physicalOrigin,
+    Offset physicalScale,
+    Offset bgOrigin,
+    Size bgSize,
+  ) {
     int index = 0;
     _shader.setFloat(index++, size.width);
     _shader.setFloat(index++, size.height);
@@ -1128,11 +1152,13 @@ class _RenderInteractiveIndicator extends RenderProxyBox {
     _shader.setFloat(index++, physicalScale.dx);
     _shader.setFloat(index++, physicalScale.dy);
     _shader.setFloat(
-        index++, _settings.glowIntensity); // uGlowIntensity (fresnel boost)
+      index++,
+      _settings.glowIntensity,
+    ); // uGlowIntensity (fresnel boost)
     _shader.setFloat(
-        index++,
-        _densityFactor.clamp(0.0,
-            1.0)); // 20: uDensityFactor (float) - Elevation physics (0.0-1.0)
+      index++,
+      _densityFactor.clamp(0.0, 1.0),
+    ); // 20: uDensityFactor (float) - Elevation physics (0.0-1.0)
     _shader.setFloat(index++, _interactionIntensity.clamp(0.0, 1.0));
 
     // Background Mapping Uniforms

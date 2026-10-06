@@ -1,5 +1,6 @@
 // ignore: unnecessary_import
 import 'dart:ui';
+
 import 'package:liquid_glass_widgets/widgets/interactive/glass_chip.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -15,9 +16,7 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: GlassChip(
-              label: 'Test Chip',
-            ),
+            child: GlassChip(label: 'Test Chip'),
           ),
         ),
       );
@@ -33,9 +32,7 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: GlassChip(
-              label: testLabel,
-            ),
+            child: GlassChip(label: testLabel),
           ),
         ),
       );
@@ -59,18 +56,16 @@ void main() {
       expect(find.byIcon(CupertinoIcons.heart_fill), findsOneWidget);
     });
 
-    testWidgets('displays delete button when onDeleted provided',
-        (tester) async {
+    testWidgets('displays delete button when onDeleted provided', (
+      tester,
+    ) async {
       var deleted = false;
 
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: GlassChip(
-              label: 'Tag',
-              onDeleted: () => deleted = true,
-            ),
+            child: GlassChip(label: 'Tag', onDeleted: () => deleted = true),
           ),
         ),
       );
@@ -90,10 +85,7 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: GlassChip(
-              label: 'Filter',
-              onTap: () => tapped = true,
-            ),
+            child: GlassChip(label: 'Filter', onTap: () => tapped = true),
           ),
         ),
       );
@@ -109,11 +101,7 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: GlassChip(
-              label: 'Selected',
-              selected: true,
-              onTap: () {},
-            ),
+            child: GlassChip(label: 'Selected', selected: true, onTap: () {}),
           ),
         ),
       );
@@ -123,21 +111,14 @@ void main() {
 
     testWidgets('works in standalone mode', (tester) async {
       await tester.pumpWidget(
-        createTestApp(
-          child: GlassChip(
-            label: 'Standalone',
-            useOwnLayer: true,
-          ),
-        ),
+        createTestApp(child: GlassChip(label: 'Standalone', useOwnLayer: true)),
       );
 
       expect(find.byType(GlassChip), findsOneWidget);
     });
 
     test('defaults are correct', () {
-      final chip = GlassChip(
-        label: 'Test',
-      );
+      final chip = GlassChip(label: 'Test');
 
       expect(chip.selected, isFalse);
       expect(chip.useOwnLayer, isFalse);
@@ -213,8 +194,9 @@ void main() {
             ),
           );
 
-          final node =
-              tester.getSemantics(find.bySemanticsLabel('Semantics Chip'));
+          final node = tester.getSemantics(
+            find.bySemanticsLabel('Semantics Chip'),
+          );
           // ignore: deprecated_member_use
           expect(node.hasFlag(SemanticsFlag.isButton), true);
           // ignore: deprecated_member_use

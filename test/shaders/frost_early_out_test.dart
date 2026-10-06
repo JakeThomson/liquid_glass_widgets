@@ -33,8 +33,11 @@ void main() {
     final frostAt = _body(render, 'vec3 frostAt(');
     final earlyOut = frostAt.indexOf('if (uFrost.x >= 1.0)');
     final ghostLoop = frostAt.indexOf('for (int j = -2; j <= 2; j++)');
-    expect(earlyOut, isNonNegative,
-        reason: 'The opaque-cloud early-out is gone.');
+    expect(
+      earlyOut,
+      isNonNegative,
+      reason: 'The opaque-cloud early-out is gone.',
+    );
     expect(ghostLoop, isNonNegative);
     expect(earlyOut, lessThan(ghostLoop));
     // Exact, not a threshold: below 1 the ghost still shows through the mix.
@@ -69,10 +72,7 @@ void main() {
     );
     // The touch glint inside scales by uLightIntensity, so skipping the block
     // at zero light loses nothing.
-    expect(
-      render,
-      contains('tSpec * uTouchIntensity * uLightIntensity * 2.5'),
-    );
+    expect(render, contains('tSpec * uTouchIntensity * uLightIntensity * 2.5'));
   });
 
   test('a squircle with equal radii is evaluated once', () {

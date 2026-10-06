@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../liquid_glass_setup.dart';
 import '../../types/glass_quality.dart';
@@ -41,8 +42,8 @@ class InheritedLiquidGlass extends InheritedWidget {
   /// to look up `LiquidGlassSettings.of(context)` from the renderer package
   /// to maintain compatibility with standard `LiquidGlassLayer` usage.
   static LiquidGlassSettings? of(BuildContext context) {
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
+    final inherited = context
+        .dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
     if (inherited != null) {
       return inherited.settings;
     }

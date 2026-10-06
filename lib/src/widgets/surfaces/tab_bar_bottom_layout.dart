@@ -6,8 +6,10 @@
 // Do NOT import this file directly — use [GlassTabBar.bottom()] instead.
 
 import 'dart:ui' as ui;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
+
 import '../../renderer/liquid_glass_renderer.dart';
 import '../../types/glass_interaction_behavior.dart';
 import '../../../types/glass_quality.dart';
@@ -80,8 +82,10 @@ class TabBarBottomLayout extends StatefulWidget {
     this.backgroundKey,
     this.tabWidth,
     this.indicatorBorderRadius,
-    this.indicatorExpansion =
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    this.indicatorExpansion = const EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: 8,
+    ),
     this.interactionGlowColor,
     this.interactionGlowRadius,
     this.interactionBehavior = GlassInteractionBehavior.full,
@@ -222,8 +226,8 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
       fallback: GlassQuality.premium,
     );
 
-    final resolvedGlowColors =
-        GlassThemeData.of(context).glowColorsFor(context);
+    final resolvedGlowColors = GlassThemeData.of(context)
+        .glowColorsFor(context);
     // A null radius asks for native mode: the calibration GlassButton has
     // resolved from a null `glowRadius` since 1.3.0. An explicit radius keeps
     // the theme's palette, so a tuned app keeps what it tuned. The resolved
@@ -287,8 +291,10 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
         : widget.onTabSelected;
 
     final pillLayer = AdaptiveLiquidGlassLayer(
-      clipExpansion:
-          const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
+      clipExpansion: const EdgeInsets.symmetric(
+        horizontal: 20.0,
+        vertical: 15.0,
+      ),
       settings: effectiveSettings,
       quality: effectiveQuality,
       platformViewBackdrop: widget.platformViewBackdrop,
@@ -303,7 +309,8 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
             final resolvedExtraButton = widget.extraButton != null
                 ? _resolvedExtraButtonConfig()
                 : null;
-            final extraPlacement = resolvedExtraButton?.placement ??
+            final extraPlacement =
+                resolvedExtraButton?.placement ??
                 GlassExtraButtonPlacement.right;
             final extraOnLeft =
                 extraPlacement == GlassExtraButtonPlacement.left;
@@ -337,10 +344,12 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
                               // Chrome-plane peer: matches the track background,
                               // not the indicator pill (effectiveQuality).
                               quality: effectiveBackgroundQuality,
-                              iconColor: resolvedExtraButton.iconColor ??
+                              iconColor:
+                                  resolvedExtraButton.iconColor ??
                                   resolvedUnselectedIconColor,
                               enableBlend: widget.enableBlend,
-                              borderRadius: widget.barBorderRadius ==
+                              borderRadius:
+                                  widget.barBorderRadius ==
                                       TabBarBottomLayout._kDefaultBorderRadius
                                   ? null
                                   : widget.barBorderRadius,
@@ -428,11 +437,12 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
                         ),
                         selectedTabBuilder: (context, intensity, alignment) =>
                             _buildSelectedTabs(
-                                intensity,
-                                alignment,
-                                tabs,
-                                resolvedSelectedIconColor,
-                                resolvedUnselectedIconColor),
+                              intensity,
+                              alignment,
+                              tabs,
+                              resolvedSelectedIconColor,
+                              resolvedUnselectedIconColor,
+                            ),
                         magnification: widget.magnification,
                         innerBlur: widget.innerBlur,
                       ),
@@ -441,10 +451,7 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
 
                   return Stack(
                     clipBehavior: Clip.none,
-                    children: [
-                      if (extraButton != null) extraButton,
-                      tabPill,
-                    ],
+                    children: [if (extraButton != null) extraButton, tabPill],
                   );
                 },
               ),
@@ -483,16 +490,19 @@ class _TabBarBottomLayoutState extends State<TabBarBottomLayout>
   }
 
   Widget _buildSelectedTabs(
-      double intensity,
-      Alignment alignment,
-      List<GlassTab> tabs,
-      Color resolvedSelectedIconColor,
-      Color resolvedUnselectedIconColor) {
+    double intensity,
+    Alignment alignment,
+    List<GlassTab> tabs,
+    Color resolvedSelectedIconColor,
+    Color resolvedUnselectedIconColor,
+  ) {
     final scale = ui.lerpDouble(1.0, widget.magnification, intensity) ?? 1.0;
 
     final currentTabFloat = ((alignment.x + 1) / 2) * tabs.length;
-    final affectedStart =
-        (currentTabFloat - 1).floor().clamp(0, tabs.length - 1);
+    final affectedStart = (currentTabFloat - 1).floor().clamp(
+      0,
+      tabs.length - 1,
+    );
     final affectedEnd = (currentTabFloat + 1).ceil().clamp(0, tabs.length - 1);
 
     return ExcludeSemantics(

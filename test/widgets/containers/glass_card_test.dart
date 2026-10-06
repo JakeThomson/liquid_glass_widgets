@@ -27,9 +27,7 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: const GlassCard(
-              child: Text(testText),
-            ),
+            child: const GlassCard(child: Text(testText)),
           ),
         ),
       );
@@ -42,9 +40,7 @@ void main() {
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
             settings: defaultTestGlassSettings,
-            child: const GlassCard(
-              child: Text('Content'),
-            ),
+            child: const GlassCard(child: Text('Content')),
           ),
         ),
       );

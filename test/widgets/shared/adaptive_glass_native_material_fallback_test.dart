@@ -13,22 +13,24 @@ Future<LiquidGlassSettings> _lightweightSettings(
   LiquidGlassSettings settings,
   GlassQuality quality,
 ) async {
-  await tester.pumpWidget(MaterialApp(
-    home: Scaffold(
-      body: LiquidGlassWidgets.wrap(
-        child: SizedBox(
-          width: 200,
-          height: 100,
-          child: AdaptiveGlass(
-            shape: const LiquidRoundedRectangle(borderRadius: 20),
-            settings: settings,
-            quality: quality,
-            child: const SizedBox.expand(),
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: LiquidGlassWidgets.wrap(
+          child: SizedBox(
+            width: 200,
+            height: 100,
+            child: AdaptiveGlass(
+              shape: const LiquidRoundedRectangle(borderRadius: 20),
+              settings: settings,
+              quality: quality,
+              child: const SizedBox.expand(),
+            ),
           ),
         ),
       ),
     ),
-  ));
+  );
   return tester
       .widget<LightweightLiquidGlass>(find.byType(LightweightLiquidGlass))
       .settings!;
@@ -38,8 +40,9 @@ void main() {
   for (final quality in [GlassQuality.standard, GlassQuality.premium]) {
     // In flutter test the premium shader isn't available, so premium takes
     // the lightweight path too, the one a device without Impeller takes.
-    testWidgets('ios27Light keeps a blur and a highlight (${quality.name})',
-        (tester) async {
+    testWidgets('ios27Light keeps a blur and a highlight (${quality.name})', (
+      tester,
+    ) async {
       final s = await _lightweightSettings(
         tester,
         LiquidGlassSettings.ios27Light,

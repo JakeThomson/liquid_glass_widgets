@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
 import '../../shared/test_helpers.dart';
 
 void main() {
@@ -10,11 +11,7 @@ void main() {
       await tester.pumpWidget(
         createTestApp(
           child: Stack(
-            children: [
-              GlassModalSheet(
-                child: const Text('Sheet Content'),
-              ),
-            ],
+            children: [GlassModalSheet(child: const Text('Sheet Content'))],
           ),
         ),
       );
@@ -36,11 +33,7 @@ void main() {
                 initialState: GlassSheetState.half,
                 child: const Material(
                   child: Center(
-                    child: SizedBox(
-                      width: 200,
-                      height: 40,
-                      child: TextField(),
-                    ),
+                    child: SizedBox(width: 200, height: 40, child: TextField()),
                   ),
                 ),
               ),
@@ -64,49 +57,54 @@ void main() {
     });
 
     testWidgets(
-        'child State is preserved across half↔full transitions (no GlobalObjectKey)',
-        (tester) async {
-      // Regression test for: GlobalObjectKey(widget.child) on the internal
-      // Focus widget caused Flutter to tear down the child's Element subtree
-      // on every sheet expand/collapse, firing dispose+initState each time.
-      int initStateCount = 0;
+      'child State is preserved across half↔full transitions (no GlobalObjectKey)',
+      (tester) async {
+        // Regression test for: GlobalObjectKey(widget.child) on the internal
+        // Focus widget caused Flutter to tear down the child's Element subtree
+        // on every sheet expand/collapse, firing dispose+initState each time.
+        int initStateCount = 0;
 
-      final controller = GlassModalSheetController();
+        final controller = GlassModalSheetController();
 
-      await tester.pumpWidget(
-        createTestApp(
-          child: Stack(
-            children: [
-              GlassModalSheet(
-                controller: controller,
-                initialState: GlassSheetState.half,
-                child: _CountingWidget(
-                  onInitState: () => initStateCount++,
+        await tester.pumpWidget(
+          createTestApp(
+            child: Stack(
+              children: [
+                GlassModalSheet(
+                  controller: controller,
+                  initialState: GlassSheetState.half,
+                  child: _CountingWidget(onInitState: () => initStateCount++),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // 1 initState on first mount — expected.
-      expect(initStateCount, 1);
+        // 1 initState on first mount — expected.
+        expect(initStateCount, 1);
 
-      // Expand to full — child State must NOT be torn down.
-      controller.snapToState(GlassSheetState.full, animate: false);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(initStateCount, 1,
-          reason: 'Child initState must not fire again on sheet expansion');
+        // Expand to full — child State must NOT be torn down.
+        controller.snapToState(GlassSheetState.full, animate: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(
+          initStateCount,
+          1,
+          reason: 'Child initState must not fire again on sheet expansion',
+        );
 
-      // Collapse back to half — still must not rebuild.
-      controller.snapToState(GlassSheetState.half, animate: false);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(initStateCount, 1,
-          reason: 'Child initState must not fire again on sheet collapse');
-    });
+        // Collapse back to half — still must not rebuild.
+        controller.snapToState(GlassSheetState.half, animate: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(
+          initStateCount,
+          1,
+          reason: 'Child initState must not fire again on sheet collapse',
+        );
+      },
+    );
 
     testWidgets('static show() method displays the sheet', (tester) async {
       await tester.pumpWidget(
@@ -131,42 +129,48 @@ void main() {
       expect(find.text('Modal Content'), findsOneWidget);
     });
 
-    testWidgets('show() falls back when initialState is not an offered detent',
-        (tester) async {
-      // A caller can ask to open on a detent the sheet doesn't offer — most
-      // easily by leaving initialState at its default while narrowing the
-      // set. Opening on a state that isn't in orderedStates leaves the sheet
-      // wedged (no rest position resolves), so show() coerces it to one that
-      // IS offered rather than trusting the caller.
-      final controller = GlassModalSheetController();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => ElevatedButton(
-                onPressed: () => GlassModalSheet.show(
-                  context: context,
-                  controller: controller,
-                  // Asks for full; only medium is on offer.
-                  initialState: GlassSheetState.full,
-                  detents: const {GlassSheetDetent.medium},
-                  builder: (context) => const Text('Modal Content'),
+    testWidgets(
+      'show() falls back when initialState is not an offered detent',
+      (tester) async {
+        // A caller can ask to open on a detent the sheet doesn't offer — most
+        // easily by leaving initialState at its default while narrowing the
+        // set. Opening on a state that isn't in orderedStates leaves the sheet
+        // wedged (no rest position resolves), so show() coerces it to one that
+        // IS offered rather than trusting the caller.
+        final controller = GlassModalSheetController();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => GlassModalSheet.show(
+                    context: context,
+                    controller: controller,
+                    // Asks for full; only medium is on offer.
+                    initialState: GlassSheetState.full,
+                    detents: const {GlassSheetDetent.medium},
+                    builder: (context) => const Text('Modal Content'),
+                  ),
+                  child: const Text('Show'),
                 ),
-                child: const Text('Show'),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Show'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Show'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Modal Content'), findsOneWidget);
-      expect(controller.currentState, GlassSheetState.half,
-          reason: 'full was not offered, so the sheet opens at the medium '
-              'detent instead of a state it cannot rest at');
-    });
+        expect(find.text('Modal Content'), findsOneWidget);
+        expect(
+          controller.currentState,
+          GlassSheetState.half,
+          reason:
+              'full was not offered, so the sheet opens at the medium '
+              'detent instead of a state it cannot rest at',
+        );
+      },
+    );
 
     testWidgets('show() coerces the other direction too', (tester) async {
       // The mirror case: half requested, only large offered.
@@ -212,28 +216,27 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final widget =
-          tester.widget<GlassModalSheet>(find.byType(GlassModalSheet));
+      final widget = tester.widget<GlassModalSheet>(
+        find.byType(GlassModalSheet),
+      );
       expect(widget.topBorderRadius, customRadius);
     });
 
-    testWidgets('dragIndicatorWidth defaults to 36 (iOS native)',
-        (tester) async {
+    testWidgets('dragIndicatorWidth defaults to 36 (iOS native)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: Stack(
-            children: [
-              GlassModalSheet(
-                child: const SizedBox(height: 100),
-              ),
-            ],
+            children: [GlassModalSheet(child: const SizedBox(height: 100))],
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      final widget =
-          tester.widget<GlassModalSheet>(find.byType(GlassModalSheet));
+      final widget = tester.widget<GlassModalSheet>(
+        find.byType(GlassModalSheet),
+      );
       expect(widget.dragIndicatorWidth, 36);
     });
 
@@ -253,13 +256,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final widget =
-          tester.widget<GlassModalSheet>(find.byType(GlassModalSheet));
+      final widget = tester.widget<GlassModalSheet>(
+        find.byType(GlassModalSheet),
+      );
       expect(widget.dragIndicatorWidth, customWidth);
     });
 
-    testWidgets(
-        'dragIndicatorWidth is rendered — Container inside _GlassDragIndicator '
+    testWidgets('dragIndicatorWidth is rendered — Container inside _GlassDragIndicator '
         'has the specified width', (tester) async {
       const customWidth = 72.0;
       await tester.pumpWidget(
@@ -281,9 +284,11 @@ void main() {
       final indicatorFinder = find.byElementPredicate(
         (e) => e.widget.runtimeType.toString() == '_GlassDragIndicator',
       );
-      expect(indicatorFinder, findsOneWidget,
-          reason:
-              'Drag indicator should be present when showDragIndicator=true');
+      expect(
+        indicatorFinder,
+        findsOneWidget,
+        reason: 'Drag indicator should be present when showDragIndicator=true',
+      );
 
       // The Container with the exact width must be a descendant of the indicator.
       final containerFinder = find.descendant(
@@ -292,13 +297,15 @@ void main() {
           (w) => w is Container && w.constraints?.maxWidth == customWidth,
         ),
       );
-      expect(containerFinder, findsOneWidget,
-          reason:
-              'Container inside _GlassDragIndicator should render at dragIndicatorWidth ($customWidth)');
+      expect(
+        containerFinder,
+        findsOneWidget,
+        reason:
+            'Container inside _GlassDragIndicator should render at dragIndicatorWidth ($customWidth)',
+      );
     });
 
-    testWidgets(
-        'dragIndicatorWidth defaults render — Container inside _GlassDragIndicator '
+    testWidgets('dragIndicatorWidth defaults render — Container inside _GlassDragIndicator '
         'has default 36 width', (tester) async {
       await tester.pumpWidget(
         createTestApp(
@@ -325,13 +332,17 @@ void main() {
           (w) => w is Container && w.constraints?.maxWidth == 36.0,
         ),
       );
-      expect(containerFinder, findsOneWidget,
-          reason:
-              'Default Container width inside _GlassDragIndicator should be 36');
+      expect(
+        containerFinder,
+        findsOneWidget,
+        reason:
+            'Default Container width inside _GlassDragIndicator should be 36',
+      );
     });
 
-    testWidgets('GlassInteractionSilence can be used in content',
-        (tester) async {
+    testWidgets('GlassInteractionSilence can be used in content', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: Stack(
@@ -372,8 +383,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final widget =
-          tester.widget<GlassModalSheet>(find.byType(GlassModalSheet));
+      final widget = tester.widget<GlassModalSheet>(
+        find.byType(GlassModalSheet),
+      );
       expect(widget.fillThreshold, 0.5);
       expect(widget.expandedColor, testColor);
     });
@@ -391,7 +403,7 @@ void main() {
                 detents: const {
                   GlassSheetDetent.small,
                   GlassSheetDetent.medium,
-                  GlassSheetDetent.large
+                  GlassSheetDetent.large,
                 },
                 child: const SizedBox.expand(),
               ),
@@ -404,13 +416,19 @@ void main() {
 
       // Fling up to full
       await tester.flingFrom(
-          const Offset(400, 450), const Offset(0, -500), 2000);
+        const Offset(400, 450),
+        const Offset(0, -500),
+        2000,
+      );
       await tester.pumpAndSettle();
       expect(controller.currentState, GlassSheetState.full);
 
       // Fling down to peek
       await tester.flingFrom(
-          const Offset(400, 100), const Offset(0, 600), 2000);
+        const Offset(400, 100),
+        const Offset(0, 600),
+        2000,
+      );
       await tester.pumpAndSettle();
       expect(controller.currentState, GlassSheetState.peek);
     });
@@ -427,9 +445,7 @@ void main() {
                 initialState: GlassSheetState.half,
                 child: ListView.builder(
                   itemCount: 100,
-                  itemBuilder: (context, i) => ListTile(
-                    title: Text('Item $i'),
-                  ),
+                  itemBuilder: (context, i) => ListTile(title: Text('Item $i')),
                 ),
               ),
             ],
@@ -445,28 +461,40 @@ void main() {
 
       // Fling up — should snap sheet to full, not scroll list.
       await tester.flingFrom(
-          const Offset(400, 450), const Offset(0, -400), 1500);
+        const Offset(400, 450),
+        const Offset(0, -400),
+        1500,
+      );
       await tester.pumpAndSettle();
 
-      expect(controller.currentState, GlassSheetState.full,
-          reason:
-              'Upward drag in half state should expand the sheet, not scroll content');
+      expect(
+        controller.currentState,
+        GlassSheetState.full,
+        reason: 'Upward drag in half state should expand the sheet, not scroll content',
+      );
 
       // Now in full state, expand is stable — the sheet remains full.
       expect(controller.value, greaterThan(halfValue));
 
       // Fling downward from full — sheet should collapse back to half/peek.
       await tester.flingFrom(
-          const Offset(400, 100), const Offset(0, 400), 1500);
+        const Offset(400, 100),
+        const Offset(0, 400),
+        1500,
+      );
       await tester.pumpAndSettle();
 
-      expect(controller.currentState, isNot(GlassSheetState.full),
-          reason:
-              'Downward drag in full state header area should collapse the sheet');
+      expect(
+        controller.currentState,
+        isNot(GlassSheetState.full),
+        reason:
+            'Downward drag in full state header area should collapse the sheet',
+      );
     });
 
-    testWidgets('shows top fade ShaderMask when enabled and expanded',
-        (tester) async {
+    testWidgets('shows top fade ShaderMask when enabled and expanded', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: Stack(
@@ -534,9 +562,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // At half (0.45), colorOpacity is ~0 — fill present but transparent.
-      BoxDecoration getFillDecoration() => tester
-          .widget<DecoratedBox>(find.byKey(const Key('glass_modal_sheet_fill')))
-          .decoration as BoxDecoration;
+      BoxDecoration getFillDecoration() =>
+          tester
+                  .widget<DecoratedBox>(
+                    find.byKey(const Key('glass_modal_sheet_fill')),
+                  )
+                  .decoration
+              as BoxDecoration;
       expect(getFillDecoration().color?.a ?? 0, lessThan(0.05));
 
       // Move slightly above half but still below fill threshold
@@ -557,35 +589,39 @@ void main() {
       );
     });
 
-    testWidgets('switches to expandedDarkColor on a brightness switch',
-        (tester) async {
+    testWidgets('switches to expandedDarkColor on a brightness switch', (
+      tester,
+    ) async {
       final controller = GlassModalSheetController();
 
       Widget sheet(Brightness brightness) => createTestApp(
-            child: GlassTheme(
-              data: GlassThemeData(brightness: brightness),
-              child: Stack(
-                children: [
-                  GlassModalSheet(
-                    controller: controller,
-                    initialState: GlassSheetState.half,
-                    fillTransition: GlassFillTransition.instant,
-                    fillThreshold: 0.5,
-                    expandedColor: Colors.white,
-                    expandedDarkColor: Colors.black,
-                    child: const SizedBox.expand(),
-                  ),
-                ],
+        child: GlassTheme(
+          data: GlassThemeData(brightness: brightness),
+          child: Stack(
+            children: [
+              GlassModalSheet(
+                controller: controller,
+                initialState: GlassSheetState.half,
+                fillTransition: GlassFillTransition.instant,
+                fillThreshold: 0.5,
+                expandedColor: Colors.white,
+                expandedDarkColor: Colors.black,
+                child: const SizedBox.expand(),
               ),
-            ),
-          );
+            ],
+          ),
+        ),
+      );
 
-      Color? fillColor() => (tester
-              .widget<DecoratedBox>(
-                  find.byKey(const Key('glass_modal_sheet_fill')))
-              .decoration as BoxDecoration)
-          .color
-          ?.withValues(alpha: 1.0);
+      Color? fillColor() =>
+          (tester
+                      .widget<DecoratedBox>(
+                        find.byKey(const Key('glass_modal_sheet_fill')),
+                      )
+                      .decoration
+                  as BoxDecoration)
+              .color
+              ?.withValues(alpha: 1.0);
 
       await tester.pumpWidget(sheet(Brightness.light));
       await tester.pumpAndSettle();
@@ -611,7 +647,7 @@ void main() {
                 detents: const {
                   GlassSheetDetent.small,
                   GlassSheetDetent.medium,
-                  GlassSheetDetent.large
+                  GlassSheetDetent.large,
                 },
                 child: const SizedBox.expand(),
               ),
@@ -650,7 +686,9 @@ void main() {
                 initialState: GlassSheetState.half,
                 halfSettings: const LiquidGlassSettings(blur: 50.0),
                 fullSettings: const LiquidGlassSettings(
-                    blur: 0.0, glassColor: Colors.red),
+                  blur: 0.0,
+                  glassColor: Colors.red,
+                ),
                 child: const SizedBox.expand(),
               ),
             ],
@@ -660,9 +698,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // In half state, colorOpacity is ~0 — fill present but transparent.
-      BoxDecoration getFillDecoration() => tester
-          .widget<DecoratedBox>(find.byKey(const Key('glass_modal_sheet_fill')))
-          .decoration as BoxDecoration;
+      BoxDecoration getFillDecoration() =>
+          tester
+                  .widget<DecoratedBox>(
+                    find.byKey(const Key('glass_modal_sheet_fill')),
+                  )
+                  .decoration
+              as BoxDecoration;
       expect(getFillDecoration().color?.a ?? 0, lessThan(0.05));
 
       // Expand to full (blur=0 => solid color fill should appear)
@@ -679,8 +721,9 @@ void main() {
       expect(fillDecoration.color?.a, greaterThan(0.9));
     });
 
-    testWidgets('works correctly with all effects disabled (minimal mode)',
-        (tester) async {
+    testWidgets('works correctly with all effects disabled (minimal mode)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: Stack(
@@ -703,8 +746,9 @@ void main() {
       expect(find.bySemanticsLabel('Drag handle'), findsNothing);
     });
 
-    testWidgets('drag indicator Semantics.onTap dismisses the sheet',
-        (tester) async {
+    testWidgets('drag indicator Semantics.onTap dismisses the sheet', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       await tester.pumpWidget(
         MaterialApp(
@@ -791,8 +835,9 @@ void main() {
       expect(layout, findsAtLeast(1));
     });
 
-    testWidgets('prevents size order inversion (foolproof sizes)',
-        (tester) async {
+    testWidgets('prevents size order inversion (foolproof sizes)', (
+      tester,
+    ) async {
       final controller = GlassModalSheetController();
       await tester.pumpWidget(
         createTestApp(
@@ -823,45 +868,47 @@ void main() {
     });
 
     testWidgets(
-        'handles keyboard appearance without overflow (viewInsets stress)',
-        (tester) async {
-      await tester.pumpWidget(
-        createTestApp(
-          child: Stack(
-            children: [
-              GlassModalSheet(
-                initialState: GlassSheetState.full,
-                child: Column(
-                  children: [
-                    const Text('Top item'),
-                    const Spacer(),
-                    Container(
-                      height: 100,
-                      color: Colors.blue,
-                      child: const TextField(),
-                    ),
-                  ],
+      'handles keyboard appearance without overflow (viewInsets stress)',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: Stack(
+              children: [
+                GlassModalSheet(
+                  initialState: GlassSheetState.full,
+                  child: Column(
+                    children: [
+                      const Text('Top item'),
+                      const Spacer(),
+                      Container(
+                        height: 100,
+                        color: Colors.blue,
+                        child: const TextField(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Simulate keyboard popping up (300px height)
-      tester.view.viewInsets = FakeViewPadding(bottom: 300);
-      await tester.pump();
+        // Simulate keyboard popping up (300px height)
+        tester.view.viewInsets = FakeViewPadding(bottom: 300);
+        await tester.pump();
 
-      // If there was an overflow, the test would fail automatically here.
-      expect(find.text('Top item'), findsOneWidget);
+        // If there was an overflow, the test would fail automatically here.
+        expect(find.text('Top item'), findsOneWidget);
 
-      // Reset
-      tester.view.resetViewInsets();
-    });
+        // Reset
+        tester.view.resetViewInsets();
+      },
+    );
 
-    testWidgets('handles huge content with scrolling (stress height)',
-        (tester) async {
+    testWidgets('handles huge content with scrolling (stress height)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: Stack(
@@ -930,76 +977,82 @@ void main() {
 
       // We expect at least two AdaptiveGlass/LiquidGlass widgets:
       // one for the sheet background and one for the content glass.
-      final glassWidgets = find.byWidgetPredicate((w) =>
-          w.runtimeType.toString().contains('Glass') &&
-          (w.runtimeType.toString().contains('Adaptive') ||
-              w.runtimeType.toString().contains('Liquid')));
+      final glassWidgets = find.byWidgetPredicate(
+        (w) =>
+            w.runtimeType.toString().contains('Glass') &&
+            (w.runtimeType.toString().contains('Adaptive') ||
+                w.runtimeType.toString().contains('Liquid')),
+      );
 
       expect(glassWidgets, findsAtLeast(2));
     });
 
     testWidgets(
-        'applies resistance when dragging beyond boundaries (top & bottom)',
-        (tester) async {
-      final controller = GlassModalSheetController();
-      await tester.pumpWidget(
-        createTestApp(
-          child: Stack(
-            children: [
-              GlassModalSheet(
-                controller: controller,
-                initialState: GlassSheetState.full,
-                mode: GlassSheetMode.persistent,
-                fullSize: 1.0,
-                resistance: 0.5,
-                child: const SizedBox.expand(),
-              ),
-            ],
+      'applies resistance when dragging beyond boundaries (top & bottom)',
+      (tester) async {
+        final controller = GlassModalSheetController();
+        await tester.pumpWidget(
+          createTestApp(
+            child: Stack(
+              children: [
+                GlassModalSheet(
+                  controller: controller,
+                  initialState: GlassSheetState.full,
+                  mode: GlassSheetMode.persistent,
+                  fullSize: 1.0,
+                  resistance: 0.5,
+                  child: const SizedBox.expand(),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // 1. Test TOP resistance (drag UP from 1.0)
-      expect(controller.value, 1.0);
+        // 1. Test TOP resistance (drag UP from 1.0)
+        expect(controller.value, 1.0);
 
-      final gestureTop = await tester.startGesture(const Offset(400, 10));
-      await gestureTop.moveBy(const Offset(0, -200));
-      await tester.pump();
+        final gestureTop = await tester.startGesture(const Offset(400, 10));
+        await gestureTop.moveBy(const Offset(0, -200));
+        await tester.pump();
 
-      // Screen height 600, drag 200px up.
-      // Fraction 200/600 = 0.333...
-      // Resisted: 0.333... * 0.5 = 0.1666...
-      // Expected: 1.1666...
-      expect(controller.value, closeTo(1.1666, 0.01));
+        // Screen height 600, drag 200px up.
+        // Fraction 200/600 = 0.333...
+        // Resisted: 0.333... * 0.5 = 0.1666...
+        // Expected: 1.1666...
+        expect(controller.value, closeTo(1.1666, 0.01));
 
-      await gestureTop.up();
-      await tester.pumpAndSettle(); // Snap back
-      expect(controller.value, 1.0);
+        await gestureTop.up();
+        await tester.pumpAndSettle(); // Snap back
+        expect(controller.value, 1.0);
 
-      // 2. Test BOTTOM resistance (drag DOWN from peek)
-      controller.snapToState(GlassSheetState.peek, animate: false);
-      await tester.pumpAndSettle();
-      final peekValue = controller.value;
+        // 2. Test BOTTOM resistance (drag DOWN from peek)
+        controller.snapToState(GlassSheetState.peek, animate: false);
+        await tester.pumpAndSettle();
+        final peekValue = controller.value;
 
-      // Drag the handle (indicator).
-      final handleFinder = find.byElementPredicate(
-          (e) => e.widget.runtimeType.toString() == '_GlassDragIndicator');
-      final gestureBottom =
-          await tester.startGesture(tester.getCenter(handleFinder));
-      await gestureBottom.moveBy(const Offset(0, 300)); // Drag way down
-      await tester.pump();
+        // Drag the handle (indicator).
+        final handleFinder = find.byElementPredicate(
+          (e) => e.widget.runtimeType.toString() == '_GlassDragIndicator',
+        );
+        final gestureBottom = await tester.startGesture(
+          tester.getCenter(handleFinder),
+        );
+        await gestureBottom.moveBy(const Offset(0, 300)); // Drag way down
+        await tester.pump();
 
-      // Expected: boundary 0.15 - (0.5 overflow * 0.5) = -0.1
-      expect(controller.value, closeTo(-0.1, 0.01));
+        // Expected: boundary 0.15 - (0.5 overflow * 0.5) = -0.1
+        expect(controller.value, closeTo(-0.1, 0.01));
 
-      await gestureBottom.up();
-      await tester.pumpAndSettle(); // Snap back
-      expect(controller.value, peekValue);
-    });
+        await gestureBottom.up();
+        await tester.pumpAndSettle(); // Snap back
+        expect(controller.value, peekValue);
+      },
+    );
 
-    testWidgets('disables interaction glow and pulse in full state',
-        (tester) async {
+    testWidgets('disables interaction glow and pulse in full state', (
+      tester,
+    ) async {
       final controller = GlassModalSheetController();
       await tester.pumpWidget(
         createTestApp(
@@ -1129,55 +1182,59 @@ void main() {
       expect(states, contains(GlassSheetState.full));
     });
 
-    testWidgets(
-      'onStateChanged fires after slow drag past snap threshold',
-      (tester) async {
-        // Regression: a slow drag whose path crosses a snap threshold
-        // mid-gesture used to silently mutate `_currentState` to the
-        // resolved target via `_applyDrag`. By the time the user released,
-        // `_snapToState` found `_currentState == target` and skipped the
-        // side-effects branch (haptics, onStateChanged, scroll-to-top).
-        final controller = GlassModalSheetController();
-        final states = <GlassSheetState>[];
+    testWidgets('onStateChanged fires after slow drag past snap threshold', (
+      tester,
+    ) async {
+      // Regression: a slow drag whose path crosses a snap threshold
+      // mid-gesture used to silently mutate `_currentState` to the
+      // resolved target via `_applyDrag`. By the time the user released,
+      // `_snapToState` found `_currentState == target` and skipped the
+      // side-effects branch (haptics, onStateChanged, scroll-to-top).
+      final controller = GlassModalSheetController();
+      final states = <GlassSheetState>[];
 
-        await tester.pumpWidget(
-          createTestApp(
-            child: GlassModalSheetScaffold(
-              controller: controller,
-              initialState: GlassSheetState.full,
-              onStateChanged: states.add,
-              body: const SizedBox.expand(),
-              sheet: const SizedBox.expand(),
-            ),
+      await tester.pumpWidget(
+        createTestApp(
+          child: GlassModalSheetScaffold(
+            controller: controller,
+            initialState: GlassSheetState.full,
+            onStateChanged: states.add,
+            body: const SizedBox.expand(),
+            sheet: const SizedBox.expand(),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Slow drag from inside the sheet down through the half-state
-        // position. Multiple small moveBy calls with pumps between them
-        // simulate a finger that lingers — enough frames for _applyDrag
-        // to resolve and commit the intermediate snap target.
-        final start = tester.getCenter(find.byType(GlassModalSheetScaffold));
-        final gesture = await tester.startGesture(start);
-        for (var i = 0; i < 20; i++) {
-          await gesture.moveBy(const Offset(0, 15));
-          await tester.pump(const Duration(milliseconds: 16));
-        }
-        await gesture.up();
-        await tester.pumpAndSettle();
+      // Slow drag from inside the sheet down through the half-state
+      // position. Multiple small moveBy calls with pumps between them
+      // simulate a finger that lingers — enough frames for _applyDrag
+      // to resolve and commit the intermediate snap target.
+      final start = tester.getCenter(find.byType(GlassModalSheetScaffold));
+      final gesture = await tester.startGesture(start);
+      for (var i = 0; i < 20; i++) {
+        await gesture.moveBy(const Offset(0, 15));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
 
-        // The final transition to half MUST be reported regardless of
-        // how many times _applyDrag updated _currentState mid-gesture.
-        expect(states, contains(GlassSheetState.half),
-            reason: 'onStateChanged was not fired for the slow-drag-to-half '
-                'transition — _snapToState skipped its side-effects branch '
-                'because _applyDrag had already updated _currentState to '
-                'the resolved target mid-drag.');
-      },
-    );
+      // The final transition to half MUST be reported regardless of
+      // how many times _applyDrag updated _currentState mid-gesture.
+      expect(
+        states,
+        contains(GlassSheetState.half),
+        reason:
+            'onStateChanged was not fired for the slow-drag-to-half '
+            'transition — _snapToState skipped its side-effects branch '
+            'because _applyDrag had already updated _currentState to '
+            'the resolved target mid-drag.',
+      );
+    });
 
-    testWidgets('persistent mode prevents dismissal below peek',
-        (tester) async {
+    testWidgets('persistent mode prevents dismissal below peek', (
+      tester,
+    ) async {
       final controller = GlassModalSheetController();
 
       await tester.pumpWidget(
@@ -1200,8 +1257,9 @@ void main() {
       expect(controller.currentState, GlassSheetState.peek);
     });
 
-    testWidgets('renders without crashing with custom glass settings',
-        (tester) async {
+    testWidgets('renders without crashing with custom glass settings', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: GlassModalSheetScaffold(
@@ -1233,7 +1291,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final widget = tester.widget<GlassModalSheetScaffold>(
-          find.byType(GlassModalSheetScaffold));
+        find.byType(GlassModalSheetScaffold),
+      );
       expect(widget.horizontalMargin, 24);
       expect(widget.bottomMargin, 16);
     });
@@ -1270,9 +1329,7 @@ void main() {
     testWidgets('renders its child correctly', (tester) async {
       await tester.pumpWidget(
         createTestApp(
-          child: GlassInteractionSilence(
-            child: const Text('Silent Child'),
-          ),
+          child: GlassInteractionSilence(child: const Text('Silent Child')),
         ),
       );
       await tester.pumpAndSettle();
@@ -1309,45 +1366,47 @@ void main() {
       await tester.tapAt(centre);
       await tester.pump();
 
-      expect(notified, isTrue,
-          reason:
-              'GlassInteractionSilence should dispatch a notification on tap');
+      expect(
+        notified,
+        isTrue,
+        reason: 'GlassInteractionSilence should dispatch a notification on tap',
+      );
     });
 
     testWidgets(
-        'inside GlassSheet with suppressInteractionOnChildren: renders and is present',
-        (tester) async {
-      // Behavioral: confirm GlassInteractionSilence is wired up inside the sheet
-      // widget tree when suppressInteractionOnChildren is true. The actual
-      // hit-test guarantee is exercised in the standalone tap test above.
-      await tester.pumpWidget(
-        createTestApp(
-          child: Stack(
-            children: [
-              GlassModalSheet(
-                suppressInteractionOnChildren: true,
-                initialState: GlassSheetState.half,
-                child: GlassInteractionSilence(
-                  child: const SizedBox(width: 200, height: 60),
+      'inside GlassSheet with suppressInteractionOnChildren: renders and is present',
+      (tester) async {
+        // Behavioral: confirm GlassInteractionSilence is wired up inside the sheet
+        // widget tree when suppressInteractionOnChildren is true. The actual
+        // hit-test guarantee is exercised in the standalone tap test above.
+        await tester.pumpWidget(
+          createTestApp(
+            child: Stack(
+              children: [
+                GlassModalSheet(
+                  suppressInteractionOnChildren: true,
+                  initialState: GlassSheetState.half,
+                  child: GlassInteractionSilence(
+                    child: const SizedBox(width: 200, height: 60),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byType(GlassInteractionSilence), findsOneWidget);
-    });
+        expect(find.byType(GlassInteractionSilence), findsOneWidget);
+      },
+    );
 
-    testWidgets('nested GlassInteractionSilence does not throw',
-        (tester) async {
+    testWidgets('nested GlassInteractionSilence does not throw', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: GlassInteractionSilence(
-            child: GlassInteractionSilence(
-              child: const Text('Nested Silence'),
-            ),
+            child: GlassInteractionSilence(child: const Text('Nested Silence')),
           ),
         ),
       );
@@ -1357,47 +1416,60 @@ void main() {
     });
 
     testWidgets(
-        'multiple silenced children each dispatch independent notifications',
-        (tester) async {
-      var notifyCount = 0;
+      'multiple silenced children each dispatch independent notifications',
+      (tester) async {
+        var notifyCount = 0;
 
-      await tester.pumpWidget(
-        createTestApp(
-          child: Center(
-            child: NotificationListener<Notification>(
-              onNotification: (_) {
-                notifyCount++;
-                return true;
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GlassInteractionSilence(
-                    child: const SizedBox(
-                        key: Key('silA'), width: 200, height: 50),
-                  ),
-                  GlassInteractionSilence(
-                    child: const SizedBox(
-                        key: Key('silB'), width: 200, height: 50),
-                  ),
-                ],
+        await tester.pumpWidget(
+          createTestApp(
+            child: Center(
+              child: NotificationListener<Notification>(
+                onNotification: (_) {
+                  notifyCount++;
+                  return true;
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GlassInteractionSilence(
+                      child: const SizedBox(
+                        key: Key('silA'),
+                        width: 200,
+                        height: 50,
+                      ),
+                    ),
+                    GlassInteractionSilence(
+                      child: const SizedBox(
+                        key: Key('silB'),
+                        width: 200,
+                        height: 50,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tapAt(tester.getCenter(find.byKey(const Key('silA'))));
-      await tester.pump();
-      expect(notifyCount, 1,
-          reason: 'First silence tap should produce exactly one notification');
+        await tester.tapAt(tester.getCenter(find.byKey(const Key('silA'))));
+        await tester.pump();
+        expect(
+          notifyCount,
+          1,
+          reason: 'First silence tap should produce exactly one notification',
+        );
 
-      await tester.tapAt(tester.getCenter(find.byKey(const Key('silB'))));
-      await tester.pump();
-      expect(notifyCount, 2,
-          reason: 'Second silence tap should produce a second notification');
-    });
+        await tester.tapAt(tester.getCenter(find.byKey(const Key('silB'))));
+        await tester.pump();
+        expect(
+          notifyCount,
+          2,
+          reason: 'Second silence tap should produce a second notification',
+        );
+      },
+    );
   });
 }
 

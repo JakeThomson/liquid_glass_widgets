@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme_data.dart';
@@ -41,10 +43,7 @@ enum GlassToastType {
 /// Action button that can be displayed in a toast.
 class GlassToastAction {
   /// Creates a toast action button.
-  const GlassToastAction({
-    required this.label,
-    required this.onPressed,
-  });
+  const GlassToastAction({required this.label, required this.onPressed});
 
   /// The label text for the action button
   final String label;
@@ -249,16 +248,19 @@ class _GlassToastState extends State<GlassToast> {
     final Color semanticColor = _getSemanticColor(glowColors);
 
     // Use user-provided icon or fall back to default for the toast type
-    final Widget displayIcon = widget.icon ??
-        Icon(widget.type == GlassToastType.success
-            ? CupertinoIcons.check_mark_circled_solid
-            : widget.type == GlassToastType.error
-                ? CupertinoIcons.xmark_circle_fill
-                : widget.type == GlassToastType.info
-                    ? CupertinoIcons.info_circle_fill
-                    : widget.type == GlassToastType.warning
-                        ? CupertinoIcons.exclamationmark_triangle_fill
-                        : CupertinoIcons.chat_bubble_fill);
+    final Widget displayIcon =
+        widget.icon ??
+        Icon(
+          widget.type == GlassToastType.success
+              ? CupertinoIcons.check_mark_circled_solid
+              : widget.type == GlassToastType.error
+              ? CupertinoIcons.xmark_circle_fill
+              : widget.type == GlassToastType.info
+              ? CupertinoIcons.info_circle_fill
+              : widget.type == GlassToastType.warning
+              ? CupertinoIcons.exclamationmark_triangle_fill
+              : CupertinoIcons.chat_bubble_fill,
+        );
 
     return Semantics(
       liveRegion: true,
@@ -268,7 +270,10 @@ class _GlassToastState extends State<GlassToast> {
   }
 
   Widget _buildToastContent(
-      BuildContext context, Color semanticColor, Widget displayIcon) {
+    BuildContext context,
+    Color semanticColor,
+    Widget displayIcon,
+  ) {
     final hasAction = widget.action != null;
     final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
     final bgColor = isDark
@@ -277,7 +282,8 @@ class _GlassToastState extends State<GlassToast> {
     final textColor = CupertinoColors.label.resolveFrom(context);
 
     return AdaptiveLiquidGlassLayer(
-      settings: widget.settings ??
+      settings:
+          widget.settings ??
           const LiquidGlassSettings(
             thickness: 25.0,
             blur: 6.0,
@@ -286,10 +292,7 @@ class _GlassToastState extends State<GlassToast> {
           ),
       quality: widget.quality,
       child: Container(
-        constraints: const BoxConstraints(
-          minHeight: 48,
-          maxWidth: 400,
-        ),
+        constraints: const BoxConstraints(minHeight: 48, maxWidth: 400),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(24),
@@ -418,8 +421,9 @@ class _GlassToastOverlayState extends State<_GlassToastOverlay>
   late Animation<double> _fadeAnimation;
   Timer? _dismissTimer;
 
-  static const Animation<Offset> _noSlide =
-      AlwaysStoppedAnimation<Offset>(Offset.zero);
+  static const Animation<Offset> _noSlide = AlwaysStoppedAnimation<Offset>(
+    Offset.zero,
+  );
 
   @override
   void initState() {
@@ -449,10 +453,7 @@ class _GlassToastOverlayState extends State<_GlassToastOverlay>
       curve: const Interval(0.0, 0.5),
       reverseCurve: const Interval(0.5, 1.0),
     );
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(_fadeCurve);
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_fadeCurve);
 
     // Start entrance animation
     _controller.forward();

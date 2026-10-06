@@ -7,16 +7,18 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 void main() {
   for (final fromTrigger in [false, true]) {
     for (final cancel in [false, true]) {
-      testWidgets(
-          'active ${fromTrigger ? 'trigger' : 'menu'} pointer can '
+      testWidgets('active ${fromTrigger ? 'trigger' : 'menu'} pointer can '
           '${cancel ? 'cancel' : 'end'} after menu unmounts', (tester) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: GlassMenu(
                 enableContinuousSwipe: fromTrigger,
-                trigger:
-                    const SizedBox(width: 60, height: 40, child: Text('Open')),
+                trigger: const SizedBox(
+                  width: 60,
+                  height: 40,
+                  child: Text('Open'),
+                ),
                 items: [GlassMenuItem(title: 'Action', onTap: () {})],
               ),
             ),
@@ -43,8 +45,9 @@ void main() {
     }
   }
 
-  testWidgets('GlassMenu toggles and renders items',
-      (WidgetTester tester) async {
+  testWidgets('GlassMenu toggles and renders items', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -57,14 +60,8 @@ void main() {
                 child: const Center(child: Text('Open Menu')),
               ),
               items: [
-                GlassMenuItem(
-                  title: 'Option 1',
-                  onTap: () {},
-                ),
-                GlassMenuItem(
-                  title: 'Option 2',
-                  onTap: () {},
-                ),
+                GlassMenuItem(title: 'Option 1', onTap: () {}),
+                GlassMenuItem(title: 'Option 2', onTap: () {}),
               ],
             ),
           ),
@@ -78,8 +75,7 @@ void main() {
     // Tap trigger
     await tester.tap(find.text('Open Menu'));
     await tester.pump(); // Start animation
-    await tester
-        .pumpAndSettle(); // Wait for animation to complete (content appears at 65%+)
+    await tester.pumpAndSettle(); // Wait for animation to complete (content appears at 65%+)
 
     // Menu should be present (portal shown)
     expect(find.text('Option 1'), findsOneWidget);
@@ -92,8 +88,9 @@ void main() {
     expect(find.text('Option 1'), findsNothing);
   });
 
-  testWidgets('GlassMenu works with triggerBuilder (interactive trigger)',
-      (WidgetTester tester) async {
+  testWidgets('GlassMenu works with triggerBuilder (interactive trigger)', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -104,12 +101,7 @@ void main() {
                 useOwnLayer: true,
                 child: const Text('Interactive Menu'),
               ),
-              items: [
-                GlassMenuItem(
-                  title: 'Action',
-                  onTap: () {},
-                ),
-              ],
+              items: [GlassMenuItem(title: 'Action', onTap: () {})],
             ),
           ),
         ),
@@ -125,8 +117,9 @@ void main() {
     expect(find.text('Action'), findsOneWidget);
   });
 
-  testWidgets('GlassMenu aligns correctly when on right side of screen',
-      (WidgetTester tester) async {
+  testWidgets('GlassMenu aligns correctly when on right side of screen', (
+    WidgetTester tester,
+  ) async {
     // Set a wide screen
     tester.view.physicalSize = const Size(1000, 800);
     tester.view.devicePixelRatio = 1.0;
@@ -141,13 +134,14 @@ void main() {
                 top: 20,
                 child: GlassMenu(
                   trigger: const SizedBox(
-                      width: 50, height: 50, child: Text('RightBtn')),
-                  items: [
-                    GlassMenuItem(title: 'RightItem', onTap: () {}),
-                  ],
+                    width: 50,
+                    height: 50,
+                    child: Text('RightBtn'),
+                  ),
+                  items: [GlassMenuItem(title: 'RightItem', onTap: () {})],
                   menuWidth: 200,
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -166,17 +160,14 @@ void main() {
   });
 
   // ── GlassMenuItem tap-cancel (line 77) ──────────────────────────────────────
-  testWidgets('GlassMenuItem onTapCancel resets pressed state (line 77)',
-      (tester) async {
+  testWidgets('GlassMenuItem onTapCancel resets pressed state (line 77)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: GlassMenu(
-            trigger: const SizedBox(
-              width: 60,
-              height: 40,
-              child: Text('Open'),
-            ),
+            trigger: const SizedBox(width: 60, height: 40, child: Text('Open')),
             items: [
               GlassMenuItem(
                 title: 'Action',
@@ -209,8 +200,9 @@ void main() {
   });
 
   // ── _toggleMenu close path (line 186) ───────────────────────────────────────
-  testWidgets('GlassMenu second tap closes menu via _toggleMenu (line 186)',
-      (tester) async {
+  testWidgets('GlassMenu second tap closes menu via _toggleMenu (line 186)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -221,9 +213,7 @@ void main() {
                 height: 40,
                 child: Text('Toggle'),
               ),
-              items: [
-                GlassMenuItem(title: 'Close Test', onTap: () {}),
-              ],
+              items: [GlassMenuItem(title: 'Close Test', onTap: () {})],
             ),
           ),
         ),
@@ -245,41 +235,43 @@ void main() {
 
   // ── shouldFlipVertical bottom-of-screen path (line 228) ─────────────────────
   testWidgets(
-      'GlassMenu at bottom of screen flips vertical alignment (line 228)',
-      (tester) async {
-    tester.view.physicalSize = const Size(400, 600);
-    tester.view.devicePixelRatio = 1.0;
+    'GlassMenu at bottom of screen flips vertical alignment (line 228)',
+    (tester) async {
+      tester.view.physicalSize = const Size(400, 600);
+      tester.view.devicePixelRatio = 1.0;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Stack(
-            children: [
-              Positioned(
-                bottom: 10, // Near bottom — triggers shouldFlipVertical
-                left: 20,
-                child: GlassMenu(
-                  trigger: const SizedBox(
-                      width: 60, height: 40, child: Text('BottomMenu')),
-                  items: [
-                    GlassMenuItem(title: 'FlipItem', onTap: () {}),
-                  ],
-                  menuWidth: 150,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(
+                  bottom: 10, // Near bottom — triggers shouldFlipVertical
+                  left: 20,
+                  child: GlassMenu(
+                    trigger: const SizedBox(
+                      width: 60,
+                      height: 40,
+                      child: Text('BottomMenu'),
+                    ),
+                    items: [GlassMenuItem(title: 'FlipItem', onTap: () {})],
+                    menuWidth: 150,
+                  ),
                 ),
-              )
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('BottomMenu'));
-    await tester.pump();
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('BottomMenu'));
+      await tester.pump();
+      await tester.pumpAndSettle();
 
-    expect(find.text('FlipItem'), findsOneWidget);
-    addTearDown(tester.view.resetPhysicalSize);
-  });
+      expect(find.text('FlipItem'), findsOneWidget);
+      addTearDown(tester.view.resetPhysicalSize);
+    },
+  );
 
   // ── GlassMenuAlignment enum (PR #55) ─────────────────────────────────────────
   test('GlassMenuAlignment enum has all expected values', () {
@@ -297,8 +289,9 @@ void main() {
     expect(values.length, 10);
   });
 
-  testWidgets('GlassMenu opens with explicit menuAlignment.topRight',
-      (tester) async {
+  testWidgets('GlassMenu opens with explicit menuAlignment.topRight', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -306,10 +299,11 @@ void main() {
             child: GlassMenu(
               menuAlignment: GlassMenuAlignment.topRight,
               trigger: const SizedBox(
-                  width: 60, height: 40, child: Text('AlignMenu')),
-              items: [
-                GlassMenuItem(title: 'AlignedItem', onTap: () {}),
-              ],
+                width: 60,
+                height: 40,
+                child: Text('AlignMenu'),
+              ),
+              items: [GlassMenuItem(title: 'AlignedItem', onTap: () {})],
               menuWidth: 180,
             ),
           ),
@@ -323,8 +317,9 @@ void main() {
     expect(find.text('AlignedItem'), findsOneWidget);
   });
 
-  testWidgets('GlassMenu autoAdjustToScreen with menuPadding does not crash',
-      (tester) async {
+  testWidgets('GlassMenu autoAdjustToScreen with menuPadding does not crash', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1.0;
 
@@ -337,10 +332,11 @@ void main() {
               autoAdjustToScreen: true,
               menuPadding: const EdgeInsets.all(12),
               trigger: const SizedBox(
-                  width: 60, height: 40, child: Text('PaddedMenu')),
-              items: [
-                GlassMenuItem(title: 'PaddedItem', onTap: () {}),
-              ],
+                width: 60,
+                height: 40,
+                child: Text('PaddedMenu'),
+              ),
+              items: [GlassMenuItem(title: 'PaddedItem', onTap: () {})],
               menuWidth: 200,
             ),
           ),
@@ -363,11 +359,12 @@ void main() {
           body: Center(
             child: GlassMenu(
               itemBorderRadius: 8.0,
-              trigger:
-                  const SizedBox(width: 60, height: 40, child: Text('Open')),
-              items: [
-                GlassMenuItem(title: 'RoundedItem', onTap: () {}),
-              ],
+              trigger: const SizedBox(
+                width: 60,
+                height: 40,
+                child: Text('Open'),
+              ),
+              items: [GlassMenuItem(title: 'RoundedItem', onTap: () {})],
             ),
           ),
         ),
@@ -383,15 +380,13 @@ void main() {
 
   // ── onClose callback (PR #67) ────────────────────────────────────────────────
   test('GlassMenu.onClose defaults to null', () {
-    const menu = GlassMenu(
-      trigger: SizedBox(width: 40, height: 40),
-      items: [],
-    );
+    const menu = GlassMenu(trigger: SizedBox(width: 40, height: 40), items: []);
     expect(menu.onClose, isNull);
   });
 
-  testWidgets('GlassMenu onClose fires when tapping outside the barrier',
-      (tester) async {
+  testWidgets('GlassMenu onClose fires when tapping outside the barrier', (
+    tester,
+  ) async {
     // Regression: onClose must fire on the barrier tap-to-close path
     // (GestureDetector Positioned.fill, glass_menu_internal.dart line 369).
     int closeCalls = 0;
@@ -402,11 +397,12 @@ void main() {
           body: Center(
             child: GlassMenu(
               onClose: () => closeCalls++,
-              trigger:
-                  const SizedBox(width: 60, height: 40, child: Text('Open')),
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
+              trigger: const SizedBox(
+                width: 60,
+                height: 40,
+                child: Text('Open'),
+              ),
+              items: [GlassMenuItem(title: 'Item', onTap: () {})],
             ),
           ),
         ),
@@ -428,8 +424,9 @@ void main() {
     expect(closeCalls, 1);
   });
 
-  testWidgets('GlassMenu onClose fires when closed via trigger re-tap',
-      (tester) async {
+  testWidgets('GlassMenu onClose fires when closed via trigger re-tap', (
+    tester,
+  ) async {
     // Regression: onClose must fire on the _toggleMenu → _closeMenu path
     // (glass_menu_internal.dart line 188).
     int closeCalls = 0;
@@ -440,11 +437,12 @@ void main() {
           body: Center(
             child: GlassMenu(
               onClose: () => closeCalls++,
-              trigger:
-                  const SizedBox(width: 60, height: 40, child: Text('Toggle2')),
-              items: [
-                GlassMenuItem(title: 'Item2', onTap: () {}),
-              ],
+              trigger: const SizedBox(
+                width: 60,
+                height: 40,
+                child: Text('Toggle2'),
+              ),
+              items: [GlassMenuItem(title: 'Item2', onTap: () {})],
             ),
           ),
         ),
@@ -476,10 +474,11 @@ void main() {
             child: GlassMenu(
               // onClose intentionally omitted.
               trigger: const SizedBox(
-                  width: 60, height: 40, child: Text('NoCallback')),
-              items: [
-                GlassMenuItem(title: 'SafeItem', onTap: () {}),
-              ],
+                width: 60,
+                height: 40,
+                child: Text('NoCallback'),
+              ),
+              items: [GlassMenuItem(title: 'SafeItem', onTap: () {})],
             ),
           ),
         ),
@@ -507,8 +506,9 @@ void main() {
     expect(menu.morphFromZero, isFalse);
   });
 
-  testWidgets('GlassMenu morphFromZero opens and closes without crashing',
-      (tester) async {
+  testWidgets('GlassMenu morphFromZero opens and closes without crashing', (
+    tester,
+  ) async {
     // morphFromZero lerps Blob B's size from 0 → full and suppresses Blob A,
     // exercising the radius-0 / 0-area degenerate path the default-false tests
     // never hit. The zero-size render guard must keep this from throwing.
@@ -519,9 +519,7 @@ void main() {
             child: GlassMenu(
               morphFromZero: true,
               trigger: const SizedBox(width: 8, height: 8, child: Text('Zero')),
-              items: [
-                GlassMenuItem(title: 'ZeroItem', onTap: () {}),
-              ],
+              items: [GlassMenuItem(title: 'ZeroItem', onTap: () {})],
             ),
           ),
         ),
@@ -548,8 +546,9 @@ void main() {
     expect(controller.isOpen, isFalse);
   });
 
-  testWidgets('GlassMenuController.open() opens the menu imperatively',
-      (tester) async {
+  testWidgets('GlassMenuController.open() opens the menu imperatively', (
+    tester,
+  ) async {
     final controller = GlassMenuController();
 
     await tester.pumpWidget(
@@ -558,11 +557,12 @@ void main() {
           body: Center(
             child: GlassMenu(
               controller: controller,
-              trigger:
-                  const SizedBox(width: 60, height: 40, child: Text('Ctrl')),
-              items: [
-                GlassMenuItem(title: 'CtrlItem', onTap: () {}),
-              ],
+              trigger: const SizedBox(
+                width: 60,
+                height: 40,
+                child: Text('Ctrl'),
+              ),
+              items: [GlassMenuItem(title: 'CtrlItem', onTap: () {})],
             ),
           ),
         ),
@@ -581,8 +581,9 @@ void main() {
     expect(find.text('CtrlItem'), findsOneWidget);
   });
 
-  testWidgets('GlassMenuController.close() closes the menu imperatively',
-      (tester) async {
+  testWidgets('GlassMenuController.close() closes the menu imperatively', (
+    tester,
+  ) async {
     final controller = GlassMenuController();
 
     await tester.pumpWidget(
@@ -591,11 +592,12 @@ void main() {
           body: Center(
             child: GlassMenu(
               controller: controller,
-              trigger:
-                  const SizedBox(width: 60, height: 40, child: Text('Ctrl2')),
-              items: [
-                GlassMenuItem(title: 'CtrlItem2', onTap: () {}),
-              ],
+              trigger: const SizedBox(
+                width: 60,
+                height: 40,
+                child: Text('Ctrl2'),
+              ),
+              items: [GlassMenuItem(title: 'CtrlItem2', onTap: () {})],
             ),
           ),
         ),
@@ -627,46 +629,49 @@ void main() {
   });
 
   testWidgets(
-      'GlassMenu showDismissBarrier=false renders without barrier crash',
-      (tester) async {
-    final controller = GlassMenuController();
+    'GlassMenu showDismissBarrier=false renders without barrier crash',
+    (tester) async {
+      final controller = GlassMenuController();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              controller: controller,
-              showDismissBarrier: false,
-              trigger: const SizedBox(
-                  width: 60, height: 40, child: Text('NoBarrier')),
-              items: [
-                GlassMenuItem(title: 'BarrierItem', onTap: () {}),
-              ],
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                controller: controller,
+                showDismissBarrier: false,
+                trigger: const SizedBox(
+                  width: 60,
+                  height: 40,
+                  child: Text('NoBarrier'),
+                ),
+                items: [GlassMenuItem(title: 'BarrierItem', onTap: () {})],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    controller.open();
-    await tester.pump();
-    await tester.pumpAndSettle();
+      controller.open();
+      await tester.pump();
+      await tester.pumpAndSettle();
 
-    expect(find.text('BarrierItem'), findsOneWidget);
+      expect(find.text('BarrierItem'), findsOneWidget);
 
-    // Close via controller since there's no barrier to tap
-    controller.close();
-    await tester.pump();
-    await tester.pumpAndSettle();
+      // Close via controller since there's no barrier to tap
+      controller.close();
+      await tester.pump();
+      await tester.pumpAndSettle();
 
-    expect(find.text('BarrierItem'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('BarrierItem'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   // ── setFollowOffset (PR #89) ────────────────────────────────────────────────
-  testWidgets('GlassMenuController.setFollowOffset does not crash',
-      (tester) async {
+  testWidgets('GlassMenuController.setFollowOffset does not crash', (
+    tester,
+  ) async {
     final controller = GlassMenuController();
 
     await tester.pumpWidget(
@@ -675,11 +680,12 @@ void main() {
           body: Center(
             child: GlassMenu(
               controller: controller,
-              trigger:
-                  const SizedBox(width: 60, height: 40, child: Text('Follow')),
-              items: [
-                GlassMenuItem(title: 'FollowItem', onTap: () {}),
-              ],
+              trigger: const SizedBox(
+                width: 60,
+                height: 40,
+                child: Text('Follow'),
+              ),
+              items: [GlassMenuItem(title: 'FollowItem', onTap: () {})],
             ),
           ),
         ),
@@ -708,8 +714,9 @@ void main() {
   });
 
   // ── GlassIconButton quality null pass-through (PR #90) ──────────────────────
-  testWidgets('GlassIconButton passes null quality to let theme chain resolve',
-      (tester) async {
+  testWidgets('GlassIconButton passes null quality to let theme chain resolve', (
+    tester,
+  ) async {
     // Exercises the fix: quality must NOT be coerced to GlassQuality.standard
     // before reaching GlassButton.custom(), so the theme chain can resolve it.
     await tester.pumpWidget(
@@ -730,54 +737,59 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   // ── Scale-with-morph animation (PR #97) ────────────────────────────────────
-  testWidgets('GlassMenu items are wrapped in Transform.scale when fully open',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              trigger:
-                  const SizedBox(width: 60, height: 40, child: Text('Scale')),
-              items: [
-                GlassMenuItem(title: 'ScaleItem', onTap: () {}),
-              ],
+  testWidgets(
+    'GlassMenu items are wrapped in Transform.scale when fully open',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                trigger: const SizedBox(
+                  width: 60,
+                  height: 40,
+                  child: Text('Scale'),
+                ),
+                items: [GlassMenuItem(title: 'ScaleItem', onTap: () {})],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    // Open the menu and let the spring fully settle.
-    await tester.tap(find.text('Scale'));
-    await tester.pump();
-    await tester.pumpAndSettle();
+      // Open the menu and let the spring fully settle.
+      await tester.tap(find.text('Scale'));
+      await tester.pump();
+      await tester.pumpAndSettle();
 
-    // The item text must be visible.
-    expect(find.text('ScaleItem'), findsOneWidget);
+      // The item text must be visible.
+      expect(find.text('ScaleItem'), findsOneWidget);
 
-    // A Transform widget wrapping items should exist in the tree.
-    // At rest (clampedValue ≈ 1.0) the scale should be ≈ 1.0.
-    final transformFinder = find.ancestor(
-      of: find.text('ScaleItem'),
-      matching: find.byType(Transform),
-    );
-    expect(transformFinder, findsWidgets);
-    expect(tester.takeException(), isNull);
-  });
+      // A Transform widget wrapping items should exist in the tree.
+      // At rest (clampedValue ≈ 1.0) the scale should be ≈ 1.0.
+      final transformFinder = find.ancestor(
+        of: find.text('ScaleItem'),
+        matching: find.byType(Transform),
+      );
+      expect(transformFinder, findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('GlassMenu items are wrapped in Opacity when fully open',
-      (tester) async {
+  testWidgets('GlassMenu items are wrapped in Opacity when fully open', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: Center(
             child: GlassMenu(
-              trigger:
-                  const SizedBox(width: 60, height: 40, child: Text('Fade')),
-              items: [
-                GlassMenuItem(title: 'FadeItem', onTap: () {}),
-              ],
+              trigger: const SizedBox(
+                width: 60,
+                height: 40,
+                child: Text('Fade'),
+              ),
+              items: [GlassMenuItem(title: 'FadeItem', onTap: () {})],
             ),
           ),
         ),
@@ -800,449 +812,453 @@ void main() {
   });
 
   testWidgets(
-      'GlassMenu items not present immediately after opening (early morph)',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              trigger: const SizedBox(
-                  width: 60, height: 40, child: Text('EarlyMorph')),
-              items: [
-                GlassMenuItem(title: 'EarlyItem', onTap: () {}),
-              ],
+    'GlassMenu items not present immediately after opening (early morph)',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                trigger: const SizedBox(
+                  width: 60,
+                  height: 40,
+                  child: Text('EarlyMorph'),
+                ),
+                items: [GlassMenuItem(title: 'EarlyItem', onTap: () {})],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    // Tap to open — pump only one frame (spring is near 0%).
-    await tester.tap(find.text('EarlyMorph'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 16));
+      // Tap to open — pump only one frame (spring is near 0%).
+      await tester.tap(find.text('EarlyMorph'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
 
-    // At this very early stage of the spring, items should not yet be in
-    // the tree (clampedValue is well below 0.3).
-    expect(find.text('EarlyItem'), findsNothing);
+      // At this very early stage of the spring, items should not yet be in
+      // the tree (clampedValue is well below 0.3).
+      expect(find.text('EarlyItem'), findsNothing);
 
-    // Let the animation complete so teardown is clean.
-    await tester.pumpAndSettle();
-    expect(find.text('EarlyItem'), findsOneWidget);
-  });
+      // Let the animation complete so teardown is clean.
+      await tester.pumpAndSettle();
+      expect(find.text('EarlyItem'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'GlassMenu items present immediately with GlassAccessibilityScope(reduceMotion: true)',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassAccessibilityScope(
-              reduceMotion: true,
+    'GlassMenu items present immediately with GlassAccessibilityScope(reduceMotion: true)',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassAccessibilityScope(
+                reduceMotion: true,
+                child: GlassMenu(
+                  trigger: const SizedBox(
+                    width: 60,
+                    height: 40,
+                    child: Text('InstantMenu'),
+                  ),
+                  items: [GlassMenuItem(title: 'InstantItem', onTap: () {})],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Tap to open — with reduceMotion (instant spring stiffness 500), the morph settles
+      // well within 150ms, whereas normal spring (~375ms) is still travelling.
+      await tester.tap(find.text('InstantMenu'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      expect(find.text('InstantItem'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'GlassMenu items present within 150ms with platform reduceMotion: true',
+    (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(reduceMotion: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
               child: GlassMenu(
                 trigger: const SizedBox(
-                    width: 60, height: 40, child: Text('InstantMenu')),
+                  width: 60,
+                  height: 40,
+                  child: Text('PlatformInstantMenu'),
+                ),
                 items: [
-                  GlassMenuItem(title: 'InstantItem', onTap: () {}),
+                  GlassMenuItem(title: 'PlatformInstantItem', onTap: () {}),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    // Tap to open — with reduceMotion (instant spring stiffness 500), the morph settles
-    // well within 150ms, whereas normal spring (~375ms) is still travelling.
-    await tester.tap(find.text('InstantMenu'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 150));
+      await tester.tap(find.text('PlatformInstantMenu'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
 
-    expect(find.text('InstantItem'), findsOneWidget);
+      expect(find.text('PlatformInstantItem'), findsOneWidget);
 
-    await tester.pumpAndSettle();
-  });
-
-  testWidgets(
-      'GlassMenu items present within 150ms with platform reduceMotion: true',
-      (tester) async {
-    tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(reduceMotion: true);
-    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              trigger: const SizedBox(
-                  width: 60, height: 40, child: Text('PlatformInstantMenu')),
-              items: [
-                GlassMenuItem(title: 'PlatformInstantItem', onTap: () {}),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('PlatformInstantMenu'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 150));
-
-    expect(find.text('PlatformInstantItem'), findsOneWidget);
-
-    await tester.pumpAndSettle();
-  });
+      await tester.pumpAndSettle();
+    },
+  );
 
   // ── Route-aware dismissal tests (#274) ────────────────────────────────────
   testWidgets(
-      'GlassMenu dismisses instantly on route navigation without overlapping destination (#274)',
-      (tester) async {
-    bool closedCalled = false;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: GlassMenu(
-                onClose: () => closedCalled = true,
-                trigger: const SizedBox(
-                  width: 80,
-                  height: 40,
-                  child: Text('Open Menu'),
+    'GlassMenu dismisses instantly on route navigation without overlapping destination (#274)',
+    (tester) async {
+      bool closedCalled = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: GlassMenu(
+                  onClose: () => closedCalled = true,
+                  trigger: const SizedBox(
+                    width: 80,
+                    height: 40,
+                    child: Text('Open Menu'),
+                  ),
+                  items: [
+                    GlassMenuItem(
+                      title: 'Navigate Item',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const Scaffold(
+                              body: Center(child: Text('Page 2')),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                items: [
-                  GlassMenuItem(
-                    title: 'Navigate Item',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const Scaffold(
-                            body: Center(child: Text('Page 2')),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Open the menu
+      await tester.tap(find.text('Open Menu'));
+      await tester.pumpAndSettle();
+      expect(find.text('Navigate Item'), findsOneWidget);
+      expect(closedCalled, isFalse);
+
+      // Tap navigate item
+      await tester.tap(find.text('Navigate Item'));
+
+      // Advance into the route transition
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Mid-transition into the new route, the menu must already be dismissed.
+      // It should not linger in the root overlay over the incoming page.
+      expect(find.text('Navigate Item'), findsNothing);
+      expect(find.text('Page 2'), findsOneWidget);
+      expect(closedCalled, isTrue);
+
+      // Complete the transition
+      await tester.pumpAndSettle();
+      expect(find.text('Page 2'), findsOneWidget);
+      expect(find.text('Navigate Item'), findsNothing);
+
+      // Pop back to Page 1
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.pop();
+      await tester.pumpAndSettle();
+
+      // Back on Page 1: trigger is visible and menu is closed
+      expect(find.text('Open Menu'), findsOneWidget);
+      expect(find.text('Navigate Item'), findsNothing);
+
+      // Menu can be reopened cleanly
+      await tester.tap(find.text('Open Menu'));
+      await tester.pumpAndSettle();
+      expect(find.text('Navigate Item'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GlassMenu dismisses instantly when route is pushed externally while open',
+    (tester) async {
+      late BuildContext homeContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              homeContext = context;
+              return Scaffold(
+                body: Center(
+                  child: GlassMenu(
+                    trigger: const Text('Open Menu'),
+                    items: [GlassMenuItem(title: 'Option', onTap: () {})],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Menu'));
+      await tester.pumpAndSettle();
+      expect(find.text('Option'), findsOneWidget);
+
+      // Push an external route
+      Navigator.of(homeContext).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              const Scaffold(body: Center(child: Text('External Route'))),
+        ),
+      );
+
+      // Advance into transition
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text('Option'), findsNothing);
+      expect(find.text('External Route'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'GlassMenu dismisses instantly when route with zero duration is pushed while open',
+    (tester) async {
+      late BuildContext homeContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              homeContext = context;
+              return Scaffold(
+                body: Center(
+                  child: GlassMenu(
+                    trigger: const Text('Open Menu'),
+                    items: [GlassMenuItem(title: 'Option', onTap: () {})],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Menu'));
+      await tester.pumpAndSettle();
+      expect(find.text('Option'), findsOneWidget);
+
+      Navigator.of(homeContext).push(
+        PageRouteBuilder(
+          transitionDuration: Duration.zero,
+          pageBuilder: (_, __, ___) =>
+              const Scaffold(body: Center(child: Text('Zero Duration Route'))),
+        ),
+      );
+
+      await tester.pump();
+      expect(find.text('Option'), findsNothing);
+      expect(find.text('Zero Duration Route'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GlassMenu dismisses instantly when containing route is popped while open',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => Scaffold(
+                        appBar: AppBar(title: const Text('Second Route')),
+                        body: Center(
+                          child: GlassMenu(
+                            trigger: const Text('Open SubMenu'),
+                            items: [
+                              GlassMenuItem(title: 'Sub Option', onTap: () {}),
+                            ],
                           ),
                         ),
-                      );
-                    },
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Go to Second'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Go to Second'));
+      await tester.pumpAndSettle();
+      expect(find.text('Second Route'), findsOneWidget);
+
+      // Open menu on second route
+      await tester.tap(find.text('Open SubMenu'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sub Option'), findsOneWidget);
+
+      // Pop the containing route
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.pop();
+
+      // First frame of pop
+      await tester.pump();
+      expect(find.text('Sub Option'), findsNothing);
+
+      await tester.pumpAndSettle();
+      expect(find.text('Go to Second'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GlassMenu dismisses instantly when route is pushed on ancestor Navigator (#274 nested navigator)',
+    (tester) async {
+      final shellNavigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Navigator(
+            key: shellNavigatorKey,
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (_) => Navigator(
+                onGenerateRoute: (_) => MaterialPageRoute<void>(
+                  builder: (context) => Scaffold(
+                    body: Center(
+                      child: GlassMenu(
+                        trigger: const Text('Open Menu'),
+                        items: [
+                          GlassMenuItem(
+                            title: 'Start Activity',
+                            onTap: () {
+                              shellNavigatorKey.currentState!.push<void>(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const Scaffold(
+                                    body: Center(
+                                      child: Text('Destination page'),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open Menu'));
+      await tester.pumpAndSettle();
+      expect(find.text('Start Activity'), findsOneWidget);
+
+      await tester.tap(find.text('Start Activity'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Mid-transition into Destination page on the ancestor navigator,
+      // the menu should already be dismissed and not lingering in root overlay.
+      expect(find.text('Destination page'), findsOneWidget);
+      expect(find.text('Start Activity'), findsNothing);
+
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'GlassMenuItem does not throw RenderFlex overflow when constrained to narrow width',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 59.9,
+                child: GlassMenuItem(
+                  icon: const Icon(Icons.share),
+                  title: 'Share',
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(GlassMenuItem), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GlassMenu opening morph with icons and default menuWidth does not overflow',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                trigger: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Text('Open'),
+                ),
+                menuWidth: 200,
+                items: [
+                  GlassMenuItem(
+                    icon: const Icon(Icons.share),
+                    title: 'Option A',
+                    onTap: () {},
+                  ),
+                  GlassMenuItem(
+                    icon: const Icon(Icons.edit),
+                    title: 'Option B',
+                    onTap: () {},
                   ),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    // Open the menu
-    await tester.tap(find.text('Open Menu'));
-    await tester.pumpAndSettle();
-    expect(find.text('Navigate Item'), findsOneWidget);
-    expect(closedCalled, isFalse);
-
-    // Tap navigate item
-    await tester.tap(find.text('Navigate Item'));
-
-    // Advance into the route transition
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-
-    // Mid-transition into the new route, the menu must already be dismissed.
-    // It should not linger in the root overlay over the incoming page.
-    expect(find.text('Navigate Item'), findsNothing);
-    expect(find.text('Page 2'), findsOneWidget);
-    expect(closedCalled, isTrue);
-
-    // Complete the transition
-    await tester.pumpAndSettle();
-    expect(find.text('Page 2'), findsOneWidget);
-    expect(find.text('Navigate Item'), findsNothing);
-
-    // Pop back to Page 1
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-    navigator.pop();
-    await tester.pumpAndSettle();
-
-    // Back on Page 1: trigger is visible and menu is closed
-    expect(find.text('Open Menu'), findsOneWidget);
-    expect(find.text('Navigate Item'), findsNothing);
-
-    // Menu can be reopened cleanly
-    await tester.tap(find.text('Open Menu'));
-    await tester.pumpAndSettle();
-    expect(find.text('Navigate Item'), findsOneWidget);
-  });
-
-  testWidgets(
-      'GlassMenu dismisses instantly when route is pushed externally while open',
-      (tester) async {
-    late BuildContext homeContext;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) {
-            homeContext = context;
-            return Scaffold(
-              body: Center(
-                child: GlassMenu(
-                  trigger: const Text('Open Menu'),
-                  items: [
-                    GlassMenuItem(
-                      title: 'Option',
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('Open Menu'));
-    await tester.pumpAndSettle();
-    expect(find.text('Option'), findsOneWidget);
-
-    // Push an external route
-    Navigator.of(homeContext).push(
-      MaterialPageRoute(
-        builder: (_) => const Scaffold(
-          body: Center(child: Text('External Route')),
-        ),
-      ),
-    );
-
-    // Advance into transition
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('Option'), findsNothing);
-    expect(find.text('External Route'), findsOneWidget);
-
-    await tester.pumpAndSettle();
-  });
-
-  testWidgets(
-      'GlassMenu dismisses instantly when route with zero duration is pushed while open',
-      (tester) async {
-    late BuildContext homeContext;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) {
-            homeContext = context;
-            return Scaffold(
-              body: Center(
-                child: GlassMenu(
-                  trigger: const Text('Open Menu'),
-                  items: [
-                    GlassMenuItem(
-                      title: 'Option',
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('Open Menu'));
-    await tester.pumpAndSettle();
-    expect(find.text('Option'), findsOneWidget);
-
-    Navigator.of(homeContext).push(
-      PageRouteBuilder(
-        transitionDuration: Duration.zero,
-        pageBuilder: (_, __, ___) => const Scaffold(
-          body: Center(child: Text('Zero Duration Route')),
-        ),
-      ),
-    );
-
-    await tester.pump();
-    expect(find.text('Option'), findsNothing);
-    expect(find.text('Zero Duration Route'), findsOneWidget);
-  });
-
-  testWidgets(
-      'GlassMenu dismisses instantly when containing route is popped while open',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                      appBar: AppBar(title: const Text('Second Route')),
-                      body: Center(
-                        child: GlassMenu(
-                          trigger: const Text('Open SubMenu'),
-                          items: [
-                            GlassMenuItem(
-                              title: 'Sub Option',
-                              onTap: () {},
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Go to Second'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('Go to Second'));
-    await tester.pumpAndSettle();
-    expect(find.text('Second Route'), findsOneWidget);
-
-    // Open menu on second route
-    await tester.tap(find.text('Open SubMenu'));
-    await tester.pumpAndSettle();
-    expect(find.text('Sub Option'), findsOneWidget);
-
-    // Pop the containing route
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-    navigator.pop();
-
-    // First frame of pop
-    await tester.pump();
-    expect(find.text('Sub Option'), findsNothing);
-
-    await tester.pumpAndSettle();
-    expect(find.text('Go to Second'), findsOneWidget);
-  });
-
-  testWidgets(
-      'GlassMenu dismisses instantly when route is pushed on ancestor Navigator (#274 nested navigator)',
-      (tester) async {
-    final shellNavigatorKey = GlobalKey<NavigatorState>();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Navigator(
-          key: shellNavigatorKey,
-          onGenerateRoute: (_) => MaterialPageRoute<void>(
-            builder: (_) => Navigator(
-              onGenerateRoute: (_) => MaterialPageRoute<void>(
-                builder: (context) => Scaffold(
-                  body: Center(
-                    child: GlassMenu(
-                      trigger: const Text('Open Menu'),
-                      items: [
-                        GlassMenuItem(
-                          title: 'Start Activity',
-                          onTap: () {
-                            shellNavigatorKey.currentState!.push<void>(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const Scaffold(
-                                  body: Center(child: Text('Destination page')),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Open Menu'));
-    await tester.pumpAndSettle();
-    expect(find.text('Start Activity'), findsOneWidget);
-
-    await tester.tap(find.text('Start Activity'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-
-    // Mid-transition into Destination page on the ancestor navigator,
-    // the menu should already be dismissed and not lingering in root overlay.
-    expect(find.text('Destination page'), findsOneWidget);
-    expect(find.text('Start Activity'), findsNothing);
-
-    await tester.pumpAndSettle();
-  });
-
-  testWidgets(
-      'GlassMenuItem does not throw RenderFlex overflow when constrained to narrow width',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 59.9,
-              child: GlassMenuItem(
-                icon: const Icon(Icons.share),
-                title: 'Share',
-                onTap: () {},
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    expect(find.byType(GlassMenuItem), findsOneWidget);
-  });
-
-  testWidgets(
-      'GlassMenu opening morph with icons and default menuWidth does not overflow',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              trigger: const SizedBox(
-                width: 44,
-                height: 44,
-                child: Text('Open'),
-              ),
-              menuWidth: 200,
-              items: [
-                GlassMenuItem(
-                  icon: const Icon(Icons.share),
-                  title: 'Option A',
-                  onTap: () {},
-                ),
-                GlassMenuItem(
-                  icon: const Icon(Icons.edit),
-                  title: 'Option B',
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('Open'));
-    // Pump through morph animation frame by frame
-    for (int i = 0; i < 30; i++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    await tester.pumpAndSettle();
-    expect(find.text('Option A'), findsOneWidget);
-    expect(find.text('Option B'), findsOneWidget);
-  });
+      await tester.tap(find.text('Open'));
+      // Pump through morph animation frame by frame
+      for (int i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('Option A'), findsOneWidget);
+      expect(find.text('Option B'), findsOneWidget);
+    },
+  );
 
   // ── Trigger soft-detach opacity ───────────────────────────────────────────
 
@@ -1258,9 +1274,7 @@ void main() {
                 child: Text('Btn'),
               ),
               menuWidth: 200,
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
+              items: [GlassMenuItem(title: 'Item', onTap: () {})],
             ),
           ),
         ),
@@ -1272,8 +1286,9 @@ void main() {
     expect(opacity.opacity, equals(1.0));
   });
 
-  testWidgets('Trigger dissolves cleanly to 0.0 when menu is fully open',
-      (tester) async {
+  testWidgets('Trigger dissolves cleanly to 0.0 when menu is fully open', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -1285,9 +1300,7 @@ void main() {
                 child: Text('Btn'),
               ),
               menuWidth: 200,
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
+              items: [GlassMenuItem(title: 'Item', onTap: () {})],
             ),
           ),
         ),
@@ -1309,8 +1322,9 @@ void main() {
     );
   });
 
-  testWidgets('Trigger opacity returns to 1.0 after menu fully closes',
-      (tester) async {
+  testWidgets('Trigger opacity returns to 1.0 after menu fully closes', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -1322,9 +1336,7 @@ void main() {
                 child: Text('Btn'),
               ),
               menuWidth: 200,
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
+              items: [GlassMenuItem(title: 'Item', onTap: () {})],
             ),
           ),
         ),
@@ -1342,217 +1354,213 @@ void main() {
   });
 
   testWidgets(
-      'GlassMenu on standard quality renders only single GlassContainer on close (no Blob A ghost)',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              quality: GlassQuality.standard,
-              trigger: const SizedBox(
-                width: 44,
-                height: 44,
-                child: Text('Btn'),
+    'GlassMenu on standard quality renders only single GlassContainer on close (no Blob A ghost)',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                quality: GlassQuality.standard,
+                trigger: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Text('Btn'),
+                ),
+                menuWidth: 200,
+                items: [GlassMenuItem(title: 'Item', onTap: () {})],
               ),
-              menuWidth: 200,
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Btn'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Btn'));
+      await tester.pumpAndSettle();
 
-    // Trigger close
-    await tester.tap(find.text('Item'));
-    // Pump partially into the close animation (e.g. 50ms)
-    await tester.pump(const Duration(milliseconds: 50));
+      // Trigger close
+      await tester.tap(find.text('Item'));
+      // Pump partially into the close animation (e.g. 50ms)
+      await tester.pump(const Duration(milliseconds: 50));
 
-    // Under standard quality, Blob A is suppressed during close to prevent double-button overlap.
-    // There should be exactly 1 GlassContainer inside the overlay (Blob B, the collapsing menu body).
-    final overlayContainers = find.descendant(
-      of: find.byType(AdaptiveLiquidGlassLayer),
-      matching: find.byType(GlassContainer),
-    );
-    expect(overlayContainers, findsOneWidget);
+      // Under standard quality, Blob A is suppressed during close to prevent double-button overlap.
+      // There should be exactly 1 GlassContainer inside the overlay (Blob B, the collapsing menu body).
+      final overlayContainers = find.descendant(
+        of: find.byType(AdaptiveLiquidGlassLayer),
+        matching: find.byType(GlassContainer),
+      );
+      expect(overlayContainers, findsOneWidget);
 
-    await tester.pumpAndSettle();
-  });
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets(
-      'GlassMenu on minimal quality renders only single GlassContainer on close (no Blob A ghost)',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              quality: GlassQuality.minimal,
-              trigger: const SizedBox(
-                width: 44,
-                height: 44,
-                child: Text('Btn'),
+    'GlassMenu on minimal quality renders only single GlassContainer on close (no Blob A ghost)',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                quality: GlassQuality.minimal,
+                trigger: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Text('Btn'),
+                ),
+                menuWidth: 200,
+                items: [GlassMenuItem(title: 'Item', onTap: () {})],
               ),
-              menuWidth: 200,
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Btn'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Btn'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Item'));
-    await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('Item'));
+      await tester.pump(const Duration(milliseconds: 50));
 
-    final overlayContainers = find.descendant(
-      of: find.byType(AdaptiveLiquidGlassLayer),
-      matching: find.byType(GlassContainer),
-    );
-    expect(overlayContainers, findsOneWidget);
+      final overlayContainers = find.descendant(
+        of: find.byType(AdaptiveLiquidGlassLayer),
+        matching: find.byType(GlassContainer),
+      );
+      expect(overlayContainers, findsOneWidget);
 
-    await tester.pumpAndSettle();
-  });
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets(
-      'GlassMenu with platformViewBackdrop: true suppresses Blob A on close even with premium quality',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              quality: GlassQuality.premium,
-              platformViewBackdrop: true,
-              trigger: const SizedBox(
-                width: 44,
-                height: 44,
-                child: Text('Btn'),
+    'GlassMenu with platformViewBackdrop: true suppresses Blob A on close even with premium quality',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                quality: GlassQuality.premium,
+                platformViewBackdrop: true,
+                trigger: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Text('Btn'),
+                ),
+                menuWidth: 200,
+                items: [GlassMenuItem(title: 'Item', onTap: () {})],
               ),
-              menuWidth: 200,
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Btn'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Btn'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Item'));
-    await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('Item'));
+      await tester.pump(const Duration(milliseconds: 50));
 
-    final overlayContainers = find.descendant(
-      of: find.byType(AdaptiveLiquidGlassLayer),
-      matching: find.byType(GlassContainer),
-    );
-    expect(overlayContainers, findsOneWidget);
+      final overlayContainers = find.descendant(
+        of: find.byType(AdaptiveLiquidGlassLayer),
+        matching: find.byType(GlassContainer),
+      );
+      expect(overlayContainers, findsOneWidget);
 
-    await tester.pumpAndSettle();
-  });
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets(
-      'GlassMenu renders Blob A trigger ghost during opening morph (liquid bridge preserved on open)',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              quality: GlassQuality.standard,
-              trigger: const SizedBox(
-                width: 44,
-                height: 44,
-                child: Text('Btn'),
+    'GlassMenu renders Blob A trigger ghost during opening morph (liquid bridge preserved on open)',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                quality: GlassQuality.standard,
+                trigger: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Text('Btn'),
+                ),
+                menuWidth: 200,
+                items: [GlassMenuItem(title: 'Item', onTap: () {})],
               ),
-              menuWidth: 200,
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Btn'));
-    // Pump partially into the opening animation where anchorScale > 0
-    await tester.pump(const Duration(milliseconds: 30));
+      await tester.tap(find.text('Btn'));
+      // Pump partially into the opening animation where anchorScale > 0
+      await tester.pump(const Duration(milliseconds: 30));
 
-    // On open, both Blob A (trigger ghost) and Blob B (menu body) must be present
-    final overlayContainers = find.descendant(
-      of: find.byType(AdaptiveLiquidGlassLayer),
-      matching: find.byType(GlassContainer),
-    );
-    expect(overlayContainers, findsNWidgets(2));
+      // On open, both Blob A (trigger ghost) and Blob B (menu body) must be present
+      final overlayContainers = find.descendant(
+        of: find.byType(AdaptiveLiquidGlassLayer),
+        matching: find.byType(GlassContainer),
+      );
+      expect(overlayContainers, findsNWidgets(2));
 
-    await tester.pumpAndSettle();
-  });
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets(
-      'GlassMenu on standard quality lerps border radius toward trigger border radius during close',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: GlassMenu(
-              quality: GlassQuality.standard,
-              menuBorderRadius: 24.0,
-              trigger: const SizedBox(
-                width: 40,
-                height: 20, // trigger shortest side / 2 = 10.0
-                child: Text('Btn'),
+    'GlassMenu on standard quality lerps border radius toward trigger border radius during close',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: GlassMenu(
+                quality: GlassQuality.standard,
+                menuBorderRadius: 24.0,
+                trigger: const SizedBox(
+                  width: 40,
+                  height: 20, // trigger shortest side / 2 = 10.0
+                  child: Text('Btn'),
+                ),
+                menuWidth: 200,
+                items: [GlassMenuItem(title: 'Item', onTap: () {})],
               ),
-              menuWidth: 200,
-              items: [
-                GlassMenuItem(title: 'Item', onTap: () {}),
-              ],
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Btn'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Btn'));
+      await tester.pumpAndSettle();
 
-    // Start close
-    await tester.tap(find.text('Item'));
-    // Pump into close travel
-    await tester.pump(const Duration(milliseconds: 100));
+      // Start close
+      await tester.tap(find.text('Item'));
+      // Pump into close travel
+      await tester.pump(const Duration(milliseconds: 100));
 
-    final containerFinder = find.descendant(
-      of: find.byType(AdaptiveLiquidGlassLayer),
-      matching: find.byType(GlassContainer),
-    );
-    expect(containerFinder, findsOneWidget);
+      final containerFinder = find.descendant(
+        of: find.byType(AdaptiveLiquidGlassLayer),
+        matching: find.byType(GlassContainer),
+      );
+      expect(containerFinder, findsOneWidget);
 
-    final container = tester.widget<GlassContainer>(containerFinder);
-    final shape = container.shape as LiquidRoundedRectangle;
-    // On standard quality, border radius lerps between trigger radius (10.0) and menuBorderRadius (24.0)
-    // rather than locking to full capsule rounding (which would be min(width, height)/2 >= 40.0)
-    expect(shape.borderRadius, lessThanOrEqualTo(24.0));
-    expect(shape.borderRadius, greaterThanOrEqualTo(10.0));
+      final container = tester.widget<GlassContainer>(containerFinder);
+      final shape = container.shape as LiquidRoundedRectangle;
+      // On standard quality, border radius lerps between trigger radius (10.0) and menuBorderRadius (24.0)
+      // rather than locking to full capsule rounding (which would be min(width, height)/2 >= 40.0)
+      expect(shape.borderRadius, lessThanOrEqualTo(24.0));
+      expect(shape.borderRadius, greaterThanOrEqualTo(10.0));
 
-    await tester.pumpAndSettle();
-  });
+      await tester.pumpAndSettle();
+    },
+  );
 
   group('non-scrollable menu row activation', () {
     Future<(GlassMenuController, List<String>)> openMenu(
-        WidgetTester tester) async {
+      WidgetTester tester,
+    ) async {
       final controller = GlassMenuController();
       final tapped = <String>[];
       await tester.pumpWidget(
@@ -1569,9 +1577,13 @@ void main() {
                     trigger: const SizedBox(width: 8, height: 8),
                     items: [
                       GlassMenuItem(
-                          title: 'Copy', onTap: () => tapped.add('Copy')),
+                        title: 'Copy',
+                        onTap: () => tapped.add('Copy'),
+                      ),
                       GlassMenuItem(
-                          title: 'Cut', onTap: () => tapped.add('Cut')),
+                        title: 'Cut',
+                        onTap: () => tapped.add('Cut'),
+                      ),
                     ],
                   ),
                 ),
@@ -1610,8 +1622,9 @@ void main() {
       expect(controller.isOpen, isFalse);
     });
 
-    testWidgets('a touch tap still activates the row exactly once',
-        (tester) async {
+    testWidgets('a touch tap still activates the row exactly once', (
+      tester,
+    ) async {
       final (_, tapped) = await openMenu(tester);
 
       await tester.tap(find.text('Copy'));
@@ -1622,51 +1635,58 @@ void main() {
   });
 
   testWidgets(
-      'a slide-to-select released over the gap between two rows activates a '
-      'row', (tester) async {
-    final controller = GlassMenuController();
-    final tapped = <String>[];
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Stack(
-            children: [
-              Positioned(
-                left: 40,
-                top: 80,
-                child: GlassMenu(
-                  controller: controller,
-                  menuAlignment: GlassMenuAlignment.topLeft,
-                  trigger: const SizedBox(width: 8, height: 8),
-                  items: [
-                    GlassMenuItem(
-                        title: 'Copy', onTap: () => tapped.add('Copy')),
-                    GlassMenuItem(title: 'Cut', onTap: () => tapped.add('Cut')),
-                  ],
+    'a slide-to-select released over the gap between two rows activates a '
+    'row',
+    (tester) async {
+      final controller = GlassMenuController();
+      final tapped = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(
+                  left: 40,
+                  top: 80,
+                  child: GlassMenu(
+                    controller: controller,
+                    menuAlignment: GlassMenuAlignment.topLeft,
+                    trigger: const SizedBox(width: 8, height: 8),
+                    items: [
+                      GlassMenuItem(
+                        title: 'Copy',
+                        onTap: () => tapped.add('Copy'),
+                      ),
+                      GlassMenuItem(
+                        title: 'Cut',
+                        onTap: () => tapped.add('Cut'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-    controller.open();
-    await tester.pumpAndSettle();
+      );
+      controller.open();
+      await tester.pumpAndSettle();
 
-    // Rows are separated by a 2px gap; just below the midpoint between the
-    // two row centres lies inside it.
-    final copy = tester.getCenter(find.text('Copy'));
-    final cut = tester.getCenter(find.text('Cut'));
-    final gesture = await tester.startGesture(copy);
-    await tester.pump();
-    await gesture.moveTo(cut);
-    await tester.pump();
-    await gesture.moveTo(Offset(copy.dx, (copy.dy + cut.dy) / 2 + 0.5));
-    await tester.pump();
-    await gesture.up();
-    await tester.pumpAndSettle();
+      // Rows are separated by a 2px gap; just below the midpoint between the
+      // two row centres lies inside it.
+      final copy = tester.getCenter(find.text('Copy'));
+      final cut = tester.getCenter(find.text('Cut'));
+      final gesture = await tester.startGesture(copy);
+      await tester.pump();
+      await gesture.moveTo(cut);
+      await tester.pump();
+      await gesture.moveTo(Offset(copy.dx, (copy.dy + cut.dy) / 2 + 0.5));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
 
-    expect(tapped, hasLength(1));
-    expect(controller.isOpen, isFalse);
-  });
+      expect(tapped, hasLength(1));
+      expect(controller.isOpen, isFalse);
+    },
+  );
 }

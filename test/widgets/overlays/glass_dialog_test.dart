@@ -7,23 +7,13 @@ import '../../shared/test_helpers.dart';
 void main() {
   group('GlassDialog', () {
     final testActions = [
-      GlassDialogAction(
-        label: 'Cancel',
-        onPressed: () {},
-      ),
-      GlassDialogAction(
-        label: 'OK',
-        onPressed: () {},
-      ),
+      GlassDialogAction(label: 'Cancel', onPressed: () {}),
+      GlassDialogAction(label: 'OK', onPressed: () {}),
     ];
 
     testWidgets('can be instantiated with required parameters', (tester) async {
       await tester.pumpWidget(
-        createTestApp(
-          child: GlassDialog(
-            actions: testActions,
-          ),
-        ),
+        createTestApp(child: GlassDialog(actions: testActions)),
       );
 
       expect(find.byType(GlassDialog), findsOneWidget);
@@ -32,10 +22,7 @@ void main() {
     testWidgets('displays title when provided', (tester) async {
       await tester.pumpWidget(
         createTestApp(
-          child: GlassDialog(
-            title: 'Alert',
-            actions: testActions,
-          ),
+          child: GlassDialog(title: 'Alert', actions: testActions),
         ),
       );
 
@@ -71,11 +58,7 @@ void main() {
 
     testWidgets('displays all action buttons', (tester) async {
       await tester.pumpWidget(
-        createTestApp(
-          child: GlassDialog(
-            actions: testActions,
-          ),
-        ),
+        createTestApp(child: GlassDialog(actions: testActions)),
       );
 
       expect(find.text('Cancel'), findsOneWidget);
@@ -131,28 +114,20 @@ void main() {
     });
 
     test('defaults are correct', () {
-      final dialog = GlassDialog(
-        actions: testActions,
-      );
+      final dialog = GlassDialog(actions: testActions);
 
       expect(dialog.maxWidth, equals(280));
       expect(dialog.quality, isNull);
     });
 
     test('asserts 1-3 actions', () {
-      expect(
-        () => GlassDialog(actions: []),
-        throwsAssertionError,
-      );
+      expect(() => GlassDialog(actions: []), throwsAssertionError);
 
       expect(
         () => GlassDialog(
           actions: List.generate(
             4,
-            (i) => GlassDialogAction(
-              label: 'Action $i',
-              onPressed: () {},
-            ),
+            (i) => GlassDialogAction(label: 'Action $i', onPressed: () {}),
           ),
         ),
         throwsAssertionError,
@@ -162,10 +137,7 @@ void main() {
 
   group('GlassDialogAction', () {
     test('can be instantiated', () {
-      final action = GlassDialogAction(
-        label: 'OK',
-        onPressed: () {},
-      );
+      final action = GlassDialogAction(label: 'OK', onPressed: () {});
 
       expect(action.label, equals('OK'));
       expect(action.isPrimary, isFalse);

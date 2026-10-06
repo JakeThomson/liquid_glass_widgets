@@ -21,8 +21,9 @@ void main() {
       );
     });
 
-    testWidgets('renders cleanly with bodyMode: GlassBodyMode.clear',
-        (tester) async {
+    testWidgets('renders cleanly with bodyMode: GlassBodyMode.clear', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -57,12 +58,8 @@ void main() {
                     settings: settingsWithoutLighting.copyWith(
                       thickness: thickness.toDouble(),
                     ),
-                    shape: const LiquidRoundedSuperellipse(
-                      borderRadius: 100,
-                    ),
-                    child: const SizedBox.square(
-                      dimension: 400,
-                    ),
+                    shape: const LiquidRoundedSuperellipse(borderRadius: 100),
+                    child: const SizedBox.square(dimension: 400),
                   ),
                 ),
               ),
@@ -89,9 +86,7 @@ void main() {
                         glassColor: Colors.blue.withValues(alpha: 0.5),
                       ),
                       glassContainsChild: true,
-                      shape: LiquidRoundedSuperellipse(
-                        borderRadius: radius,
-                      ),
+                      shape: LiquidRoundedSuperellipse(borderRadius: radius),
                       child: SizedBox.square(
                         dimension: 400,
                         child: Container(
@@ -170,15 +165,11 @@ void main() {
                             child: SizedBox.square(dimension: 100),
                           ),
                           LiquidGlass.grouped(
-                            shape: LiquidRoundedRectangle(
-                              borderRadius: 20,
-                            ),
+                            shape: LiquidRoundedRectangle(borderRadius: 20),
                             child: SizedBox.square(dimension: 100),
                           ),
                           LiquidGlass.grouped(
-                            shape: LiquidRoundedSuperellipse(
-                              borderRadius: 20,
-                            ),
+                            shape: LiquidRoundedSuperellipse(borderRadius: 20),
                             child: SizedBox.square(dimension: 100),
                           ),
                         ],

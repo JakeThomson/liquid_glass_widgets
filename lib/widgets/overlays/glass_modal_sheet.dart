@@ -313,9 +313,10 @@ class GlassModalSheet extends StatefulWidget {
     this.peekBottomRadius,
     this.placement = GlassSheetPlacement.automatic,
   }) : assert(
-            detents.length > 0,
-            'GlassModalSheet needs at least one detent — add medium and/or large '
-            '(small alone is a floor, not a resting height).');
+         detents.length > 0,
+         'GlassModalSheet needs at least one detent — add medium and/or large '
+         '(small alone is a floor, not a resting height).',
+       );
 
   /// Shows a high-fidelity glass modal sheet.
   ///
@@ -425,7 +426,7 @@ class GlassModalSheet extends StatefulWidget {
     LiquidGlassSettings? fullStateContentSettings,
     Set<GlassSheetDetent> detents = const {
       GlassSheetDetent.medium,
-      GlassSheetDetent.large
+      GlassSheetDetent.large,
     },
     bool dismissible = true,
     double? peekHorizontalMargin,
@@ -439,13 +440,15 @@ class GlassModalSheet extends StatefulWidget {
     MorphSpeed morphSpeed = MorphSpeed.normal,
   }) {
     assert(
-        morphFrom == null || morphFromRect == null,
-        'Pass either morphFrom (the GlassMorphAnchor from a GlassMorphTrigger) '
-        'or morphFromRect (an explicit global rect) — not both.');
+      morphFrom == null || morphFromRect == null,
+      'Pass either morphFrom (the GlassMorphAnchor from a GlassMorphTrigger) '
+      'or morphFromRect (an explicit global rect) — not both.',
+    );
     assert(
-        detents.isNotEmpty,
-        'GlassModalSheet.show() needs at least one detent — add medium '
-        'and/or large (small alone is a floor, not a resting height).');
+      detents.isNotEmpty,
+      'GlassModalSheet.show() needs at least one detent — add medium '
+      'and/or large (small alone is a floor, not a resting height).',
+    );
     assert(() {
       if (mode == GlassSheetMode.persistent &&
           barrierColor == const Color(0x00000000)) {
@@ -476,7 +479,8 @@ class GlassModalSheet extends StatefulWidget {
     // read while the trigger is still laid out, and the render capabilities
     // decide which transition the route is built with in the first place.
     final morphTriggerRect = _resolveMorphTriggerRect(morphFrom, morphFromRect);
-    final morphing = morphTriggerRect != null &&
+    final morphing =
+        morphTriggerRect != null &&
         _supportsMorph(
           context,
           quality: quality,
@@ -514,8 +518,8 @@ class GlassModalSheet extends StatefulWidget {
         return SlideTransition(
           position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
               .animate(
-            CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
-          ),
+                CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+              ),
           child: child,
         );
       },
@@ -598,10 +602,7 @@ class GlassModalSheet extends StatefulWidget {
             halfSize: halfSize,
             fullSize: fullSize ?? _stripFullSize(context),
             peekSize: peekSize,
-            enablePeek: SheetGeometry.resolvePeek(
-              detents: detents,
-              mode: mode,
-            ),
+            enablePeek: SheetGeometry.resolvePeek(detents: detents, mode: mode),
             enableHalf: detents.contains(GlassSheetDetent.medium),
             enableFull: detents.contains(GlassSheetDetent.large),
             dismissible: dismissible,
@@ -649,11 +650,12 @@ class GlassModalSheet extends StatefulWidget {
 
     final rect = morphFrom._rect;
     assert(
-        rect != null,
-        'GlassModalSheet.show(morphFrom:) needs a GlassMorphAnchor whose '
-        'GlassMorphTrigger is mounted and laid out. It was not on screen when '
-        'show() was called — pass morphFromRect if the trigger has no render '
-        'box of its own.');
+      rect != null,
+      'GlassModalSheet.show(morphFrom:) needs a GlassMorphAnchor whose '
+      'GlassMorphTrigger is mounted and laid out. It was not on screen when '
+      'show() was called — pass morphFromRect if the trigger has no render '
+      'box of its own.',
+    );
     return rect;
   }
 
@@ -700,8 +702,8 @@ class GlassModalSheet extends StatefulWidget {
   /// from the top of the screen instead of stopping short of the status bar.
   static double? _stripFullSize(BuildContext context) =>
       GlassVerticalBar.maybeOf(context) == null
-          ? null
-          : MediaQuery.sizeOf(context).height - _kStripSheetTop;
+      ? null
+      : MediaQuery.sizeOf(context).height - _kStripSheetTop;
 
   /// Route transition duration that covers a morph at [speed].
   ///

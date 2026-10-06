@@ -307,8 +307,10 @@ class LiquidMorphPhysics {
   }) {
     final absDy = finalDy.abs();
     if (absDy <= _adaptiveThresholdDy) return baseAmplitude;
-    return (baseAmplitude * _adaptiveThresholdDy / absDy)
-        .clamp(_minBackOutAmplitude, baseAmplitude);
+    return (baseAmplitude * _adaptiveThresholdDy / absDy).clamp(
+      _minBackOutAmplitude,
+      baseAmplitude,
+    );
   }
 
   /// Computes the SDF blend attenuation factor for a given scale ratio.
@@ -451,8 +453,10 @@ class LiquidMorphPhysics {
     if (isClosing) {
       anchorScale = (1.0 - (clampedValue - 0.45) / 0.40).clamp(0.0, 1.0);
     } else {
-      anchorScale =
-          (1.0 - (clampedValue / _anchorEaseDuration)).clamp(0.0, 1.0);
+      anchorScale = (1.0 - (clampedValue / _anchorEaseDuration)).clamp(
+        0.0,
+        1.0,
+      );
     }
 
     // ── Metaball Blend ────────────────────────────────────────────────────────
@@ -475,8 +479,10 @@ class LiquidMorphPhysics {
       // NOTE: this value is non-zero only when a LiquidGlassBlendGroup is
       // present (GlassQuality.premium + Impeller).  On standard / minimal
       // quality the blend field is computed but the SDF layer never reads it.
-      final proximityT =
-          (1.0 - clampedValue / _closeProximityThreshold).clamp(0.0, 1.0);
+      final proximityT = (1.0 - clampedValue / _closeProximityThreshold).clamp(
+        0.0,
+        1.0,
+      );
       final eased = Curves.easeOut.transform(proximityT);
       blend = (eased * _maxBlend * blendAttenuation).clamp(0.0, _maxBlend);
     } else {
@@ -484,17 +490,23 @@ class LiquidMorphPhysics {
       // how far Blob B has pulled away from its anchor.  Blend naturally scales
       // with this, attenuated for large-scale morphs.
       final separation = (pathT - sizeT).abs();
-      blend = (separation * _blendMultiplier * blendAttenuation)
-          .clamp(0.0, _maxBlend);
+      blend = (separation * _blendMultiplier * blendAttenuation).clamp(
+        0.0,
+        _maxBlend,
+      );
     }
 
     // ── Container Scale Pulse ─────────────────────────────────────────────────
     // Subtle squeeze/swell during spring overshoot phases.
     final containerScale = rawValue > 1.0
-        ? 1.0 + (rawValue - 1.0) * 0.10 // open overshoot (negligible)
+        ? 1.0 +
+              (rawValue - 1.0) *
+                  0.10 // open overshoot (negligible)
         : rawValue < 0.0
-            ? 1.0 + rawValue * 0.55 // close undershoot → visible squeeze
-            : 1.0;
+        ? 1.0 +
+              rawValue *
+                  0.55 // close undershoot → visible squeeze
+        : 1.0;
 
     // ── Phase ─────────────────────────────────────────────────────────────────
     final phase = _derivePhase(rawValue, clampedValue);

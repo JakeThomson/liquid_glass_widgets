@@ -19,14 +19,8 @@ void main() {
               title: 'Confirm',
               message: 'Are you sure you want to continue?',
               actions: [
-                GlassDialogAction(
-                  label: 'Cancel',
-                  onPressed: () {},
-                ),
-                GlassDialogAction(
-                  label: 'OK',
-                  onPressed: () {},
-                ),
+                GlassDialogAction(label: 'Cancel', onPressed: () {}),
+                GlassDialogAction(label: 'OK', onPressed: () {}),
               ],
             ),
           ),
@@ -37,12 +31,7 @@ void main() {
             GlassDialog(
               title: 'Success',
               message: 'Your changes have been saved.',
-              actions: [
-                GlassDialogAction(
-                  label: 'OK',
-                  onPressed: () {},
-                ),
-              ],
+              actions: [GlassDialogAction(label: 'OK', onPressed: () {})],
             ),
           ),
         ),
@@ -53,14 +42,8 @@ void main() {
               title: 'Save Changes?',
               message: 'You have unsaved changes.',
               actions: [
-                GlassDialogAction(
-                  label: "Don't Save",
-                  onPressed: () {},
-                ),
-                GlassDialogAction(
-                  label: 'Cancel',
-                  onPressed: () {},
-                ),
+                GlassDialogAction(label: "Don't Save", onPressed: () {}),
+                GlassDialogAction(label: 'Cancel', onPressed: () {}),
                 GlassDialogAction(
                   label: 'Save',
                   isPrimary: true,
@@ -77,10 +60,7 @@ void main() {
               title: 'Delete Item?',
               message: 'This action cannot be undone.',
               actions: [
-                GlassDialogAction(
-                  label: 'Cancel',
-                  onPressed: () {},
-                ),
+                GlassDialogAction(label: 'Cancel', onPressed: () {}),
                 GlassDialogAction(
                   label: 'Delete',
                   isDestructive: true,

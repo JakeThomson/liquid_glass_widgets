@@ -218,16 +218,18 @@ class _GlassPopoverState extends State<GlassPopover>
 
   void _addRouteListeners() {
     for (final route in _routes) {
-      route.secondaryAnimation
-          ?.addStatusListener(_handleSecondaryAnimationStatus);
+      route.secondaryAnimation?.addStatusListener(
+        _handleSecondaryAnimationStatus,
+      );
       route.animation?.addStatusListener(_handlePrimaryAnimationStatus);
     }
   }
 
   void _removeRouteListeners() {
     for (final route in _routes) {
-      route.secondaryAnimation
-          ?.removeStatusListener(_handleSecondaryAnimationStatus);
+      route.secondaryAnimation?.removeStatusListener(
+        _handleSecondaryAnimationStatus,
+      );
       route.animation?.removeStatusListener(_handlePrimaryAnimationStatus);
     }
   }
@@ -401,8 +403,9 @@ class _GlassPopoverState extends State<GlassPopover>
         // Underdamped bounce impact squash: as the droplet slams into the trigger,
         // the button compresses slightly and rebounds to rest, giving a visceral
         // tactile sensation of liquid absorption.
-        final double impactScale =
-            isHandoff ? (1.0 + rawValue * 0.35).clamp(0.88, 1.0) : 1.0;
+        final double impactScale = isHandoff
+            ? (1.0 + rawValue * 0.35).clamp(0.88, 1.0)
+            : 1.0;
 
         final outer = GlassMaterializeScope.maybeOf(context);
 
@@ -446,16 +449,10 @@ class _GlassPopoverState extends State<GlassPopover>
             hasTransform
                 ? triggerWidget
                 : triggerOpacity < 1.0
-                    ? triggerWidget
-                    : isPopoverBlocking
-                        ? IgnorePointer(
-                            ignoring: true,
-                            child: child,
-                          )
-                        : child ??
-                            const SizedBox
-                                .shrink(), // Raw trigger when completely idle
-
+                ? triggerWidget
+                : isPopoverBlocking
+                ? IgnorePointer(ignoring: true, child: child)
+                : child ?? const SizedBox.shrink(), // Raw trigger when completely idle
             // ── Overlay portal ─────────────────────────────────────────────
             // OverlayPortal renders in the overlay layer, not in-tree, so it
             // is zero-sized here and does not affect the Stack's dimensions.
@@ -611,7 +608,9 @@ class _GlassPopoverState extends State<GlassPopover>
   EdgeInsets _viewInsets() {
     final flutterView = View.of(context);
     return EdgeInsets.fromViewPadding(
-        flutterView.padding, flutterView.devicePixelRatio);
+      flutterView.padding,
+      flutterView.devicePixelRatio,
+    );
   }
 
   double _effectivePopoverHeight([EdgeInsets? precomputedPadding]) {
@@ -678,9 +677,11 @@ class _GlassPopoverState extends State<GlassPopover>
       final double safeBottom = widget.screenPadding.bottom + insets.bottom;
       // The strip's inset is no bar to a popover opened out of the strip,
       // which natively lies over the item it came from.
-      final double safeLeft = widget.screenPadding.left +
+      final double safeLeft =
+          widget.screenPadding.left +
           (stripAlignment == null ? insets.left : 0.0);
-      final double safeRight = widget.screenPadding.right +
+      final double safeRight =
+          widget.screenPadding.right +
           (stripAlignment == null ? insets.right : 0.0);
 
       final double targetX =
@@ -733,26 +734,29 @@ class _GlassPopoverState extends State<GlassPopover>
           maxWidth: widget.popoverWidth,
           minHeight: 0,
           maxHeight: double.infinity,
-          child: Builder(builder: (context) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted || _contentMeasured) return;
-              final renderBox =
-                  _contentKey.currentContext?.findRenderObject() as RenderBox?;
-              if (renderBox != null && renderBox.hasSize) {
-                setState(() {
-                  _measuredContentHeight = renderBox.size.height;
-                  _contentMeasured = true;
-                  _updatePositionAndClamping();
-                });
-                _startMorphOpen();
-              }
-            });
-            return SizedBox(
-              key: _contentKey,
-              width: widget.popoverWidth,
-              child: _cachedContent ?? const SizedBox.shrink(),
-            );
-          }),
+          child: Builder(
+            builder: (context) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || _contentMeasured) return;
+                final renderBox =
+                    _contentKey.currentContext?.findRenderObject()
+                        as RenderBox?;
+                if (renderBox != null && renderBox.hasSize) {
+                  setState(() {
+                    _measuredContentHeight = renderBox.size.height;
+                    _contentMeasured = true;
+                    _updatePositionAndClamping();
+                  });
+                  _startMorphOpen();
+                }
+              });
+              return SizedBox(
+                key: _contentKey,
+                width: widget.popoverWidth,
+                child: _cachedContent ?? const SizedBox.shrink(),
+              );
+            },
+          ),
         ),
       );
     }
@@ -775,7 +779,8 @@ class _GlassPopoverState extends State<GlassPopover>
     // InheritedWidget lookups — traverses the element tree; must NOT be inside
     // the AnimatedBuilder's builder closure.
     final inheritedSettings = InheritedLiquidGlass.of(context);
-    final effectiveSettings = widget.settings ??
+    final effectiveSettings =
+        widget.settings ??
         inheritedSettings ??
         const LiquidGlassSettings(
           blur: 10,
@@ -798,7 +803,8 @@ class _GlassPopoverState extends State<GlassPopover>
     // parent LiquidGlassLayer. In minimal quality mode we skip the layer
     // (and thus the blend group) to avoid the assert / null crash (issue #214).
     final bool useBlendGroup = effectiveQuality != GlassQuality.minimal;
-    final bool isPremium = effectiveQuality == GlassQuality.premium &&
+    final bool isPremium =
+        effectiveQuality == GlassQuality.premium &&
         ImageFilter.isShaderFilterSupported;
 
     final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
@@ -853,8 +859,8 @@ class _GlassPopoverState extends State<GlassPopover>
         // Handoff to the real trigger button occurs cleanly when hasHandedOff fires (rawValue <= 0.0).
         final double overlayOpacity =
             (_morphController.isClosing && _morphController.hasHandedOff)
-                ? 0.0
-                : 1.0;
+            ? 0.0
+            : 1.0;
 
         return Stack(
           children: [
@@ -880,9 +886,7 @@ class _GlassPopoverState extends State<GlassPopover>
 
             // ── Non-dismissible barrier (absorbs taps without closing) ───────
             if (clampedValue > 0.3 && !widget.barrierDismissible)
-              const Positioned.fill(
-                child: AbsorbPointer(),
-              ),
+              const Positioned.fill(child: AbsorbPointer()),
 
             // ── Two-blob metaball morphing ───────────────────────────────────
             Positioned.fill(
@@ -918,7 +922,8 @@ class _GlassPopoverState extends State<GlassPopover>
                                     width: tw,
                                     height: th,
                                     shape: LiquidRoundedRectangle(
-                                      borderRadius: _triggerBorderRadius ??
+                                      borderRadius:
+                                          _triggerBorderRadius ??
                                           _triggerSize!.shortestSide / 2.0,
                                     ),
                                   ),
@@ -927,12 +932,14 @@ class _GlassPopoverState extends State<GlassPopover>
 
                             // ── Blob B: Popover body ─────────────────────────
                             Positioned(
-                              left: _triggerOverlayPosition.dx +
+                              left:
+                                  _triggerOverlayPosition.dx +
                                   tw / 2.0 +
                                   effectiveDx -
                                   currentWidth / 2.0 +
                                   (_horizontalOffset * clampedValue),
-                              top: _triggerOverlayPosition.dy +
+                              top:
+                                  _triggerOverlayPosition.dy +
                                   th / 2.0 +
                                   effectiveDy -
                                   currentHeight / 2.0 +
@@ -989,23 +996,23 @@ class _GlassPopoverState extends State<GlassPopover>
   ) {
     // Morph border radius from pill → target corner radius.
     final maxRadius = math.min(currentWidth, currentHeight) / 2.0;
-    final double radiusT =
-        Curves.easeInExpo.transform(state.sizeT.clamp(0.0, 1.0));
-    final bool isPremium = effectiveQuality == GlassQuality.premium &&
+    final double radiusT = Curves.easeInExpo.transform(
+      state.sizeT.clamp(0.0, 1.0),
+    );
+    final bool isPremium =
+        effectiveQuality == GlassQuality.premium &&
         ImageFilter.isShaderFilterSupported;
     final currentRadius = _morphController.isClosing
         ? (isPremium
-            ? maxRadius
-            : lerpDouble(
-                _triggerBorderRadius ?? (_triggerSize!.shortestSide / 2.0),
-                widget.popoverBorderRadius,
-                radiusT,
-              )!)
+              ? maxRadius
+              : lerpDouble(
+                  _triggerBorderRadius ?? (_triggerSize!.shortestSide / 2.0),
+                  widget.popoverBorderRadius,
+                  radiusT,
+                )!)
         : lerpDouble(maxRadius, widget.popoverBorderRadius, radiusT)!;
 
-    final teardropShape = LiquidRoundedRectangle(
-      borderRadius: currentRadius,
-    );
+    final teardropShape = LiquidRoundedRectangle(borderRadius: currentRadius);
 
     return LiquidStretch(
       stretch: widget.stretch,
@@ -1031,12 +1038,15 @@ class _GlassPopoverState extends State<GlassPopover>
         child: GlassGlow(
           enabled: widget.enableInteractionGlow,
           glowOnTapOnly: widget.glowOnTapOnly,
-          glowColor: widget.glowColor ??
+          glowColor:
+              widget.glowColor ??
               (isDark
-                  ? CupertinoColors.white
-                      .withValues(alpha: GlassDefaults.specularLightAlpha)
-                  : CupertinoColors.black
-                      .withValues(alpha: GlassDefaults.specularDarkAlpha)),
+                  ? CupertinoColors.white.withValues(
+                      alpha: GlassDefaults.specularLightAlpha,
+                    )
+                  : CupertinoColors.black.withValues(
+                      alpha: GlassDefaults.specularDarkAlpha,
+                    )),
           glowRadius: widget.glowRadius,
           glowBlurRadius: 40,
           clipper: ShapeBorderClipper(shape: teardropShape),
@@ -1062,7 +1072,9 @@ class _GlassPopoverState extends State<GlassPopover>
   }
 
   Widget _buildContentWithMeasurement(
-      double clampedValue, double targetHeight) {
+    double clampedValue,
+    double targetHeight,
+  ) {
     // Fade in smoothly: fully opaque by 70 % morph progress.
     final contentOpacity = _morphController.isClosing
         ? ((clampedValue - 0.85) / 0.15).clamp(0.0, 1.0)
@@ -1072,9 +1084,7 @@ class _GlassPopoverState extends State<GlassPopover>
     final contentScale = lerpDouble(
       0.5,
       1.0,
-      Curves.easeOut.transform(
-        ((clampedValue - 0.3) / 0.7).clamp(0.0, 1.0),
-      ),
+      Curves.easeOut.transform(((clampedValue - 0.3) / 0.7).clamp(0.0, 1.0)),
     )!;
 
     // _cachedContent was set in _openPopover (or refreshed in didUpdateWidget).
@@ -1123,10 +1133,7 @@ class _GlassPopoverState extends State<GlassPopover>
       maxHeight: widget.popoverHeight ?? _getMaxPopoverHeight(),
       child: Opacity(
         opacity: contentOpacity,
-        child: Transform.scale(
-          scale: contentScale,
-          child: measuredContent,
-        ),
+        child: Transform.scale(scale: contentScale, child: measuredContent),
       ),
     );
   }

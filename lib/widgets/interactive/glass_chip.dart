@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme.dart';
@@ -278,13 +279,16 @@ class GlassChip extends StatelessWidget {
     final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
     final baseColor = isDark ? CupertinoColors.white : CupertinoColors.black;
     final defaultContentColor = baseColor.withValues(alpha: 0.9);
-    final defaultSelectedColor =
-        baseColor.withValues(alpha: isDark ? 0.3 : 0.1);
-    final defaultGlowUnselected =
-        baseColor.withValues(alpha: isDark ? 0.2 : 0.05);
+    final defaultSelectedColor = baseColor.withValues(
+      alpha: isDark ? 0.3 : 0.1,
+    );
+    final defaultGlowUnselected = baseColor.withValues(
+      alpha: isDark ? 0.2 : 0.05,
+    );
 
     final effectiveIconColor = iconColor ?? defaultContentColor;
-    final effectiveLabelStyle = labelStyle ??
+    final effectiveLabelStyle =
+        labelStyle ??
         TextStyle(
           fontSize: 14,
           color: defaultContentColor,
@@ -300,10 +304,7 @@ class GlassChip extends StatelessWidget {
           // Leading icon
           if (icon != null) ...[
             IconTheme(
-              data: IconThemeData(
-                color: effectiveIconColor,
-                size: iconSize,
-              ),
+              data: IconThemeData(color: effectiveIconColor, size: iconSize),
               child: icon!,
             ),
             SizedBox(width: spacing),
@@ -363,15 +364,16 @@ class GlassChip extends StatelessWidget {
     final effectiveInteractionScale = interactionScale != 1.03
         ? interactionScale
         : themeInteraction.interactionScale ?? interactionScale;
-    final effectiveStretch =
-        stretch != 0.3 ? stretch : themeInteraction.stretch ?? stretch;
+    final effectiveStretch = stretch != 0.3
+        ? stretch
+        : themeInteraction.stretch ?? stretch;
     final effectiveAnchorStretch = anchorStretch != true
         ? anchorStretch
         : themeInteraction.anchorStretch ?? anchorStretch;
     final effectiveAnchorStretchSettings =
         !identical(anchorStretchSettings, const AnchorStretchSettings())
-            ? anchorStretchSettings
-            : themeInteraction.anchorStretchSettings ?? anchorStretchSettings;
+        ? anchorStretchSettings
+        : themeInteraction.anchorStretchSettings ?? anchorStretchSettings;
 
     return IntrinsicWidth(
       child: IntrinsicHeight(

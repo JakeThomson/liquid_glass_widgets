@@ -7,6 +7,7 @@ library;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart' show RenderPositionedBox;
+
 import '../../../constants/glass_defaults.dart';
 import '../../renderer/liquid_glass_renderer.dart';
 import '../../../types/glass_quality.dart';
@@ -52,8 +53,10 @@ class ScrollableSegmentContent extends StatefulWidget {
     this.indicatorBorderRadius,
     this.indicatorSettings,
     this.indicatorPinchStrength = 0.4,
-    this.indicatorExpansion =
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    this.indicatorExpansion = const EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: 8,
+    ),
     this.backgroundKey,
     this.maskingQuality = MaskingQuality.high,
     this.dividerSettings,
@@ -118,8 +121,9 @@ class ScrollableSegmentContent extends StatefulWidget {
 class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     with TickerProviderStateMixin {
   // Cache default indicator color to avoid allocations
-  static const _defaultIndicatorColor =
-      Color(0x33FFFFFF); // white.withValues(alpha: 0.2)
+  static const _defaultIndicatorColor = Color(
+    0x33FFFFFF,
+  ); // white.withValues(alpha: 0.2)
 
   bool _isDown = false;
   bool _isDragging = false;
@@ -585,12 +589,16 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
       x += _morphEntering!.contains(i)
           ? w * t
           : _morphExiting!.contains(i)
-              ? w * (1 - t)
-              : w;
+          ? w * (1 - t)
+          : w;
       if (dividerW > 0) x += dividerW;
     }
-    ctl.jumpTo((x - _morphAnchorLocalX!)
-        .clamp(ctl.position.minScrollExtent, ctl.position.maxScrollExtent));
+    ctl.jumpTo(
+      (x - _morphAnchorLocalX!).clamp(
+        ctl.position.minScrollExtent,
+        ctl.position.maxScrollExtent,
+      ),
+    );
   }
 
   /// Ends the morph: drops the exiting cells, remeasures the final list,
@@ -736,8 +744,10 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
         final int nextIndex = (index + 1).clamp(0, widget.tabs.length - 1);
         final double diff = _tabOffsets[nextIndex] - _tabOffsets[index];
         final double t =
-            (diff != 0 ? (curOffset - _tabOffsets[index]) / diff : 0.0)
-                .clamp(0.0, 1.0);
+            (diff != 0 ? (curOffset - _tabOffsets[index]) / diff : 0.0).clamp(
+              0.0,
+              1.0,
+            );
         targetWidth =
             _tabWidths[index] + (_tabWidths[nextIndex] - _tabWidths[index]) * t;
       }
@@ -911,9 +921,10 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     // Matches the pattern used by GlassTabBar.bottom (tab_bar_bottom_layout.dart).
     final dynamicLabelColor =
         CupertinoTheme.of(context).textTheme.textStyle.color ??
-            CupertinoColors.label.resolveFrom(context);
-    final dynamicSecondaryColor =
-        CupertinoColors.secondaryLabel.resolveFrom(context);
+        CupertinoColors.label.resolveFrom(context);
+    final dynamicSecondaryColor = CupertinoColors.secondaryLabel.resolveFrom(
+      context,
+    );
 
     final selectedLabelStyle = TextStyle(
       fontSize: 14,
@@ -940,16 +951,15 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
 
     return RawGestureDetector(
       gestures: {
-        HorizontalDragGestureRecognizer: GestureRecognizerFactoryWithHandlers<
-            HorizontalDragGestureRecognizer>(
-          () => _drag,
-          (instance) {},
-        ),
+        HorizontalDragGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<
+              HorizontalDragGestureRecognizer
+            >(() => _drag, (instance) {}),
         TapGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
-          () => _tap,
-          (instance) {},
-        ),
+              () => _tap,
+              (instance) {},
+            ),
       },
       // D1: ListenableBuilder scoped to the indicator subtree.
       // Spring ticks rebuild only VelocitySpringBuilder and its children;
@@ -974,18 +984,19 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
             builder: (context, currentValue, velocity, _) {
               // Normalizing velocity: pixels-per-frame to a manageable 0.0-2.0 scale for the shader
               // in scrollable mode. Prevents over-stretching into a vertical line during drag.
-              final double normalizedVelocity =
-                  widget.isScrollable ? velocity / 150.0 : velocity;
+              final double normalizedVelocity = widget.isScrollable
+                  ? velocity / 150.0
+                  : velocity;
 
               final Alignment alignment = widget.isScrollable
                   ? Alignment.center
                   : Alignment(currentValue, 0);
-              final double screenLeft = (_morphing || _morphSettling) &&
-                      _morphAnchorLocalX != null
+              final double screenLeft =
+                  (_morphing || _morphSettling) && _morphAnchorLocalX != null
                   ? _morphAnchorLocalX!
                   : widget.isScrollable && widget.scrollController.hasClients
-                      ? currentValue - widget.scrollController.offset
-                      : 0.0;
+                  ? currentValue - widget.scrollController.offset
+                  : 0.0;
 
               // Bloom while the position spring is still in transit — deactivates
               // naturally as the spring settles (mirrors GlassSegmentedControl).
@@ -997,12 +1008,13 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                     _tabWidths.length == widget.tabs.length;
                 final double targetOffset =
                     measuredReady && widget.selectedIndex < _tabOffsets.length
-                        ? _tabOffsets[widget.selectedIndex]
-                        : 0.0;
+                    ? _tabOffsets[widget.selectedIndex]
+                    : 0.0;
                 // Only a measured target can say the pill is moving: during
                 // a remeasure gap the stale comparison read as motion and
                 // fired the bloom pulse on every list change.
-                isMoving = !_morphing &&
+                isMoving =
+                    !_morphing &&
                     !_morphSettling &&
                     measuredReady &&
                     (currentValue - targetOffset).abs() > 2.0;
@@ -1011,8 +1023,9 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                 // so the pill stays visible through it instead of blinking.
                 canShowIndicator = _indWidthSpring.value > 0;
               } else {
-                final double targetAlignment =
-                    _computeXAlignmentForTab(widget.selectedIndex);
+                final double targetAlignment = _computeXAlignmentForTab(
+                  widget.selectedIndex,
+                );
                 isMoving = (alignment.x - targetAlignment).abs() > 0.05;
                 canShowIndicator = true;
               }
@@ -1024,9 +1037,10 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                 value: _isDown || isMoving ? 1.0 : 0.0,
                 builder: (context, thickness, _) {
                   // Helper to prevent indicator parameter duplication
-                  Widget buildIndicator(
-                      {required bool paintBackground,
-                      required bool paintGlass}) {
+                  Widget buildIndicator({
+                    required bool paintBackground,
+                    required bool paintGlass,
+                  }) {
                     return AnimatedGlassIndicator(
                       velocity: normalizedVelocity,
                       itemCount: widget.tabs.length,
@@ -1044,8 +1058,9 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                       paintBackground: paintBackground,
                       paintGlass: paintGlass,
                       shadows: paintBackground ? _effectiveShadow : null,
-                      exactWidth:
-                          widget.isScrollable ? _indWidthSpring.value : null,
+                      exactWidth: widget.isScrollable
+                          ? _indWidthSpring.value
+                          : null,
                       exactOffset: widget.isScrollable ? screenLeft : null,
                       // Nested-arc default: if the outer bar is a capsule sentinel
                       // (>= GlassDefaults.capsuleRadius), pass capsuleRadius directly so
@@ -1054,13 +1069,14 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                       // For custom radii, subtract the indicator inset (2 px) to
                       // produce concentric nested arcs.
                       // An explicit indicatorBorderRadius always takes priority.
-                      borderRadius: widget.indicatorBorderRadius ??
+                      borderRadius:
+                          widget.indicatorBorderRadius ??
                           ((widget.tabBarBorderRadius?.topLeft.x ??
                                       GlassDefaults.capsuleRadius) >=
                                   GlassDefaults.capsuleRadius
                               ? GlassDefaults.capsuleRadius
                               : ((widget.tabBarBorderRadius!.topLeft.x) - 2.0)
-                                  .clamp(0.0, GlassDefaults.capsuleRadius)),
+                                    .clamp(0.0, GlassDefaults.capsuleRadius)),
                     );
                   }
 
@@ -1090,7 +1106,9 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                               // labels so labels paint above the pill — correct z-order).
                               if (canShowIndicator)
                                 buildIndicator(
-                                    paintBackground: true, paintGlass: false),
+                                  paintBackground: true,
+                                  paintGlass: false,
+                                ),
 
                               // Tab labels (scrollable) — stableTabLabels is the ListenableBuilder
                               // child: built once per full setState, reused across spring ticks.
@@ -1113,7 +1131,9 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                         // ── Layer 2: glass bloom (above all clips) ──────────────────────
                         if (canShowIndicator)
                           buildIndicator(
-                              paintBackground: false, paintGlass: true),
+                            paintBackground: false,
+                            paintGlass: true,
+                          ),
                       ],
                     );
                   } else {
@@ -1131,12 +1151,15 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
                       children: [
                         if (canShowIndicator)
                           buildIndicator(
-                              paintBackground: true,
-                              paintGlass: !isPremiumQuality),
+                            paintBackground: true,
+                            paintGlass: !isPremiumQuality,
+                          ),
                         safeTabLabels,
                         if (canShowIndicator && isPremiumQuality)
                           buildIndicator(
-                              paintBackground: false, paintGlass: true),
+                            paintBackground: false,
+                            paintGlass: true,
+                          ),
                       ],
                     );
                   }
@@ -1156,56 +1179,54 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
     Color unselectedIconColor,
   ) {
     final tabs = _renderTabs;
-    final selectedRenderIndex =
-        _morphing ? _morphSelectedIndex : widget.selectedIndex;
-    final List<Widget> tabWidgets = List.generate(
-      tabs.length,
-      (index) {
-        final tab = tabs[index];
-        final isSelected = index == selectedRenderIndex;
-        Widget cell = RepaintBoundary(
-          child: TabBarItem(
-            tab: tab,
-            isSelected: isSelected,
-            onTap: () => _onTabTap(index),
-            onTapDown: () {},
-            labelStyle: isSelected ? selectedStyle : unselectedStyle,
-            iconColor: isSelected ? selectedIconColor : unselectedIconColor,
-            iconSize: widget.iconSize,
-            padding: widget.labelPadding,
-          ),
-        );
-        if (_morphing &&
-            (_morphEntering!.contains(index) ||
-                _morphExiting!.contains(index))) {
-          final entering = _morphEntering!.contains(index);
-          cell = AnimatedBuilder(
-            animation: _morphAnim!,
-            child: cell,
-            builder: (context, child) {
-              final t = entering ? _morphAnim!.value : 1.0 - _morphAnim!.value;
-              // Width 0→natural glides the survivors apart as the Row
-              // re-flows; the scale and fade ride the same curve.
-              return ClipRect(
-                child: Align(
-                  widthFactor: t,
-                  child: Transform.scale(
-                    scale: 0.8 + 0.2 * t,
-                    child: Opacity(opacity: t, child: child),
-                  ),
+    final selectedRenderIndex = _morphing
+        ? _morphSelectedIndex
+        : widget.selectedIndex;
+    final List<Widget> tabWidgets = List.generate(tabs.length, (index) {
+      final tab = tabs[index];
+      final isSelected = index == selectedRenderIndex;
+      Widget cell = RepaintBoundary(
+        child: TabBarItem(
+          tab: tab,
+          isSelected: isSelected,
+          onTap: () => _onTabTap(index),
+          onTapDown: () {},
+          labelStyle: isSelected ? selectedStyle : unselectedStyle,
+          iconColor: isSelected ? selectedIconColor : unselectedIconColor,
+          iconSize: widget.iconSize,
+          padding: widget.labelPadding,
+        ),
+      );
+      if (_morphing &&
+          (_morphEntering!.contains(index) || _morphExiting!.contains(index))) {
+        final entering = _morphEntering!.contains(index);
+        cell = AnimatedBuilder(
+          animation: _morphAnim!,
+          child: cell,
+          builder: (context, child) {
+            final t = entering ? _morphAnim!.value : 1.0 - _morphAnim!.value;
+            // Width 0→natural glides the survivors apart as the Row
+            // re-flows; the scale and fade ride the same curve.
+            return ClipRect(
+              child: Align(
+                widthFactor: t,
+                child: Transform.scale(
+                  scale: 0.8 + 0.2 * t,
+                  child: Opacity(opacity: t, child: child),
                 ),
-              );
-            },
-          );
-        }
-        return KeyedSubtree(key: _tabKeys[index], child: cell);
-      },
-    );
+              ),
+            );
+          },
+        );
+      }
+      return KeyedSubtree(key: _tabKeys[index], child: cell);
+    });
 
     if (widget.dividerSettings != null) {
       final d = widget.dividerSettings!;
       for (int i = tabs.length - 1; i > 0; i--) {
-        final isVisible = !d.isHideAutomatically ||
+        final isVisible =
+            !d.isHideAutomatically ||
             (i - 1 != widget.selectedIndex && i != widget.selectedIndex);
 
         tabWidgets.insert(
@@ -1217,7 +1238,8 @@ class ScrollableSegmentContentState extends State<ScrollableSegmentContent>
             child: Container(
               width: d.thickness,
               margin: EdgeInsets.only(top: d.indent, bottom: d.endIndent),
-              decoration: d.decoration ??
+              decoration:
+                  d.decoration ??
                   BoxDecoration(
                     color: CupertinoColors.separator.resolveFrom(context),
                   ),
@@ -1293,11 +1315,7 @@ class TabBarItem extends StatelessWidget {
       content = Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          iconWidget,
-          const SizedBox(height: 4),
-          labelWidget,
-        ],
+        children: [iconWidget, const SizedBox(height: 4), labelWidget],
       );
     } else if (iconWidget != null) {
       content = iconWidget;

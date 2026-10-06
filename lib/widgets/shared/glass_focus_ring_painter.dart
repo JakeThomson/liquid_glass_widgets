@@ -15,10 +15,7 @@ import 'package:flutter/cupertino.dart';
 /// only mounted inside a [ValueListenableBuilder] when focus is active.
 class GlassFocusRingPainter extends CustomPainter {
   /// Creates a new [GlassFocusRingPainter].
-  GlassFocusRingPainter({
-    required this.shape,
-    required this.color,
-  });
+  GlassFocusRingPainter({required this.shape, required this.color});
 
   /// The shape of the focus ring.
   final ShapeBorder shape;

@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme.dart';
@@ -64,10 +65,10 @@ class GlassButtonGroupItem {
     required this.onTap,
     this.label,
     this.enabled = true,
-  })  : menuItems = null,
-        menuAlignment = null,
-        menuWidth = 200,
-        menuHeight = null;
+  }) : menuItems = null,
+       menuAlignment = null,
+       menuWidth = 200,
+       menuHeight = null;
 
   /// Creates a group item that opens a [GlassMenu] pull-down when tapped.
   ///
@@ -91,8 +92,8 @@ class GlassButtonGroupItem {
     this.menuWidth = 200,
     this.menuHeight,
     this.label,
-  })  : onTap = _noOp,
-        enabled = true;
+  }) : onTap = _noOp,
+       enabled = true;
 
   /// The icon widget to display.
   ///
@@ -305,9 +306,7 @@ class GlassButtonGroup extends StatelessWidget {
       final menuItemIndex = items!.indexWhere((item) => item.menuItems != null);
 
       // Helper that builds the pill shell — reused in both branches.
-      Widget buildPill({
-        VoidCallback? menuToggle,
-      }) {
+      Widget buildPill({VoidCallback? menuToggle}) {
         return GlassButton.custom(
           onTap: () {}, // Items handle their own taps
           shape: shape,
@@ -317,8 +316,7 @@ class GlassButtonGroup extends StatelessWidget {
           platformViewBackdrop: platformViewBackdrop,
           canRequestFocus:
               false, // The outer pill doesn't take focus, individual items do.
-          excludeFromSemantics:
-              true, // Hide the outer pill from semantics so inner items don't merge into it
+          excludeFromSemantics: true, // Hide the outer pill from semantics so inner items don't merge into it
           width: null, // Size to content
           height: null, // Size to content
           // Reduce stretch for grouped buttons — full stretch looks too dramatic
@@ -357,7 +355,8 @@ class GlassButtonGroup extends StatelessWidget {
     // ---------------------------------------------------------------------------
     // Children mode: use GlassContainer for full widget flexibility.
     // ---------------------------------------------------------------------------
-    final effectiveBorderColor = borderColor ??
+    final effectiveBorderColor =
+        borderColor ??
         (GlassTheme.brightnessOf(context) == Brightness.light
             ? CupertinoColors.black.withValues(alpha: 0.12)
             : CupertinoColors.white.withValues(alpha: 0.12));

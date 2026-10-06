@@ -193,8 +193,8 @@ class GlassThemeHelpers {
     final scopeDefault = GlassIsolationScope.defaultQualityOf(context);
     GlassQuality? resolved;
     if (!GlassIsolationScope.isIsolated(context) && scopeDefault == null) {
-      final inherited =
-          context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
+      final inherited = context
+          .dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
       if (inherited != null) resolved = inherited.quality;
     }
 
@@ -223,7 +223,9 @@ class GlassThemeHelpers {
 
   /// Returns the lower of [quality] and [ceiling] using the correct ordinal.
   static GlassQuality _applyCeiling(
-      GlassQuality quality, GlassQuality ceiling) {
+    GlassQuality quality,
+    GlassQuality ceiling,
+  ) {
     return _qualityOrdinal(quality) > _qualityOrdinal(ceiling)
         ? ceiling
         : quality;

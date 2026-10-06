@@ -107,8 +107,8 @@ class GlassMorphController extends ChangeNotifier {
     required TickerProvider vsync,
     MorphSpeed speed = MorphSpeed.normal,
     this.style = MorphStyle.teardrop,
-  })  : _speed = speed,
-        _animationController = AnimationController.unbounded(vsync: vsync) {
+  }) : _speed = speed,
+       _animationController = AnimationController.unbounded(vsync: vsync) {
     _animationController.addListener(_onTick);
     _animationController.addStatusListener(_onStatusChange);
   }
@@ -307,16 +307,25 @@ class GlassMorphController extends ChangeNotifier {
     // animation completes in a single frame — no bounce, no teardrop neck.
     if (_disableAnimations) {
       return const SpringDescription(
-          mass: 1.0, stiffness: 500.0, damping: 32.4);
+        mass: 1.0,
+        stiffness: 500.0,
+        damping: 32.4,
+      );
     }
     switch (_speed) {
       case MorphSpeed.slow:
         // ω₀ ≈ 7.7 rad/s open, ω₀ ≈ 10.0 rad/s close
         return _isClosing
             ? const SpringDescription(
-                mass: 1.0, stiffness: 100.0, damping: 14.6)
+                mass: 1.0,
+                stiffness: 100.0,
+                damping: 14.6,
+              )
             : const SpringDescription(
-                mass: 1.0, stiffness: 60.0, damping: 11.3);
+                mass: 1.0,
+                stiffness: 60.0,
+                damping: 11.3,
+              );
       case MorphSpeed.normal:
         // iOS 26 native asymmetric springs:
         // Open: ω₀ ≈ 11.0 rad/s, ζ ≈ 0.73 — buoyant, lush fluid expansion (~350 ms)
@@ -328,13 +337,22 @@ class GlassMorphController extends ChangeNotifier {
         // ω₀ ≈ 14.1 rad/s open, ω₀ ≈ 17.3 rad/s close
         return _isClosing
             ? const SpringDescription(
-                mass: 1.0, stiffness: 300.0, damping: 25.1)
+                mass: 1.0,
+                stiffness: 300.0,
+                damping: 25.1,
+              )
             : const SpringDescription(
-                mass: 1.0, stiffness: 200.0, damping: 20.5);
+                mass: 1.0,
+                stiffness: 200.0,
+                damping: 20.5,
+              );
       case MorphSpeed.instant:
         // ω₀ ≈ 22 rad/s, ζ ≈ 0.73 — very stiff, near-instant
         return const SpringDescription(
-            mass: 1.0, stiffness: 500.0, damping: 32.4);
+          mass: 1.0,
+          stiffness: 500.0,
+          damping: 32.4,
+        );
     }
   }
 

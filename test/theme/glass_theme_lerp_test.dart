@@ -139,8 +139,11 @@ void main() {
         glowOpacity: 1.0,
       );
       final mid = GlassGlowColors.lerp(a, b, 0.5)!;
-      final expected =
-          Color.lerp(const Color(0xFF000000), const Color(0xFFFFFFFF), 0.5);
+      final expected = Color.lerp(
+        const Color(0xFF000000),
+        const Color(0xFFFFFFFF),
+        0.5,
+      );
       expect(mid.primary, expected);
       expect(mid.secondary, expected);
       expect(mid.success, expected);
@@ -159,8 +162,10 @@ void main() {
       expect(GlassGlowColors.lerp(a, b, 0.3)!.primary, isNull);
       expect(GlassGlowColors.lerp(a, b, 0.7)!.primary, const Color(0xFF123456));
       // Scalars still interpolate even when colors switch discretely.
-      expect(GlassGlowColors.lerp(a, b, 0.3)!.glowBlurRadius,
-          closeTo(0.7 * a.glowBlurRadius + 0.3 * b.glowBlurRadius, 1e-9));
+      expect(
+        GlassGlowColors.lerp(a, b, 0.3)!.glowBlurRadius,
+        closeTo(0.7 * a.glowBlurRadius + 0.3 * b.glowBlurRadius, 1e-9),
+      );
     });
   });
 
@@ -202,7 +207,10 @@ void main() {
 
     test('lerping the built-in light and dark variants is well-formed', () {
       final mid = GlassThemeVariant.lerp(
-          GlassThemeVariant.light, GlassThemeVariant.dark, 0.5);
+        GlassThemeVariant.light,
+        GlassThemeVariant.dark,
+        0.5,
+      );
       expect(mid.settings!.thickness, closeTo(11.0, 1e-9));
       expect(mid.settings!.blur, closeTo(4.5, 1e-9));
       expect(mid.quality, isNull);
@@ -210,14 +218,18 @@ void main() {
       // Endpoints reproduce the variants' settings exactly.
       expect(
         GlassThemeVariant.lerp(
-                GlassThemeVariant.light, GlassThemeVariant.dark, 0.0)
-            .settings,
+          GlassThemeVariant.light,
+          GlassThemeVariant.dark,
+          0.0,
+        ).settings,
         GlassThemeVariant.light.settings,
       );
       expect(
         GlassThemeVariant.lerp(
-                GlassThemeVariant.light, GlassThemeVariant.dark, 1.0)
-            .settings,
+          GlassThemeVariant.light,
+          GlassThemeVariant.dark,
+          1.0,
+        ).settings,
         GlassThemeVariant.dark.settings,
       );
     });

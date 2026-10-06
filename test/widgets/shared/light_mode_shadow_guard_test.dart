@@ -22,34 +22,28 @@ import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_searchable_int
 
 /// Light-mode test app wrapper (Brightness.light).
 Widget _lightApp(Widget child) => MaterialApp(
-      theme: ThemeData(brightness: Brightness.light),
-      home: CupertinoTheme(
-        data: const CupertinoThemeData(brightness: Brightness.light),
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          body: child,
-        ),
-      ),
-    );
+  theme: ThemeData(brightness: Brightness.light),
+  home: CupertinoTheme(
+    data: const CupertinoThemeData(brightness: Brightness.light),
+    child: Scaffold(backgroundColor: Colors.white, body: child),
+  ),
+);
 
 /// Dark-mode test app wrapper (Brightness.dark).
 Widget _darkApp(Widget child) => MaterialApp(
-      theme: ThemeData(brightness: Brightness.dark),
-      home: CupertinoTheme(
-        data: const CupertinoThemeData(brightness: Brightness.dark),
-        child: Scaffold(
-          backgroundColor: Colors.black,
-          body: child,
-        ),
-      ),
-    );
+  theme: ThemeData(brightness: Brightness.dark),
+  home: CupertinoTheme(
+    data: const CupertinoThemeData(brightness: Brightness.dark),
+    child: Scaffold(backgroundColor: Colors.black, body: child),
+  ),
+);
 
 /// Minimal [GlassSearchBarConfig] for SearchPill tests.
 GlassSearchBarConfig _searchConfig() => GlassSearchBarConfig(
-      onSearchToggle: (_) {},
-      hintText: 'Search',
-      autoFocusOnExpand: false,
-    );
+  onSearchToggle: (_) {},
+  hintText: 'Search',
+  autoFocusOnExpand: false,
+);
 
 /// Settings with shadow elevation explicitly set.
 const _settingsWithShadow = LiquidGlassSettings(
@@ -69,11 +63,11 @@ const _settingsNoShadow = LiquidGlassSettings(
 /// This identifies the shadow layer painted by _wrapWithBarShadow /
 /// _wrapWithLightModeShadow.
 Finder findShadowDecoratedBox() => find.byWidgetPredicate((widget) {
-      if (widget is! DecoratedBox) return false;
-      final decoration = widget.decoration;
-      if (decoration is! BoxDecoration) return false;
-      return decoration.boxShadow != null && decoration.boxShadow!.isNotEmpty;
-    });
+  if (widget is! DecoratedBox) return false;
+  final decoration = widget.decoration;
+  if (decoration is! BoxDecoration) return false;
+  return decoration.boxShadow != null && decoration.boxShadow!.isNotEmpty;
+});
 
 // ===========================================================================
 // SearchPill shadow guard tests
@@ -81,8 +75,9 @@ Finder findShadowDecoratedBox() => find.byWidgetPredicate((widget) {
 
 void main() {
   group('SearchPill — light-mode shadow guard', () {
-    testWidgets('collapsed pill renders shadow in light mode with elevation',
-        (tester) async {
+    testWidgets('collapsed pill renders shadow in light mode with elevation', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _lightApp(
           Center(
@@ -141,8 +136,9 @@ void main() {
       expect(findShadowDecoratedBox(), findsNothing);
     });
 
-    testWidgets('collapsed pill skips shadow when shadowElevation is 0',
-        (tester) async {
+    testWidgets('collapsed pill skips shadow when shadowElevation is 0', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _lightApp(
           Center(
@@ -172,8 +168,9 @@ void main() {
       expect(findShadowDecoratedBox(), findsNothing);
     });
 
-    testWidgets('expanded pill renders shadow in light mode with elevation',
-        (tester) async {
+    testWidgets('expanded pill renders shadow in light mode with elevation', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _lightApp(
           Center(
@@ -277,8 +274,9 @@ void main() {
   // ===========================================================================
 
   group('GlassMenu — trigger Stack clipBehavior', () {
-    testWidgets('trigger Stack uses Clip.none for shadow overflow',
-        (tester) async {
+    testWidgets('trigger Stack uses Clip.none for shadow overflow', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -289,9 +287,7 @@ void main() {
                   height: 56,
                   child: Text('Menu'),
                 ),
-                items: [
-                  GlassMenuItem(title: 'Item', onTap: () {}),
-                ],
+                items: [GlassMenuItem(title: 'Item', onTap: () {})],
               ),
             ),
           ),
@@ -315,10 +311,13 @@ void main() {
           break;
         }
       }
-      expect(foundClipNone, isTrue,
-          reason:
-              'GlassMenu trigger Stack must use Clip.none so button shadows '
-              'are not clipped at the Stack boundary');
+      expect(
+        foundClipNone,
+        isTrue,
+        reason:
+            'GlassMenu trigger Stack must use Clip.none so button shadows '
+            'are not clipped at the Stack boundary',
+      );
     });
   });
 
@@ -327,8 +326,9 @@ void main() {
   // ===========================================================================
 
   group('GlassMenu — morph overlay shadow guard', () {
-    testWidgets('menu opens without crash in dark mode (no shadow)',
-        (tester) async {
+    testWidgets('menu opens without crash in dark mode (no shadow)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _darkApp(
           Center(
@@ -338,9 +338,7 @@ void main() {
                 height: 56,
                 child: Text('DarkMenu'),
               ),
-              items: [
-                GlassMenuItem(title: 'DarkItem', onTap: () {}),
-              ],
+              items: [GlassMenuItem(title: 'DarkItem', onTap: () {})],
             ),
           ),
         ),
@@ -355,8 +353,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('menu opens without crash in light mode with elevation',
-        (tester) async {
+    testWidgets('menu opens without crash in light mode with elevation', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _lightApp(
           Center(
@@ -367,9 +366,7 @@ void main() {
                 height: 56,
                 child: Text('LightMenu'),
               ),
-              items: [
-                GlassMenuItem(title: 'LightItem', onTap: () {}),
-              ],
+              items: [GlassMenuItem(title: 'LightItem', onTap: () {})],
             ),
           ),
         ),
@@ -384,34 +381,34 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('menu opens without crash in light mode with shadowElevation=0',
-        (tester) async {
-      await tester.pumpWidget(
-        _lightApp(
-          Center(
-            child: GlassMenu(
-              settings: _settingsNoShadow,
-              trigger: const SizedBox(
-                width: 56,
-                height: 56,
-                child: Text('NoShadowMenu'),
+    testWidgets(
+      'menu opens without crash in light mode with shadowElevation=0',
+      (tester) async {
+        await tester.pumpWidget(
+          _lightApp(
+            Center(
+              child: GlassMenu(
+                settings: _settingsNoShadow,
+                trigger: const SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: Text('NoShadowMenu'),
+                ),
+                items: [GlassMenuItem(title: 'NoShadowItem', onTap: () {})],
               ),
-              items: [
-                GlassMenuItem(title: 'NoShadowItem', onTap: () {}),
-              ],
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('NoShadowMenu'));
-      await tester.pump();
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('NoShadowMenu'));
+        await tester.pump();
+        await tester.pumpAndSettle();
 
-      // Menu opens successfully — no shadow when elevation is 0.
-      expect(find.text('NoShadowItem'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+        // Menu opens successfully — no shadow when elevation is 0.
+        expect(find.text('NoShadowItem'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 
   // ===========================================================================
@@ -419,8 +416,9 @@ void main() {
   // ===========================================================================
 
   group('AdaptiveGlass — light-mode shadow guard', () {
-    testWidgets('own-layer renders shadow DecoratedBox in light mode',
-        (tester) async {
+    testWidgets('own-layer renders shadow DecoratedBox in light mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _lightApp(
           Center(
@@ -467,8 +465,9 @@ void main() {
       expect(findShadowDecoratedBox(), findsNothing);
     });
 
-    testWidgets('own-layer skips shadow when shadowElevation=0',
-        (tester) async {
+    testWidgets('own-layer skips shadow when shadowElevation=0', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _lightApp(
           Center(
@@ -493,37 +492,38 @@ void main() {
     });
 
     testWidgets(
-        'grouped path in minimal quality still renders shadow (frosted fallback)',
-        (tester) async {
-      // In minimal quality, both grouped and own-layer paths go through
-      // the same _FrostedFallback + _wrapWithLightModeShadow. The
-      // "skip shadow for grouped" rule only applies to the premium
-      // (Impeller) path where metaball blending requires no wrappers.
-      await tester.pumpWidget(
-        _lightApp(
-          Center(
-            child: SizedBox(
-              width: 200,
-              height: 100,
-              child: AdaptiveLiquidGlassLayer(
-                settings: _settingsWithShadow,
-                child: AdaptiveGlass.grouped(
-                  shape: const LiquidRoundedSuperellipse(borderRadius: 20),
-                  quality: GlassQuality.minimal,
-                  child: const SizedBox.expand(),
+      'grouped path in minimal quality still renders shadow (frosted fallback)',
+      (tester) async {
+        // In minimal quality, both grouped and own-layer paths go through
+        // the same _FrostedFallback + _wrapWithLightModeShadow. The
+        // "skip shadow for grouped" rule only applies to the premium
+        // (Impeller) path where metaball blending requires no wrappers.
+        await tester.pumpWidget(
+          _lightApp(
+            Center(
+              child: SizedBox(
+                width: 200,
+                height: 100,
+                child: AdaptiveLiquidGlassLayer(
+                  settings: _settingsWithShadow,
+                  child: AdaptiveGlass.grouped(
+                    shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+                    quality: GlassQuality.minimal,
+                    child: const SizedBox.expand(),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      // Minimal quality grouped path uses _FrostedFallback which DOES
-      // wrap with shadow — this is correct since minimal never uses
-      // the LiquidGlassLayer blend group.
-      expect(findShadowDecoratedBox(), findsWidgets);
-    });
+        // Minimal quality grouped path uses _FrostedFallback which DOES
+        // wrap with shadow — this is correct since minimal never uses
+        // the LiquidGlassLayer blend group.
+        expect(findShadowDecoratedBox(), findsWidgets);
+      },
+    );
 
     // NOTE: Premium grouped path (LiquidGlass.grouped) skips
     // _wrapWithLightModeShadow to avoid breaking metaball blending,
@@ -575,10 +575,12 @@ void main() {
       expect(settings.effectiveShadow, equals(GlassShadow.defaults));
     });
 
-    test('effectiveShadow returns empty when elevation is 0 and shadow is null',
-        () {
-      const settings = LiquidGlassSettings(shadowElevation: 0.0);
-      expect(settings.effectiveShadow, isEmpty);
-    });
+    test(
+      'effectiveShadow returns empty when elevation is 0 and shadow is null',
+      () {
+        const settings = LiquidGlassSettings(shadowElevation: 0.0);
+        expect(settings.effectiveShadow, isEmpty);
+      },
+    );
   });
 }

@@ -12,10 +12,12 @@ import 'dart:collection';
 import 'dart:math';
 import 'dart:ui';
 import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+
 import '../../renderer/fragment_shader_extensions.dart';
 import '../../renderer/liquid_glass_renderer.dart'
     show debugPaintLiquidGlassGeometry;
@@ -35,16 +37,16 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     BackdropKey? backdropKey,
     ui.Image? captureImage,
     Offset captureOriginInScreenSpace = Offset.zero,
-  })  : _settings = settings,
-        _devicePixelRatio = devicePixelRatio,
-        _backdropKey = backdropKey,
-        _captureImage = captureImage,
-        _captureOriginInScreenSpace = captureOriginInScreenSpace,
-        _link = link,
-        _cachedLightDir = Offset(
-          cos(settings.lightAngle),
-          -sin(settings.lightAngle),
-        );
+  }) : _settings = settings,
+       _devicePixelRatio = devicePixelRatio,
+       _backdropKey = backdropKey,
+       _captureImage = captureImage,
+       _captureOriginInScreenSpace = captureOriginInScreenSpace,
+       _link = link,
+       _cachedLightDir = Offset(
+         cos(settings.lightAngle),
+         -sin(settings.lightAngle),
+       );
 
   final FragmentShader? renderShader;
 
@@ -101,11 +103,11 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
   /// Builds [frostRowsPath] for the glass's current bounds and screen
   /// transform; see [FrostRows].
   Path? _frostRows(Rect passPhysical, double dpr) => _frostRowsCache.rows(
-        transform: getTransformTo(null),
-        bounds: _paintBounds,
-        passPhysical: passPhysical,
-        dpr: dpr,
-      );
+    transform: getTransformTo(null),
+    bounds: _paintBounds,
+    passPhysical: passPhysical,
+    dpr: dpr,
+  );
 
   /// Screen-space (logical) rect of the nearest enclosing Impeller compositor
   /// pass that a [BackdropFilterLayer] in this subtree samples from, or null
@@ -170,10 +172,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     if (_settings == value) return;
     // Only recompute the trig if lightAngle actually changed.
     if (value.lightAngle != _settings?.lightAngle) {
-      _cachedLightDir = Offset(
-        cos(value.lightAngle),
-        -sin(value.lightAngle),
-      );
+      _cachedLightDir = Offset(cos(value.lightAngle), -sin(value.lightAngle));
     }
     // alwaysNeedsCompositing == (_geometryImage != null). The geometry image is
     // set synchronously inside paint() so we cannot call
@@ -385,10 +384,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       final transform = geometryRo.getTransformTo(this);
       _shapesWithGeometry.add((geometryRo, geometry, transform));
 
-      final geoBounds = MatrixUtils.transformRect(
-        transform,
-        geometry.bounds,
-      );
+      final geoBounds = MatrixUtils.transformRect(transform, geometry.bounds);
       boundingBox = boundingBox == null
           ? geoBounds
           : boundingBox.expandToInclude(geoBounds);
@@ -425,7 +421,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
       return;
     }
 
-    final rebuildGeometry = needsGeometryUpdate ||
+    final rebuildGeometry =
+        needsGeometryUpdate ||
         _geometryImage == null ||
         link._dirty ||
         (link._transformDirty && !_sameTransformsAsMatte());
@@ -569,7 +566,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           })
           // Slots 22-25: uBackgroundFallback (straight RGBA).
           ..setFloatUniforms(initialIndex: 22, (value) {
-            final b = settings.platformViewFallbackColor ??
+            final b =
+                settings.platformViewFallbackColor ??
                 settings.effectiveBackerColor ??
                 const Color(0x00000000);
             value.setFloats(<double>[b.r, b.g, b.b, b.a]);
@@ -595,9 +593,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
                     ? 1.0
                     : 0.0,
               )
-              ..setFloat(
-                settings.bodyMode == GlassBodyMode.clear ? 1.0 : 0.0,
-              );
+              ..setFloat(settings.bodyMode == GlassBodyMode.clear ? 1.0 : 0.0);
           })
           // Slots 34-35: uTouchPosition (physical px); Slot 36: uTouchIntensity.
           // Multiply by DPR here so the shader receives physical-pixel coords
@@ -631,12 +627,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
             geometryImage,
             filterQuality: FilterQuality.medium,
           );
-        paintLiquidGlass(
-          context,
-          offset,
-          _shapesWithGeometry,
-          _paintBounds,
-        );
+        paintLiquidGlass(context, offset, _shapesWithGeometry, _paintBounds);
       }
     }
 
@@ -699,8 +690,10 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
         (captureOriginInScreenSpace - thisOriginLogical) * dpr;
 
     // uSize: physical pixel dimensions of the captured image.
-    final captureSize =
-        ui.Size(capture.width.toDouble(), capture.height.toDouble());
+    final captureSize = ui.Size(
+      capture.width.toDouble(),
+      capture.height.toDouble(),
+    );
 
     // Geometry bounds in screen space, snapped to pixels.
     final activeBounds = MatrixUtils.transformRect(
@@ -748,7 +741,8 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
           ..setFloat(settings.pinchStrength);
       })
       ..setFloatUniforms(initialIndex: 22, (value) {
-        final b = settings.platformViewFallbackColor ??
+        final b =
+            settings.platformViewFallbackColor ??
             settings.effectiveBackerColor ??
             const Color(0x00000000);
         value.setFloats(<double>[b.r, b.g, b.b, b.a]);
@@ -774,9 +768,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
                 ? 1.0
                 : 0.0,
           )
-          ..setFloat(
-            settings.bodyMode == GlassBodyMode.clear ? 1.0 : 0.0,
-          );
+          ..setFloat(settings.bodyMode == GlassBodyMode.clear ? 1.0 : 0.0);
       })
       // Slots 34-35: uTouchPosition (physical px); Slot 36: uTouchIntensity.
       // Multiply by DPR here so the shader receives physical-pixel coords
@@ -827,10 +819,7 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     context.canvas
       ..save()
       ..clipRect(clipRect.shift(offset))
-      ..drawRect(
-        clipRect.shift(offset),
-        Paint()..shader = renderShader!,
-      )
+      ..drawRect(clipRect.shift(offset), Paint()..shader = renderShader!)
       ..restore();
 
     // Pass 3: shape contents painted on top (non-glass child layer).
@@ -885,15 +874,20 @@ abstract class LiquidGlassRenderObject extends RenderProxyBox {
     Rect bounds, {
     required bool capped,
   }) {
-    final matteDevicePixelRatio =
-        _matteDevicePixelRatio(bounds.size, capped: capped);
+    final matteDevicePixelRatio = _matteDevicePixelRatio(
+      bounds.size,
+      capped: capped,
+    );
     _geometryImageTransforms
       ..clear()
       ..addAll([for (final (_, _, transform) in geometries) transform]);
 
     // Record canvas commands synchronously — pure CPU work.
-    final (picture, localBounds, imageSize) =
-        _recordGeometryPicture(geometries, bounds, matteDevicePixelRatio);
+    final (picture, localBounds, imageSize) = _recordGeometryPicture(
+      geometries,
+      bounds,
+      matteDevicePixelRatio,
+    );
 
     try {
       // Synchronous GPU rasterization — no async lag.
@@ -1047,9 +1041,7 @@ class GeometryRenderLink {
     }
   }
 
-  void registerGeometry(
-    RenderLiquidGlassGeometry renderObject,
-  ) {
+  void registerGeometry(RenderLiquidGlassGeometry renderObject) {
     _dirty = true;
     _shapeGeometries.add(renderObject);
   }

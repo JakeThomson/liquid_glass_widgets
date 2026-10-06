@@ -433,7 +433,8 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       height: backSize,
       iconSize: GlassNavPinnedMetrics.iconSize,
       platformViewBackdrop: widget.platformViewBackdrop,
-      label: Localizations.of<CupertinoLocalizations>(
+      label:
+          Localizations.of<CupertinoLocalizations>(
             context,
             CupertinoLocalizations,
           )?.backButtonLabel ??
@@ -484,8 +485,8 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
 
           VoidCallback tapOf(GlassBarActionItem item) =>
               item is GlassBarSheetItem
-                  ? () => item.onPresent(anchor)
-                  : item.onTap;
+              ? () => item.onPresent(anchor)
+              : item.onTap;
 
           if (!group.glass) {
             final item = group.items.single;
@@ -512,15 +513,16 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
           // The tint replaces the body colour only: it starts from the bar's
           // button settings, so the capsule keeps the outline and rim its
           // neighbours get.
-          final tintColor =
-              group.items.length == 1 ? group.items.first.tintColor : null;
+          final tintColor = group.items.length == 1
+              ? group.items.first.tintColor
+              : null;
           final groupSettings = tintColor != null
               ? (DefaultButtonSettings.of(context) ??
-                      const LiquidGlassSettings())
-                  .copyWith(
-                  glassColor: tintColor,
-                  bodyMode: GlassBodyMode.clear,
-                )
+                        const LiquidGlassSettings())
+                    .copyWith(
+                      glassColor: tintColor,
+                      bodyMode: GlassBodyMode.clear,
+                    )
               : null;
           return GlassButtonGroup.icons(
             platformViewBackdrop: widget.platformViewBackdrop,
@@ -592,13 +594,13 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       width: item is GlassBarCustomItem
           ? null
           : (group.axis == Axis.horizontal
-              ? group.slotExtent
-              : group.crossExtent),
+                ? group.slotExtent
+                : group.crossExtent),
       height: item is GlassBarCustomItem
           ? null
           : (group.axis == Axis.vertical
-              ? group.slotExtent
-              : group.crossExtent),
+                ? group.slotExtent
+                : group.crossExtent),
       child: Center(
         child: Directionality(
           textDirection: ambientDirection,
@@ -641,8 +643,10 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       items
           // A spacer stays on both sides, to split whichever items it is
           // between.
-          .where((item) =>
-              item is! GlassBarActionItem || item.goesVertical == vertical)
+          .where(
+            (item) =>
+                item is! GlassBarActionItem || item.goesVertical == vertical,
+          )
           .toList(),
       axis: vertical ? Axis.vertical : Axis.horizontal,
     );
@@ -676,19 +680,21 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
     GlassVerticalBarData bar,
     OverlayChildLayoutInfo layout,
   ) {
-    const columnWidth = GlassVerticalBarMetrics.controlExtent +
+    const columnWidth =
+        GlassVerticalBarMetrics.controlExtent +
         2 * GlassVerticalBarMetrics.inset;
     final columnOffset = bar.width - columnWidth;
     final trailingStrip = bar.edge == GlassVerticalBarEdge.trailing;
     final reserved = _shell?.verticalBarBottom ?? 0.0;
-    final available = MediaQuery.sizeOf(context).height -
+    final available =
+        MediaQuery.sizeOf(context).height -
         bar.top -
         (reserved > 0
             ? reserved + GlassVerticalBarMetrics.spacing
             : bar.bottom) -
         (_showsBack
             ? GlassVerticalBarMetrics.controlExtent +
-                GlassVerticalBarMetrics.spacing
+                  GlassVerticalBarMetrics.spacing
             : 0.0);
     final strip = Positioned.directional(
       textDirection: Directionality.of(context),
@@ -708,13 +714,10 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
                 context,
                 backSize: GlassVerticalBarMetrics.controlExtent,
               ),
-            for (final group in fitGlassNavStripGroups(
-              [
-                ..._stripGroups(widget.leading, vertical: true),
-                ..._stripGroups(widget.actions, vertical: true),
-              ],
-              available,
-            ))
+            for (final group in fitGlassNavStripGroups([
+              ..._stripGroups(widget.leading, vertical: true),
+              ..._stripGroups(widget.actions, vertical: true),
+            ], available))
               _buildGroup(group),
           ],
         ),
@@ -756,8 +759,8 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
       controller: _strip,
       overlayChildBuilder: (context, layout) =>
           verticalBar == null || _handedOver
-              ? const SizedBox.shrink()
-              : _buildStrip(context, verticalBar, layout),
+          ? const SizedBox.shrink()
+          : _buildStrip(context, verticalBar, layout),
       child: bar,
     );
 

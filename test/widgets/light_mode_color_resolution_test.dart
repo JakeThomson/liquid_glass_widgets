@@ -19,15 +19,10 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 ///
 /// Using CupertinoApp ensures CupertinoTheme provides the correct
 /// brightness-resolved colors — matching real-world usage.
-Widget _buildApp({
-  required Brightness brightness,
-  required Widget child,
-}) {
+Widget _buildApp({required Brightness brightness, required Widget child}) {
   return CupertinoApp(
     theme: CupertinoThemeData(brightness: brightness),
-    home: CupertinoPageScaffold(
-      child: Center(child: child),
-    ),
+    home: CupertinoPageScaffold(child: Center(child: child)),
   );
 }
 
@@ -115,8 +110,9 @@ void main() {
       expect(color.b, lessThan(0.1));
     });
 
-    testWidgets('disabled icon uses tertiaryLabel in dark mode',
-        (tester) async {
+    testWidgets('disabled icon uses tertiaryLabel in dark mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.dark,
@@ -134,8 +130,9 @@ void main() {
       expect(color!.a, lessThan(0.5)); // significantly dimmed
     });
 
-    testWidgets('disabled icon uses tertiaryLabel in light mode',
-        (tester) async {
+    testWidgets('disabled icon uses tertiaryLabel in light mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
@@ -163,10 +160,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.dark,
-          child: const GlassPageControl(
-            count: 3,
-            currentPage: 0,
-          ),
+          child: const GlassPageControl(count: 3, currentPage: 0),
         ),
       );
       await tester.pumpAndSettle();
@@ -183,10 +177,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
-          child: const GlassPageControl(
-            count: 3,
-            currentPage: 0,
-          ),
+          child: const GlassPageControl(count: 3, currentPage: 0),
         ),
       );
       await tester.pumpAndSettle();
@@ -199,8 +190,9 @@ void main() {
       expect(color.b, lessThan(0.1));
     });
 
-    testWidgets('custom activeColor overrides brightness resolution',
-        (tester) async {
+    testWidgets('custom activeColor overrides brightness resolution', (
+      tester,
+    ) async {
       const customColor = Color(0xFFFF0000);
       await tester.pumpWidget(
         _buildApp(
@@ -292,8 +284,9 @@ void main() {
       expect(color.b, lessThan(0.1));
     });
 
-    testWidgets('unselected tab uses secondary color in light mode',
-        (tester) async {
+    testWidgets('unselected tab uses secondary color in light mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
@@ -323,8 +316,9 @@ void main() {
       expect(color.a, lessThan(0.7));
     });
 
-    testWidgets('custom selectedLabelColor overrides brightness resolution',
-        (tester) async {
+    testWidgets('custom selectedLabelColor overrides brightness resolution', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
@@ -366,14 +360,8 @@ void main() {
             selectedIndex: 0,
             onTabSelected: (_) {},
             tabs: const [
-              GlassTab(
-                label: 'Home',
-                icon: Icon(CupertinoIcons.house),
-              ),
-              GlassTab(
-                label: 'Search',
-                icon: Icon(CupertinoIcons.search),
-              ),
+              GlassTab(label: 'Home', icon: Icon(CupertinoIcons.house)),
+              GlassTab(label: 'Search', icon: Icon(CupertinoIcons.search)),
             ],
           ),
         ),
@@ -392,14 +380,8 @@ void main() {
             selectedIndex: 0,
             onTabSelected: (_) {},
             tabs: const [
-              GlassTab(
-                label: 'Home',
-                icon: Icon(CupertinoIcons.house),
-              ),
-              GlassTab(
-                label: 'Search',
-                icon: Icon(CupertinoIcons.search),
-              ),
+              GlassTab(label: 'Home', icon: Icon(CupertinoIcons.house)),
+              GlassTab(label: 'Search', icon: Icon(CupertinoIcons.search)),
             ],
           ),
         ),
@@ -415,15 +397,13 @@ void main() {
   // ===========================================================================
 
   group('GlassBadge text color', () {
-    testWidgets('badge text is white in dark mode (on colored bg)',
-        (tester) async {
+    testWidgets('badge text is white in dark mode (on colored bg)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.dark,
-          child: GlassBadge(
-            count: 5,
-            child: const Icon(CupertinoIcons.bell),
-          ),
+          child: GlassBadge(count: 5, child: const Icon(CupertinoIcons.bell)),
         ),
       );
       await tester.pumpAndSettle();
@@ -432,15 +412,13 @@ void main() {
       expect(text.style?.color, equals(CupertinoColors.white));
     });
 
-    testWidgets('badge text is white in light mode (on colored bg)',
-        (tester) async {
+    testWidgets('badge text is white in light mode (on colored bg)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
-          child: GlassBadge(
-            count: 3,
-            child: const Icon(CupertinoIcons.bell),
-          ),
+          child: GlassBadge(count: 3, child: const Icon(CupertinoIcons.bell)),
         ),
       );
       await tester.pumpAndSettle();
@@ -460,10 +438,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.dark,
-          child: GlassSwitch(
-            value: true,
-            onChanged: (_) {},
-          ),
+          child: GlassSwitch(value: true, onChanged: (_) {}),
         ),
       );
       await tester.pumpAndSettle();
@@ -476,10 +451,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
-          child: GlassSwitch(
-            value: true,
-            onChanged: (_) {},
-          ),
+          child: GlassSwitch(value: true, onChanged: (_) {}),
         ),
       );
       await tester.pumpAndSettle();
@@ -533,8 +505,9 @@ void main() {
       expect(color.b, lessThan(0.1));
     });
 
-    testWidgets('helper text uses secondaryLabel in light mode',
-        (tester) async {
+    testWidgets('helper text uses secondaryLabel in light mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
@@ -564,10 +537,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.dark,
-          child: GlassPicker(
-            value: 'Developer',
-            onTap: () {},
-          ),
+          child: GlassPicker(value: 'Developer', onTap: () {}),
         ),
       );
       await tester.pumpAndSettle();
@@ -584,10 +554,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
-          child: GlassPicker(
-            value: 'Developer',
-            onTap: () {},
-          ),
+          child: GlassPicker(value: 'Developer', onTap: () {}),
         ),
       );
       await tester.pumpAndSettle();
@@ -610,9 +577,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
-          child: const GlassPasswordField(
-            placeholder: 'Password',
-          ),
+          child: const GlassPasswordField(placeholder: 'Password'),
         ),
       );
       await tester.pumpAndSettle();
@@ -624,9 +589,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.dark,
-          child: const GlassPasswordField(
-            placeholder: 'Password',
-          ),
+          child: const GlassPasswordField(placeholder: 'Password'),
         ),
       );
       await tester.pumpAndSettle();
@@ -684,10 +647,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.dark,
-          child: const GlassToast(
-            message: 'Info',
-            type: GlassToastType.info,
-          ),
+          child: const GlassToast(message: 'Info', type: GlassToastType.info),
         ),
       );
       await tester.pumpAndSettle();
@@ -711,15 +671,13 @@ void main() {
       expect(bgColor.b, lessThan(0.1));
     });
 
-    testWidgets('toast background is light-tinted in light mode',
-        (tester) async {
+    testWidgets('toast background is light-tinted in light mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           brightness: Brightness.light,
-          child: const GlassToast(
-            message: 'Info',
-            type: GlassToastType.info,
-          ),
+          child: const GlassToast(message: 'Info', type: GlassToastType.info),
         ),
       );
       await tester.pumpAndSettle();
@@ -760,10 +718,7 @@ void main() {
                   context: context,
                   title: 'Test',
                   actions: [
-                    GlassActionSheetAction(
-                      label: 'Action 1',
-                      onPressed: () {},
-                    ),
+                    GlassActionSheetAction(label: 'Action 1', onPressed: () {}),
                   ],
                 );
               },
@@ -794,10 +749,7 @@ void main() {
                   context: context,
                   title: 'Test',
                   actions: [
-                    GlassActionSheetAction(
-                      label: 'Action 1',
-                      onPressed: () {},
-                    ),
+                    GlassActionSheetAction(label: 'Action 1', onPressed: () {}),
                   ],
                 );
               },

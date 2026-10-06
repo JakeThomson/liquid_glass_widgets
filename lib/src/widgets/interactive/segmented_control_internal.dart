@@ -52,8 +52,10 @@ class SegmentedControlContent extends StatefulWidget {
     this.direction = Axis.horizontal,
     this.indicatorSettings,
     this.indicatorPinchStrength = 0.4,
-    this.indicatorExpansion =
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    this.indicatorExpansion = const EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: 8,
+    ),
     this.backgroundKey,
     this.interactionBehavior = GlassInteractionBehavior.full,
     this.glowColor,
@@ -183,8 +185,9 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
-    final nextAlignment =
-        _getAlignmentFromGlobalPosition(details.globalPosition);
+    final nextAlignment = _getAlignmentFromGlobalPosition(
+      details.globalPosition,
+    );
     setState(() {
       _isDragging = true;
       _mainAlign = nextAlignment;
@@ -205,8 +208,9 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
     final mainVelocity = widget.direction == Axis.horizontal
         ? details.velocity.pixelsPerSecond.dx
         : details.velocity.pixelsPerSecond.dy;
-    final mainExtent =
-        widget.direction == Axis.horizontal ? box.size.width : box.size.height;
+    final mainExtent = widget.direction == Axis.horizontal
+        ? box.size.width
+        : box.size.height;
     final velocityX = (mainVelocity / mainExtent) / draggableRange;
 
     final targetSegmentIndex = DraggableIndicatorPhysics.computeTargetIndex(
@@ -258,7 +262,8 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
 
   @override
   Widget build(BuildContext context) {
-    final indicatorColor = widget.indicatorColor ??
+    final indicatorColor =
+        widget.indicatorColor ??
         (GlassTheme.brightnessOf(context) == Brightness.light
             ? CupertinoColors.black.withValues(alpha: 0.08)
             : CupertinoColors.white.withValues(alpha: 0.2));
@@ -268,15 +273,18 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
     // the inset padding (2 px), unless explicitly overridden.
     // If the outer container is a perfect capsule (e.g. 9999.0), the indicator
     // is also a perfect capsule.
-    final indicatorRadius = widget.indicatorBorderRadius ??
+    final indicatorRadius =
+        widget.indicatorBorderRadius ??
         (widget.borderRadius >= GlassDefaults.capsuleRadius
             ? GlassDefaults.capsuleRadius
-            : (widget.borderRadius - 2.0)
-                .clamp(0.0, GlassDefaults.capsuleRadius));
+            : (widget.borderRadius - 2.0).clamp(
+                0.0,
+                GlassDefaults.capsuleRadius,
+              ));
 
     final dynamicLabelColor =
         CupertinoTheme.of(context).textTheme.textStyle.color ??
-            CupertinoColors.label;
+        CupertinoColors.label;
 
     final selectedTextStyle = TextStyle(
       fontSize: 13,
@@ -303,22 +311,30 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
       },
       child: GestureDetector(
         excludeFromSemantics: true,
-        onHorizontalDragDown:
-            widget.direction == Axis.horizontal ? _onDragDown : null,
-        onHorizontalDragUpdate:
-            widget.direction == Axis.horizontal ? _onDragUpdate : null,
-        onHorizontalDragEnd:
-            widget.direction == Axis.horizontal ? _onDragEnd : null,
-        onHorizontalDragCancel:
-            widget.direction == Axis.horizontal ? _onDragCancel : null,
-        onVerticalDragDown:
-            widget.direction == Axis.vertical ? _onDragDown : null,
-        onVerticalDragUpdate:
-            widget.direction == Axis.vertical ? _onDragUpdate : null,
-        onVerticalDragEnd:
-            widget.direction == Axis.vertical ? _onDragEnd : null,
-        onVerticalDragCancel:
-            widget.direction == Axis.vertical ? _onDragCancel : null,
+        onHorizontalDragDown: widget.direction == Axis.horizontal
+            ? _onDragDown
+            : null,
+        onHorizontalDragUpdate: widget.direction == Axis.horizontal
+            ? _onDragUpdate
+            : null,
+        onHorizontalDragEnd: widget.direction == Axis.horizontal
+            ? _onDragEnd
+            : null,
+        onHorizontalDragCancel: widget.direction == Axis.horizontal
+            ? _onDragCancel
+            : null,
+        onVerticalDragDown: widget.direction == Axis.vertical
+            ? _onDragDown
+            : null,
+        onVerticalDragUpdate: widget.direction == Axis.vertical
+            ? _onDragUpdate
+            : null,
+        onVerticalDragEnd: widget.direction == Axis.vertical
+            ? _onDragEnd
+            : null,
+        onVerticalDragCancel: widget.direction == Axis.vertical
+            ? _onDragCancel
+            : null,
         child: VelocitySpringBuilder(
           value: _mainAlign,
           springWhenActive: GlassSpring.interactive(),
@@ -413,20 +429,23 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
                             isButton: true,
                             tracksSelection: true,
                             isSelected: widget.selectedIndex == i,
-                            semanticLabel: widget.segments[i].semanticLabel ??
+                            semanticLabel:
+                                widget.segments[i].semanticLabel ??
                                 widget.segments[i].label,
                             onKeyboardActivate: () => _onSegmentTap(i),
                             semanticOnTap: () => _onSegmentTap(i),
                             isFocusedNotifier: _focusNotifiers[i],
                             isHoveredNotifier: _hoverNotifiers[i],
-                            shape:
-                                const LiquidRoundedRectangle(borderRadius: 8.0),
+                            shape: const LiquidRoundedRectangle(
+                              borderRadius: 8.0,
+                            ),
                             child: Center(
                               child: IgnorePointer(
                                 ignoring: !widget.segments[i].enabled,
                                 child: Opacity(
-                                  opacity:
-                                      widget.segments[i].enabled ? 1.0 : 0.38,
+                                  opacity: widget.segments[i].enabled
+                                      ? 1.0
+                                      : 0.38,
                                   child: _buildSegmentContent(
                                     widget.segments[i],
                                     isSelected: widget.selectedIndex == i,
@@ -480,10 +499,7 @@ class SegmentedControlContentState extends State<SegmentedControlContent> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconTheme(
-            data: IconThemeData(
-              color: style.color,
-              size: 16,
-            ),
+            data: IconThemeData(color: style.color, size: 16),
             child: tab.icon!,
           ),
           const SizedBox(height: 2),

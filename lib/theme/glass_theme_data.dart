@@ -1,6 +1,7 @@
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/widgets.dart';
+
 import '../src/renderer/liquid_glass_renderer.dart';
 import '../utils/glass_brightness.dart';
 import 'glass_interaction_settings.dart';
@@ -177,16 +178,16 @@ class GlassGlowColors {
 
   @override
   int get hashCode => Object.hash(
-        primary,
-        secondary,
-        success,
-        warning,
-        danger,
-        info,
-        glowBlurRadius,
-        glowSpreadRadius,
-        glowOpacity,
-      );
+    primary,
+    secondary,
+    success,
+    warning,
+    danger,
+    info,
+    glowBlurRadius,
+    glowSpreadRadius,
+    glowOpacity,
+  );
 }
 
 /// Theme configuration for a specific brightness (light or dark).
@@ -343,7 +344,11 @@ class GlassThemeVariant {
       thickness: 10.0, // Consistent with light/dark
       blur: 8.0, // BackdropFilter sigma — enough frosting to see shapes through
       glassColor: Color.fromRGBO(
-          200, 210, 230, 0.15), // Visible tint for the container overlay
+        200,
+        210,
+        230,
+        0.15,
+      ), // Visible tint for the container overlay
     ),
     quality: GlassQuality.minimal,
     glowColors: GlassGlowColors.fallback,
@@ -463,7 +468,8 @@ class GlassThemeData {
 
     return GlassThemeData(
       light: GlassThemeVariant.light.copyWith(
-        settings: GlassThemeVariant.light.settings?.copyWith(
+        settings:
+            GlassThemeVariant.light.settings?.copyWith(
               blur: blur,
               thickness: thickness,
               chromaticAberration: chromaticAberration,
@@ -477,7 +483,8 @@ class GlassThemeData {
         borderRadius: borderRadius,
       ),
       dark: GlassThemeVariant.dark.copyWith(
-        settings: GlassThemeVariant.dark.settings?.copyWith(
+        settings:
+            GlassThemeVariant.dark.settings?.copyWith(
               blur: blur,
               thickness: thickness,
               chromaticAberration: chromaticAberration,
@@ -595,8 +602,9 @@ class GlassThemeData {
     // 0x2A = ~16% opacity in dark mode — dark glass surfaces are already
     // luminous, so a slightly dimmer highlight looks more natural.
     // BlendMode.plus compositing keeps both from blowing out.
-    final adaptivePrimary =
-        isDark ? const Color(0x2AFFFFFF) : const Color(0x3DFFFFFF);
+    final adaptivePrimary = isDark
+        ? const Color(0x2AFFFFFF)
+        : const Color(0x3DFFFFFF);
 
     return colors.copyWith(primary: adaptivePrimary);
   }
@@ -613,8 +621,9 @@ class GlassThemeData {
       dark: dark ?? this.dark,
       interaction: interaction ?? this.interaction,
       // Use sentinel so callers can explicitly clear the override with null.
-      brightness:
-          brightness == _sentinel ? this.brightness : brightness as Brightness?,
+      brightness: brightness == _sentinel
+          ? this.brightness
+          : brightness as Brightness?,
     );
   }
 

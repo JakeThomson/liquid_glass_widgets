@@ -71,7 +71,8 @@ const kBottomBarGlassDefaults = LiquidGlassSettings(
 /// custom label colors have no variants to fade between and are returned
 /// as-is.
 Color resolveBarLabelColor(BuildContext context, double? darkAmount) {
-  final labelColor = CupertinoTheme.of(context).textTheme.textStyle.color ??
+  final labelColor =
+      CupertinoTheme.of(context).textTheme.textStyle.color ??
       CupertinoColors.label;
   if (darkAmount != null && labelColor is CupertinoDynamicColor) {
     // Content-aware path: animated cross-fade between light/dark variants.
@@ -118,10 +119,9 @@ List<Shadow>? buildIconShadows({
   final shadows = <Shadow>[];
   const step = math.pi / 4;
   for (double a = 0; a < math.pi * 2; a += step) {
-    shadows.add(Shadow(
-      color: iconColor,
-      offset: Offset.fromDirection(a, thickness),
-    ));
+    shadows.add(
+      Shadow(color: iconColor, offset: Offset.fromDirection(a, thickness)),
+    );
   }
   return shadows;
 }
@@ -220,19 +220,22 @@ class BottomBarTabItem extends StatelessWidget {
     //      default) stands.
     //   3. The per-state [selectedLabelStyle]/[unselectedLabelStyle] merges last,
     //      so a caller can set a heavier/different selected font on top.
-    var baseLabelStyle = textStyle ??
+    var baseLabelStyle =
+        textStyle ??
         TextStyle(
           color: iconColor,
           fontSize: labelFontSize,
           fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
         );
-    final perStateLabelColor =
-        selected ? selectedLabelColor : unselectedLabelColor;
+    final perStateLabelColor = selected
+        ? selectedLabelColor
+        : unselectedLabelColor;
     if (perStateLabelColor != null) {
       baseLabelStyle = baseLabelStyle.copyWith(color: perStateLabelColor);
     }
-    final stateLabelStyle =
-        selected ? selectedLabelStyle : unselectedLabelStyle;
+    final stateLabelStyle = selected
+        ? selectedLabelStyle
+        : unselectedLabelStyle;
     final resolvedLabelStyle = stateLabelStyle != null
         ? baseLabelStyle.merge(stateLabelStyle)
         : baseLabelStyle;
@@ -283,8 +286,8 @@ class BottomBarTabItem extends StatelessWidget {
                                 transform: selected
                                     ? Matrix4.identity()
                                     : (Matrix4.identity()
-                                      ..scale(0.4)
-                                      ..rotateZ(-math.pi)),
+                                        ..scale(0.4)
+                                        ..rotateZ(-math.pi)),
                                 child: AnimatedOpacity(
                                   duration: glowDuration,
                                   opacity: selected ? 1 : 0,
@@ -319,8 +322,7 @@ class BottomBarTabItem extends StatelessWidget {
                             ),
                           ),
                           child: DefaultTextStyle(
-                            style: DefaultTextStyle.of(context)
-                                .style
+                            style: DefaultTextStyle.of(context).style
                                 .copyWith(color: iconColor),
                             child: iconWidget,
                           ),
@@ -397,8 +399,8 @@ class BottomBarExtraBtn extends StatelessWidget {
     final effectiveShape = borderRadius != null
         ? LiquidRoundedRectangle(borderRadius: borderRadius!)
         : (platformViewBackdrop
-            ? LiquidRoundedRectangle(borderRadius: config.size / 2)
-            : const LiquidOval());
+              ? LiquidRoundedRectangle(borderRadius: config.size / 2)
+              : const LiquidOval());
 
     Widget buildButton(VoidCallback onTap) {
       return GlassButton(
@@ -554,8 +556,9 @@ class TabIndicatorState extends State<TabIndicator>
   final GlobalKey _iconLayerKey = GlobalKey();
 
   // Cached shape to avoid recreation on every animation frame
-  late LiquidRoundedRectangle _barShape =
-      LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
+  late LiquidRoundedRectangle _barShape = LiquidRoundedRectangle(
+    borderRadius: widget.barBorderRadius,
+  );
 
   @override
   void didUpdateWidget(covariant TabIndicator oldWidget) {
@@ -571,7 +574,8 @@ class TabIndicatorState extends State<TabIndicator>
   @override
   Widget build(BuildContext context) {
     final brightness = GlassTheme.brightnessOf(context);
-    final indicatorColor = widget.indicatorColor ??
+    final indicatorColor =
+        widget.indicatorColor ??
         (brightness == Brightness.dark
             ? CupertinoColors.white.withValues(alpha: .1)
             : CupertinoColors.black.withValues(alpha: .1));
@@ -585,7 +589,8 @@ class TabIndicatorState extends State<TabIndicator>
     // the padding inset (4 px) to produce concentric nested arcs (32 − 4 = 28).
     // An explicit indicatorBorderRadius always takes priority.
     const indicatorPadding = 4.0;
-    final indicatorRadius = widget.indicatorBorderRadius ??
+    final indicatorRadius =
+        widget.indicatorBorderRadius ??
         (widget.barBorderRadius >= GlassDefaults.capsuleRadius
             ? GlassDefaults.capsuleRadius
             : (widget.barBorderRadius - indicatorPadding).clamp(
@@ -597,17 +602,14 @@ class TabIndicatorState extends State<TabIndicator>
     // horizontal drags, mimicking iOS 26 bottom bar physics. The SpringBuilder
     // animates the offset back to 0.0 when the drag ends.
     return SpringBuilder(
-      spring: GlassSpring.smooth(
-        duration: const Duration(milliseconds: 250),
-      ),
+      spring: GlassSpring.smooth(duration: const Duration(milliseconds: 250)),
       value: barSwayOffset,
       builder: (context, swayValue, _) {
         return Transform.translate(
           offset: Offset(swayValue, 0),
           child: LiquidStretch(
             interactionScale: widget.interactionScale,
-            stretch:
-                0.0, // stretch disabled on platformViewBackdrop to prevent BackdropFilter pixel-snap jitter
+            stretch: 0.0, // stretch disabled on platformViewBackdrop to prevent BackdropFilter pixel-snap jitter
             resistance: 0.08,
             anchorStretch: false, // Tab bars use jelly-follow, not anchored
             child: Listener(
@@ -634,7 +636,8 @@ class TabIndicatorState extends State<TabIndicator>
                 child: VelocitySpringBuilder(
                   value: tabXAlign,
                   springWhenActive: GlassSpring.interactive(),
-                  springWhenReleased: widget.springDescription ??
+                  springWhenReleased:
+                      widget.springDescription ??
                       GlassSpring.snappy(
                         duration: const Duration(milliseconds: 350),
                       ),
@@ -656,7 +659,8 @@ class TabIndicatorState extends State<TabIndicator>
                       //    even when passing back over the selected tab), OR
                       //  - the spring still has meaningful separation from target.
                       // Threshold 0.05 (was 0.10) catches the full deceleration tail.
-                      value: widget.visible &&
+                      value:
+                          widget.visible &&
                               (tabIsDown ||
                                   tabIsDragging ||
                                   (value - targetAlignment).abs() > 0.05)
@@ -670,9 +674,7 @@ class TabIndicatorState extends State<TabIndicator>
                           // Fast path: indicator is hidden, render simple layout
                           return Container(
                             height: widget.barHeight,
-                            decoration: ShapeDecoration(
-                              shape: _barShape,
-                            ),
+                            decoration: ShapeDecoration(shape: _barShape),
                             child: AdaptiveGlass.grouped(
                               quality:
                                   widget.backgroundQuality ?? widget.quality,
@@ -689,10 +691,10 @@ class TabIndicatorState extends State<TabIndicator>
                         // Calculate jelly transform for the clipper (only when needed)
                         final jellyTransform =
                             DraggableIndicatorPhysics.buildJellyTransform(
-                          velocity: Offset(velocity, 0),
-                          maxDistortion: 0.8,
-                          velocityScale: 10,
-                        );
+                              velocity: Offset(velocity, 0),
+                              maxDistortion: 0.8,
+                              velocityScale: 10,
+                            );
 
                         // Switch rendering mode based on masking quality
                         switch (widget.maskingQuality) {
@@ -751,8 +753,9 @@ class TabIndicatorState extends State<TabIndicator>
         clipper: _InverseBarClipper(_barShape),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius:
-                GlassDefaults.safeBorderRadius(widget.barBorderRadius),
+            borderRadius: GlassDefaults.safeBorderRadius(
+              widget.barBorderRadius,
+            ),
             boxShadow: shadows,
           ),
         ),
@@ -859,8 +862,11 @@ class TabIndicatorState extends State<TabIndicator>
                   child: Container(
                     padding: widget.tabPadding,
                     height: widget.barHeight,
-                    child: widget.selectedTabBuilder(context, 1.0,
-                        targetAlignment.resolve(Directionality.of(context))),
+                    child: widget.selectedTabBuilder(
+                      context,
+                      1.0,
+                      targetAlignment.resolve(Directionality.of(context)),
+                    ),
                   ),
                 ),
               ),
@@ -942,8 +948,9 @@ class TabIndicatorState extends State<TabIndicator>
                                   clipBehavior: Clip.antiAliasWithSaveLayer,
                                   clipper: JellyClipper(
                                     itemCount: widget.tabCount,
-                                    alignment: alignment
-                                        .resolve(Directionality.of(context)),
+                                    alignment: alignment.resolve(
+                                      Directionality.of(context),
+                                    ),
                                     thickness: thickness,
                                     expansion: widget.indicatorExpansion
                                         .resolve(Directionality.of(context)),
@@ -962,8 +969,9 @@ class TabIndicatorState extends State<TabIndicator>
                                   clipBehavior: Clip.antiAliasWithSaveLayer,
                                   clipper: JellyClipper(
                                     itemCount: widget.tabCount,
-                                    alignment: alignment
-                                        .resolve(Directionality.of(context)),
+                                    alignment: alignment.resolve(
+                                      Directionality.of(context),
+                                    ),
                                     thickness: thickness,
                                     expansion: widget.indicatorExpansion
                                         .resolve(Directionality.of(context)),
@@ -974,10 +982,12 @@ class TabIndicatorState extends State<TabIndicator>
                                     padding: widget.tabPadding,
                                     height: widget.barHeight,
                                     child: widget.selectedTabBuilder(
-                                        context,
-                                        thickness,
-                                        alignment.resolve(
-                                            Directionality.of(context))),
+                                      context,
+                                      thickness,
+                                      alignment.resolve(
+                                        Directionality.of(context),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -990,11 +1000,13 @@ class TabIndicatorState extends State<TabIndicator>
                                 clipBehavior: Clip.antiAliasWithSaveLayer,
                                 clipper: JellyClipper(
                                   itemCount: widget.tabCount,
-                                  alignment: alignment
-                                      .resolve(Directionality.of(context)),
+                                  alignment: alignment.resolve(
+                                    Directionality.of(context),
+                                  ),
                                   thickness: thickness,
-                                  expansion: widget.indicatorExpansion
-                                      .resolve(Directionality.of(context)),
+                                  expansion: widget.indicatorExpansion.resolve(
+                                    Directionality.of(context),
+                                  ),
                                   transform: jellyTransform,
                                   borderRadius: indicatorRadius * 2,
                                   inverse: true,
@@ -1010,11 +1022,13 @@ class TabIndicatorState extends State<TabIndicator>
                                 clipBehavior: Clip.antiAliasWithSaveLayer,
                                 clipper: JellyClipper(
                                   itemCount: widget.tabCount,
-                                  alignment: alignment
-                                      .resolve(Directionality.of(context)),
+                                  alignment: alignment.resolve(
+                                    Directionality.of(context),
+                                  ),
                                   thickness: thickness,
-                                  expansion: widget.indicatorExpansion
-                                      .resolve(Directionality.of(context)),
+                                  expansion: widget.indicatorExpansion.resolve(
+                                    Directionality.of(context),
+                                  ),
                                   transform: jellyTransform,
                                   borderRadius: indicatorRadius * 2,
                                 ),
@@ -1022,10 +1036,12 @@ class TabIndicatorState extends State<TabIndicator>
                                   padding: widget.tabPadding,
                                   height: widget.barHeight,
                                   child: widget.selectedTabBuilder(
-                                      context,
-                                      thickness,
-                                      alignment
-                                          .resolve(Directionality.of(context))),
+                                    context,
+                                    thickness,
+                                    alignment.resolve(
+                                      Directionality.of(context),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -1049,8 +1065,9 @@ class TabIndicatorState extends State<TabIndicator>
             paintBackground: false,
             paintGlass: true,
             padding: const EdgeInsets.all(4),
-            expansion:
-                widget.indicatorExpansion.resolve(Directionality.of(context)),
+            expansion: widget.indicatorExpansion.resolve(
+              Directionality.of(context),
+            ),
             settings: widget.indicatorSettings,
             borderRadius: indicatorRadius,
             pinchStrength: widget.indicatorPinchStrength,

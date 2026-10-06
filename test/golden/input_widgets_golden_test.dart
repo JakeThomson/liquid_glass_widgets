@@ -17,9 +17,7 @@ void main() {
           child: buildWithGradientBackground(
             AdaptiveLiquidGlassLayer(
               settings: defaultTestGlassSettings,
-              child: const GlassTextField(
-                placeholder: 'Enter text...',
-              ),
+              child: const GlassTextField(placeholder: 'Enter text...'),
             ),
           ),
         ),

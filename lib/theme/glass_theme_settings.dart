@@ -215,16 +215,28 @@ class GlassThemeSettings {
       frostClamp: _lerpDoubleField(a.frostClamp, b.frostClamp, t),
       frostWeight: _lerpDoubleField(a.frostWeight, b.frostWeight, t),
       blurWeight: _lerpDoubleField(a.blurWeight, b.blurWeight, t),
-      chromaticAberration:
-          _lerpDoubleField(a.chromaticAberration, b.chromaticAberration, t),
+      chromaticAberration: _lerpDoubleField(
+        a.chromaticAberration,
+        b.chromaticAberration,
+        t,
+      ),
       lightAngle: _lerpDoubleField(a.lightAngle, b.lightAngle, t),
       lightIntensity: _lerpDoubleField(a.lightIntensity, b.lightIntensity, t),
-      ambientStrength:
-          _lerpDoubleField(a.ambientStrength, b.ambientStrength, t),
-      fresnelStrength:
-          _lerpDoubleField(a.fresnelStrength, b.fresnelStrength, t),
-      refractiveIndex:
-          _lerpDoubleField(a.refractiveIndex, b.refractiveIndex, t),
+      ambientStrength: _lerpDoubleField(
+        a.ambientStrength,
+        b.ambientStrength,
+        t,
+      ),
+      fresnelStrength: _lerpDoubleField(
+        a.fresnelStrength,
+        b.fresnelStrength,
+        t,
+      ),
+      refractiveIndex: _lerpDoubleField(
+        a.refractiveIndex,
+        b.refractiveIndex,
+        t,
+      ),
       saturation: _lerpDoubleField(a.saturation, b.saturation, t),
       specularSharpness: t < 0.5 ? a.specularSharpness : b.specularSharpness,
       edgeAbsorption: _lerpDoubleField(a.edgeAbsorption, b.edgeAbsorption, t),
@@ -330,33 +342,34 @@ class GlassThemeSettings {
 
   @override
   int get hashCode => Object.hashAll([
-        visibility,
-        glassColor,
-        thickness,
-        blur,
-        frost,
-        frostOpacity,
-        frostClamp,
-        frostWeight,
-        blurWeight,
-        chromaticAberration,
-        lightAngle,
-        lightIntensity,
-        ambientStrength,
-        fresnelStrength,
-        refractiveIndex,
-        saturation,
-        specularSharpness,
-        edgeAbsorption,
-        rimShade,
-        rimShadeEnds,
-        rimLight,
-        bodyShade,
-        lensModel,
-      ]);
+    visibility,
+    glassColor,
+    thickness,
+    blur,
+    frost,
+    frostOpacity,
+    frostClamp,
+    frostWeight,
+    blurWeight,
+    chromaticAberration,
+    lightAngle,
+    lightIntensity,
+    ambientStrength,
+    fresnelStrength,
+    refractiveIndex,
+    saturation,
+    specularSharpness,
+    edgeAbsorption,
+    rimShade,
+    rimShadeEnds,
+    rimLight,
+    bodyShade,
+    lensModel,
+  ]);
 
   @override
-  String toString() => 'GlassThemeSettings('
+  String toString() =>
+      'GlassThemeSettings('
       'visibility: $visibility, '
       'thickness: $thickness, '
       'blur: $blur, '

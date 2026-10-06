@@ -68,10 +68,7 @@ void main() {
     });
 
     test('copyWith only updates specified fields', () {
-      const initial = GlassThemeSettings(
-        thickness: 30.0,
-        blur: 10.0,
-      );
+      const initial = GlassThemeSettings(thickness: 30.0, blur: 10.0);
 
       final updated = initial.copyWith(thickness: 50.0);
 

@@ -1,0 +1,97 @@
+import Flutter
+import UIKit
+
+/// Reports the regions of the Flutter view that UIKit reserves for system
+/// elements: on iPhone Duo, the status cluster and the camera at the ends of
+/// the vertical bar strip.
+///
+/// They are the view's `reservedRegions(kind: .occlusion)`, added in the
+/// iOS 27.1 SDK. Flutter does not pass them to Dart yet
+/// (flutter/flutter#193025), so the package reads them here.
+public final class LiquidGlassWidgetsPlugin: NSObject, FlutterPlugin {
+  private let channel: FlutterMethodChannel
+  private weak var registrar: FlutterPluginRegistrar?
+  private var observer: OcclusionObserver?
+
+  private init(channel: FlutterMethodChannel, registrar: FlutterPluginRegistrar) {
+    self.channel = channel
+    self.registrar = registrar
+  }
+
+  public static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(
+      name: "liquid_glass_widgets/reserved_regions",
+      binaryMessenger: registrar.messenger())
+    let instance = LiquidGlassWidgetsPlugin(channel: channel, registrar: registrar)
+    registrar.addMethodCallDelegate(instance, channel: channel)
+  }
+
+  public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "observe":
+      result(observe())
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  /// Starts reporting the Flutter view's occlusion regions, and returns them.
+  private func observe() -> [[Double]] {
+    guard let view = registrar?.viewController?.view else { return [] }
+    if let observer, observer.superview === view { return observer.regions }
+    observer?.removeFromSuperview()
+    let observer = OcclusionObserver { [weak self] regions in
+      self?.channel.invokeMethod("didChange", arguments: regions)
+    }
+    view.addSubview(observer)
+    self.observer = observer
+    return observer.regions
+  }
+}
+
+/// A hidden view that reports its superview's occlusion regions, as
+/// `[left, top, right, bottom]` in points, whenever they change.
+private final class OcclusionObserver: UIView {
+  private let onChange: ([[Double]]) -> Void
+  private(set) var regions: [[Double]] = []
+
+  init(onChange: @escaping ([[Double]]) -> Void) {
+    self.onChange = onChange
+    super.init(frame: .zero)
+    isHidden = true
+    isUserInteractionEnabled = false
+    autoresizingMask = [.flexibleWidth, .flexibleHeight]
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func didMoveToSuperview() {
+    super.didMoveToSuperview()
+    frame = superview?.bounds ?? .zero
+    regions = read()
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    let regions = read()
+    guard regions != self.regions else { return }
+    self.regions = regions
+    onChange(regions)
+  }
+
+  private func read() -> [[Double]] {
+    // The iOS 27.1 SDK's UIKit, the first with reserved regions; the package
+    // still has to build against older SDKs.
+    #if canImport(UIKit, _version: 9127.0.85)
+    if #available(iOS 27.1, *), let superview {
+      return superview.reservedRegions(kind: .occlusion).map { region in
+        let frame = region.frame
+        return [frame.minX, frame.minY, frame.maxX, frame.maxY].map(Double.init)
+      }
+    }
+    #endif
+    return []
+  }
+}

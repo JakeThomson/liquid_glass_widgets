@@ -31,29 +31,40 @@ RenderLiquidGlassLayer _layer(WidgetTester tester, Key key) => tester
     .renderObject<RenderLiquidGlassLayer>(find.byKey(key, skipOffstage: false));
 
 void main() {
-  testWidgets('descendants share one key; none outside a group',
-      (tester) async {
+  testWidgets('descendants share one key; none outside a group', (
+    tester,
+  ) async {
     BackdropKey? a, b, outside;
-    await tester.pumpWidget(Column(
-      children: [
-        GlassBackdropGroup(
-          child: Column(children: [
-            Builder(builder: (context) {
-              a = GlassBackdropGroup.keyOf(context);
+    await tester.pumpWidget(
+      Column(
+        children: [
+          GlassBackdropGroup(
+            child: Column(
+              children: [
+                Builder(
+                  builder: (context) {
+                    a = GlassBackdropGroup.keyOf(context);
+                    return const SizedBox();
+                  },
+                ),
+                Builder(
+                  builder: (context) {
+                    b = GlassBackdropGroup.keyOf(context);
+                    return const SizedBox();
+                  },
+                ),
+              ],
+            ),
+          ),
+          Builder(
+            builder: (context) {
+              outside = GlassBackdropGroup.keyOf(context);
               return const SizedBox();
-            }),
-            Builder(builder: (context) {
-              b = GlassBackdropGroup.keyOf(context);
-              return const SizedBox();
-            }),
-          ]),
-        ),
-        Builder(builder: (context) {
-          outside = GlassBackdropGroup.keyOf(context);
-          return const SizedBox();
-        }),
-      ],
-    ));
+            },
+          ),
+        ],
+      ),
+    );
     expect(a, isNotNull);
     expect(identical(a, b), isTrue);
     expect(outside, isNull);
@@ -62,46 +73,59 @@ void main() {
   testWidgets('the key survives rebuilds', (tester) async {
     BackdropKey? first, second;
     Widget app() => GlassBackdropGroup(
-          child: Builder(builder: (context) {
-            first ??= GlassBackdropGroup.keyOf(context);
-            second = GlassBackdropGroup.keyOf(context);
-            return const SizedBox();
-          }),
-        );
+      child: Builder(
+        builder: (context) {
+          first ??= GlassBackdropGroup.keyOf(context);
+          second = GlassBackdropGroup.keyOf(context);
+          return const SizedBox();
+        },
+      ),
+    );
     await tester.pumpWidget(app());
     await tester.pumpWidget(app());
     expect(identical(first, second), isTrue);
   });
 
-  testWidgets('a disabled group hands out no key and hides the outer one',
-      (tester) async {
+  testWidgets('a disabled group hands out no key and hides the outer one', (
+    tester,
+  ) async {
     BackdropKey? inner;
-    await tester.pumpWidget(GlassBackdropGroup(
-      child: GlassBackdropGroup(
-        enabled: false,
-        child: Builder(builder: (context) {
-          inner = GlassBackdropGroup.keyOf(context);
-          return const SizedBox();
-        }),
+    await tester.pumpWidget(
+      GlassBackdropGroup(
+        child: GlassBackdropGroup(
+          enabled: false,
+          child: Builder(
+            builder: (context) {
+              inner = GlassBackdropGroup.keyOf(context);
+              return const SizedBox();
+            },
+          ),
+        ),
       ),
-    ));
+    );
     expect(inner, isNull);
   });
 
   group('members', () {
     const a = Key('a'), b = Key('b'), c = Key('c');
 
-    Future<void> pump(WidgetTester tester, Widget Function(Widget) third,
-            {bool withB = true}) =>
-        tester.pumpWidget(Offstage(
-          child: GlassBackdropGroup(
-            child: Column(children: [
+    Future<void> pump(
+      WidgetTester tester,
+      Widget Function(Widget) third, {
+      bool withB = true,
+    }) => tester.pumpWidget(
+      Offstage(
+        child: GlassBackdropGroup(
+          child: Column(
+            children: [
               const _Member(key: a),
               if (withB) const _Member(key: b),
               third(const _Member(key: c)),
-            ]),
+            ],
           ),
-        ));
+        ),
+      ),
+    );
 
     testWidgets('share only with another member in the group', (tester) async {
       await pump(tester, (m) => m, withB: false);
@@ -112,20 +136,18 @@ void main() {
       expect(_layer(tester, a).debugResolveSharing(), isTrue);
     });
 
-    testWidgets(
-        'stay out of the group under an opacity, at any value, fully '
+    testWidgets('stay out of the group under an opacity, at any value, fully '
         'opaque included', (tester) async {
-      Future<void> fade(double opacity) => pump(
-            tester,
-            (m) => Opacity(opacity: opacity, child: m),
-          );
+      Future<void> fade(double opacity) =>
+          pump(tester, (m) => Opacity(opacity: opacity, child: m));
       await fade(0.5);
       _layer(tester, a).debugResolveSharing();
       expect(_layer(tester, b).debugResolveSharing(), isTrue);
       expect(_layer(tester, a).debugResolveSharing(), isTrue);
       expect(_layer(tester, c).debugResolveSharing(), isFalse);
       final group = tester.renderObject<RenderGlassBackdropGroupBoundary>(
-          find.byType(GlassBackdropGroupBoundary, skipOffstage: false));
+        find.byType(GlassBackdropGroupBoundary, skipOffstage: false),
+      );
       expect(group.memberCount, 2);
 
       // At 1 the opacity may start a fade without the member painting again
@@ -135,8 +157,7 @@ void main() {
       expect(group.memberCount, 2);
     });
 
-    testWidgets(
-        'a fade that starts after the first paint finds the member '
+    testWidgets('a fade that starts after the first paint finds the member '
         'already out of the group', (tester) async {
       final controller = AnimationController(
         vsync: const TestVSync(),
@@ -173,7 +194,8 @@ void main() {
         _layer(tester, key).debugResolveSharing();
       }
       final group = tester.renderObject<RenderGlassBackdropGroupBoundary>(
-          find.byType(GlassBackdropGroupBoundary, skipOffstage: false));
+        find.byType(GlassBackdropGroupBoundary, skipOffstage: false),
+      );
       expect(group.memberCount, 3);
       await pump(tester, (m) => const SizedBox());
       expect(group.memberCount, 2);
@@ -182,11 +204,13 @@ void main() {
 
   group('render passes of their own', () {
     Future<RenderObject> inner(
-        WidgetTester tester, Widget Function(Widget) wrap) async {
+      WidgetTester tester,
+      Widget Function(Widget) wrap,
+    ) async {
       const key = Key('inner');
-      await tester.pumpWidget(GlassBackdropGroup(
-        child: wrap(const SizedBox(key: key)),
-      ));
+      await tester.pumpWidget(
+        GlassBackdropGroup(child: wrap(const SizedBox(key: key))),
+      );
       return tester.renderObject(find.byKey(key, skipOffstage: false));
     }
 
@@ -195,24 +219,22 @@ void main() {
         'opacity': (c) => Opacity(opacity: 0.4, child: c),
         'opaque opacity': (c) => Opacity(opacity: 1, child: c),
         'fade': (c) => FadeTransition(
-              opacity: const AlwaysStoppedAnimation(0.5),
-              child: c,
-            ),
-        'fade at rest': (c) => FadeTransition(
-              opacity: const AlwaysStoppedAnimation(1),
-              child: c,
-            ),
+          opacity: const AlwaysStoppedAnimation(0.5),
+          child: c,
+        ),
+        'fade at rest': (c) =>
+            FadeTransition(opacity: const AlwaysStoppedAnimation(1), child: c),
         'shader mask': (c) => ShaderMask(
-              shaderCallback: (r) => const LinearGradient(
-                colors: [Color(0xFF000000), Color(0x00000000)],
-              ).createShader(r),
-              child: c,
-            ),
+          shaderCallback: (r) => const LinearGradient(
+            colors: [Color(0xFF000000), Color(0x00000000)],
+          ).createShader(r),
+          child: c,
+        ),
         'save-layer clip': (c) => ClipRRect(
-              clipBehavior: Clip.antiAliasWithSaveLayer,
-              borderRadius: BorderRadius.circular(8),
-              child: c,
-            ),
+          clipBehavior: Clip.antiAliasWithSaveLayer,
+          borderRadius: BorderRadius.circular(8),
+          child: c,
+        ),
       };
       for (final MapEntry(:key, :value) in opening.entries) {
         final node = await inner(tester, value);
@@ -220,10 +242,8 @@ void main() {
       }
       final staying = <String, Widget Function(Widget)>{
         'nothing': (c) => c,
-        'clip': (c) => ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: c,
-            ),
+        'clip': (c) =>
+            ClipRRect(borderRadius: BorderRadius.circular(8), child: c),
         'transform': (c) => Transform.scale(scale: 1.05, child: c),
         'repaint boundary': (c) => RepaintBoundary(child: c),
       };
@@ -234,13 +254,14 @@ void main() {
     });
   });
 
-  testWidgets(
-      'GlassTabBar and GlassAppBar group their glass unless told not '
+  testWidgets('GlassTabBar and GlassAppBar group their glass unless told not '
       'to', (tester) async {
     Future<GlassBackdropGroup> barGroup(Widget bar) async {
-      await tester.pumpWidget(CupertinoApp(
-        home: CupertinoPageScaffold(child: Align(child: bar)),
-      ));
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: CupertinoPageScaffold(child: Align(child: bar)),
+        ),
+      );
       return tester.widget<GlassBackdropGroup>(
         find.byType(GlassBackdropGroup).first,
       );
@@ -250,32 +271,29 @@ void main() {
       GlassTab(icon: Icon(CupertinoIcons.home), label: 'Home'),
       GlassTab(icon: Icon(CupertinoIcons.search), label: 'Search'),
     ];
-    final tabBarGroup = await barGroup(GlassTabBar.bottom(
-      tabs: tabs,
-      selectedIndex: 0,
-      onTabSelected: (_) {},
-    ));
+    final tabBarGroup = await barGroup(
+      GlassTabBar.bottom(tabs: tabs, selectedIndex: 0, onTabSelected: (_) {}),
+    );
     expect(tabBarGroup.enabled, isTrue);
     expect(tabBarGroup.joinEnclosing, isTrue);
     expect(
-      (await barGroup(GlassTabBar.bottom(
-        tabs: tabs,
-        selectedIndex: 0,
-        onTabSelected: (_) {},
-        groupBackdrop: false,
-      )))
-          .enabled,
+      (await barGroup(
+        GlassTabBar.bottom(
+          tabs: tabs,
+          selectedIndex: 0,
+          onTabSelected: (_) {},
+          groupBackdrop: false,
+        ),
+      )).enabled,
       isFalse,
     );
     final appBarGroup = await barGroup(const GlassAppBar(title: Text('Title')));
     expect(appBarGroup.enabled, isTrue);
     expect(appBarGroup.joinEnclosing, isTrue);
     expect(
-      (await barGroup(const GlassAppBar(
-        title: Text('Title'),
-        groupBackdrop: false,
-      )))
-          .enabled,
+      (await barGroup(
+        const GlassAppBar(title: Text('Title'), groupBackdrop: false),
+      )).enabled,
       isFalse,
     );
   });
@@ -289,12 +307,16 @@ void main() {
         );
 
     // Two bars' groups side by side, optionally inside one of the app's own.
-    Future<void> pump(WidgetTester tester,
-            {bool outer = true, bool second = true}) =>
-        tester.pumpWidget(Offstage(
-          child: GlassBackdropGroup(
-            enabled: outer,
-            child: Column(children: [
+    Future<void> pump(
+      WidgetTester tester, {
+      bool outer = true,
+      bool second = true,
+    }) => tester.pumpWidget(
+      Offstage(
+        child: GlassBackdropGroup(
+          enabled: outer,
+          child: Column(
+            children: [
               const GlassBackdropGroup(
                 joinEnclosing: true,
                 child: _Member(key: a),
@@ -304,9 +326,11 @@ void main() {
                 joinEnclosing: true,
                 child: const _Member(key: b),
               ),
-            ]),
+            ],
           ),
-        ));
+        ),
+      ),
+    );
 
     testWidgets('makes two bars one group', (tester) async {
       await pump(tester);
@@ -335,16 +359,18 @@ void main() {
       expect(boundary(tester, 1).memberCount, 1);
     });
 
-    testWidgets('a disabled bar stays out of the enclosing group',
-        (tester) async {
+    testWidgets('a disabled bar stays out of the enclosing group', (
+      tester,
+    ) async {
       await pump(tester, second: false);
       expect(_layer(tester, b).backdropKey, isNull);
       expect(_layer(tester, a).debugResolveSharing(), isFalse);
       expect(boundary(tester, 0).memberCount, 1);
     });
 
-    testWidgets('members move when the enclosing group goes away',
-        (tester) async {
+    testWidgets('members move when the enclosing group goes away', (
+      tester,
+    ) async {
       await pump(tester);
       _layer(tester, a).debugResolveSharing();
       _layer(tester, b).debugResolveSharing();
@@ -362,24 +388,24 @@ void main() {
   group('GlassTabBar.searchable keeps glass that lies over the bar out', () {
     // No page scaffold: it would take the keyboard's inset away from the bar.
     Widget bar({Widget? accessory}) => CupertinoApp(
-          home: ColoredBox(
-            color: const Color(0xFFFFFFFF),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: GlassTabBar.searchable(
-                tabs: const [
-                  GlassTab(icon: Icon(CupertinoIcons.home), label: 'Home'),
-                  GlassTab(icon: Icon(CupertinoIcons.person), label: 'Me'),
-                ],
-                selectedIndex: 0,
-                onTabSelected: (_) {},
-                searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
-                bottomAccessory: accessory,
-                bottomAccessoryHeight: accessory == null ? null : 48,
-              ),
-            ),
+      home: ColoredBox(
+        color: const Color(0xFFFFFFFF),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: GlassTabBar.searchable(
+            tabs: const [
+              GlassTab(icon: Icon(CupertinoIcons.home), label: 'Home'),
+              GlassTab(icon: Icon(CupertinoIcons.person), label: 'Me'),
+            ],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            searchConfig: GlassSearchBarConfig(onSearchToggle: (_) {}),
+            bottomAccessory: accessory,
+            bottomAccessoryHeight: accessory == null ? null : 48,
           ),
-        );
+        ),
+      ),
+    );
 
     GlassBackdropGroup nearestGroup(WidgetTester tester, Finder of) =>
         tester.widget<GlassBackdropGroup>(
@@ -388,8 +414,9 @@ void main() {
               .first,
         );
 
-    testWidgets('the search pill only while the keyboard is down',
-        (tester) async {
+    testWidgets('the search pill only while the keyboard is down', (
+      tester,
+    ) async {
       await tester.pumpWidget(bar());
       await tester.pump();
       final search = find.byType(SearchPill);

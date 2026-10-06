@@ -28,10 +28,7 @@ void main() {
         );
         return shell ? GlassNavigationShell(child: content) : content;
       },
-      home: Directionality(
-        textDirection: textDirection,
-        child: home,
-      ),
+      home: Directionality(textDirection: textDirection, child: home),
     );
   }
 
@@ -50,17 +47,23 @@ void main() {
   group('horizontal inset', () {
     /// The chrome's own box, which is what the inset positions.
     Rect hostRect(WidgetTester tester) {
-      final box =
-          tester.renderObject<RenderBox>(find.byType(GlassNavPinnedHost));
+      final box = tester.renderObject<RenderBox>(
+        find.byType(GlassNavPinnedHost),
+      );
       return box.localToGlobal(Offset.zero) & box.size;
     }
 
-    testWidgets('defaults to the inset GlassAppBar draws its own chrome at',
-        (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-      )));
+    testWidgets('defaults to the inset GlassAppBar draws its own chrome at', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
+        ),
+      );
       await settle(tester);
 
       final screen =
@@ -71,11 +74,15 @@ void main() {
     });
 
     testWidgets('follows the bar that registered it', (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-        horizontalInset: 16,
-      )));
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+            horizontalInset: 16,
+          ),
+        ),
+      );
       await settle(tester);
 
       // A bar aligned to its app's page gutter rather than the package's
@@ -88,103 +95,126 @@ void main() {
     });
 
     testWidgets('a push lands on the incoming route\'s guide', (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-        horizontalInset: 16,
-      )));
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+            horizontalInset: 16,
+          ),
+        ),
+      );
       await settle(tester);
 
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-      navigator.push(MaterialPageRoute<void>(
-        builder: (_) => const _MaterialBarScreen(
-          title: 'Detail',
-          actionIcon: CupertinoIcons.share,
-          horizontalInset: 4,
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const _MaterialBarScreen(
+            title: 'Detail',
+            actionIcon: CupertinoIcons.share,
+            horizontalInset: 4,
+          ),
         ),
-      ));
+      );
       await settle(tester);
 
       expect(hostRect(tester).left, 4);
     });
 
     testWidgets(
-        'a pop lands on the incoming route\'s guide from the first frame',
-        (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-        horizontalInset: 16,
-      )));
-      await settle(tester);
+      'a pop lands on the incoming route\'s guide from the first frame',
+      (tester) async {
+        await tester.pumpWidget(
+          shellApp(
+            const _MaterialBarScreen(
+              title: 'Inbox',
+              actionIcon: CupertinoIcons.add,
+              horizontalInset: 16,
+            ),
+          ),
+        );
+        await settle(tester);
 
-      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-      navigator.push(MaterialPageRoute<void>(
-        builder: (_) => const _MaterialBarScreen(
-          title: 'Detail',
-          actionIcon: CupertinoIcons.share,
-          horizontalInset: 4,
-        ),
-      ));
-      await settle(tester);
-      expect(hostRect(tester).left, 4);
+        final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const _MaterialBarScreen(
+              title: 'Detail',
+              actionIcon: CupertinoIcons.share,
+              horizontalInset: 4,
+            ),
+          ),
+        );
+        await settle(tester);
+        expect(hostRect(tester).left, 4);
 
-      navigator.pop();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 16));
-      expect(hostRect(tester).left, 16);
+        navigator.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(hostRect(tester).left, 16);
 
-      await settle(tester);
-      expect(hostRect(tester).left, 16);
-    });
+        await settle(tester);
+        expect(hostRect(tester).left, 16);
+      },
+    );
   });
 
   group('buttonSettings', () {
-    testWidgets('follows the route being entered, on push and pop (fixes #351)',
-        (tester) async {
-      const inboxSettings = LiquidGlassSettings(blur: 10, thickness: 20);
-      const detailSettings = LiquidGlassSettings(blur: 30, thickness: 40);
+    testWidgets(
+      'follows the route being entered, on push and pop (fixes #351)',
+      (tester) async {
+        const inboxSettings = LiquidGlassSettings(blur: 10, thickness: 20);
+        const detailSettings = LiquidGlassSettings(blur: 30, thickness: 40);
 
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-        buttonSettings: inboxSettings,
-      )));
-      await settle(tester);
-
-      LiquidGlassSettings? currentSettings() {
-        final scopeFinder = find.descendant(
-          of: find.byType(GlassNavPinnedHost),
-          matching: find.byType(DefaultButtonSettings),
+        await tester.pumpWidget(
+          shellApp(
+            const _MaterialBarScreen(
+              title: 'Inbox',
+              actionIcon: CupertinoIcons.add,
+              buttonSettings: inboxSettings,
+            ),
+          ),
         );
-        if (scopeFinder.evaluate().isEmpty) return null;
-        return tester.widget<DefaultButtonSettings>(scopeFinder.first).settings;
-      }
+        await settle(tester);
 
-      expect(currentSettings()?.blur, 10);
+        LiquidGlassSettings? currentSettings() {
+          final scopeFinder = find.descendant(
+            of: find.byType(GlassNavPinnedHost),
+            matching: find.byType(DefaultButtonSettings),
+          );
+          if (scopeFinder.evaluate().isEmpty) return null;
+          return tester
+              .widget<DefaultButtonSettings>(scopeFinder.first)
+              .settings;
+        }
 
-      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-      navigator.push(MaterialPageRoute<void>(
-        builder: (_) => const _MaterialBarScreen(
-          title: 'Detail',
-          actionIcon: CupertinoIcons.share,
-          buttonSettings: detailSettings,
-        ),
-      ));
-      await settle(tester);
-      expect(currentSettings()?.blur, 30);
+        expect(currentSettings()?.blur, 10);
 
-      // On pop, the chrome adopts the destination's buttonSettings immediately
-      // during the transition rather than holding the leaving route's look
-      // until it snaps at completion.
-      navigator.pop();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 16));
-      expect(currentSettings()?.blur, 10);
+        final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const _MaterialBarScreen(
+              title: 'Detail',
+              actionIcon: CupertinoIcons.share,
+              buttonSettings: detailSettings,
+            ),
+          ),
+        );
+        await settle(tester);
+        expect(currentSettings()?.blur, 30);
 
-      await settle(tester);
-      expect(currentSettings()?.blur, 10);
-    });
+        // On pop, the chrome adopts the destination's buttonSettings immediately
+        // during the transition rather than holding the leaving route's look
+        // until it snaps at completion.
+        navigator.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(currentSettings()?.blur, 10);
+
+        await settle(tester);
+        expect(currentSettings()?.blur, 10);
+      },
+    );
   });
 
   group('platform view backdrop', () {
@@ -194,10 +224,14 @@ void main() {
         .every((b) => b.platformViewBackdrop);
 
     testWidgets('is off unless the bar says otherwise', (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-      )));
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
+        ),
+      );
       await settle(tester);
 
       expect(inHost(find.byType(GlassButton)), findsWidgets);
@@ -205,11 +239,15 @@ void main() {
     });
 
     testWidgets('reaches the capsule the shell draws', (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Map',
-        actionIcon: CupertinoIcons.add,
-        platformViewBackdrop: true,
-      )));
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Map',
+            actionIcon: CupertinoIcons.add,
+            platformViewBackdrop: true,
+          ),
+        ),
+      );
       await settle(tester);
 
       // The material slot alone cannot do this: the shader reads a captured
@@ -220,14 +258,16 @@ void main() {
     });
 
     testWidgets('reaches the in-route capsules too', (tester) async {
-      await tester.pumpWidget(shellApp(
-        const _MaterialBarScreen(
-          title: 'Map',
-          actionIcon: CupertinoIcons.add,
-          platformViewBackdrop: true,
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Map',
+            actionIcon: CupertinoIcons.add,
+            platformViewBackdrop: true,
+          ),
+          shell: false,
         ),
-        shell: false,
-      ));
+      );
       await settle(tester);
 
       final group = tester.widget<GlassButtonGroup>(
@@ -236,22 +276,29 @@ void main() {
       expect(group.platformViewBackdrop, isTrue);
     });
 
-    testWidgets('follows the route being entered, from its first frame',
-        (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Map',
-        actionIcon: CupertinoIcons.add,
-        platformViewBackdrop: true,
-      )));
+    testWidgets('follows the route being entered, from its first frame', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Map',
+            actionIcon: CupertinoIcons.add,
+            platformViewBackdrop: true,
+          ),
+        ),
+      );
       await settle(tester);
 
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-      navigator.push(MaterialPageRoute<void>(
-        builder: (_) => const _MaterialBarScreen(
-          title: 'Detail',
-          actionIcon: CupertinoIcons.share,
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const _MaterialBarScreen(
+            title: 'Detail',
+            actionIcon: CupertinoIcons.share,
+          ),
         ),
-      ));
+      );
       await settle(tester);
       expect(hostOnBackdrop(tester), isFalse);
 
@@ -270,12 +317,17 @@ void main() {
   });
 
   group('registration', () {
-    testWidgets('a plain Material AppBar hands its items to the shell',
-        (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-      )));
+    testWidgets('a plain Material AppBar hands its items to the shell', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
+        ),
+      );
       await settle(tester);
 
       // The shell renders the capsule above the navigator...
@@ -290,8 +342,9 @@ void main() {
       );
     });
 
-    testWidgets('hoisted only flips on the frame after registration',
-        (tester) async {
+    testWidgets('hoisted only flips on the frame after registration', (
+      tester,
+    ) async {
       final hoists = <bool>[];
       await tester.pumpWidget(shellApp(_RecordingScreen(hoists: hoists)));
 
@@ -315,21 +368,28 @@ void main() {
       expect(inHost(find.byIcon(CupertinoIcons.add)), findsNothing);
     });
 
-    testWidgets('a pushed route takes the chrome and hands it back on pop',
-        (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-      )));
+    testWidgets('a pushed route takes the chrome and hands it back on pop', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
+        ),
+      );
       await settle(tester);
 
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-      navigator.push(MaterialPageRoute<void>(
-        builder: (_) => const _MaterialBarScreen(
-          title: 'Thread',
-          actionIcon: CupertinoIcons.search,
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const _MaterialBarScreen(
+            title: 'Thread',
+            actionIcon: CupertinoIcons.search,
+          ),
         ),
-      ));
+      );
       await settle(tester);
 
       expect(inHost(find.byIcon(CupertinoIcons.search)), findsOneWidget);
@@ -346,13 +406,19 @@ void main() {
 
     testWidgets('onBack overrides the default pop', (tester) async {
       var custom = 0;
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-      )));
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
+        ),
+      );
       await settle(tester);
 
-      tester.state<NavigatorState>(find.byType(Navigator)).push(
+      tester
+          .state<NavigatorState>(find.byType(Navigator))
+          .push(
             MaterialPageRoute<void>(
               builder: (_) => _MaterialBarScreen(
                 title: 'Thread',
@@ -370,15 +436,22 @@ void main() {
       expect(find.text('Thread'), findsOneWidget); // custom handler didn't pop
     });
 
-    testWidgets('backButton: false suppresses the pinned back button',
-        (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-      )));
+    testWidgets('backButton: false suppresses the pinned back button', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
+        ),
+      );
       await settle(tester);
 
-      tester.state<NavigatorState>(find.byType(Navigator)).push(
+      tester
+          .state<NavigatorState>(find.byType(Navigator))
+          .push(
             MaterialPageRoute<void>(
               builder: (_) => const _MaterialBarScreen(
                 title: 'Thread',
@@ -395,15 +468,18 @@ void main() {
   });
 
   group('opting out', () {
-    testWidgets('without a shell the bar keeps drawing its own chrome',
-        (tester) async {
-      await tester.pumpWidget(shellApp(
-        shell: false,
-        const _MaterialBarScreen(
-          title: 'Inbox',
-          actionIcon: CupertinoIcons.add,
+    testWidgets('without a shell the bar keeps drawing its own chrome', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        shellApp(
+          shell: false,
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
         ),
-      ));
+      );
       await settle(tester);
 
       expect(find.byType(GlassNavPinnedHost), findsNothing);
@@ -413,18 +489,23 @@ void main() {
       expect(inBar(find.byIcon(CupertinoIcons.add)), findsOneWidget);
     });
 
-    testWidgets('the in-route back button is built for you and pops',
-        (tester) async {
-      await tester.pumpWidget(shellApp(
-        shell: false,
-        const _MaterialBarScreen(
-          title: 'Inbox',
-          actionIcon: CupertinoIcons.add,
+    testWidgets('the in-route back button is built for you and pops', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        shellApp(
+          shell: false,
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
         ),
-      ));
+      );
       await settle(tester);
 
-      tester.state<NavigatorState>(find.byType(Navigator)).push(
+      tester
+          .state<NavigatorState>(find.byType(Navigator))
+          .push(
             MaterialPageRoute<void>(
               builder: (_) => const _MaterialBarScreen(
                 title: 'Thread',
@@ -444,8 +525,9 @@ void main() {
       expect(find.byIcon(CupertinoIcons.back), findsNothing);
     });
 
-    testWidgets('the in-route capsule matches the one the shell draws',
-        (tester) async {
+    testWidgets('the in-route capsule matches the one the shell draws', (
+      tester,
+    ) async {
       // Larger than the default icon, which happened to fit the padded slot.
       const screen = _MaterialBarScreen(
         title: 'Inbox',
@@ -465,10 +547,14 @@ void main() {
 
     testWidgets('an unsupported device falls back in-route', (tester) async {
       GlassNavigationShellState.debugPinningSupported = false;
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-      )));
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+          ),
+        ),
+      );
       await settle(tester);
 
       expect(find.byType(GlassNavPinnedHost), findsNothing);
@@ -478,21 +564,27 @@ void main() {
       expect(inBar(find.byIcon(CupertinoIcons.add)), findsOneWidget);
     });
 
-    testWidgets('enabled: false keeps a route out of the shell entirely',
-        (tester) async {
-      await tester.pumpWidget(shellApp(const _MaterialBarScreen(
-        title: 'Inbox',
-        actionIcon: CupertinoIcons.add,
-        enabled: false,
-      )));
+    testWidgets('enabled: false keeps a route out of the shell entirely', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        shellApp(
+          const _MaterialBarScreen(
+            title: 'Inbox',
+            actionIcon: CupertinoIcons.add,
+            enabled: false,
+          ),
+        ),
+      );
       await settle(tester);
 
       expect(inHost(find.byIcon(CupertinoIcons.add)), findsNothing);
       expect(inBar(find.byIcon(CupertinoIcons.add)), findsOneWidget);
     });
 
-    testWidgets('flipping enabled off releases a live registration',
-        (tester) async {
+    testWidgets('flipping enabled off releases a live registration', (
+      tester,
+    ) async {
       await tester.pumpWidget(shellApp(const _TogglingScreen()));
       await settle(tester);
       expect(inHost(find.byIcon(CupertinoIcons.add)), findsOneWidget);
@@ -504,152 +596,176 @@ void main() {
       expect(inBar(find.byIcon(CupertinoIcons.add)), findsOneWidget);
     });
     testWidgets(
-        'actions item order remains consistent in RTL when modal sheet is opened (fixes #374)',
-        (tester) async {
-      await tester.pumpWidget(shellApp(
-        const _TwoActionScreen(),
-        textDirection: TextDirection.rtl,
-      ));
-      await settle(tester);
+      'actions item order remains consistent in RTL when modal sheet is opened (fixes #374)',
+      (tester) async {
+        await tester.pumpWidget(
+          shellApp(const _TwoActionScreen(), textDirection: TextDirection.rtl),
+        );
+        await settle(tester);
 
-      final shareBefore =
-          tester.getCenter(inHost(find.byIcon(CupertinoIcons.share))).dx;
-      final settingsBefore =
-          tester.getCenter(inHost(find.byIcon(CupertinoIcons.settings))).dx;
+        final shareBefore = tester
+            .getCenter(inHost(find.byIcon(CupertinoIcons.share)))
+            .dx;
+        final settingsBefore = tester
+            .getCenter(inHost(find.byIcon(CupertinoIcons.settings)))
+            .dx;
 
-      // In the hoisted host, slot 0 (share) is to the left of slot 1 (settings).
-      expect(shareBefore, lessThan(settingsBefore));
+        // In the hoisted host, slot 0 (share) is to the left of slot 1 (settings).
+        expect(shareBefore, lessThan(settingsBefore));
 
-      // Open a modal bottom sheet, triggering handover to in-route chrome.
-      await tester.tap(find.text('open sheet'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+        // Open a modal bottom sheet, triggering handover to in-route chrome.
+        await tester.tap(find.text('open sheet'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
-      final shareAfter =
-          tester.getCenter(inBar(find.byIcon(CupertinoIcons.share))).dx;
-      final settingsAfter =
-          tester.getCenter(inBar(find.byIcon(CupertinoIcons.settings))).dx;
+        final shareAfter = tester
+            .getCenter(inBar(find.byIcon(CupertinoIcons.share)))
+            .dx;
+        final settingsAfter = tester
+            .getCenter(inBar(find.byIcon(CupertinoIcons.settings)))
+            .dx;
 
-      // Item order must not flip between hoisted and handed-over states.
-      expect(shareAfter, lessThan(settingsAfter));
+        // Item order must not flip between hoisted and handed-over states.
+        expect(shareAfter, lessThan(settingsAfter));
 
-      // Dismiss the bottom sheet.
-      Navigator.of(tester.element(find.text('open sheet'))).pop();
-      await settle(tester);
+        // Dismiss the bottom sheet.
+        Navigator.of(tester.element(find.text('open sheet'))).pop();
+        await settle(tester);
 
-      final shareDismissed =
-          tester.getCenter(inHost(find.byIcon(CupertinoIcons.share))).dx;
-      final settingsDismissed =
-          tester.getCenter(inHost(find.byIcon(CupertinoIcons.settings))).dx;
+        final shareDismissed = tester
+            .getCenter(inHost(find.byIcon(CupertinoIcons.share)))
+            .dx;
+        final settingsDismissed = tester
+            .getCenter(inHost(find.byIcon(CupertinoIcons.settings)))
+            .dx;
 
-      expect(shareDismissed, lessThan(settingsDismissed));
-      expect(shareDismissed, shareBefore);
-      expect(settingsDismissed, settingsBefore);
-    });
-
-    testWidgets(
-        'leading item order remains consistent in RTL when modal sheet is opened',
-        (tester) async {
-      await tester.pumpWidget(shellApp(
-        const _TwoLeadingScreen(),
-        textDirection: TextDirection.rtl,
-      ));
-      await settle(tester);
-
-      final shareBefore =
-          tester.getCenter(inHost(find.byIcon(CupertinoIcons.share))).dx;
-      final settingsBefore =
-          tester.getCenter(inHost(find.byIcon(CupertinoIcons.settings))).dx;
-
-      expect(shareBefore, lessThan(settingsBefore));
-
-      // Open a modal bottom sheet, triggering handover to in-route chrome.
-      await tester.tap(find.text('open sheet'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      final shareAfter =
-          tester.getCenter(inBar(find.byIcon(CupertinoIcons.share))).dx;
-      final settingsAfter =
-          tester.getCenter(inBar(find.byIcon(CupertinoIcons.settings))).dx;
-
-      expect(shareAfter, lessThan(settingsAfter));
-    });
+        expect(shareDismissed, lessThan(settingsDismissed));
+        expect(shareDismissed, shareBefore);
+        expect(settingsDismissed, settingsBefore);
+      },
+    );
 
     testWidgets(
-        'custom item preserves ambient RTL directionality during handover',
-        (tester) async {
-      TextDirection? hoistedDirection;
+      'leading item order remains consistent in RTL when modal sheet is opened',
+      (tester) async {
+        await tester.pumpWidget(
+          shellApp(const _TwoLeadingScreen(), textDirection: TextDirection.rtl),
+        );
+        await settle(tester);
 
-      await tester.pumpWidget(shellApp(
-        GlassPinnedBarChrome(
-          backButton: false,
-          actions: [
-            GlassBarItem.custom(
-              child: Builder(
-                builder: (context) {
-                  hoistedDirection = Directionality.of(context);
-                  return const Text('test');
-                },
+        final shareBefore = tester
+            .getCenter(inHost(find.byIcon(CupertinoIcons.share)))
+            .dx;
+        final settingsBefore = tester
+            .getCenter(inHost(find.byIcon(CupertinoIcons.settings)))
+            .dx;
+
+        expect(shareBefore, lessThan(settingsBefore));
+
+        // Open a modal bottom sheet, triggering handover to in-route chrome.
+        await tester.tap(find.text('open sheet'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final shareAfter = tester
+            .getCenter(inBar(find.byIcon(CupertinoIcons.share)))
+            .dx;
+        final settingsAfter = tester
+            .getCenter(inBar(find.byIcon(CupertinoIcons.settings)))
+            .dx;
+
+        expect(shareAfter, lessThan(settingsAfter));
+      },
+    );
+
+    testWidgets(
+      'custom item preserves ambient RTL directionality during handover',
+      (tester) async {
+        TextDirection? hoistedDirection;
+
+        await tester.pumpWidget(
+          shellApp(
+            GlassPinnedBarChrome(
+              backButton: false,
+              actions: [
+                GlassBarItem.custom(
+                  child: Builder(
+                    builder: (context) {
+                      hoistedDirection = Directionality.of(context);
+                      return const Text('test');
+                    },
+                  ),
+                ),
+              ],
+              builder: (context, chrome) => Scaffold(
+                appBar: AppBar(
+                  automaticallyImplyLeading: false,
+                  actions: chrome.actions,
+                ),
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        builder: (_) => const SizedBox(height: 200),
+                      );
+                    },
+                    child: const Text('open sheet'),
+                  ),
+                ),
               ),
             ),
-          ],
-          builder: (context, chrome) => Scaffold(
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              actions: chrome.actions,
-            ),
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    builder: (_) => const SizedBox(height: 200),
-                  );
-                },
-                child: const Text('open sheet'),
-              ),
-            ),
+            textDirection: TextDirection.rtl,
           ),
-        ),
-        textDirection: TextDirection.rtl,
-      ));
-      await settle(tester);
+        );
+        await settle(tester);
 
-      expect(hoistedDirection, TextDirection.rtl);
+        expect(hoistedDirection, TextDirection.rtl);
 
-      await tester.tap(find.text('open sheet'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+        await tester.tap(find.text('open sheet'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
-      final customFinder = inBar(find.text('test'));
-      expect(customFinder, findsOneWidget);
-      final handedOverDirection =
-          Directionality.of(tester.element(customFinder));
-      expect(handedOverDirection, TextDirection.rtl);
-    });
+        final customFinder = inBar(find.text('test'));
+        expect(customFinder, findsOneWidget);
+        final handedOverDirection = Directionality.of(
+          tester.element(customFinder),
+        );
+        expect(handedOverDirection, TextDirection.rtl);
+      },
+    );
   });
 
-  testWidgets('a spacer splits the in-route actions into two capsules',
-      (tester) async {
+  testWidgets('a spacer splits the in-route actions into two capsules', (
+    tester,
+  ) async {
     late GlassPinnedBarChromeData data;
-    await tester.pumpWidget(shellApp(
-      GlassPinnedBarChrome(
-        actions: [
-          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
-          GlassBarItem.icon(
-              icon: const Icon(CupertinoIcons.search), onTap: () {}),
-          const GlassBarItem.spacer(),
-          GlassBarItem.icon(
-              icon: const Icon(CupertinoIcons.ellipsis), onTap: () {}),
-        ],
-        builder: (context, chrome) {
-          data = chrome;
-          return Row(children: chrome.actions);
-        },
+    await tester.pumpWidget(
+      shellApp(
+        GlassPinnedBarChrome(
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.add),
+              onTap: () {},
+            ),
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.search),
+              onTap: () {},
+            ),
+            const GlassBarItem.spacer(),
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.ellipsis),
+              onTap: () {},
+            ),
+          ],
+          builder: (context, chrome) {
+            data = chrome;
+            return Row(children: chrome.actions);
+          },
+        ),
+        shell: false,
       ),
-      shell: false,
-    ));
+    );
     await settle(tester);
 
     // One widget per shell, which the shell's own cluster matches.
@@ -744,9 +860,9 @@ class _TogglingScreenState extends State<_TogglingScreen> {
     );
 
     Widget bar(List<Widget> actions) => Scaffold(
-          appBar: AppBar(title: const Text('Inbox'), actions: actions),
-          body: body,
-        );
+      appBar: AppBar(title: const Text('Inbox'), actions: actions),
+      body: body,
+    );
 
     if (!_mounted) return bar(const []);
     return GlassPinnedBarChrome(
@@ -786,10 +902,7 @@ class _TwoActionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassPinnedBarChrome(
       actions: [
-        GlassBarItem.icon(
-          icon: const Icon(CupertinoIcons.share),
-          onTap: () {},
-        ),
+        GlassBarItem.icon(icon: const Icon(CupertinoIcons.share), onTap: () {}),
         GlassBarItem.icon(
           icon: const Icon(CupertinoIcons.settings),
           onTap: () {},
@@ -826,10 +939,7 @@ class _TwoLeadingScreen extends StatelessWidget {
     return GlassPinnedBarChrome(
       actions: const [],
       leading: [
-        GlassBarItem.icon(
-          icon: const Icon(CupertinoIcons.share),
-          onTap: () {},
-        ),
+        GlassBarItem.icon(icon: const Icon(CupertinoIcons.share), onTap: () {}),
         GlassBarItem.icon(
           icon: const Icon(CupertinoIcons.settings),
           onTap: () {},

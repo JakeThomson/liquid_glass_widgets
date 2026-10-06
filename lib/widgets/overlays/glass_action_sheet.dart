@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+
 import '../../constants/glass_defaults.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
@@ -221,7 +222,8 @@ class _GlassActionSheetContent extends StatelessWidget {
         : CupertinoColors.black.withValues(alpha: 0.1);
 
     return AdaptiveLiquidGlassLayer(
-      settings: settings ??
+      settings:
+          settings ??
           const LiquidGlassSettings(
             thickness: 30.0,
             blur: 5.0,
@@ -249,12 +251,10 @@ class _GlassActionSheetContent extends StatelessWidget {
                   SizedBox(
                     height: 1,
                     child: Center(
-                        child: Container(height: 0.5, color: dividerColor)),
+                      child: Container(height: 0.5, color: dividerColor),
+                    ),
                   ),
-                _ActionSheetButton(
-                  action: actions[i],
-                  glowColors: glowColors,
-                ),
+                _ActionSheetButton(action: actions[i], glowColors: glowColors),
               ],
             ],
           ),
@@ -301,7 +301,8 @@ class _GlassActionSheetContent extends StatelessWidget {
         : CupertinoColors.white.withValues(alpha: 0.65);
 
     return AdaptiveLiquidGlassLayer(
-      settings: settings ??
+      settings:
+          settings ??
           const LiquidGlassSettings(
             thickness: 30.0,
             blur: 5.0,
@@ -333,10 +334,7 @@ class _GlassActionSheetContent extends StatelessWidget {
 /// A single action button within the action sheet — manages its own pressed
 /// state to provide iOS-style opacity highlight on tap-down.
 class _ActionSheetButton extends StatefulWidget {
-  const _ActionSheetButton({
-    required this.action,
-    required this.glowColors,
-  });
+  const _ActionSheetButton({required this.action, required this.glowColors});
 
   final GlassActionSheetAction action;
   final GlassGlowColors? glowColors;
@@ -392,14 +390,11 @@ class _ActionSheetButtonState extends State<_ActionSheetButton>
               curve: Curves.easeOutCubic,
               color: showHighlight
                   ? CupertinoColors.label
-                      .resolveFrom(context)
-                      .withValues(alpha: 0.06)
+                        .resolveFrom(context)
+                        .withValues(alpha: 0.06)
                   : const Color(0x00000000),
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: child,
             );
           },

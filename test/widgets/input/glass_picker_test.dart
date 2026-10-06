@@ -10,10 +10,7 @@ void main() {
     testWidgets('renders with a selected value', (tester) async {
       await tester.pumpWidget(
         createTestApp(
-          child: GlassPicker(
-            value: 'Option A',
-            onTap: () {},
-          ),
+          child: GlassPicker(value: 'Option A', onTap: () {}),
         ),
       );
       expect(find.text('Option A'), findsOneWidget);
@@ -22,25 +19,21 @@ void main() {
     testWidgets('renders placeholder when value is null', (tester) async {
       await tester.pumpWidget(
         createTestApp(
-          child: const GlassPicker(
-            value: null,
-            placeholder: 'Choose one',
-          ),
+          child: const GlassPicker(value: null, placeholder: 'Choose one'),
         ),
       );
       expect(find.text('Choose one'), findsOneWidget);
     });
 
     testWidgets(
-        'renders default placeholder when value is null and no placeholder given',
-        (tester) async {
-      await tester.pumpWidget(
-        createTestApp(
-          child: const GlassPicker(value: null),
-        ),
-      );
-      expect(find.text('Select'), findsOneWidget);
-    });
+      'renders default placeholder when value is null and no placeholder given',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestApp(child: const GlassPicker(value: null)),
+        );
+        expect(find.text('Select'), findsOneWidget);
+      },
+    );
 
     testWidgets('renders custom icon', (tester) async {
       await tester.pumpWidget(
@@ -54,31 +47,28 @@ void main() {
       expect(find.byIcon(Icons.arrow_drop_down), findsOneWidget);
     });
 
-    testWidgets('renders default chevron icon when no icon given',
-        (tester) async {
+    testWidgets('renders default chevron icon when no icon given', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        createTestApp(
-          child: const GlassPicker(value: 'X'),
-        ),
+        createTestApp(child: const GlassPicker(value: 'X')),
       );
       expect(
-          find.byIcon(CupertinoIcons.chevron_up_chevron_down), findsOneWidget);
+        find.byIcon(CupertinoIcons.chevron_up_chevron_down),
+        findsOneWidget,
+      );
     });
 
     testWidgets('custom height is accepted', (tester) async {
       await tester.pumpWidget(
-        createTestApp(
-          child: const GlassPicker(value: 'Y', height: 64),
-        ),
+        createTestApp(child: const GlassPicker(value: 'Y', height: 64)),
       );
       expect(find.byType(GlassPicker), findsOneWidget);
     });
 
     testWidgets('custom width is accepted', (tester) async {
       await tester.pumpWidget(
-        createTestApp(
-          child: const GlassPicker(value: 'Z', width: 200),
-        ),
+        createTestApp(child: const GlassPicker(value: 'Z', width: 200)),
       );
       expect(find.byType(GlassPicker), findsOneWidget);
     });
@@ -114,10 +104,7 @@ void main() {
       var tapped = false;
       await tester.pumpWidget(
         createTestApp(
-          child: GlassPicker(
-            value: 'Tap me',
-            onTap: () => tapped = true,
-          ),
+          child: GlassPicker(value: 'Tap me', onTap: () => tapped = true),
         ),
       );
       await tester.tap(find.byType(GlassPicker));
@@ -127,9 +114,7 @@ void main() {
 
     testWidgets('onTap is null is safe (no crash)', (tester) async {
       await tester.pumpWidget(
-        createTestApp(
-          child: const GlassPicker(value: 'No tap'),
-        ),
+        createTestApp(child: const GlassPicker(value: 'No tap')),
       );
       await tester.tap(find.byType(GlassPicker));
       await tester.pump();
@@ -142,10 +127,7 @@ void main() {
     testWidgets('renders with useOwnLayer=true', (tester) async {
       await tester.pumpWidget(
         createTestApp(
-          child: const GlassPicker(
-            value: 'Layered',
-            useOwnLayer: true,
-          ),
+          child: const GlassPicker(value: 'Layered', useOwnLayer: true),
         ),
       );
       expect(find.byType(GlassPicker), findsOneWidget);
@@ -154,10 +136,7 @@ void main() {
     testWidgets('renders with custom quality', (tester) async {
       await tester.pumpWidget(
         createTestApp(
-          child: const GlassPicker(
-            value: 'Q',
-            quality: GlassQuality.standard,
-          ),
+          child: const GlassPicker(value: 'Q', quality: GlassQuality.standard),
         ),
       );
       expect(find.byType(GlassPicker), findsOneWidget);

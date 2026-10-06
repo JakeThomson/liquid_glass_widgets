@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../theme/glass_theme_data.dart';
@@ -133,8 +134,8 @@ class GlassBadge extends StatelessWidget {
     this.maxCount = 99,
     this.semanticLabel,
     this.semanticCount,
-  })  : isDot = false,
-        dotColor = null;
+  }) : isDot = false,
+       dotColor = null;
 
   /// Creates a dot badge (status indicator).
   ///
@@ -157,13 +158,13 @@ class GlassBadge extends StatelessWidget {
     this.settings,
     this.quality,
     this.semanticLabel,
-  })  : isDot = true,
-        count = 0,
-        backgroundColor = null,
-        textColor = null,
-        showZero = false,
-        maxCount = 99,
-        semanticCount = null;
+  }) : isDot = true,
+       count = 0,
+       backgroundColor = null,
+       textColor = null,
+       showZero = false,
+       maxCount = 99,
+       semanticCount = null;
 
   /// The widget to display the badge on top of
   final Widget child;
@@ -275,8 +276,9 @@ class GlassBadge extends StatelessWidget {
             // Badge visual is decorative — the parent Semantics node above
             // carries the label, so exclude the badge widget itself.
             child: ExcludeSemantics(
-              child:
-                  isDot ? _buildDotBadge(context) : _buildCountBadge(context),
+              child: isDot
+                  ? _buildDotBadge(context)
+                  : _buildCountBadge(context),
             ),
           ),
         ],
@@ -293,8 +295,9 @@ class GlassBadge extends StatelessWidget {
     final fgColor = textColor ?? CupertinoColors.white;
 
     // Format count display
-    final String displayText =
-        count > maxCount ? '$maxCount+' : count.toString();
+    final String displayText = count > maxCount
+        ? '$maxCount+'
+        : count.toString();
 
     // Determine size based on digit count
     final bool isWide = count > 9 || count > maxCount;
@@ -302,7 +305,8 @@ class GlassBadge extends StatelessWidget {
     final double horizontalPadding = isWide ? 6.0 : 0.0;
 
     return AdaptiveLiquidGlassLayer(
-      settings: settings ??
+      settings:
+          settings ??
           const LiquidGlassSettings(
             thickness: 20.0,
             blur: 4.0,
@@ -311,10 +315,7 @@ class GlassBadge extends StatelessWidget {
           ),
       quality: quality,
       child: Container(
-        constraints: BoxConstraints(
-          minWidth: minWidth,
-          minHeight: 18.0,
-        ),
+        constraints: BoxConstraints(minWidth: minWidth, minHeight: 18.0),
         padding: EdgeInsets.symmetric(
           horizontal: horizontalPadding,
           vertical: 2.0,
@@ -353,7 +354,8 @@ class GlassBadge extends StatelessWidget {
     final color = dotColor ?? CupertinoColors.systemGreen;
 
     return AdaptiveLiquidGlassLayer(
-      settings: settings ??
+      settings:
+          settings ??
           const LiquidGlassSettings(
             thickness: 15.0,
             blur: 3.0,
@@ -367,10 +369,7 @@ class GlassBadge extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          border: Border.all(
-            color: CupertinoColors.white,
-            width: 2,
-          ),
+          border: Border.all(color: CupertinoColors.white, width: 2),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.5),

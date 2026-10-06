@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
@@ -207,9 +208,13 @@ class _GlassSwitchState extends State<GlassSwitch>
 
     // Unified tempo: Position jump and Liquid bloom now move together
     _positionController = AnimationController(
-        duration: const Duration(milliseconds: 380), vsync: this);
+      duration: const Duration(milliseconds: 380),
+      vsync: this,
+    );
     _thicknessController = AnimationController(
-        duration: const Duration(milliseconds: 380), vsync: this);
+      duration: const Duration(milliseconds: 380),
+      vsync: this,
+    );
 
     _positionCurve = CurvedAnimation(
       parent: _positionController,
@@ -225,13 +230,17 @@ class _GlassSwitchState extends State<GlassSwitch>
     // Synchronized to grow and settle as the toggle jumps
     _thicknessAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOutCubic)),
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOutCubic)),
         weight: 45, // Grow up as it gains speed
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeInOutQuad)),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeInOutQuad)),
         weight: 55, // Settle down as it lands
       ),
     ]).animate(_thicknessController);
@@ -282,15 +291,17 @@ class _GlassSwitchState extends State<GlassSwitch>
         final int ms = (380 * posDist).round();
 
         if (ms > 0) {
-          unawaited(_thicknessController.animateTo(
-            1.0,
-            duration: Duration(milliseconds: ms),
-            // Use an ease-in curve so that if the thumb is fully bloomed (held down),
-            // it maintains its stretched shape for the majority of the travel,
-            // and only deflates back to a circle as it lands on the other side.
-            // This prevents the "jerky" deflation mid-flight.
-            curve: Curves.easeIn,
-          ));
+          unawaited(
+            _thicknessController.animateTo(
+              1.0,
+              duration: Duration(milliseconds: ms),
+              // Use an ease-in curve so that if the thumb is fully bloomed (held down),
+              // it maintains its stretched shape for the majority of the travel,
+              // and only deflates back to a circle as it lands on the other side.
+              // This prevents the "jerky" deflation mid-flight.
+              curve: Curves.easeIn,
+            ),
+          );
         } else {
           _thicknessController.value = 1.0;
         }
@@ -308,7 +319,8 @@ class _GlassSwitchState extends State<GlassSwitch>
       if (_thicknessController.value > 0.0 &&
           !_thicknessController.isAnimating) {
         unawaited(
-            _thicknessController.forward(from: _thicknessController.value));
+          _thicknessController.forward(from: _thicknessController.value),
+        );
       }
     }
   }
@@ -363,11 +375,13 @@ class _GlassSwitchState extends State<GlassSwitch>
       _thicknessController.value = 0.0;
     }
     _dragAbandonedExternally = false;
-    unawaited(_thicknessController.animateTo(
-      0.45,
-      duration: const Duration(milliseconds: 120),
-      curve: Curves.easeOut,
-    ));
+    unawaited(
+      _thicknessController.animateTo(
+        0.45,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+      ),
+    );
   }
 
   void _onTapUp(TapUpDetails details) {
@@ -405,10 +419,12 @@ class _GlassSwitchState extends State<GlassSwitch>
 
     // If we're not at perfect plump (e.g., started deflating), animate back to 0.45
     if ((_thicknessController.value - 0.45).abs() > 0.01) {
-      unawaited(_thicknessController.animateTo(
-        0.45,
-        duration: const Duration(milliseconds: 80),
-      ));
+      unawaited(
+        _thicknessController.animateTo(
+          0.45,
+          duration: const Duration(milliseconds: 80),
+        ),
+      );
     } else {
       _thicknessController.value = 0.45;
     }
@@ -430,8 +446,10 @@ class _GlassSwitchState extends State<GlassSwitch>
     // into the controller so the AnimatedBuilder redraws this frame.
     final travel = _thumbTravelDistance;
     final dragDelta = details.localPosition.dx - _dragStartX;
-    _positionController.value =
-        (_dragStartPosition + dragDelta / travel).clamp(0.0, 1.0);
+    _positionController.value = (_dragStartPosition + dragDelta / travel).clamp(
+      0.0,
+      1.0,
+    );
 
     // Detect midpoint crossing and fire a single haptic tick.
     // iOS fires at the 50 % mark regardless of drag direction.
@@ -456,8 +474,9 @@ class _GlassSwitchState extends State<GlassSwitch>
     final velocity = details.primaryVelocity ?? 0.0;
 
     // A fast flick (> 200 px/s) wins over position; otherwise snap at 50 %.
-    final bool shouldBeOn =
-        velocity.abs() > 200.0 ? velocity > 0 : position >= 0.5;
+    final bool shouldBeOn = velocity.abs() > 200.0
+        ? velocity > 0
+        : position >= 0.5;
 
     _isMovingForward = shouldBeOn;
     setState(() => _isDragging = false);
@@ -507,147 +526,160 @@ class _GlassSwitchState extends State<GlassSwitch>
     final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
     // Light mode: solid opaque grey matching native iOS switch track groove.
     // Dark mode: semi-transparent white overlay for glass aesthetic.
-    final inactiveTrackColor = widget.inactiveColor ??
+    final inactiveTrackColor =
+        widget.inactiveColor ??
         // Whitelisted: iOS-exact inactive track colours.
         (isDark ? const Color(0x33FFFFFF) : const Color(0xFFC5C5C6));
     final activeTrackColor = widget.activeColor ?? CupertinoColors.systemGreen;
 
     return GlassFocusRegion(
-        enabled: true,
-        focusNode: widget.focusNode,
-        autofocus: widget.autofocus,
-        semanticLabel: widget.semanticLabel ?? 'Switch',
-        isButton: true,
-        toggled: widget.value,
-        semanticOnTap: _handleTap,
-        shape: const StadiumBorder(),
-        isFocusedNotifier: _isFocused,
-        isHoveredNotifier: _isHovered,
-        onKeyboardActivate: _activateFromKeyboard,
-        child: GestureDetector(
-          excludeFromSemantics: true,
-          // NOTE: We do NOT use onTap here. Having both onTap and onHorizontalDrag*
-          // on the same GestureDetector creates a gesture arena conflict — Flutter
-          // must choose one winner per touch, leading to missed interactions.
-          // Instead, we detect taps manually: onTapDown starts the bloom, onTapUp
-          // fires the toggle if no horizontal drag was confirmed.
-          onTapDown: _onTapDown,
-          onTapUp: _onTapUp,
-          onTapCancel: _onTapCancel,
-          onHorizontalDragCancel: _onDragCancel,
-          onHorizontalDragStart: _onDragStart,
-          onHorizontalDragUpdate: _onDragUpdate,
-          onHorizontalDragEnd: _onDragEnd,
-          // Performance: RepaintBoundary isolates switch animation from parent
-          child: RepaintBoundary(
-            child: AnimatedBuilder(
-              animation:
-                  Listenable.merge([_positionController, _thicknessController]),
-              builder: (context, child) {
-                final position = _positionAnimation.value;
-                final thickness = _thicknessAnimation.value;
-                // Tie squash directly to thickness so it doesn't fluctuate during drag
-                final scale = 1.0 - (thickness * 0.08);
+      enabled: true,
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      semanticLabel: widget.semanticLabel ?? 'Switch',
+      isButton: true,
+      toggled: widget.value,
+      semanticOnTap: _handleTap,
+      shape: const StadiumBorder(),
+      isFocusedNotifier: _isFocused,
+      isHoveredNotifier: _isHovered,
+      onKeyboardActivate: _activateFromKeyboard,
+      child: GestureDetector(
+        excludeFromSemantics: true,
+        // NOTE: We do NOT use onTap here. Having both onTap and onHorizontalDrag*
+        // on the same GestureDetector creates a gesture arena conflict — Flutter
+        // must choose one winner per touch, leading to missed interactions.
+        // Instead, we detect taps manually: onTapDown starts the bloom, onTapUp
+        // fires the toggle if no horizontal drag was confirmed.
+        onTapDown: _onTapDown,
+        onTapUp: _onTapUp,
+        onTapCancel: _onTapCancel,
+        onHorizontalDragCancel: _onDragCancel,
+        onHorizontalDragStart: _onDragStart,
+        onHorizontalDragUpdate: _onDragUpdate,
+        onHorizontalDragEnd: _onDragEnd,
+        // Performance: RepaintBoundary isolates switch animation from parent
+        child: RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: Listenable.merge([
+              _positionController,
+              _thicknessController,
+            ]),
+            builder: (context, child) {
+              final position = _positionAnimation.value;
+              final thickness = _thicknessAnimation.value;
+              // Tie squash directly to thickness so it doesn't fluctuate during drag
+              final scale = 1.0 - (thickness * 0.08);
 
-                // Build the track — plain Container driven entirely by `position`
-                // from the single AnimatedBuilder above. Using AnimatedContainer
-                // here previously caused a 200ms *second* animation to start after
-                // the rebuild, making the track go green late. Now everything is
-                // frame-locked to _positionAnimation.
-                //
-                // Color strategy:
-                //   0.0 = fully inactive (inactiveTrackColor, no glow)
-                //   1.0 = fully active   (activeTrackColor gradient, glow)
-                // We lerp smoothly using `position` as the blend factor.
-                final blendedColor =
-                    Color.lerp(inactiveTrackColor, activeTrackColor, position)!;
-                final specularTop =
-                    Color.lerp(activeTrackColor, CupertinoColors.white, 0.25)!;
+              // Build the track — plain Container driven entirely by `position`
+              // from the single AnimatedBuilder above. Using AnimatedContainer
+              // here previously caused a 200ms *second* animation to start after
+              // the rebuild, making the track go green late. Now everything is
+              // frame-locked to _positionAnimation.
+              //
+              // Color strategy:
+              //   0.0 = fully inactive (inactiveTrackColor, no glow)
+              //   1.0 = fully active   (activeTrackColor gradient, glow)
+              // We lerp smoothly using `position` as the blend factor.
+              final blendedColor = Color.lerp(
+                inactiveTrackColor,
+                activeTrackColor,
+                position,
+              )!;
+              final specularTop = Color.lerp(
+                activeTrackColor,
+                CupertinoColors.white,
+                0.25,
+              )!;
 
-                final track = Container(
-                  width: trackWidth,
-                  height: widget.height,
-                  decoration: BoxDecoration(
-                    // Gradient blends in as position → 1: starts as a flat lerped
-                    // colour, gains the specular highlight progressively.
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color.lerp(blendedColor, specularTop, position)!,
-                        blendedColor,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(widget.height / 2),
-                    // Glow fades in smoothly from 0 → max alpha over full travel.
-                    // Kept subtle (0.35 max, 6dp blur) to avoid over-illumination.
-                    boxShadow: position > 0.01
-                        ? [
-                            BoxShadow(
-                              color: activeTrackColor.withValues(
-                                alpha: 0.35 * position,
-                              ),
-                              blurRadius: 6,
-                              spreadRadius: 0,
-                              offset: const Offset(0, 1),
-                            ),
-                          ]
-                        : null,
-                  ),
-                );
-
-                // Growth/Expansion offsets
-                final vExpand = thickness * 10.0;
-                final leadStretch = thickness * 16.0;
-
-                final thumbOffset = 2.0 + (thumbTravelDistance * position);
-
-                // Anchor logic:
-                // Dragging -> Symmetric stretch (anchor center)
-                // Jumping  -> Directional stretch (anchor left or right based on direction)
-                final double anchorOffset = _isDragging
-                    ? (leadStretch / 2.0)
-                    : (_isMovingForward ? 0.0 : leadStretch);
-
-                final thumbLeft = thumbOffset - anchorOffset;
-
-                final thumb = Positioned(
-                  left: thumbLeft,
-                  top: 2.0 - vExpand,
-                  child: Transform.scale(
-                    // Combined scale: Squash for jump + slight Grow for the liquid bloom
-                    scale: scale * (1.0 + thickness * 0.1),
-                    child: _buildThumb(thumbSize, thickness, scale, vExpand,
-                        leadStretch, anchorOffset, effectiveQuality, isDark),
-                  ),
-                );
-
-                return SizedBox(
-                  width: trackWidth,
-                  height: widget.height,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      track,
-                      thumb,
+              final track = Container(
+                width: trackWidth,
+                height: widget.height,
+                decoration: BoxDecoration(
+                  // Gradient blends in as position → 1: starts as a flat lerped
+                  // colour, gains the specular highlight progressively.
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color.lerp(blendedColor, specularTop, position)!,
+                      blendedColor,
                     ],
                   ),
-                );
-              },
-            ),
+                  borderRadius: BorderRadius.circular(widget.height / 2),
+                  // Glow fades in smoothly from 0 → max alpha over full travel.
+                  // Kept subtle (0.35 max, 6dp blur) to avoid over-illumination.
+                  boxShadow: position > 0.01
+                      ? [
+                          BoxShadow(
+                            color: activeTrackColor.withValues(
+                              alpha: 0.35 * position,
+                            ),
+                            blurRadius: 6,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 1),
+                          ),
+                        ]
+                      : null,
+                ),
+              );
+
+              // Growth/Expansion offsets
+              final vExpand = thickness * 10.0;
+              final leadStretch = thickness * 16.0;
+
+              final thumbOffset = 2.0 + (thumbTravelDistance * position);
+
+              // Anchor logic:
+              // Dragging -> Symmetric stretch (anchor center)
+              // Jumping  -> Directional stretch (anchor left or right based on direction)
+              final double anchorOffset = _isDragging
+                  ? (leadStretch / 2.0)
+                  : (_isMovingForward ? 0.0 : leadStretch);
+
+              final thumbLeft = thumbOffset - anchorOffset;
+
+              final thumb = Positioned(
+                left: thumbLeft,
+                top: 2.0 - vExpand,
+                child: Transform.scale(
+                  // Combined scale: Squash for jump + slight Grow for the liquid bloom
+                  scale: scale * (1.0 + thickness * 0.1),
+                  child: _buildThumb(
+                    thumbSize,
+                    thickness,
+                    scale,
+                    vExpand,
+                    leadStretch,
+                    anchorOffset,
+                    effectiveQuality,
+                    isDark,
+                  ),
+                ),
+              );
+
+              return SizedBox(
+                width: trackWidth,
+                height: widget.height,
+                child: Stack(clipBehavior: Clip.none, children: [track, thumb]),
+              );
+            },
           ),
-        ));
+        ),
+      ),
+    );
   }
 
   Widget _buildThumb(
-      double size,
-      double transition,
-      double scale,
-      double vExpand,
-      double leadStretch,
-      double anchorOffset,
-      GlassQuality? effectiveQuality,
-      bool isDark) {
+    double size,
+    double transition,
+    double scale,
+    double vExpand,
+    double leadStretch,
+    double anchorOffset,
+    GlassQuality? effectiveQuality,
+    bool isDark,
+  ) {
     // iOS 26: Unified Material Melt with Directional Anchoring
     final thumbWidth = size * 1.6;
     final thumbHeight = size;
@@ -655,9 +687,7 @@ class _GlassSwitchState extends State<GlassSwitch>
     final totalHeight = thumbHeight + vExpand * 2;
 
     // Restored perfect pill radius with exact stadium SDF.
-    final thumbShape = LiquidRoundedRectangle(
-      borderRadius: totalHeight / 2,
-    );
+    final thumbShape = LiquidRoundedRectangle(borderRadius: totalHeight / 2);
     // Standard path only — Premium values are unchanged.
     final isStdPath =
         (effectiveQuality ?? GlassQuality.standard) == GlassQuality.standard;
@@ -673,7 +703,8 @@ class _GlassSwitchState extends State<GlassSwitch>
           boxShadow: [
             BoxShadow(
               color: _defaultThumbShadowColor.withValues(
-                  alpha: 0.2 * (1.0 - transition)),
+                alpha: 0.2 * (1.0 - transition),
+              ),
               blurRadius: 0,
               offset: const Offset(0, 2),
             ),
@@ -696,12 +727,14 @@ class _GlassSwitchState extends State<GlassSwitch>
           glassColor: isDark
               ? const Color.from(alpha: 0.08, red: 1, green: 1, blue: 1)
               : const Color.from(
-                  alpha: 0.12, red: 0.88, green: 0.88, blue: 0.90),
+                  alpha: 0.12,
+                  red: 0.88,
+                  green: 0.88,
+                  blue: 0.90,
+                ),
           refractiveIndex: isDark ? 1.12 : 1.22,
           thickness: isDark ? 10 : 14,
-          lightIntensity: isStdPath
-              ? 0.0
-              : 2.0, // no specular on synthetic path (clamped by synthBase); premium unchanged
+          lightIntensity: isStdPath ? 0.0 : 2.0, // no specular on synthetic path (clamped by synthBase); premium unchanged
           blur: 0,
           lightAngle: GlassDefaults.lightAngle,
         ),
@@ -727,10 +760,7 @@ class _GlassSwitchState extends State<GlassSwitch>
             Positioned.fill(child: Container(color: const Color(0x00000000))),
 
             // Physical thumb position based on anchor
-            Positioned(
-              left: anchorOffset,
-              child: materialContent,
-            ),
+            Positioned(left: anchorOffset, child: materialContent),
 
             if (transition > 0.05)
               Positioned(
@@ -738,10 +768,7 @@ class _GlassSwitchState extends State<GlassSwitch>
                 child: Opacity(
                   opacity: transition,
                   child: GlassGlow(
-                    child: SizedBox(
-                      width: thumbWidth,
-                      height: thumbHeight,
-                    ),
+                    child: SizedBox(width: thumbWidth, height: thumbHeight),
                   ),
                 ),
               ),

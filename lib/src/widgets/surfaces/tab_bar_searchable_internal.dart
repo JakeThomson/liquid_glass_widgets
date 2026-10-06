@@ -70,11 +70,13 @@ class DismissPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final safeColor = indicatorColor;
     final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
-    final defaultIconColor =
-        isDark ? const Color(0xE6FFFFFF) : const Color(0xE6000000);
+    final defaultIconColor = isDark
+        ? const Color(0xE6FFFFFF)
+        : const Color(0xE6000000);
     return GlassButton(
       onTap: onTap,
-      label: semanticLabel ??
+      label:
+          semanticLabel ??
           glassCupertinoLocalizationsOf(context).cancelButtonLabel,
       width: pillSize,
       height: pillSize,
@@ -84,11 +86,12 @@ class DismissPill extends StatelessWidget {
       // identical to the adjacent search pill.
       settings:
           settings?.copyWith(glassColor: safeColor ?? settings?.glassColor) ??
-              (safeColor != null
-                  ? LiquidGlassSettings(glassColor: safeColor)
-                  : null),
+          (safeColor != null
+              ? LiquidGlassSettings(glassColor: safeColor)
+              : null),
       shape: LiquidRoundedRectangle(borderRadius: barBorderRadius),
-      icon: cancelIcon ??
+      icon:
+          cancelIcon ??
           Icon(
             CupertinoIcons.xmark,
             color: cancelButtonColor ?? defaultIconColor,
@@ -133,8 +136,10 @@ class SearchableTabIndicator extends StatefulWidget {
     this.indicatorPinchStrength = 0.4,
     this.backgroundKey,
     this.collapsedLogoBuilder,
-    this.indicatorExpansion =
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    this.indicatorExpansion = const EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: 8,
+    ),
     this.interactionGlowColor,
     this.nativePressHighlight = false,
     this.interactionGlowRadius = 1.5,
@@ -231,8 +236,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
   final GlobalKey _iconLayerKey = GlobalKey();
 
   // Cached shape to avoid recreation on every animation frame
-  late LiquidRoundedRectangle _barShape =
-      LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
+  late LiquidRoundedRectangle _barShape = LiquidRoundedRectangle(
+    borderRadius: widget.barBorderRadius,
+  );
 
   @override
   void didUpdateWidget(covariant SearchableTabIndicator oldWidget) {
@@ -258,7 +264,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
           final currentShape = isSquare ? const LiquidOval() : _barShape;
 
           final nativePress = _pressesNatively(
-              widget.enableBackgroundAnimation, widget.backgroundPressScale);
+            widget.enableBackgroundAnimation,
+            widget.backgroundPressScale,
+          );
           final content = widget.collapsedLogoBuilder != null
               ? AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
@@ -314,7 +322,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
 
     // ── Normal draggable tab bar — identical logic to GlassTabBar.bottom ─────
     final brightness = GlassTheme.brightnessOf(context);
-    final indicatorColor = widget.indicatorColor ??
+    final indicatorColor =
+        widget.indicatorColor ??
         (brightness == Brightness.dark
             ? CupertinoColors.white.withValues(alpha: .1)
             : CupertinoColors.black.withValues(alpha: .1));
@@ -326,7 +335,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
     // (4 px) to produce concentric nested arcs (100 − 4 = 96). An explicit
     // indicatorBorderRadius always takes priority.
     const indicatorPadding = 4.0;
-    final indicatorRadius = widget.indicatorBorderRadius ??
+    final indicatorRadius =
+        widget.indicatorBorderRadius ??
         (widget.barBorderRadius >= GlassDefaults.capsuleRadius
             ? GlassDefaults.capsuleRadius
             : (widget.barBorderRadius - indicatorPadding).clamp(
@@ -338,9 +348,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
     // horizontal drags, mimicking iOS 26 bottom bar physics. The SpringBuilder
     // animates the offset back to 0.0 when the drag ends.
     return SpringBuilder(
-      spring: GlassSpring.smooth(
-        duration: const Duration(milliseconds: 250),
-      ),
+      spring: GlassSpring.smooth(duration: const Duration(milliseconds: 250)),
       value: barSwayOffset,
       builder: (context, swayValue, _) {
         return Transform.translate(
@@ -349,8 +357,7 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
             interactionScale: widget.enableBackgroundAnimation
                 ? (widget.backgroundPressScale ?? 1.04)
                 : 1.0,
-            stretch:
-                0.0, // stretch disabled on platformViewBackdrop to prevent BackdropFilter pixel-snap jitter
+            stretch: 0.0, // stretch disabled on platformViewBackdrop to prevent BackdropFilter pixel-snap jitter
             resistance: 0.08,
             anchorStretch: false, // Tab bars use jelly-follow, not anchored
             child: Listener(
@@ -382,7 +389,8 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                       spring: GlassSpring.snappy(
                         duration: const Duration(milliseconds: 300),
                       ),
-                      value: widget.visible &&
+                      value:
+                          widget.visible &&
                               (tabIsDown ||
                                   tabIsDragging ||
                                   (alignment.x - targetAlignment).abs() > 0.05)
@@ -410,10 +418,10 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
 
                         final jellyTransform =
                             DraggableIndicatorPhysics.buildJellyTransform(
-                          velocity: Offset(velocity, 0),
-                          maxDistortion: 0.8,
-                          velocityScale: 10,
-                        );
+                              velocity: Offset(velocity, 0),
+                              maxDistortion: 0.8,
+                              velocityScale: 10,
+                            );
 
                         switch (widget.maskingQuality) {
                           case MaskingQuality.off:
@@ -466,8 +474,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
         clipper: _InverseSearchBarClipper(_barShape),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius:
-                GlassDefaults.safeBorderRadius(widget.barBorderRadius),
+            borderRadius: GlassDefaults.safeBorderRadius(
+              widget.barBorderRadius,
+            ),
             boxShadow: shadows,
           ),
         ),
@@ -567,7 +576,10 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                     padding: widget.tabPadding,
                     height: widget.barHeight,
                     child: widget.selectedTabBuilder(
-                        context, 1.0, targetAlignment),
+                      context,
+                      1.0,
+                      targetAlignment,
+                    ),
                   ),
                 ),
               ),
@@ -636,8 +648,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                   // causes extreme wrap-around chromatic aliasing on Impeller).
                   Builder(
                     builder: (context) {
-                      final exp = widget.indicatorExpansion
-                          .resolve(Directionality.of(context));
+                      final exp = widget.indicatorExpansion.resolve(
+                        Directionality.of(context),
+                      );
                       return Positioned(
                         top: -exp.top,
                         bottom: -exp.bottom,
@@ -685,7 +698,10 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                                       padding: widget.tabPadding,
                                       height: widget.barHeight,
                                       child: widget.selectedTabBuilder(
-                                          context, thickness, alignment),
+                                        context,
+                                        thickness,
+                                        alignment,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -713,8 +729,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
             paintBackground: false,
             paintGlass: true,
             padding: const EdgeInsets.all(4),
-            expansion:
-                widget.indicatorExpansion.resolve(Directionality.of(context)),
+            expansion: widget.indicatorExpansion.resolve(
+              Directionality.of(context),
+            ),
             settings: widget.indicatorSettings,
             borderRadius: indicatorRadius,
             pinchStrength: widget.indicatorPinchStrength,
@@ -739,8 +756,9 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                     itemCount: widget.tabCount,
                     alignment: alignment,
                     thickness: thickness,
-                    expansion: widget.indicatorExpansion
-                        .resolve(Directionality.of(context)),
+                    expansion: widget.indicatorExpansion.resolve(
+                      Directionality.of(context),
+                    ),
                     transform: jellyTransform,
                     borderRadius: indicatorRadius * 2,
                   ),
@@ -748,7 +766,10 @@ class SearchableTabIndicatorState extends State<SearchableTabIndicator>
                     padding: widget.tabPadding,
                     height: widget.barHeight,
                     child: widget.selectedTabBuilder(
-                        context, thickness, alignment),
+                      context,
+                      thickness,
+                      alignment,
+                    ),
                   ),
                 ),
               ),
@@ -933,15 +954,17 @@ class SearchPillState extends State<SearchPill> {
 
   /// Whether the collapsed circle presses with the native button sizing.
   bool get _nativePress => _pressesNatively(
-      widget.enableBackgroundAnimation, widget.backgroundPressScale);
+    widget.enableBackgroundAnimation,
+    widget.backgroundPressScale,
+  );
 
   /// The pressed highlight: a native press brightens the whole surface and
   /// holds it wherever the finger goes, so the default renders the even lift
   /// a [GlassButton] has; a customised glow colour keeps the directional glow.
   Widget _pressHighlight({required Widget child}) =>
       _nativePress && widget.nativePressHighlight
-          ? PressAmbientLift(child: child)
-          : _wrapWithGlow(child: child);
+      ? PressAmbientLift(child: child)
+      : _wrapWithGlow(child: child);
 
   /// Builds a standalone shadow widget for the search pill.
   ///
@@ -962,8 +985,9 @@ class SearchPillState extends State<SearchPill> {
         clipper: _InverseSearchBarClipper(pillShape),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius:
-                GlassDefaults.safeBorderRadius(widget.barBorderRadius),
+            borderRadius: GlassDefaults.safeBorderRadius(
+              widget.barBorderRadius,
+            ),
             boxShadow: shadows,
           ),
         ),
@@ -987,12 +1011,14 @@ class SearchPillState extends State<SearchPill> {
       return c;
     }
 
-    final rawIconColor = widget.config.searchIconColor ??
+    final rawIconColor =
+        widget.config.searchIconColor ??
         widget.iconColor ??
         CupertinoColors.label;
     final iconColor = resolveIconColor(rawIconColor);
-    final micColor =
-        resolveIconColor(widget.config.micIconColor ?? rawIconColor);
+    final micColor = resolveIconColor(
+      widget.config.micIconColor ?? rawIconColor,
+    );
     final shape = LiquidRoundedRectangle(borderRadius: widget.barBorderRadius);
 
     // LayoutBuilder reads the ACTUAL rendered width on every frame.
@@ -1023,15 +1049,15 @@ class SearchPillState extends State<SearchPill> {
                 // a null pressScale resolves to the ~17 pt growth with the
                 // tremor stretch on top; a number stays a fixed factor, as
                 // on GlassButton.
-                pressGrowth:
-                    _nativePress ? LiquidStretch.nativePressGrowth : null,
+                pressGrowth: _nativePress
+                    ? LiquidStretch.nativePressGrowth
+                    : null,
                 anchorStretchSettings: _nativePress
                     ? AnchorStretchSettings.nativeTremor
                     : const AnchorStretchSettings(),
                 stretch: widget.platformViewBackdrop ? 0.0 : 0.5,
                 resistance: 0.01,
-                anchorStretch:
-                    true, // Matches GlassButton default (keeps it attached so it morphs)
+                anchorStretch: true, // Matches GlassButton default (keeps it attached so it morphs)
                 // The collapsed circle opens search: a button named by the
                 // field's own hint text, which the app already localizes.
                 child: Semantics(
@@ -1058,7 +1084,8 @@ class SearchPillState extends State<SearchPill> {
                           // color: explicitly for belt-and-braces safety.
                           child: IconTheme(
                             data: IconThemeData(color: iconColor),
-                            child: widget.config.searchIcon ??
+                            child:
+                                widget.config.searchIcon ??
                                 Icon(CupertinoIcons.search, color: iconColor),
                           ),
                         ),
@@ -1119,9 +1146,7 @@ class SearchPillState extends State<SearchPill> {
               shape: shape,
               quality: widget.quality,
               platformViewBackdrop: widget.platformViewBackdrop,
-              child: _wrapWithGlow(
-                child: _buildExpanded(iconColor, micColor),
-              ),
+              child: _wrapWithGlow(child: _buildExpanded(iconColor, micColor)),
             ),
           ), // GestureDetector
         ); // LiquidStretch
@@ -1175,12 +1200,14 @@ class SearchPillState extends State<SearchPill> {
       fontWeight: config.hintStyle?.fontWeight ?? FontWeight.w400,
     );
 
-    final placeholderColor =
-        hintColor != null ? resolveDynamicColor(hintColor) : iconColor;
+    final placeholderColor = hintColor != null
+        ? resolveDynamicColor(hintColor)
+        : iconColor;
 
-    final effectivePlaceholderStyle = (config.hintStyle ??
-            const TextStyle(fontSize: 17, fontWeight: FontWeight.w400))
-        .copyWith(color: placeholderColor);
+    final effectivePlaceholderStyle =
+        (config.hintStyle ??
+                const TextStyle(fontSize: 17, fontWeight: FontWeight.w400))
+            .copyWith(color: placeholderColor);
 
     // Trailing slot priority:
     //   1. trailingBuilder — caller has full control.
@@ -1204,7 +1231,8 @@ class SearchPillState extends State<SearchPill> {
                 key: const ValueKey('clear'),
                 container: true,
                 button: true,
-                label: config.clearButtonSemanticLabel ??
+                label:
+                    config.clearButtonSemanticLabel ??
                     glassCupertinoLocalizationsOf(context).clearButtonLabel,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -1227,11 +1255,7 @@ class SearchPillState extends State<SearchPill> {
                   behavior: HitTestBehavior.opaque,
                   onTap: config.onMicTap,
                   child: config.onMicTap != null
-                      ? Icon(
-                          CupertinoIcons.mic_fill,
-                          color: micColor,
-                          size: 18,
-                        )
+                      ? Icon(CupertinoIcons.mic_fill, color: micColor, size: 18)
                       : const SizedBox.shrink(),
                 ),
               ),
@@ -1377,8 +1401,10 @@ class MinimizableTrailingPill extends StatelessWidget {
         // LiquidOval so the corners ride the press growth — see SearchPill.
         final currentShape = isOval ? const LiquidOval() : shape;
 
-        final nativePress =
-            _pressesNatively(enableBackgroundAnimation, backgroundPressScale);
+        final nativePress = _pressesNatively(
+          enableBackgroundAnimation,
+          backgroundPressScale,
+        );
         final content = Center(
           child: IconTheme(
             data: IconThemeData(color: resolvedIconColor),
@@ -1386,8 +1412,9 @@ class MinimizableTrailingPill extends StatelessWidget {
           ),
         );
         return LiquidStretch(
-          interactionScale:
-              enableBackgroundAnimation ? (backgroundPressScale ?? 1.0) : 1.0,
+          interactionScale: enableBackgroundAnimation
+              ? (backgroundPressScale ?? 1.0)
+              : 1.0,
           // Presses like a native button (#272), as the search circle does.
           pressGrowth: nativePress ? LiquidStretch.nativePressGrowth : null,
           anchorStretchSettings: nativePress

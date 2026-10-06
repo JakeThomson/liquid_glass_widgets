@@ -50,43 +50,45 @@ void main() {
 
   group('GlassNavPinnedHost tintColor shell and settings', () {
     testWidgets(
-        'separate item with tintColor creates shell with clear bodyMode and tint',
-        (tester) async {
-      const tint = Color(0xFFFF9500);
+      'separate item with tintColor creates shell with clear bodyMode and tint',
+      (tester) async {
+        const tint = Color(0xFFFF9500);
 
-      await tester.pumpWidget(
-        shellApp(
-          _Screen(
-            title: 'Tinted Screen',
-            actions: [
-              GlassBarItem.icon(
-                icon: const Icon(CupertinoIcons.heart_fill),
-                onTap: () {},
-                background: GlassBarItemBackground.separate,
-                tintColor: tint,
-              ),
-            ],
+        await tester.pumpWidget(
+          shellApp(
+            _Screen(
+              title: 'Tinted Screen',
+              actions: [
+                GlassBarItem.icon(
+                  icon: const Icon(CupertinoIcons.heart_fill),
+                  onTap: () {},
+                  background: GlassBarItemBackground.separate,
+                  tintColor: tint,
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-      await settle(tester);
+        );
+        await settle(tester);
 
-      final glassButtons = tester.widgetList<GlassButton>(
-        find.descendant(
-          of: find.byType(GlassNavPinnedHost),
-          matching: find.byType(GlassButton),
-        ),
-      );
+        final glassButtons = tester.widgetList<GlassButton>(
+          find.descendant(
+            of: find.byType(GlassNavPinnedHost),
+            matching: find.byType(GlassButton),
+          ),
+        );
 
-      expect(glassButtons, isNotEmpty);
-      final shellButton = glassButtons.first;
-      expect(shellButton.settings, isNotNull);
-      expect(shellButton.settings!.glassColor, tint);
-      expect(shellButton.settings!.bodyMode, GlassBodyMode.clear);
-    });
+        expect(glassButtons, isNotEmpty);
+        final shellButton = glassButtons.first;
+        expect(shellButton.settings, isNotNull);
+        expect(shellButton.settings!.glassColor, tint);
+        expect(shellButton.settings!.bodyMode, GlassBodyMode.clear);
+      },
+    );
 
-    testWidgets('tinted shell keeps the bar\'s buttonSettings under its tint',
-        (tester) async {
+    testWidgets('tinted shell keeps the bar\'s buttonSettings under its tint', (
+      tester,
+    ) async {
       const tint = Color(0xFF007AFF);
 
       await tester.pumpWidget(
@@ -126,107 +128,111 @@ void main() {
     });
 
     testWidgets(
-        'separate item without tintColor creates shell with null settings',
-        (tester) async {
-      await tester.pumpWidget(
-        shellApp(
-          _Screen(
-            title: 'Untinted Screen',
-            actions: [
-              GlassBarItem.icon(
-                icon: const Icon(CupertinoIcons.heart),
-                onTap: () {},
-                background: GlassBarItemBackground.separate,
-                tintColor: null,
-              ),
-            ],
+      'separate item without tintColor creates shell with null settings',
+      (tester) async {
+        await tester.pumpWidget(
+          shellApp(
+            _Screen(
+              title: 'Untinted Screen',
+              actions: [
+                GlassBarItem.icon(
+                  icon: const Icon(CupertinoIcons.heart),
+                  onTap: () {},
+                  background: GlassBarItemBackground.separate,
+                  tintColor: null,
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-      await settle(tester);
+        );
+        await settle(tester);
 
-      final glassButtons = tester.widgetList<GlassButton>(
-        find.descendant(
-          of: find.byType(GlassNavPinnedHost),
-          matching: find.byType(GlassButton),
-        ),
-      );
+        final glassButtons = tester.widgetList<GlassButton>(
+          find.descendant(
+            of: find.byType(GlassNavPinnedHost),
+            matching: find.byType(GlassButton),
+          ),
+        );
 
-      expect(glassButtons, isNotEmpty);
-      final shellButton = glassButtons.first;
-      expect(shellButton.settings, isNull);
-    });
+        expect(glassButtons, isNotEmpty);
+        final shellButton = glassButtons.first;
+        expect(shellButton.settings, isNull);
+      },
+    );
   });
 
   group('GlassNavPinnedHost foreground luminance flip', () {
     testWidgets(
-        'bright tint (luminance > 0.35) flips icon color to high-contrast black',
-        (tester) async {
-      // Yellow: luminance ~0.67 > 0.35
-      const brightYellow = Color(0xFFFFCC00);
+      'bright tint (luminance > 0.35) flips icon color to high-contrast black',
+      (tester) async {
+        // Yellow: luminance ~0.67 > 0.35
+        const brightYellow = Color(0xFFFFCC00);
 
-      await tester.pumpWidget(
-        shellApp(
-          _Screen(
-            title: 'Yellow Tint',
-            actions: [
-              GlassBarItem.icon(
-                icon: const Icon(CupertinoIcons.star_fill),
-                onTap: () {},
-                background: GlassBarItemBackground.separate,
-                tintColor: brightYellow,
-              ),
-            ],
+        await tester.pumpWidget(
+          shellApp(
+            _Screen(
+              title: 'Yellow Tint',
+              actions: [
+                GlassBarItem.icon(
+                  icon: const Icon(CupertinoIcons.star_fill),
+                  onTap: () {},
+                  background: GlassBarItemBackground.separate,
+                  tintColor: brightYellow,
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-      await settle(tester);
+        );
+        await settle(tester);
 
-      final iconFinder = find.descendant(
-        of: find.byType(GlassNavPinnedHost),
-        matching: find.byIcon(CupertinoIcons.star_fill),
-      );
-      expect(iconFinder, findsOneWidget);
+        final iconFinder = find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.star_fill),
+        );
+        expect(iconFinder, findsOneWidget);
 
-      final iconTheme = IconTheme.of(tester.element(iconFinder));
-      expect(iconTheme.color, const Color(0xFF000000));
-    });
+        final iconTheme = IconTheme.of(tester.element(iconFinder));
+        expect(iconTheme.color, const Color(0xFF000000));
+      },
+    );
 
     testWidgets(
-        'dark tint (luminance <= 0.35) flips icon color to high-contrast white',
-        (tester) async {
-      // iOS active blue: luminance ~0.21 <= 0.35
-      const darkBlue = Color(0xFF007AFF);
+      'dark tint (luminance <= 0.35) flips icon color to high-contrast white',
+      (tester) async {
+        // iOS active blue: luminance ~0.21 <= 0.35
+        const darkBlue = Color(0xFF007AFF);
 
-      await tester.pumpWidget(
-        shellApp(
-          _Screen(
-            title: 'Blue Tint',
-            actions: [
-              GlassBarItem.icon(
-                icon: const Icon(CupertinoIcons.bookmark_fill),
-                onTap: () {},
-                background: GlassBarItemBackground.separate,
-                tintColor: darkBlue,
-              ),
-            ],
+        await tester.pumpWidget(
+          shellApp(
+            _Screen(
+              title: 'Blue Tint',
+              actions: [
+                GlassBarItem.icon(
+                  icon: const Icon(CupertinoIcons.bookmark_fill),
+                  onTap: () {},
+                  background: GlassBarItemBackground.separate,
+                  tintColor: darkBlue,
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-      await settle(tester);
+        );
+        await settle(tester);
 
-      final iconFinder = find.descendant(
-        of: find.byType(GlassNavPinnedHost),
-        matching: find.byIcon(CupertinoIcons.bookmark_fill),
-      );
-      expect(iconFinder, findsOneWidget);
+        final iconFinder = find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.bookmark_fill),
+        );
+        expect(iconFinder, findsOneWidget);
 
-      final iconTheme = IconTheme.of(tester.element(iconFinder));
-      expect(iconTheme.color, const Color(0xFFFFFFFF));
-    });
+        final iconTheme = IconTheme.of(tester.element(iconFinder));
+        expect(iconTheme.color, const Color(0xFFFFFFFF));
+      },
+    );
 
-    testWidgets('untinted item falls back to CupertinoColors.label',
-        (tester) async {
+    testWidgets('untinted item falls back to CupertinoColors.label', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         shellApp(
           _Screen(
@@ -259,94 +265,97 @@ void main() {
 
   group('GlassNavPinnedHost route transitions with tintColor', () {
     testWidgets(
-        'transition between tinted items forwards tintColor across animation frames',
-        (tester) async {
-      const tintA = Color(0xFFFF2D55); // Pink/red
-      const tintB = Color(0xFF34C759); // Green
+      'transition between tinted items forwards tintColor across animation frames',
+      (tester) async {
+        const tintA = Color(0xFFFF2D55); // Pink/red
+        const tintB = Color(0xFF34C759); // Green
 
-      await tester.pumpWidget(
-        shellApp(
-          _Screen(
-            title: 'Screen A',
-            actions: [
-              GlassBarItem.icon(
-                icon: const Icon(CupertinoIcons.heart),
-                onTap: () {},
-                background: GlassBarItemBackground.separate,
-                tintColor: tintA,
-              ),
-            ],
+        await tester.pumpWidget(
+          shellApp(
+            _Screen(
+              title: 'Screen A',
+              actions: [
+                GlassBarItem.icon(
+                  icon: const Icon(CupertinoIcons.heart),
+                  onTap: () {},
+                  background: GlassBarItemBackground.separate,
+                  tintColor: tintA,
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-      await settle(tester);
+        );
+        await settle(tester);
 
-      // Verify Screen A button has tintA
-      var shellButtons = tester.widgetList<GlassButton>(
-        find.descendant(
-          of: find.byType(GlassNavPinnedHost),
-          matching: find.byType(GlassButton),
-        ),
-      );
-      expect(shellButtons.first.settings?.glassColor, tintA);
-
-      // Push Screen B with tintB
-      final navState = tester.state<NavigatorState>(find.byType(Navigator));
-      navState.push(
-        CupertinoPageRoute<void>(
-          builder: (_) => _Screen(
-            title: 'Screen B',
-            actions: [
-              GlassBarItem.icon(
-                icon: const Icon(CupertinoIcons.check_mark),
-                onTap: () {},
-                background: GlassBarItemBackground.separate,
-                tintColor: tintB,
-              ),
-            ],
+        // Verify Screen A button has tintA
+        var shellButtons = tester.widgetList<GlassButton>(
+          find.descendant(
+            of: find.byType(GlassNavPinnedHost),
+            matching: find.byType(GlassButton),
           ),
-        ),
-      );
+        );
+        expect(shellButtons.first.settings?.glassColor, tintA);
 
-      // Pump halfway through the route transition to exercise interpolation/forwarding paths
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 150));
+        // Push Screen B with tintB
+        final navState = tester.state<NavigatorState>(find.byType(Navigator));
+        navState.push(
+          CupertinoPageRoute<void>(
+            builder: (_) => _Screen(
+              title: 'Screen B',
+              actions: [
+                GlassBarItem.icon(
+                  icon: const Icon(CupertinoIcons.check_mark),
+                  onTap: () {},
+                  background: GlassBarItemBackground.separate,
+                  tintColor: tintB,
+                ),
+              ],
+            ),
+          ),
+        );
 
-      // Pinned host should remain rendered during transition without throwing
-      expect(find.byType(GlassNavPinnedHost), findsOneWidget);
+        // Pump halfway through the route transition to exercise interpolation/forwarding paths
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
 
-      // Complete transition
-      await settle(tester);
+        // Pinned host should remain rendered during transition without throwing
+        expect(find.byType(GlassNavPinnedHost), findsOneWidget);
 
-      // Verify Screen B action button has tintB (ignoring untinted back button)
-      shellButtons = tester.widgetList<GlassButton>(
-        find.descendant(
-          of: find.byType(GlassNavPinnedHost),
-          matching: find.byType(GlassButton),
-        ),
-      );
-      final tintedButtonsB =
-          shellButtons.where((b) => b.settings?.glassColor != null).toList();
-      expect(tintedButtonsB, hasLength(1));
-      expect(tintedButtonsB.single.settings?.glassColor, tintB);
+        // Complete transition
+        await settle(tester);
 
-      // Pop back to Screen A
-      navState.pop();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 150));
-      expect(find.byType(GlassNavPinnedHost), findsOneWidget);
+        // Verify Screen B action button has tintB (ignoring untinted back button)
+        shellButtons = tester.widgetList<GlassButton>(
+          find.descendant(
+            of: find.byType(GlassNavPinnedHost),
+            matching: find.byType(GlassButton),
+          ),
+        );
+        final tintedButtonsB = shellButtons
+            .where((b) => b.settings?.glassColor != null)
+            .toList();
+        expect(tintedButtonsB, hasLength(1));
+        expect(tintedButtonsB.single.settings?.glassColor, tintB);
 
-      await settle(tester);
-      shellButtons = tester.widgetList<GlassButton>(
-        find.descendant(
-          of: find.byType(GlassNavPinnedHost),
-          matching: find.byType(GlassButton),
-        ),
-      );
-      final tintedButtonsA =
-          shellButtons.where((b) => b.settings?.glassColor != null).toList();
-      expect(tintedButtonsA, hasLength(1));
-      expect(tintedButtonsA.single.settings?.glassColor, tintA);
-    });
+        // Pop back to Screen A
+        navState.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(find.byType(GlassNavPinnedHost), findsOneWidget);
+
+        await settle(tester);
+        shellButtons = tester.widgetList<GlassButton>(
+          find.descendant(
+            of: find.byType(GlassNavPinnedHost),
+            matching: find.byType(GlassButton),
+          ),
+        );
+        final tintedButtonsA = shellButtons
+            .where((b) => b.settings?.glassColor != null)
+            .toList();
+        expect(tintedButtonsA, hasLength(1));
+        expect(tintedButtonsA.single.settings?.glassColor, tintA);
+      },
+    );
   });
 }

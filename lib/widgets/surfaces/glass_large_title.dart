@@ -75,8 +75,8 @@ class GlassLargeTitleController extends ChangeNotifier {
   GlassLargeTitleController({
     double collapseTitleHeight = 52.0,
     double searchBarHeight = 44.0,
-  })  : _collapseTitleHeight = collapseTitleHeight,
-        _searchBarHeight = searchBarHeight {
+  }) : _collapseTitleHeight = collapseTitleHeight,
+       _searchBarHeight = searchBarHeight {
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
   }
@@ -185,7 +185,8 @@ class GlassLargeTitleController extends ChangeNotifier {
     // Notify on collapseProgress change, searchBar change, or overscroll
     // (negative offsets keep collapseProgress at 0 but change stretch scale).
     final overscrollChanged = offset < 0 && offset != _rawScrollOffset;
-    final changed = newTitleProgress != _collapseProgress ||
+    final changed =
+        newTitleProgress != _collapseProgress ||
         newSearchProgress != _searchBarCollapseProgress ||
         overscrollChanged;
 
@@ -280,8 +281,10 @@ class GlassLargeTitle extends StatefulWidget {
     this.fontWeight = FontWeight.w700,
     this.letterSpacing = -0.5,
     this.padding = const EdgeInsetsDirectional.fromSTEB(24, 0, 24, 8),
-    this.searchBarPadding =
-        const EdgeInsetsDirectional.symmetric(horizontal: 16, vertical: 4),
+    this.searchBarPadding = const EdgeInsetsDirectional.symmetric(
+      horizontal: 16,
+      vertical: 4,
+    ),
     this.color,
     this.trailing,
     super.key,
@@ -375,8 +378,9 @@ class _GlassTitleSliverState extends State<GlassLargeTitle> {
     ..show();
 
   /// The field the strip's magnifier opens, focused as it opens.
-  final FocusScopeNode _stripFieldScope =
-      FocusScopeNode(debugLabel: 'GlassLargeTitle strip search');
+  final FocusScopeNode _stripFieldScope = FocusScopeNode(
+    debugLabel: 'GlassLargeTitle strip search',
+  );
 
   /// The strip, or null where the bars are horizontal.
   GlassVerticalBarData? _bar;
@@ -447,8 +451,9 @@ class _GlassTitleSliverState extends State<GlassLargeTitle> {
     // In the strip the collapse is the row scrolling away, whatever the title
     // measures.
     if (_bar != null) {
-      widget.controller
-          .reportMeasuredHeight(VerticalBarTitleRow.collapseExtent);
+      widget.controller.reportMeasuredHeight(
+        VerticalBarTitleRow.collapseExtent,
+      );
       return;
     }
 
@@ -501,8 +506,8 @@ class _GlassTitleSliverState extends State<GlassLargeTitle> {
         final top = widget.controller.isSearchPresented
             ? bar.rowTop
             : bar.rowTop +
-                VerticalBarTitleRow.contentTop -
-                GlassVerticalBarMetrics.edgeMargin;
+                  VerticalBarTitleRow.contentTop -
+                  GlassVerticalBarMetrics.edgeMargin;
         Widget place = AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
@@ -572,8 +577,9 @@ class _GlassTitleSliverState extends State<GlassLargeTitle> {
                   width: extent,
                   height: extent,
                   shape: const LiquidOval(),
-                  iconSize:
-                      presented ? _stripCloseIconSize : _stripSearchIconSize,
+                  iconSize: presented
+                      ? _stripCloseIconSize
+                      : _stripSearchIconSize,
                   icon: Icon(
                     presented ? CupertinoIcons.xmark : CupertinoIcons.search,
                     color: label,
@@ -600,18 +606,21 @@ class _GlassTitleSliverState extends State<GlassLargeTitle> {
 
     // ── iOS 26 ease-in fade (Phase 1) ─────────────────────────────────────
     // Large title stays opaque longer, drops off quickly — matching UIKit.
-    final titleFadeOut =
-        Curves.easeIn.transform((1.0 - progress).clamp(0.0, 1.0));
+    final titleFadeOut = Curves.easeIn.transform(
+      (1.0 - progress).clamp(0.0, 1.0),
+    );
 
     // ── iOS 26 overscroll rubber-band stretch ──────────────────────────────
     // Title grows slightly on rubber-band pull, matching UINavigationBar.
-    final stretchScale =
-        rawOffset < 0 ? 1.0 + (-rawOffset / 300.0).clamp(0.0, 0.12) : 1.0;
+    final stretchScale = rawOffset < 0
+        ? 1.0 + (-rawOffset / 300.0).clamp(0.0, 0.12)
+        : 1.0;
 
     // ── iOS 26 search bar ease-in fade (Phase 2) ──────────────────────────
     // Collapses height to zero and fades out after the title is gone.
-    final searchFadeOut =
-        Curves.easeIn.transform((1.0 - searchProgress).clamp(0.0, 1.0));
+    final searchFadeOut = Curves.easeIn.transform(
+      (1.0 - searchProgress).clamp(0.0, 1.0),
+    );
     final searchHeightFactor = (1.0 - searchProgress).clamp(0.0, 1.0);
 
     return SliverToBoxAdapter(
@@ -643,10 +652,7 @@ class _GlassTitleSliverState extends State<GlassLargeTitle> {
                   ),
                   if (widget.trailing != null) ...[
                     const SizedBox(width: 8),
-                    Opacity(
-                      opacity: titleFadeOut,
-                      child: widget.trailing,
-                    ),
+                    Opacity(opacity: titleFadeOut, child: widget.trailing),
                   ],
                 ],
               ),

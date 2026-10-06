@@ -241,10 +241,7 @@ void main() {
         createTestApp(
           child: GlassTabBar.bottom(
             tabs: const [
-              GlassTab(
-                icon: Icon(CupertinoIcons.home),
-                semanticLabel: 'Home',
-              ),
+              GlassTab(icon: Icon(CupertinoIcons.home), semanticLabel: 'Home'),
               GlassTab(
                 icon: Icon(CupertinoIcons.search),
                 semanticLabel: 'Search',

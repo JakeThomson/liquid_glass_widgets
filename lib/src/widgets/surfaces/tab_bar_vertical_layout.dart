@@ -163,7 +163,8 @@ class _TabBarVerticalLayoutState extends State<TabBarVerticalLayout> {
     final label = CupertinoColors.label.resolveFrom(context);
     final selectedColor = widget.selectedIconColor ?? label;
     final unselectedColor = widget.unselectedIconColor ?? label;
-    final indicatorTop = padding +
+    final indicatorTop =
+        padding +
         selectedSlot * itemExtent -
         (indicatorSize.height - itemExtent) / 2;
     // The capsule sits in the strip's column: its inner edge
@@ -201,8 +202,8 @@ class _TabBarVerticalLayoutState extends State<TabBarVerticalLayout> {
             label: searching
                 ? search.hintText
                 : tabs[selectedSlot].semanticLabel ??
-                    tabs[selectedSlot].label ??
-                    '',
+                      tabs[selectedSlot].label ??
+                      '',
             width: width,
             height: width,
             child: searching
@@ -241,9 +242,11 @@ class _TabBarVerticalLayoutState extends State<TabBarVerticalLayout> {
                   height: indicatorSize.height,
                   child: DecoratedBox(
                     decoration: ShapeDecoration(
-                      color: widget.indicatorColor ??
-                          CupertinoColors.secondarySystemFill
-                              .resolveFrom(context),
+                      color:
+                          widget.indicatorColor ??
+                          CupertinoColors.secondarySystemFill.resolveFrom(
+                            context,
+                          ),
                       shape: const StadiumBorder(),
                     ),
                   ),
@@ -301,10 +304,12 @@ class _TabBarVerticalLayoutState extends State<TabBarVerticalLayout> {
     final spacing = regular
         ? GlassVerticalBarMetrics.spacing
         : TabBarVerticalLayout._compactSearchFieldSpacing;
-    final rowEnd =
-        trailingStrip ? bar.width : GlassVerticalBarMetrics.titleInset;
-    final rowStart =
-        trailingStrip ? GlassVerticalBarMetrics.titleInset : bar.width;
+    final rowEnd = trailingStrip
+        ? bar.width
+        : GlassVerticalBarMetrics.titleInset;
+    final rowStart = trailingStrip
+        ? GlassVerticalBarMetrics.titleInset
+        : bar.width;
     return Stack(
       children: [
         strip,
@@ -370,8 +375,9 @@ class _VerticalSearchField extends StatelessWidget {
       fontSize: config.hintStyle?.fontSize ?? 17,
       fontWeight: config.hintStyle?.fontWeight ?? FontWeight.w400,
     );
-    final defaultCancelColor =
-        dark ? const Color(0xE6FFFFFF) : const Color(0xE6000000);
+    final defaultCancelColor = dark
+        ? const Color(0xE6FFFFFF)
+        : const Color(0xE6000000);
 
     return Row(
       children: [
@@ -410,7 +416,8 @@ class _VerticalSearchField extends StatelessWidget {
             settings: settings,
             quality: quality,
             useOwnLayer: true,
-            icon: config.cancelIcon ??
+            icon:
+                config.cancelIcon ??
                 Icon(
                   CupertinoIcons.xmark,
                   color: config.cancelButtonColor ?? defaultCancelColor,
@@ -463,7 +470,8 @@ class _VerticalTab extends StatelessWidget {
             child: IconTheme.merge(
               data: IconThemeData(color: color, size: iconSize),
               // A label-only tab keeps its label, shrunk to the slot.
-              child: icon ??
+              child:
+                  icon ??
                   FittedBox(
                     child: Text(
                       tab.label!,

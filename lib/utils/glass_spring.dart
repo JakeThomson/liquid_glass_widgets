@@ -29,44 +29,40 @@ abstract final class GlassSpring {
   static SpringDescription bouncy({
     Duration duration = const Duration(milliseconds: 500),
     double extraBounce = 0.0,
-  }) =>
-      SpringDescription.withDurationAndBounce(
-        duration: duration,
-        bounce: 0.3 + extraBounce,
-      );
+  }) => SpringDescription.withDurationAndBounce(
+    duration: duration,
+    bounce: 0.3 + extraBounce,
+  );
 
   /// Snappy spring — motor's `Motion.snappySpring`.
   /// Default duration 500 ms, bounce 0.15.
   static SpringDescription snappy({
     Duration duration = const Duration(milliseconds: 500),
     double extraBounce = 0.0,
-  }) =>
-      SpringDescription.withDurationAndBounce(
-        duration: duration,
-        bounce: 0.15 + extraBounce,
-      );
+  }) => SpringDescription.withDurationAndBounce(
+    duration: duration,
+    bounce: 0.15 + extraBounce,
+  );
 
   /// Smooth spring — motor's `Motion.smoothSpring`.
   /// Default duration 500 ms, bounce 0.0 (critically-damped).
   static SpringDescription smooth({
     Duration duration = const Duration(milliseconds: 500),
     double extraBounce = 0.0,
-  }) =>
-      SpringDescription.withDurationAndBounce(
-        duration: duration,
-        bounce: 0.0 + extraBounce,
-      );
+  }) => SpringDescription.withDurationAndBounce(
+    duration: duration,
+    bounce: 0.0 + extraBounce,
+  );
 
   /// Interactive spring — motor's `Motion.interactiveSpring`.
   /// Short 150 ms response, light bounce 0.14.
   static SpringDescription interactive({
     Duration duration = const Duration(milliseconds: 150),
     double extraBounce = 0.0,
-  }) =>
-      SpringDescription.withDurationAndBounce(
-        duration: duration,
-        bounce: 0.14 + extraBounce,
-      );
+  }) => SpringDescription.withDurationAndBounce(
+    duration: duration,
+    bounce: 0.14 + extraBounce,
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -102,10 +98,10 @@ class SingleSpringController extends ChangeNotifier {
     double initialValue = 0.0,
     double? lowerBound,
     double? upperBound,
-  })  : _spring = spring,
-        _value = initialValue,
-        _lowerBound = lowerBound,
-        _upperBound = upperBound {
+  }) : _spring = spring,
+       _value = initialValue,
+       _lowerBound = lowerBound,
+       _upperBound = upperBound {
     _ticker = vsync.createTicker(_tick);
   }
 
@@ -174,12 +170,7 @@ class SingleSpringController extends ChangeNotifier {
   }
 
   void _startSim({required double target, required double fromVelocity}) {
-    _sim = SpringSimulation(
-      _spring,
-      _value,
-      target,
-      fromVelocity,
-    );
+    _sim = SpringSimulation(_spring, _value, target, fromVelocity);
     if (!_ticker.isActive) {
       // The Dart Ticker resets its elapsed counter to zero on each start().
       // _simStartTime must match so that sim.x/dx are evaluated at t=0 on the
@@ -201,8 +192,10 @@ class SingleSpringController extends ChangeNotifier {
     // rapid-fire redirects where _simStartTime was set from a _tickerElapsed
     // that was incremented after _startSim returned.  SpringSimulation.x(t<0)
     // extrapolates backward and can produce huge/NaN values.
-    final simElapsed =
-        (_tickerElapsed - _simStartTime).clamp(0.0, double.infinity);
+    final simElapsed = (_tickerElapsed - _simStartTime).clamp(
+      0.0,
+      double.infinity,
+    );
     final sim = _sim;
     if (sim == null) {
       _ticker.stop();
@@ -478,7 +471,8 @@ class _VelocitySpringBuilderState extends State<VelocitySpringBuilder>
     // Spring selection changes when drag state or spring params change.
     // Note: active here only controls WHICH spring is used, never stops the
     // animation — motor's VelocityMotionBuilder had no snap-on-inactive path.
-    final springChanged = widget.active != oldWidget.active ||
+    final springChanged =
+        widget.active != oldWidget.active ||
         widget.springWhenActive != oldWidget.springWhenActive ||
         widget.springWhenReleased != oldWidget.springWhenReleased;
     if (springChanged) {

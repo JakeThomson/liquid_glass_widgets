@@ -17,12 +17,7 @@ void main() {
               bottomBar: GlassTabBar.bottom(
                 selectedIndex: 0,
                 onTabSelected: (_) {},
-                tabs: const [
-                  GlassTab(
-                    label: 'Tab 1',
-                    icon: Icon(Icons.home),
-                  ),
-                ],
+                tabs: const [GlassTab(label: 'Tab 1', icon: Icon(Icons.home))],
               ),
             ),
           ),
@@ -52,8 +47,9 @@ void main() {
 
     // ── Edge fade: top fade height calculation ──────────────────────────────
 
-    testWidgets('top fade excludes appBarHeight when no appBar is provided',
-        (tester) async {
+    testWidgets('top fade excludes appBarHeight when no appBar is provided', (
+      tester,
+    ) async {
       // When topEdgeFade is true but no appBar is set, the fade should
       // only cover the status bar area + extent — NOT include the default
       // 44px appBarHeight. Regression test for the fix that checks
@@ -83,8 +79,9 @@ void main() {
       expect(scrollEdge.topFadeHeight, 20.0);
     });
 
-    testWidgets('top fade includes appBarHeight when appBar is provided',
-        (tester) async {
+    testWidgets('top fade includes appBarHeight when appBar is provided', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
@@ -107,83 +104,86 @@ void main() {
     });
 
     testWidgets(
-        'defaults to GlassScrollEdgeStyle.soft and does not render ProgressiveBlur',
-        (tester) async {
-      await tester.pumpWidget(
-        createTestApp(
-          child: AdaptiveLiquidGlassLayer(
-            settings: defaultTestGlassSettings,
-            child: const GlassScaffold(
-              topEdgeFade: true,
-              body: SizedBox.expand(),
-            ),
-          ),
-        ),
-      );
-
-      final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
-        find.byType(GlassScrollEdgeEffect),
-      );
-      expect(scrollEdge.style, GlassScrollEdgeStyle.soft);
-      expect(find.byType(ProgressiveBlur), findsNothing);
-    });
-
-    testWidgets(
-        'forwards explicit blur edgeStyle to GlassScrollEdgeEffect and renders ProgressiveBlur',
-        (tester) async {
-      await tester.pumpWidget(
-        createTestApp(
-          child: AdaptiveLiquidGlassLayer(
-            settings: defaultTestGlassSettings,
-            child: const GlassScaffold(
-              topEdgeFade: true,
-              edgeStyle: GlassScrollEdgeStyle.blur,
-              maxSigma: 22,
-              body: SizedBox.expand(),
-            ),
-          ),
-        ),
-      );
-
-      final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
-        find.byType(GlassScrollEdgeEffect),
-      );
-      expect(scrollEdge.style, GlassScrollEdgeStyle.blur);
-      expect(scrollEdge.maxSigma, 22);
-
-      final blur = tester.widget<ProgressiveBlur>(find.byType(ProgressiveBlur));
-      expect(blur.maxSigma, 22);
-    });
-
-    // ── Isolation scope: bars get premium quality hint ───────────────────────
-
-    testWidgets('wraps bars in GlassIsolationScope with defaultQuality premium',
-        (tester) async {
-      await tester.pumpWidget(
-        createTestApp(
-          child: AdaptiveLiquidGlassLayer(
-            settings: defaultTestGlassSettings,
-            child: GlassScaffold(
-              appBar: const GlassAppBar(title: Text('Title')),
-              body: const Text('Body'),
-              bottomBar: GlassTabBar.bottom(
-                selectedIndex: 0,
-                onTabSelected: (_) {},
-                tabs: const [
-                  GlassTab(
-                    label: 'Tab 1',
-                    icon: Icon(Icons.home),
-                  ),
-                ],
+      'defaults to GlassScrollEdgeStyle.soft and does not render ProgressiveBlur',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: const GlassScaffold(
+                topEdgeFade: true,
+                body: SizedBox.expand(),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // GlassIsolationScope should be present (wrapping bars).
-      expect(find.byType(GlassIsolationScope), findsWidgets);
-    });
+        final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
+          find.byType(GlassScrollEdgeEffect),
+        );
+        expect(scrollEdge.style, GlassScrollEdgeStyle.soft);
+        expect(find.byType(ProgressiveBlur), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'forwards explicit blur edgeStyle to GlassScrollEdgeEffect and renders ProgressiveBlur',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: const GlassScaffold(
+                topEdgeFade: true,
+                edgeStyle: GlassScrollEdgeStyle.blur,
+                maxSigma: 22,
+                body: SizedBox.expand(),
+              ),
+            ),
+          ),
+        );
+
+        final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
+          find.byType(GlassScrollEdgeEffect),
+        );
+        expect(scrollEdge.style, GlassScrollEdgeStyle.blur);
+        expect(scrollEdge.maxSigma, 22);
+
+        final blur = tester.widget<ProgressiveBlur>(
+          find.byType(ProgressiveBlur),
+        );
+        expect(blur.maxSigma, 22);
+      },
+    );
+
+    // ── Isolation scope: bars get premium quality hint ───────────────────────
+
+    testWidgets(
+      'wraps bars in GlassIsolationScope with defaultQuality premium',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: GlassScaffold(
+                appBar: const GlassAppBar(title: Text('Title')),
+                body: const Text('Body'),
+                bottomBar: GlassTabBar.bottom(
+                  selectedIndex: 0,
+                  onTabSelected: (_) {},
+                  tabs: const [
+                    GlassTab(label: 'Tab 1', icon: Icon(Icons.home)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // GlassIsolationScope should be present (wrapping bars).
+        expect(find.byType(GlassIsolationScope), findsWidgets);
+      },
+    );
 
     testWidgets('bars use isolated: true for correct Z-order', (tester) async {
       await tester.pumpWidget(
@@ -196,12 +196,7 @@ void main() {
               bottomBar: GlassTabBar.bottom(
                 selectedIndex: 0,
                 onTabSelected: (_) {},
-                tabs: const [
-                  GlassTab(
-                    label: 'Tab 1',
-                    icon: Icon(Icons.home),
-                  ),
-                ],
+                tabs: const [GlassTab(label: 'Tab 1', icon: Icon(Icons.home))],
               ),
             ),
           ),
@@ -215,9 +210,13 @@ void main() {
       for (final scope in scopes) {
         if (scope.defaultQuality == GlassQuality.premium) {
           // Bar scopes from GlassScaffold should be isolated.
-          expect(scope.isolated, isTrue,
-              reason: 'Bar isolation scope should use isolated: true '
-                  'for correct Z-order of glass components');
+          expect(
+            scope.isolated,
+            isTrue,
+            reason:
+                'Bar isolation scope should use isolated: true '
+                'for correct Z-order of glass components',
+          );
         }
       }
     });
@@ -261,8 +260,9 @@ void main() {
       );
     });
 
-    testWidgets('header fades on scroll via headerScrollController',
-        (tester) async {
+    testWidgets('header fades on scroll via headerScrollController', (
+      tester,
+    ) async {
       final controller = ScrollController();
 
       await tester.pumpWidget(
@@ -296,14 +296,18 @@ void main() {
           matching: find.byType(IgnorePointer),
         ),
       );
-      expect(igp.any((w) => w.ignoring), isTrue,
-          reason: 'Fully faded header should be non-interactive');
+      expect(
+        igp.any((w) => w.ignoring),
+        isTrue,
+        reason: 'Fully faded header should be non-interactive',
+      );
 
       controller.dispose();
     });
 
-    testWidgets('header without scroll controller renders directly',
-        (tester) async {
+    testWidgets('header without scroll controller renders directly', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
@@ -323,8 +327,9 @@ void main() {
   // ── bodyOverlays ────────────────────────────────────────────────────────
 
   group('GlassScaffold.bodyOverlays', () {
-    testWidgets('renders overlay widgets between body and bars',
-        (tester) async {
+    testWidgets('renders overlay widgets between body and bars', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: AdaptiveLiquidGlassLayer(
@@ -403,9 +408,7 @@ void main() {
               bottomBar: GlassTabBar.bottom(
                 selectedIndex: 0,
                 onTabSelected: (_) {},
-                tabs: const [
-                  GlassTab(label: 'Home', icon: Icon(Icons.home)),
-                ],
+                tabs: const [GlassTab(label: 'Home', icon: Icon(Icons.home))],
               ),
             ),
           ),
@@ -465,9 +468,7 @@ void main() {
               bottomBar: GlassTabBar.bottom(
                 selectedIndex: 0,
                 onTabSelected: (_) {},
-                tabs: const [
-                  GlassTab(label: 'Home', icon: Icon(Icons.home)),
-                ],
+                tabs: const [GlassTab(label: 'Home', icon: Icon(Icons.home))],
               ),
             ),
           ),
@@ -489,9 +490,7 @@ void main() {
               bottomBar: GlassTabBar.bottom(
                 selectedIndex: 0,
                 onTabSelected: (_) {},
-                tabs: const [
-                  GlassTab(label: 'Home', icon: Icon(Icons.home)),
-                ],
+                tabs: const [GlassTab(label: 'Home', icon: Icon(Icons.home))],
               ),
             ),
           ),
@@ -505,10 +504,10 @@ void main() {
 
     // ── Dark-mode gradient flash regression (fix: fadeColor + transparent scaffold) ──
 
-    testWidgets(
-        'passes backgroundColor to GlassScrollEdgeEffect.fadeColor '
-        'so fallback gradient uses correct colour in dark mode',
-        (tester) async {
+    testWidgets('passes backgroundColor to GlassScrollEdgeEffect.fadeColor '
+        'so fallback gradient uses correct colour in dark mode', (
+      tester,
+    ) async {
       // Regression test for: GlassTabBar gradient flickering dark when
       // GlassScaffold(backgroundColor: Colors.white) is used in dark mode.
       // GlassScrollEdgeEffect's async-capture fallback previously defaulted
@@ -535,30 +534,30 @@ void main() {
     });
 
     testWidgets(
-        'GlassScrollEdgeEffect.fadeColor is null when no backgroundColor set',
-        (tester) async {
-      // When no backgroundColor is provided, fadeColor should be null so
-      // GlassScrollEdgeEffect falls back to the theme default (existing behaviour).
-      await tester.pumpWidget(
-        createTestApp(
-          child: AdaptiveLiquidGlassLayer(
-            settings: defaultTestGlassSettings,
-            child: const GlassScaffold(
-              topEdgeFade: true,
-              body: SizedBox.expand(),
+      'GlassScrollEdgeEffect.fadeColor is null when no backgroundColor set',
+      (tester) async {
+        // When no backgroundColor is provided, fadeColor should be null so
+        // GlassScrollEdgeEffect falls back to the theme default (existing behaviour).
+        await tester.pumpWidget(
+          createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: const GlassScaffold(
+                topEdgeFade: true,
+                body: SizedBox.expand(),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
-        find.byType(GlassScrollEdgeEffect),
-      );
-      expect(scrollEdge.fadeColor, isNull);
-    });
+        final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
+          find.byType(GlassScrollEdgeEffect),
+        );
+        expect(scrollEdge.fadeColor, isNull);
+      },
+    );
 
-    testWidgets(
-        'inner CupertinoPageScaffold is always transparent '
+    testWidgets('inner CupertinoPageScaffold is always transparent '
         'regardless of background or backgroundColor', (tester) async {
       // Regression test: Scaffold.backgroundColor was conditionally null when
       // only backgroundColor (not background widget) was provided, causing the
@@ -587,30 +586,29 @@ void main() {
     });
 
     testWidgets(
-        'inner CupertinoPageScaffold uses CupertinoTheme background with no background set',
-        (tester) async {
-      await tester.pumpWidget(
-        createTestApp(
-          child: AdaptiveLiquidGlassLayer(
-            settings: defaultTestGlassSettings,
-            child: const GlassScaffold(
-              body: Text('Body'),
+      'inner CupertinoPageScaffold uses CupertinoTheme background with no background set',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestApp(
+            child: AdaptiveLiquidGlassLayer(
+              settings: defaultTestGlassSettings,
+              child: const GlassScaffold(body: Text('Body')),
             ),
           ),
-        ),
-      );
+        );
 
-      final scaffold = tester.widget<CupertinoPageScaffold>(
-        find.descendant(
-          of: find.byType(GlassScaffold),
-          matching: find.byType(CupertinoPageScaffold),
-        ),
-      );
-      // Without a background widget the CupertinoPageScaffold must NOT be
-      // forced transparent — null lets it use the CupertinoTheme default (opaque)
-      // to prevent the underlying route bleeding through during route transitions
-      // (issue #177). Mirrors prior Scaffold(backgroundColor: null) behaviour.
-      expect(scaffold.backgroundColor, isNull);
-    });
+        final scaffold = tester.widget<CupertinoPageScaffold>(
+          find.descendant(
+            of: find.byType(GlassScaffold),
+            matching: find.byType(CupertinoPageScaffold),
+          ),
+        );
+        // Without a background widget the CupertinoPageScaffold must NOT be
+        // forced transparent — null lets it use the CupertinoTheme default (opaque)
+        // to prevent the underlying route bleeding through during route transitions
+        // (issue #177). Mirrors prior Scaffold(backgroundColor: null) behaviour.
+        expect(scaffold.backgroundColor, isNull);
+      },
+    );
   });
 }

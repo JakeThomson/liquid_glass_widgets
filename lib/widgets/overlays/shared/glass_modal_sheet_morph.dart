@@ -223,13 +223,16 @@ class _GlassMorphTriggerState extends State<GlassMorphTrigger>
 
   /// Drives the tail of the closing bounce, after the presented route — and the
   /// controller that started the spring — has been torn down.
-  late final AnimationController _bounce =
-      AnimationController.unbounded(vsync: this);
+  late final AnimationController _bounce = AnimationController.unbounded(
+    vsync: this,
+  );
 
   /// Built once, not per build: [AnimatedBuilder] compares listenables by
   /// identity, so merging inline would resubscribe on every rebuild.
-  late final Listenable _repaint =
-      Listenable.merge([_anchor._notifier, _bounce]);
+  late final Listenable _repaint = Listenable.merge([
+    _anchor._notifier,
+    _bounce,
+  ]);
 
   /// Vector the current bounce swings along; zero when nothing is bouncing.
   Offset _travel = Offset.zero;
@@ -455,10 +458,9 @@ class SheetMorphGeometry {
   /// [GlassSheetState.hidden] for the common dismissible peek-less sheet —
   /// hidden is the position a swipe drags the sheet *to*, and measuring travel
   /// from it would read every drag as zero.
-  static GlassSheetState dismissPivotState(SheetGeometry geometry) =>
-      geometry.orderedStates.firstWhere(
-        (state) => state != GlassSheetState.hidden,
-      );
+  static GlassSheetState dismissPivotState(SheetGeometry geometry) => geometry
+      .orderedStates
+      .firstWhere((state) => state != GlassSheetState.hidden);
 
   /// How far the sheet has been dragged below its lowest detent, as a fraction
   /// of screen height.
@@ -469,8 +471,7 @@ class SheetMorphGeometry {
   static double dismissTravel({
     required double position,
     required double minPosition,
-  }) =>
-      (minPosition - position).clamp(0.0, 1.0);
+  }) => (minPosition - position).clamp(0.0, 1.0);
 
   /// The travel the sheet actually renders at, given what the finger did.
   ///
@@ -490,10 +491,10 @@ class SheetMorphGeometry {
     final damped = raw <= _dismissTravelKnee
         ? raw
         : _dismissTravelKnee +
-            rubberBand(
-              raw - _dismissTravelKnee,
-              limit: _maxDismissTravel - _dismissTravelKnee,
-            );
+              rubberBand(
+                raw - _dismissTravelKnee,
+                limit: _maxDismissTravel - _dismissTravelKnee,
+              );
     return damped * cardFraction;
   }
 
@@ -597,8 +598,9 @@ class SheetMorphGeometry {
     double horizontalOffset = 0.0,
     Offset? scaleAnchor,
   }) {
-    final cardFraction =
-        screenHeight <= 0.0 ? 0.0 : restingRect.height / screenHeight;
+    final cardFraction = screenHeight <= 0.0
+        ? 0.0
+        : restingRect.height / screenHeight;
     final fall = Offset(
       0.0,
       dampedDismissTravel(travel, cardFraction: cardFraction) * screenHeight,
@@ -663,10 +665,16 @@ class SheetMorphGeometry {
       // anchor-drift clamping below, the base of the droplet stays rooted at
       // the trigger while inflating outward and upward — achieving GlassMenu's
       // cohesive "one animated blob" feel without artificial elongation artifacts.
-      width =
-          lerpDouble(trigger.width, destination.width, sizeT)!.clamp(0.0, 1e6);
-      height = lerpDouble(trigger.height, destination.height, sizeT)!
-          .clamp(0.0, 1e6);
+      width = lerpDouble(
+        trigger.width,
+        destination.width,
+        sizeT,
+      )!.clamp(0.0, 1e6);
+      height = lerpDouble(
+        trigger.height,
+        destination.height,
+        sizeT,
+      )!.clamp(0.0, 1e6);
     }
 
     // Anchor-drift clamping (parity with GlassMenu):
@@ -681,13 +689,17 @@ class SheetMorphGeometry {
     final double finalDy = destination.center.dy - trigger.center.dy;
 
     final double rawAnchorDriftX = finalDx * (pathT - sizeT);
-    final double anchorDriftX =
-        rawAnchorDriftX.clamp(-maxAnchorDrift, maxAnchorDrift);
+    final double anchorDriftX = rawAnchorDriftX.clamp(
+      -maxAnchorDrift,
+      maxAnchorDrift,
+    );
     final double effectiveDx = finalDx * sizeT + anchorDriftX;
 
     final double rawAnchorDriftY = finalDy * (pathT - sizeT);
-    final double anchorDriftY =
-        rawAnchorDriftY.clamp(-maxAnchorDrift, maxAnchorDrift);
+    final double anchorDriftY = rawAnchorDriftY.clamp(
+      -maxAnchorDrift,
+      maxAnchorDrift,
+    );
     final double effectiveDy = finalDy * sizeT + anchorDriftY;
 
     final double centerX = trigger.center.dx + effectiveDx;
@@ -1077,13 +1089,19 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
   /// Sized from the native capture — ~12–24 pt of trail at a ~535 pt/s sweep.
   /// A critically damped spring tracking a ramp lags by 2·v/ω, so ω ≈ 45
   /// (stiffness ≈ 2000) lands in that window.
-  static const SpringDescription _trackingSpring =
-      SpringDescription(mass: 1.0, stiffness: 2000.0, damping: 89.0);
+  static const SpringDescription _trackingSpring = SpringDescription(
+    mass: 1.0,
+    stiffness: 2000.0,
+    damping: 89.0,
+  );
 
   /// The go-home spring: the sheet's own snap spring, used when the offset is
   /// released (or the axis closes) and the card returns to centre.
-  static const SpringDescription _returnSpring =
-      SpringDescription(mass: 1.0, stiffness: 220.0, damping: 30.0);
+  static const SpringDescription _returnSpring = SpringDescription(
+    mass: 1.0,
+    stiffness: 220.0,
+    damping: 30.0,
+  );
 
   /// The sheet's position notifier, once it has mounted and attached.
   ///
@@ -1124,8 +1142,9 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     // opens the moment it mounts, so the flag has to land BEFORE the spring
     // starts — otherwise the first presentation of every session animates at
     // full length with Reduce Motion on.
-    _morph
-        .setDisableAnimations(GlassAccessibilityData.of(context).reduceMotion);
+    _morph.setDisableAnimations(
+      GlassAccessibilityData.of(context).reduceMotion,
+    );
     // The sheet mounts as this presenter's child, so it has not attached to
     // the controller yet on the first pass — bind once the frame is up, and
     // re-check on morph ticks in case the sheet's state is ever rebuilt.
@@ -1174,7 +1193,8 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     // snaps included, where the swipe transform is identity and a rebuild
     // renders nothing new. Skip those, but always paint the first at-rest
     // frame after a swipe so the transform actually returns to identity.
-    final atRest = _dismissTravel() == 0.0 &&
+    final atRest =
+        _dismissTravel() == 0.0 &&
         !_horizontalTicker.isActive &&
         _horizontalOffset.abs() < 0.05;
     if (atRest && _wasAtRest) return;
@@ -1278,9 +1298,9 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
   /// which detent it was opened at, so a sheet swiped away from `full` is
   /// already a half-sized (or peek-sized) card by the time it is falling.
   Rect _pivotRect(Size screenSize) => _restingRect(
-        screenSize,
-        state: SheetMorphGeometry.dismissPivotState(widget.geometry),
-      );
+    screenSize,
+    state: SheetMorphGeometry.dismissPivotState(widget.geometry),
+  );
 
   /// Layers the swipe-away scale and sideways offset over the real sheet.
   ///
@@ -1293,10 +1313,13 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
   Widget _dragTransform(Size screenSize, Widget child) {
     final travel = _dismissTravel();
     final pivotRect = _pivotRect(screenSize);
-    final cardFraction =
-        screenSize.height <= 0.0 ? 0.0 : pivotRect.height / screenSize.height;
-    final scale =
-        SheetMorphGeometry.dismissScale(travel, cardFraction: cardFraction);
+    final cardFraction = screenSize.height <= 0.0
+        ? 0.0
+        : pivotRect.height / screenSize.height;
+    final scale = SheetMorphGeometry.dismissScale(
+      travel,
+      cardFraction: cardFraction,
+    );
 
     // Where the sheet actually is: its own position tracks the finger 1:1.
     final rawFallen = pivotRect.shift(Offset(0.0, travel * screenSize.height));
@@ -1457,7 +1480,8 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
 
   void _onHorizontalTick(Duration elapsed) {
     if (!mounted) return;
-    final dt = (elapsed - _horizontalLastTick).inMicroseconds /
+    final dt =
+        (elapsed - _horizontalLastTick).inMicroseconds /
         Duration.microsecondsPerSecond;
     _horizontalLastTick = elapsed;
     if (dt > 0.0) {
@@ -1517,8 +1541,9 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
       peekHorizontalMargin: widget.peekHorizontalMargin,
       peekBottomMargin: widget.peekBottomMargin,
       peekWidth: widget.peekWidth,
-      stripPlacement:
-          GlassVerticalBar.maybeOf(context) == null ? null : widget.placement,
+      stripPlacement: GlassVerticalBar.maybeOf(context) == null
+          ? null
+          : widget.placement,
       regularWidth: VerticalBarTitleRow.regularWidth(context),
       textDirection: Directionality.of(context),
     );
@@ -1585,8 +1610,9 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     // near full opacity while the blob is still substantial, only clearing
     // quickly at the end when the blob has nearly returned to the trigger.
     // This prevents the background from "revealing too early" on dismiss.
-    final Curve barrierCurve =
-        _morph.isClosing ? Curves.easeIn : Curves.easeOut;
+    final Curve barrierCurve = _morph.isClosing
+        ? Curves.easeIn
+        : Curves.easeOut;
     final Widget? barrierWidget = barrier == null || barrier.a == 0.0
         ? null
         : Positioned.fill(
@@ -1688,7 +1714,8 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
       halfSettings: widget.halfSettings,
       fullSettings: widget.fullSettings,
     );
-    final fillOpacity = SheetMorphGeometry.restingFillOpacity(
+    final fillOpacity =
+        SheetMorphGeometry.restingFillOpacity(
           state: widget.restingState,
           baseSettings: baseSettings,
           enablePeek: enablePeek,
@@ -1705,7 +1732,8 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
     );
 
     final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
-    final fillColor = (isDark ? widget.expandedDarkColor : null) ??
+    final fillColor =
+        (isDark ? widget.expandedDarkColor : null) ??
         widget.expandedColor ??
         (isDark ? const Color(0xFF1C1C1E) : CupertinoColors.white);
 
@@ -1780,9 +1808,7 @@ class _GlassSheetMorphPresenterState extends State<GlassSheetMorphPresenter>
               height: blobSize.height,
               child: fillOpacity <= 0.0
                   ? null
-                  : ColoredBox(
-                      color: fillColor.withValues(alpha: fillOpacity),
-                    ),
+                  : ColoredBox(color: fillColor.withValues(alpha: fillOpacity)),
             ),
           ),
         ),

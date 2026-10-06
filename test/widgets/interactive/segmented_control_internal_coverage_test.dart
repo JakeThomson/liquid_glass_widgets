@@ -15,7 +15,7 @@ void main() {
                 segments: [
                   GlassSegment(label: 'A'),
                   GlassSegment(label: 'B'),
-                  GlassSegment(label: 'C')
+                  GlassSegment(label: 'C'),
                 ],
                 selectedIndex: selected,
                 onSegmentSelected: (i) => selected = i,
@@ -25,8 +25,9 @@ void main() {
         ),
       );
 
-      final gesture = await tester
-          .startGesture(tester.getCenter(find.byType(GlassSegmentedControl)));
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(GlassSegmentedControl)),
+      );
       await tester.pump();
 
       // Move to trigger _isDragging

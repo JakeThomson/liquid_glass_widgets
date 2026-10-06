@@ -8,6 +8,7 @@
 
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
+
 import '../../constants/glass_defaults.dart';
 import '../../constants/glass_shadow.dart';
 import '../../types/glass_specular_sharpness.dart';
@@ -205,20 +206,20 @@ class LiquidGlassSettings {
     GlassSpecularSharpness specularSharpness = GlassSpecularSharpness.medium,
     double standardOpacityMultiplier = 1.0,
   }) : this(
-          visibility: visibility,
-          refractiveIndex: 1 + (refraction / 100) * 0.2,
-          thickness: depth,
-          chromaticAberration: 4 * (dispersion / 100),
-          lightIntensity: lightIntensity / 100,
-          blur: frost,
-          lightAngle: lightAngle,
-          ambientStrength: 0.1,
-          saturation: 1.5,
-          glassColor: glassColor,
-          specularSharpness: specularSharpness,
-          standardOpacityMultiplier: standardOpacityMultiplier,
-          // shadowElevation and shadow use their defaults (1.0 / null)
-        );
+         visibility: visibility,
+         refractiveIndex: 1 + (refraction / 100) * 0.2,
+         thickness: depth,
+         chromaticAberration: 4 * (dispersion / 100),
+         lightIntensity: lightIntensity / 100,
+         blur: frost,
+         lightAngle: lightAngle,
+         ambientStrength: 0.1,
+         saturation: 1.5,
+         glassColor: glassColor,
+         specularSharpness: specularSharpness,
+         standardOpacityMultiplier: standardOpacityMultiplier,
+         // shadowElevation and shadow use their defaults (1.0 / null)
+       );
 
   /// iOS 27 `glassEffect(.regular)` in the light appearance.
   ///
@@ -854,50 +855,60 @@ class LiquidGlassSettings {
     if (b == null) return a;
 
     return LiquidGlassSettings._withPinch(
-        visibility: lerpDouble(a.visibility, b.visibility, t)!,
-        glassColor: Color.lerp(a.glassColor, b.glassColor, t)!,
-        thickness: lerpDouble(a.thickness, b.thickness, t)!,
-        blur: lerpDouble(a.blur, b.blur, t)!,
-        frost: lerpDouble(a.frost, b.frost, t)!,
-        frostOpacity: lerpDouble(a.frostOpacity, b.frostOpacity, t)!,
-        frostClamp: lerpDouble(a.frostClamp, b.frostClamp, t)!,
-        frostWeight: lerpDouble(a.frostWeight, b.frostWeight, t)!,
-        blurWeight: lerpDouble(a.blurWeight, b.blurWeight, t)!,
-        chromaticAberration:
-            lerpDouble(a.chromaticAberration, b.chromaticAberration, t)!,
-        lightAngle: lerpDouble(a.lightAngle, b.lightAngle, t)!,
-        lightIntensity: lerpDouble(a.lightIntensity, b.lightIntensity, t)!,
-        ambientStrength: lerpDouble(a.ambientStrength, b.ambientStrength, t)!,
-        ambientRim: lerpDouble(a.ambientRim, b.ambientRim, t)!,
-        fresnelStrength: lerpDouble(a.fresnelStrength, b.fresnelStrength, t)!,
-        refractiveIndex: lerpDouble(a.refractiveIndex, b.refractiveIndex, t)!,
-        saturation: lerpDouble(a.saturation, b.saturation, t)!,
-        glowIntensity: lerpDouble(a.glowIntensity, b.glowIntensity, t)!,
-        specularSharpness: t < 0.5 ? a.specularSharpness : b.specularSharpness,
-        standardOpacityMultiplier: lerpDouble(
-            a.standardOpacityMultiplier, b.standardOpacityMultiplier, t)!,
-        shadowElevation: lerpDouble(a.shadowElevation, b.shadowElevation, t)!,
-        shadow: t < 0.5 ? a.shadow : b.shadow,
-        whitenStrength: lerpDouble(a.whitenStrength, b.whitenStrength, t)!,
-        whitenGated: t < 0.5 ? a.whitenGated : b.whitenGated,
-        edgeAbsorption: lerpDouble(a.edgeAbsorption, b.edgeAbsorption, t)!,
-        rimShade: lerpDouble(a.rimShade, b.rimShade, t)!,
-        rimShadeEnds: lerpDouble(a.rimShadeEnds, b.rimShadeEnds, t)!,
-        rimLight: lerpDouble(a.rimLight, b.rimLight, t)!,
-        bodyShade: lerpDouble(a.bodyShade, b.bodyShade, t)!,
-        lensModel: t < 0.5 ? a.lensModel : b.lensModel,
-        // Lerp the color so the backer fades smoothly (from/to transparent when
-        // one side is null), rather than popping at the midpoint.
-        backerColor: Color.lerp(a.backerColor, b.backerColor, t),
-        platformViewFallbackColor: Color.lerp(
-            a.platformViewFallbackColor, b.platformViewFallbackColor, t),
-        // A mode is not interpolable: it switches at the midpoint like any
-        // other enum in this class.
-        platformViewMode: t < 0.5 ? a.platformViewMode : b.platformViewMode,
-        bodyMode: t < 0.5 ? a.bodyMode : b.bodyMode,
-        // pinchStrength is interaction state — lerp it so transitions are smooth
-        // when the indicator fades between active/resting states.
-        pinchStrength: lerpDouble(a.pinchStrength, b.pinchStrength, t)!);
+      visibility: lerpDouble(a.visibility, b.visibility, t)!,
+      glassColor: Color.lerp(a.glassColor, b.glassColor, t)!,
+      thickness: lerpDouble(a.thickness, b.thickness, t)!,
+      blur: lerpDouble(a.blur, b.blur, t)!,
+      frost: lerpDouble(a.frost, b.frost, t)!,
+      frostOpacity: lerpDouble(a.frostOpacity, b.frostOpacity, t)!,
+      frostClamp: lerpDouble(a.frostClamp, b.frostClamp, t)!,
+      frostWeight: lerpDouble(a.frostWeight, b.frostWeight, t)!,
+      blurWeight: lerpDouble(a.blurWeight, b.blurWeight, t)!,
+      chromaticAberration: lerpDouble(
+        a.chromaticAberration,
+        b.chromaticAberration,
+        t,
+      )!,
+      lightAngle: lerpDouble(a.lightAngle, b.lightAngle, t)!,
+      lightIntensity: lerpDouble(a.lightIntensity, b.lightIntensity, t)!,
+      ambientStrength: lerpDouble(a.ambientStrength, b.ambientStrength, t)!,
+      ambientRim: lerpDouble(a.ambientRim, b.ambientRim, t)!,
+      fresnelStrength: lerpDouble(a.fresnelStrength, b.fresnelStrength, t)!,
+      refractiveIndex: lerpDouble(a.refractiveIndex, b.refractiveIndex, t)!,
+      saturation: lerpDouble(a.saturation, b.saturation, t)!,
+      glowIntensity: lerpDouble(a.glowIntensity, b.glowIntensity, t)!,
+      specularSharpness: t < 0.5 ? a.specularSharpness : b.specularSharpness,
+      standardOpacityMultiplier: lerpDouble(
+        a.standardOpacityMultiplier,
+        b.standardOpacityMultiplier,
+        t,
+      )!,
+      shadowElevation: lerpDouble(a.shadowElevation, b.shadowElevation, t)!,
+      shadow: t < 0.5 ? a.shadow : b.shadow,
+      whitenStrength: lerpDouble(a.whitenStrength, b.whitenStrength, t)!,
+      whitenGated: t < 0.5 ? a.whitenGated : b.whitenGated,
+      edgeAbsorption: lerpDouble(a.edgeAbsorption, b.edgeAbsorption, t)!,
+      rimShade: lerpDouble(a.rimShade, b.rimShade, t)!,
+      rimShadeEnds: lerpDouble(a.rimShadeEnds, b.rimShadeEnds, t)!,
+      rimLight: lerpDouble(a.rimLight, b.rimLight, t)!,
+      bodyShade: lerpDouble(a.bodyShade, b.bodyShade, t)!,
+      lensModel: t < 0.5 ? a.lensModel : b.lensModel,
+      // Lerp the color so the backer fades smoothly (from/to transparent when
+      // one side is null), rather than popping at the midpoint.
+      backerColor: Color.lerp(a.backerColor, b.backerColor, t),
+      platformViewFallbackColor: Color.lerp(
+        a.platformViewFallbackColor,
+        b.platformViewFallbackColor,
+        t,
+      ),
+      // A mode is not interpolable: it switches at the midpoint like any
+      // other enum in this class.
+      platformViewMode: t < 0.5 ? a.platformViewMode : b.platformViewMode,
+      bodyMode: t < 0.5 ? a.bodyMode : b.bodyMode,
+      // pinchStrength is interaction state — lerp it so transitions are smooth
+      // when the indicator fades between active/resting states.
+      pinchStrength: lerpDouble(a.pinchStrength, b.pinchStrength, t)!,
+    );
   }
 
   /// Helper for linear interpolation of doubles.
@@ -945,46 +956,45 @@ class LiquidGlassSettings {
     Color? platformViewFallbackColor,
     PlatformViewGlassMode? platformViewMode,
     GlassBodyMode? bodyMode,
-  }) =>
-      LiquidGlassSettings._withPinch(
-        visibility: visibility ?? this.visibility,
-        glassColor: glassColor ?? this.glassColor,
-        thickness: thickness ?? this.thickness,
-        blur: blur ?? this.blur,
-        frost: frost ?? this.frost,
-        frostOpacity: frostOpacity ?? this.frostOpacity,
-        frostClamp: frostClamp ?? this.frostClamp,
-        frostWeight: frostWeight ?? this.frostWeight,
-        blurWeight: blurWeight ?? this.blurWeight,
-        chromaticAberration: chromaticAberration ?? this.chromaticAberration,
-        lightAngle: lightAngle ?? this.lightAngle,
-        lightIntensity: lightIntensity ?? this.lightIntensity,
-        ambientStrength: ambientStrength ?? this.ambientStrength,
-        ambientRim: ambientRim ?? this.ambientRim,
-        fresnelStrength: fresnelStrength ?? this.fresnelStrength,
-        refractiveIndex: refractiveIndex ?? this.refractiveIndex,
-        saturation: saturation ?? this.saturation,
-        glowIntensity: glowIntensity ?? this.glowIntensity,
-        specularSharpness: specularSharpness ?? this.specularSharpness,
-        standardOpacityMultiplier:
-            standardOpacityMultiplier ?? this.standardOpacityMultiplier,
-        shadowElevation: shadowElevation ?? this.shadowElevation,
-        shadow: shadow ?? this.shadow,
-        whitenStrength: whitenStrength ?? this.whitenStrength,
-        whitenGated: whitenGated ?? this.whitenGated,
-        edgeAbsorption: edgeAbsorption ?? this.edgeAbsorption,
-        rimShade: rimShade ?? this.rimShade,
-        rimShadeEnds: rimShadeEnds ?? this.rimShadeEnds,
-        rimLight: rimLight ?? this.rimLight,
-        bodyShade: bodyShade ?? this.bodyShade,
-        lensModel: lensModel ?? this.lensModel,
-        backerColor: backerColor ?? this.backerColor,
-        platformViewFallbackColor:
-            platformViewFallbackColor ?? this.platformViewFallbackColor,
-        platformViewMode: platformViewMode ?? this.platformViewMode,
-        bodyMode: bodyMode ?? this.bodyMode,
-        pinchStrength: pinchStrength,
-      );
+  }) => LiquidGlassSettings._withPinch(
+    visibility: visibility ?? this.visibility,
+    glassColor: glassColor ?? this.glassColor,
+    thickness: thickness ?? this.thickness,
+    blur: blur ?? this.blur,
+    frost: frost ?? this.frost,
+    frostOpacity: frostOpacity ?? this.frostOpacity,
+    frostClamp: frostClamp ?? this.frostClamp,
+    frostWeight: frostWeight ?? this.frostWeight,
+    blurWeight: blurWeight ?? this.blurWeight,
+    chromaticAberration: chromaticAberration ?? this.chromaticAberration,
+    lightAngle: lightAngle ?? this.lightAngle,
+    lightIntensity: lightIntensity ?? this.lightIntensity,
+    ambientStrength: ambientStrength ?? this.ambientStrength,
+    ambientRim: ambientRim ?? this.ambientRim,
+    fresnelStrength: fresnelStrength ?? this.fresnelStrength,
+    refractiveIndex: refractiveIndex ?? this.refractiveIndex,
+    saturation: saturation ?? this.saturation,
+    glowIntensity: glowIntensity ?? this.glowIntensity,
+    specularSharpness: specularSharpness ?? this.specularSharpness,
+    standardOpacityMultiplier:
+        standardOpacityMultiplier ?? this.standardOpacityMultiplier,
+    shadowElevation: shadowElevation ?? this.shadowElevation,
+    shadow: shadow ?? this.shadow,
+    whitenStrength: whitenStrength ?? this.whitenStrength,
+    whitenGated: whitenGated ?? this.whitenGated,
+    edgeAbsorption: edgeAbsorption ?? this.edgeAbsorption,
+    rimShade: rimShade ?? this.rimShade,
+    rimShadeEnds: rimShadeEnds ?? this.rimShadeEnds,
+    rimLight: rimLight ?? this.rimLight,
+    bodyShade: bodyShade ?? this.bodyShade,
+    lensModel: lensModel ?? this.lensModel,
+    backerColor: backerColor ?? this.backerColor,
+    platformViewFallbackColor:
+        platformViewFallbackColor ?? this.platformViewFallbackColor,
+    platformViewMode: platformViewMode ?? this.platformViewMode,
+    bodyMode: bodyMode ?? this.bodyMode,
+    pinchStrength: pinchStrength,
+  );
 
   @override
   bool operator ==(Object other) {
@@ -1030,40 +1040,40 @@ class LiquidGlassSettings {
 
   @override
   int get hashCode => Object.hashAll([
-        visibility,
-        glassColor,
-        thickness,
-        blur,
-        frost,
-        frostOpacity,
-        frostClamp,
-        frostWeight,
-        blurWeight,
-        chromaticAberration,
-        lightAngle,
-        lightIntensity,
-        ambientStrength,
-        ambientRim,
-        fresnelStrength,
-        refractiveIndex,
-        saturation,
-        glowIntensity,
-        specularSharpness,
-        standardOpacityMultiplier,
-        shadowElevation,
-        shadow == null ? null : Object.hashAll(shadow!),
-        whitenStrength,
-        whitenGated,
-        edgeAbsorption,
-        rimShade,
-        rimShadeEnds,
-        rimLight,
-        bodyShade,
-        lensModel,
-        backerColor,
-        platformViewFallbackColor,
-        platformViewMode,
-        bodyMode,
-        pinchStrength,
-      ]);
+    visibility,
+    glassColor,
+    thickness,
+    blur,
+    frost,
+    frostOpacity,
+    frostClamp,
+    frostWeight,
+    blurWeight,
+    chromaticAberration,
+    lightAngle,
+    lightIntensity,
+    ambientStrength,
+    ambientRim,
+    fresnelStrength,
+    refractiveIndex,
+    saturation,
+    glowIntensity,
+    specularSharpness,
+    standardOpacityMultiplier,
+    shadowElevation,
+    shadow == null ? null : Object.hashAll(shadow!),
+    whitenStrength,
+    whitenGated,
+    edgeAbsorption,
+    rimShade,
+    rimShadeEnds,
+    rimLight,
+    bodyShade,
+    lensModel,
+    backerColor,
+    platformViewFallbackColor,
+    platformViewMode,
+    bodyMode,
+    pinchStrength,
+  ]);
 }

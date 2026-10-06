@@ -200,10 +200,12 @@ class DraggableIndicatorPhysics {
     final padding = indicatorWidth / 2;
 
     // Map drag position to 0-1 range
-    final mainPosition =
-        direction == Axis.horizontal ? localPosition.dx : localPosition.dy;
-    final mainExtent =
-        direction == Axis.horizontal ? box.size.width : box.size.height;
+    final mainPosition = direction == Axis.horizontal
+        ? localPosition.dx
+        : localPosition.dy;
+    final mainExtent = direction == Axis.horizontal
+        ? box.size.width
+        : box.size.height;
     var rawRelativeX = (mainPosition / mainExtent).clamp(0.0, 1.0);
 
     if (mirrorForRtl &&
@@ -256,11 +258,12 @@ class DraggableIndicatorPhysics {
   }) {
     final box = context.findRenderObject()! as RenderBox;
     final localPosition = box.globalToLocal(globalPosition);
-    final width =
-        direction == Axis.horizontal ? box.size.width : box.size.height;
+    final width = direction == Axis.horizontal
+        ? box.size.width
+        : box.size.height;
     double fraction =
         (direction == Axis.horizontal ? localPosition.dx : localPosition.dy) /
-            width;
+        width;
 
     return (fraction * itemCount).floor().clamp(0, itemCount - 1);
   }
@@ -317,14 +320,18 @@ class DraggableIndicatorPhysics {
 
     if (safeVelocityX.abs() > velocityThreshold) {
       // High velocity - project where we would end up
-      final projectedX =
-          (currentRelativeX + safeVelocityX * projectionTime).clamp(0.0, 1.0);
-      var targetIndex =
-          (projectedX / itemWidth).round().clamp(0, itemCount - 1);
+      final projectedX = (currentRelativeX + safeVelocityX * projectionTime)
+          .clamp(0.0, 1.0);
+      var targetIndex = (projectedX / itemWidth).round().clamp(
+        0,
+        itemCount - 1,
+      );
 
       // Ensure we move at least one item with strong velocity
-      final currentIndex =
-          (currentRelativeX / itemWidth).round().clamp(0, itemCount - 1);
+      final currentIndex = (currentRelativeX / itemWidth).round().clamp(
+        0,
+        itemCount - 1,
+      );
 
       if (safeVelocityX > velocityThreshold &&
           targetIndex <= currentIndex &&

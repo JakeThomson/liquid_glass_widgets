@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../constants/glass_defaults.dart';
 import '../../src/engine/liquid_glass_settings.dart';
+import '../../src/widgets/surfaces/vertical_bar_regions.dart';
 import '../effects/glass_materialize.dart';
 import '../overlays/glass_modal_sheet.dart';
 import 'glass_bar_item.dart';
@@ -360,6 +361,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) _scheduleNotify();
       });
+    VerticalBarRegions.instance.addListener(_onVerticalBarRegions);
   }
 
   @override
@@ -411,8 +413,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     if (existing == null) {
       _listenTo(route.animation);
       _listenTo(route.secondaryAnimation);
-      final listener =
-          _clockListeners[route] = (status) => _onRouteStatus(route, status);
+      final listener = _clockListeners[route] = (status) =>
+          _onRouteStatus(route, status);
       route.animation?.addStatusListener(listener);
     }
     _scheduleNotify();
@@ -458,8 +460,9 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     _clockFrom = forward ? current : 1.0 - current;
     _clock
       ..stop()
-      ..duration =
-          forward ? route.transitionDuration : route.reverseTransitionDuration;
+      ..duration = forward
+          ? route.transitionDuration
+          : route.reverseTransitionDuration;
     // A page-based Navigator starts a route inside the build phase, and
     // starting a controller notifies synchronously. Defer exactly as a tick
     // does; the frame in between reads the start value.
@@ -549,7 +552,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
   /// from the routes themselves, so no [NavigatorObserver] is needed and any
   /// Pages-API router works unchanged.
   List<MapEntry<ModalRoute<dynamic>, GlassNavBarRegistration>>
-      get _orderedEntries {
+  get _orderedEntries {
     final entries = _registry.entries
         .where((e) => _participates(e.key))
         .toList(growable: false);
@@ -776,7 +779,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
         popping: true,
         topRoute: exiting.topRoute,
         transition: exiting.transition,
-        crossFade: widget.swipeCommitTransition ==
+        crossFade:
+            widget.swipeCommitTransition ==
             GlassSwipeCommitTransition.crossFade,
       );
     }
@@ -786,7 +790,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
 
     final top = ordered.first;
     final below = ordered.length > 1 ? ordered[1] : null;
-    final from = below?.value ??
+    final from =
+        below?.value ??
         const GlassNavBarRegistration(
           actions: <GlassBarItem>[],
           showsBackButton: false,
@@ -865,7 +870,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     // got there first; the chrome is not settled until it has.
     final running =
         status == AnimationStatus.forward || status == AnimationStatus.reverse;
-    final clocked = identical(_clockRoute, top.key) &&
+    final clocked =
+        identical(_clockRoute, top.key) &&
         !userGesture &&
         (running || _clockPending || _clock.isAnimating);
     if (clocked) progress = _clockProgress();
@@ -876,7 +882,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     // looks finished. The controller's status and the navigator's gesture flag
     // are what actually tell the two apart, and `isCurrent` covers a route
     // that something unregistered has been pushed over.
-    final settled = top.key.isCurrent &&
+    final settled =
+        top.key.isCurrent &&
         status == AnimationStatus.completed &&
         !userGesture &&
         !(clocked && (_clockPending || _clock.isAnimating));
@@ -907,7 +914,8 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     // The gesture flag matters as much as the status: a back-swipe holds the
     // controller at whatever value the finger dictates without ever entering
     // AnimationStatus.reverse.
-    final popping = !settled &&
+    final popping =
+        !settled &&
         (status == AnimationStatus.reverse ||
             userGesture ||
             (clocked && _clockStatus == AnimationStatus.reverse));
@@ -947,6 +955,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
 
   @override
   void dispose() {
+    VerticalBarRegions.instance.removeListener(_onVerticalBarRegions);
     for (final animation in _listened) {
       animation.removeListener(_onAnimationTick);
       animation.removeStatusListener(_onAnimationStatus);
@@ -975,8 +984,10 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
   ///
   /// The pinned chrome is laid out in what is left above it, and overflows
   /// into a ••• menu where that is not enough. Zero with nothing reserved.
-  double get verticalBarBottom => _verticalBarBottom.values
-      .fold(0.0, (max, extent) => extent > max ? extent : max);
+  double get verticalBarBottom => _verticalBarBottom.values.fold(
+    0.0,
+    (max, extent) => extent > max ? extent : max,
+  );
 
   /// Reserves [extent] of the strip's bottom for [owner], replacing any
   /// earlier reservation it made.
@@ -995,23 +1006,33 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     if (_verticalBarBottom.remove(owner) != null) _scheduleNotify();
   }
 
+  void _onVerticalBarRegions() => setState(() {});
+
   /// The strip this shell's bars lay out in, or null where they are
   /// horizontal.
   ///
   /// Read from the insets the shell itself sees, which is above any [SafeArea]
-  /// a page puts around its content. See [GlassVerticalBar.resolve].
+  /// a page puts around its content, and from the regions UIKit reserves for
+  /// the status cluster and the camera, which Flutter does not report on iOS
+  /// yet. See [GlassVerticalBar.resolve].
   GlassVerticalBarData? _resolveVerticalBar(BuildContext context) {
     if (!isActive ||
         widget.verticalBarBehavior == GlassVerticalBarBehavior.disabled) {
       return null;
     }
-    return GlassVerticalBar.resolve(
+    final bar = GlassVerticalBar.resolve(
       viewPadding: MediaQuery.viewPaddingOf(context),
       size: MediaQuery.sizeOf(context),
       platform: defaultTargetPlatform,
       textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+      displayFeatures: [
+        ...MediaQuery.displayFeaturesOf(context),
+        ...VerticalBarRegions.instance.value,
+      ],
       compression: widget.verticalBarCompression,
     );
+    if (bar != null) VerticalBarRegions.instance.observe();
+    return bar;
   }
 
   @override
@@ -1053,10 +1074,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
 
 /// Exposes the shell state to descendant registrants.
 class _GlassNavigationShellScope extends InheritedWidget {
-  const _GlassNavigationShellScope({
-    required this.state,
-    required super.child,
-  });
+  const _GlassNavigationShellScope({required this.state, required super.child});
 
   final GlassNavigationShellState state;
 
@@ -1067,11 +1085,7 @@ class _GlassNavigationShellScope extends InheritedWidget {
 
 /// A capsule kept hoisted through the sheet presented out of it.
 class _SheetHold {
-  _SheetHold({
-    required this.route,
-    required this.item,
-    required this.anchor,
-  });
+  _SheetHold({required this.route, required this.item, required this.anchor});
 
   /// The route whose chrome the capsule belongs to.
   final ModalRoute<dynamic> route;

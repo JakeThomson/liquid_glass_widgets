@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../types/glass_quality.dart';
 import '../shared/adaptive_glass.dart';
@@ -87,11 +88,15 @@ class GlassPicker extends StatelessWidget {
     final labelColor = CupertinoColors.label.resolveFrom(context);
     final secondaryColor = CupertinoColors.secondaryLabel.resolveFrom(context);
 
-    final effectiveTextStyle =
-        TextStyle(fontSize: 16, color: labelColor).merge(textStyle);
+    final effectiveTextStyle = TextStyle(
+      fontSize: 16,
+      color: labelColor,
+    ).merge(textStyle);
 
-    final effectivePlaceholderStyle =
-        TextStyle(fontSize: 16, color: secondaryColor).merge(placeholderStyle);
+    final effectivePlaceholderStyle = TextStyle(
+      fontSize: 16,
+      color: secondaryColor,
+    ).merge(placeholderStyle);
 
     // A minimum height rather than a fixed one, so the value survives a
     // large system text size (SC 1.4.4); at the default scale it is the same.
@@ -170,8 +175,10 @@ class GlassPicker extends StatelessWidget {
                 // Minimum, not fixed, so a scaled-up title is not clipped.
                 constraints: const BoxConstraints(minHeight: 50),
                 alignment: Alignment.center,
-                child: Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             Expanded(
               child: CupertinoPicker.builder(

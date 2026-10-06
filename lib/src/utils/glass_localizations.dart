@@ -8,8 +8,5 @@ import 'package:flutter/cupertino.dart';
 /// package carrying any text of its own. Every such label also has an
 /// optional parameter on its widget for apps that want different wording.
 CupertinoLocalizations glassCupertinoLocalizationsOf(BuildContext context) =>
-    Localizations.of<CupertinoLocalizations>(
-      context,
-      CupertinoLocalizations,
-    ) ??
+    Localizations.of<CupertinoLocalizations>(context, CupertinoLocalizations) ??
     const DefaultCupertinoLocalizations();

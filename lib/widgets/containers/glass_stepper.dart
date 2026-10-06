@@ -248,9 +248,7 @@ class _GlassStepperState extends State<GlassStepper> {
         width: widget.width,
         height: widget.height,
         child: AdaptiveGlass(
-          shape: LiquidRoundedRectangle(
-            borderRadius: widget.height / 2,
-          ),
+          shape: LiquidRoundedRectangle(borderRadius: widget.height / 2),
           settings: widget.settings ?? const LiquidGlassSettings(),
           quality: widget.quality ?? GlassQuality.standard,
           child: ClipRRect(
@@ -387,7 +385,8 @@ class _StepperSideState extends State<_StepperSide> {
               opacity: widget.isEnabled ? 1.0 : 0.3,
               child: Icon(
                 widget.icon,
-                color: CupertinoTheme.of(context).textTheme.textStyle.color ??
+                color:
+                    CupertinoTheme.of(context).textTheme.textStyle.color ??
                     CupertinoColors.label,
                 size: 20,
               ),

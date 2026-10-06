@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../types/glass_quality.dart';
@@ -266,18 +267,12 @@ class GlassContainer extends StatelessWidget {
 
     // 2. Apply padding inside the container (before glass effect)
     if (padding != null) {
-      content = Padding(
-        padding: padding!,
-        child: content,
-      );
+      content = Padding(padding: padding!, child: content);
     }
 
     // 3. Apply alignment if provided
     if (alignment != null) {
-      content = Align(
-        alignment: alignment!,
-        child: content,
-      );
+      content = Align(alignment: alignment!, child: content);
     }
 
     // 4. Apply glass effect with adaptive fallback
@@ -330,19 +325,12 @@ class GlassContainer extends StatelessWidget {
 
     // 5. Apply width/height constraints
     if (width != null || height != null) {
-      glassWidget = SizedBox(
-        width: width,
-        height: height,
-        child: glassWidget,
-      );
+      glassWidget = SizedBox(width: width, height: height, child: glassWidget);
     }
 
     // 6. Apply margin outside the glass effect
     if (margin != null) {
-      glassWidget = Padding(
-        padding: margin!,
-        child: glassWidget,
-      );
+      glassWidget = Padding(padding: margin!, child: glassWidget);
     }
 
     return glassWidget;

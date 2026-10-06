@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+
 import '../../theme/glass_theme.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 
@@ -337,11 +338,14 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
   Widget build(BuildContext context) {
     final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
 
-    final searchIconColor = widget.searchIconColor ??
+    final searchIconColor =
+        widget.searchIconColor ??
         (isDark ? const Color(0x99FFFFFF) : const Color(0x99000000));
-    final clearIconColor = widget.clearIconColor ??
+    final clearIconColor =
+        widget.clearIconColor ??
         (isDark ? const Color(0x99FFFFFF) : const Color(0x99000000));
-    final cancelButtonColor = widget.cancelButtonColor ??
+    final cancelButtonColor =
+        widget.cancelButtonColor ??
         (isDark ? const Color(0xE6FFFFFF) : const Color(0xE6000000));
 
     return Row(
@@ -378,7 +382,8 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
               ),
             ),
             onSuffixTap: _hasText ? _handleClear : null,
-            suffixSemanticLabel: widget.clearButtonSemanticLabel ??
+            suffixSemanticLabel:
+                widget.clearButtonSemanticLabel ??
                 glassCupertinoLocalizationsOf(context).clearButtonLabel,
             onChanged: widget.onChanged,
             onSubmitted: widget.onSubmitted,
@@ -388,9 +393,7 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
             textStyle: widget.textStyle,
             placeholderStyle: widget.placeholderStyle,
             height: widget.height,
-            shape: LiquidRoundedRectangle(
-              borderRadius: widget.height / 2,
-            ),
+            shape: LiquidRoundedRectangle(borderRadius: widget.height / 2),
             settings: widget.settings,
             useOwnLayer: widget.useOwnLayer,
             quality: widget.quality,
@@ -412,7 +415,8 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
                     padding: const EdgeInsetsDirectional.only(start: 10),
                     child: GlassButton(
                       onTap: _handleCancel,
-                      label: widget.cancelButtonSemanticLabel ??
+                      label:
+                          widget.cancelButtonSemanticLabel ??
                           glassCupertinoLocalizationsOf(context)
                               .cancelButtonLabel,
                       width: widget.height,
@@ -421,7 +425,8 @@ class _GlassSearchBarState extends State<GlassSearchBar> {
                       settings: widget.settings,
                       useOwnLayer: widget.useOwnLayer,
                       quality: widget.quality,
-                      icon: widget.cancelIcon ??
+                      icon:
+                          widget.cancelIcon ??
                           Icon(
                             CupertinoIcons.xmark,
                             color: cancelButtonColor,

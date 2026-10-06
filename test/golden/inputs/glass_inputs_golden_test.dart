@@ -34,22 +34,21 @@ void main() {
                         const SizedBox(height: 16),
                         const GlassFormField(
                           label: 'Password',
-                          child:
-                              GlassPasswordField(placeholder: 'Enter password'),
+                          child: GlassPasswordField(
+                            placeholder: 'Enter password',
+                          ),
                         ),
                         const SizedBox(height: 16),
                         const GlassFormField(
                           label: 'Bio',
                           child: GlassTextArea(
-                              placeholder: 'Tell us about yourself'),
+                            placeholder: 'Tell us about yourself',
+                          ),
                         ),
                         const SizedBox(height: 16),
                         GlassFormField(
                           label: 'Role',
-                          child: GlassPicker(
-                            value: 'Developer',
-                            onTap: () {},
-                          ),
+                          child: GlassPicker(value: 'Developer', onTap: () {}),
                         ),
                         const SizedBox(height: 16),
                         const GlassFormField(

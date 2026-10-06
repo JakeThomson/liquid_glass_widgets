@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+
 import 'theme/glass_theme.dart';
 import 'theme/glass_theme_data.dart';
 import 'types/glass_quality.dart';
@@ -120,7 +121,8 @@ class LiquidGlassWidgets {
     // Android Vulkan/GLES), preload the multi-pass shaders as well.
     // Web, Windows, and Linux skip premium preload by default as they are
     // capped at standard quality by the GlassAdaptiveScope static probe.
-    final bool shouldPreloadPremium = warmUpMode == GlassWarmUpMode.always ||
+    final bool shouldPreloadPremium =
+        warmUpMode == GlassWarmUpMode.always ||
         (warmUpMode == GlassWarmUpMode.auto && !_shouldSkipPremiumPreload());
 
     if (shouldPreloadPremium) {

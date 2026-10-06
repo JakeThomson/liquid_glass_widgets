@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show listEquals;
+
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/cupertino.dart';
+
 import '../../src/renderer/liquid_glass_renderer.dart';
 
 import '../../constants/glass_defaults.dart';
@@ -181,12 +183,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
   ///     .copyWith(refractiveIndex: 1.25)
   /// ```
   static const baseIndicatorSettings = LiquidGlassSettings(
-    glassColor: Color.from(
-      alpha: 0.0,
-      red: 1,
-      green: 1,
-      blue: 1,
-    ),
+    glassColor: Color.from(alpha: 0.0, red: 1, green: 1, blue: 1),
     // Calibrated against iOS 26 reference: a shallower curve (22) with a
     // slightly lower refractive index (1.08) produces a subtle lens warp
     // on the icons without the balloon-bubble edge of the default (30 / 1.15).
@@ -233,26 +230,26 @@ class AnimatedGlassIndicator extends StatelessWidget {
       // blur is unconditionally kept at 0 — see docstring above.
       chromaticAberration:
           override.chromaticAberration != _settingsDefaults.chromaticAberration
-              ? override.chromaticAberration
-              : null,
+          ? override.chromaticAberration
+          : null,
       lightAngle: override.lightAngle != _settingsDefaults.lightAngle
           ? override.lightAngle
           : null,
       lightIntensity:
           override.lightIntensity != _settingsDefaults.lightIntensity
-              ? override.lightIntensity
-              : null,
+          ? override.lightIntensity
+          : null,
       ambientStrength:
           override.ambientStrength != _settingsDefaults.ambientStrength
-              ? override.ambientStrength
-              : null,
+          ? override.ambientStrength
+          : null,
       ambientRim: override.ambientRim != _settingsDefaults.ambientRim
           ? override.ambientRim
           : null,
       refractiveIndex:
           override.refractiveIndex != _settingsDefaults.refractiveIndex
-              ? override.refractiveIndex
-              : null,
+          ? override.refractiveIndex
+          : null,
       saturation: override.saturation != _settingsDefaults.saturation
           ? override.saturation
           : null,
@@ -261,38 +258,40 @@ class AnimatedGlassIndicator extends StatelessWidget {
           : null,
       specularSharpness:
           override.specularSharpness != _settingsDefaults.specularSharpness
-              ? override.specularSharpness
-              : null,
-      standardOpacityMultiplier: override.standardOpacityMultiplier !=
+          ? override.specularSharpness
+          : null,
+      standardOpacityMultiplier:
+          override.standardOpacityMultiplier !=
               _settingsDefaults.standardOpacityMultiplier
           ? override.standardOpacityMultiplier
           : null,
       shadowElevation:
           override.shadowElevation != _settingsDefaults.shadowElevation
-              ? override.shadowElevation
-              : null,
+          ? override.shadowElevation
+          : null,
       shadow: override.shadow,
       whitenStrength:
           override.whitenStrength != _settingsDefaults.whitenStrength
-              ? override.whitenStrength
-              : null,
+          ? override.whitenStrength
+          : null,
       whitenGated: override.whitenGated != _settingsDefaults.whitenGated
           ? override.whitenGated
           : null,
       edgeAbsorption:
           override.edgeAbsorption != _settingsDefaults.edgeAbsorption
-              ? override.edgeAbsorption
-              : null,
+          ? override.edgeAbsorption
+          : null,
       fresnelStrength:
           override.fresnelStrength != _settingsDefaults.fresnelStrength
-              ? override.fresnelStrength
-              : null,
+          ? override.fresnelStrength
+          : null,
       // backerColor and platformViewFallbackColor forwarded so indicatorSettings
       // preserve custom stand-in colors.
       backerColor: override.backerColor != _settingsDefaults.backerColor
           ? override.backerColor
           : null,
-      platformViewFallbackColor: override.platformViewFallbackColor !=
+      platformViewFallbackColor:
+          override.platformViewFallbackColor !=
               _settingsDefaults.platformViewFallbackColor
           ? override.platformViewFallbackColor
           : null,
@@ -302,8 +301,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
       // every other surface on the same bar honours it.
       platformViewMode:
           override.platformViewMode != _settingsDefaults.platformViewMode
-              ? override.platformViewMode
-              : null,
+          ? override.platformViewMode
+          : null,
     );
   }
 
@@ -389,8 +388,9 @@ class AnimatedGlassIndicator extends StatelessWidget {
     // We fade the glass in/out by setting `visibility` on the settings rather
     // than wrapping the widget in `Opacity`.
     final fade = thickness.clamp(0.0, 1.0);
-    final base =
-        settings != null ? _mergeWithBase(settings!) : baseIndicatorSettings;
+    final base = settings != null
+        ? _mergeWithBase(settings!)
+        : baseIndicatorSettings;
 
     // Stabilise the pinch UV shift against jelly spring micro-oscillation.
     //
@@ -415,8 +415,9 @@ class AnimatedGlassIndicator extends StatelessWidget {
       quality: quality,
       interactionIntensity: thickness,
       backgroundKey: backgroundKey,
-      clipExpansion:
-          isVertical ? _jellyClipExpansionVertical : _jellyClipExpansion,
+      clipExpansion: isVertical
+          ? _jellyClipExpansionVertical
+          : _jellyClipExpansion,
       // rimThickness translation: Premium uses thickness as 3D glass depth
       // (Impeller SDF — no visible border drawn). Standard uses rimThickness
       // as a literal pixel-width border in the GLSL shader, so the same raw
@@ -431,8 +432,10 @@ class AnimatedGlassIndicator extends StatelessWidget {
       //            would otherwise have a sub-pixel invisible rim.
       //   cap    : 1.5 → prevents extreme thickness values producing thick rings.
       rimThickness: isStdPath
-          ? ((settings?.effectiveThickness ?? 30.0) * (0.5 / 30.0))
-              .clamp(0.35, 1.5)
+          ? ((settings?.effectiveThickness ?? 30.0) * (0.5 / 30.0)).clamp(
+              0.35,
+              1.5,
+            )
           : (settings?.effectiveThickness ?? 0.8).clamp(0.8, 8.0),
       // iOS 26 Standard glass matching GlassSwitch/Slider pattern.
       // settings.ambientRim (default 0) overrides the hardcoded floor — the
@@ -442,10 +445,12 @@ class AnimatedGlassIndicator extends StatelessWidget {
       ambientRim: (effectiveSettings.ambientRim > 0)
           ? effectiveSettings.ambientRim
           : (isStdPath ? 0.08 : 0.1),
-      baseAlphaMultiplier:
-          isStdPath ? 0.08 : 0.2, // Match GlassSlider (near clear center)
-      edgeAlphaMultiplier:
-          isStdPath ? 0.15 : 0.4, // Match GlassSlider/Switch (subtle rim)
+      baseAlphaMultiplier: isStdPath
+          ? 0.08
+          : 0.2, // Match GlassSlider (near clear center)
+      edgeAlphaMultiplier: isStdPath
+          ? 0.15
+          : 0.4, // Match GlassSlider/Switch (subtle rim)
       child: const GlassGlow(
         // Whitelisted: Structural no-glow default.
         glowColor: Color(0x00000000),
@@ -465,7 +470,8 @@ class AnimatedGlassIndicator extends StatelessWidget {
     // the tab-bar shadow overlay).
     final jellyShadowIsDark =
         GlassTheme.brightnessOf(context) == Brightness.dark;
-    final explicitJellyShadows = (!jellyShadowIsDark &&
+    final explicitJellyShadows =
+        (!jellyShadowIsDark &&
             settings != null &&
             (settings!.shadow != null ||
                 settings!.shadowElevation != _settingsDefaults.shadowElevation))
@@ -487,8 +493,9 @@ class AnimatedGlassIndicator extends StatelessWidget {
     // below will apply a sub-pixel shift/scale. If we pre-rasterise the glass
     // with a RepaintBoundary, the pre-computed AA will misalign with the pixel
     // grid during the transform, causing stair-stepping on the edges.
-    final interactiveIndicator =
-        thickness > 0.01 ? shadowedGlass : const SizedBox.expand();
+    final interactiveIndicator = thickness > 0.01
+        ? shadowedGlass
+        : const SizedBox.expand();
 
     // Standard: background pill included inside Transform so the solid pill
     // carries the jelly squish visually. The glass lens alone is too
@@ -528,10 +535,14 @@ class AnimatedGlassIndicator extends StatelessWidget {
               borderRadius: GlassDefaults.safeBorderRadius(borderRadius),
               child: BackdropFilter(
                 filter: ImageFilter.blur(
-                  sigmaX: (innerBlur * backgroundOpacity)
-                      .clamp(0.001, double.infinity),
-                  sigmaY: (innerBlur * backgroundOpacity)
-                      .clamp(0.001, double.infinity),
+                  sigmaX: (innerBlur * backgroundOpacity).clamp(
+                    0.001,
+                    double.infinity,
+                  ),
+                  sigmaY: (innerBlur * backgroundOpacity).clamp(
+                    0.001,
+                    double.infinity,
+                  ),
                 ),
                 child: const SizedBox.expand(),
               ),
@@ -540,10 +551,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
         // Premium: background pill is rigid (outside Transform). The Impeller
         // glass lens has enough 3D contrast to carry the jelly on its own.
         if (paintBackground && !isStdPath && backgroundOpacity > 0)
-          Positioned.fromRelativeRect(
-            rect: rect!,
-            child: backgroundIndicator,
-          ),
+          Positioned.fromRelativeRect(rect: rect!, child: backgroundIndicator),
         // Jelly-physics Transform.
         // Standard: wraps both the solid background pill + glass lens so the
         //   pill itself flexes (the only element with enough visual weight).
@@ -597,10 +605,7 @@ class AnimatedGlassIndicator extends StatelessWidget {
     return Positioned.fill(
       child: Padding(
         padding: padding,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [positioning],
-        ),
+        child: Stack(clipBehavior: Clip.none, children: [positioning]),
       ),
     );
   }
@@ -645,10 +650,7 @@ class _OuterShadowPainter extends CustomPainter {
       final paint = Paint()
         ..color = s.color.withValues(alpha: s.color.a * opacity)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, s.blurSigma);
-      canvas.drawRRect(
-        rrect.shift(s.offset).inflate(s.spreadRadius),
-        paint,
-      );
+      canvas.drawRRect(rrect.shift(s.offset).inflate(s.spreadRadius), paint);
     }
     canvas.restore();
   }

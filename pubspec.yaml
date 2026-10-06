@@ -37,6 +37,11 @@ dev_dependencies:
   leak_tracker_flutter_testing: ^3.0.0
 
 flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: LiquidGlassWidgetsPlugin
+
   shaders:
     - shaders/lightweight_glass.frag
     - shaders/interactive_indicator.frag

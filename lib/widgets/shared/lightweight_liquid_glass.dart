@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+
 import '../../src/engine/internal/transform_tracking_repaint_boundary_mixin.dart';
 import '../../src/renderer/liquid_glass_renderer.dart';
 import '../../theme/glass_theme.dart';
@@ -289,7 +290,8 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
 
     // Only re-capture when geometry changes or on first capture.
     // toImageSync is synchronous and stays in GPU memory — cheap but not free.
-    final bool needsCapture = _backgroundImage == null ||
+    final bool needsCapture =
+        _backgroundImage == null ||
         _lastCaptureSize != currentSize ||
         _lastCapturePosition != currentPos;
 
@@ -322,26 +324,32 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
   /// The [_capturePending] flag prevents concurrent captures from stacking up
   /// when the ticker fires multiple times before the first capture completes.
   void _captureBackground(
-      RenderRepaintBoundary boundary, Size size, Offset pos) {
+    RenderRepaintBoundary boundary,
+    Size size,
+    Offset pos,
+  ) {
     if (_capturePending) return; // Already capturing — wait for it to finish.
     _capturePending = true;
-    boundary.toImage(pixelRatio: 1.0).then((image) {
-      if (!mounted || _isDisposed) {
-        image.dispose();
-        _capturePending = false;
-        return;
-      }
-      _backgroundImage?.dispose();
-      _backgroundImage = image;
-      _lastCaptureSize = size;
-      _lastCapturePosition = pos;
-      _capturePending = false;
-      setState(() {});
-    }).catchError((_) {
-      // toImage can fail transiently (e.g. widget detached mid-capture).
-      // Clear the flag so the ticker will retry on the next frame.
-      _capturePending = false;
-    });
+    boundary
+        .toImage(pixelRatio: 1.0)
+        .then((image) {
+          if (!mounted || _isDisposed) {
+            image.dispose();
+            _capturePending = false;
+            return;
+          }
+          _backgroundImage?.dispose();
+          _backgroundImage = image;
+          _lastCaptureSize = size;
+          _lastCapturePosition = pos;
+          _capturePending = false;
+          setState(() {});
+        })
+        .catchError((_) {
+          // toImage can fail transiently (e.g. widget detached mid-capture).
+          // Clear the flag so the ticker will retry on the next frame.
+          _capturePending = false;
+        });
   }
 
   @override
@@ -402,7 +410,8 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
           _webShader = LightweightLiquidGlass._cachedProgram!.fragmentShader();
           if (!_loggedCreation) {
             debugPrint(
-                '[LightweightGlass] ✓ Created web shader for ${widget.shape.runtimeType}');
+              '[LightweightGlass] ✓ Created web shader for ${widget.shape.runtimeType}',
+            );
             _loggedCreation = true;
           }
         });
@@ -434,14 +443,15 @@ class _LightweightLiquidGlassState extends State<LightweightLiquidGlass>
 
   @override
   Widget build(BuildContext context) {
-    final inherited =
-        context.dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
+    final inherited = context
+        .dependOnInheritedWidgetOfExactType<InheritedLiquidGlass>();
     final settings =
         widget.settings ?? inherited?.settings ?? const LiquidGlassSettings();
     final shader = _activeShader;
 
     // Optimization: Skip local blur if provided by ancestor and settings match
-    final bool skipBlur = (inherited?.isBlurProvidedByAncestor ?? false) &&
+    final bool skipBlur =
+        (inherited?.isBlurProvidedByAncestor ?? false) &&
         (widget.settings == null ||
             widget.settings?.blur == inherited?.settings.blur);
 
@@ -574,18 +584,18 @@ class _RenderLightweightGlass extends RenderProxyBox
     required double backdropLuma,
     ui.Image? backgroundImage,
     GlobalKey? backgroundKey,
-  })  : _shader = shader,
-        _settings = settings,
-        _shape = shape,
-        _skipBlur = skipBlur,
-        _glowIntensity = glowIntensity,
-        _densityFactor = densityFactor,
-        _indicatorWeight = indicatorWeight,
-        _backdropLuma = backdropLuma,
-        _backgroundImage = backgroundImage,
-        _backgroundKey = backgroundKey,
-        _cachedLightCos = math.cos(settings.lightAngle),
-        _cachedLightSin = -math.sin(settings.lightAngle);
+  }) : _shader = shader,
+       _settings = settings,
+       _shape = shape,
+       _skipBlur = skipBlur,
+       _glowIntensity = glowIntensity,
+       _densityFactor = densityFactor,
+       _indicatorWeight = indicatorWeight,
+       _backdropLuma = backdropLuma,
+       _backgroundImage = backgroundImage,
+       _backgroundKey = backgroundKey,
+       _cachedLightCos = math.cos(settings.lightAngle),
+       _cachedLightSin = -math.sin(settings.lightAngle);
 
   @override
   void onTransformChanged() {
@@ -788,18 +798,11 @@ class _RenderLightweightGlass extends RenderProxyBox
       //
       // The filter is cached on the render object and only rebuilt when blur
       // sigma or saturation changes — see _getBlurFilter().
-      final filter = _getBlurFilter(
-        blurSigma,
-        _settings.effectiveSaturation,
-      );
+      final filter = _getBlurFilter(blurSigma, _settings.effectiveSaturation);
 
-      context.pushLayer(
-        BackdropFilterLayer(filter: filter),
-        (context, offset) {
-          _paintGlassContent(context, offset);
-        },
-        offset,
-      );
+      context.pushLayer(BackdropFilterLayer(filter: filter), (context, offset) {
+        _paintGlassContent(context, offset);
+      }, offset);
     } else {
       _paintGlassContent(context, offset);
     }
@@ -859,8 +862,13 @@ class _RenderLightweightGlass extends RenderProxyBox
     super.paint(context, offset);
   }
 
-  void _updateShaderUniforms(Size size, Offset physicalOrigin,
-      Offset physicalScale, Offset bgOrigin, Size bgSize) {
+  void _updateShaderUniforms(
+    Size size,
+    Offset physicalOrigin,
+    Offset physicalScale,
+    Offset bgOrigin,
+    Size bgSize,
+  ) {
     // _updateShaderUniforms is only ever called from _paintGlassContent,
     // which is only reached when _shader != null (guarded in paint()).
     // The assertion makes the non-nullability explicit for the analyser.
@@ -890,16 +898,21 @@ class _RenderLightweightGlass extends RenderProxyBox
     // also works over platform views, where BackdropFilter color ops don't
     // apply. The gain calibrates the veil so a single whitenStrength value
     // reads close to the Premium path's gated whiten at the same value.
-    final double whitenStrength =
-        _settings.effectiveWhitenStrength.clamp(0.0, 1.0).toDouble();
+    final double whitenStrength = _settings.effectiveWhitenStrength
+        .clamp(0.0, 1.0)
+        .toDouble();
     const double kWhitenVeilGain = 1.5;
-    final double whitenVeil =
-        (whitenStrength * kWhitenVeilGain).clamp(0.0, 1.0).toDouble();
+    final double whitenVeil = (whitenStrength * kWhitenVeilGain)
+        .clamp(0.0, 1.0)
+        .toDouble();
     final color = whitenVeil <= 0.0
         ? _settings.effectiveGlassColor
         // Whitelisted: Used in Color.lerp for glass veil tint math anchor, not a theme color.
-        : Color.lerp(_settings.effectiveGlassColor, const Color(0xFFFFFFFF),
-            whitenVeil)!;
+        : Color.lerp(
+            _settings.effectiveGlassColor,
+            const Color(0xFFFFFFFF),
+            whitenVeil,
+          )!;
     shader.setFloat(index++, (color.r * 255.0).round().clamp(0, 255) / 255.0);
     shader.setFloat(index++, (color.g * 255.0).round().clamp(0, 255) / 255.0);
     shader.setFloat(index++, (color.b * 255.0).round().clamp(0, 255) / 255.0);
@@ -1039,6 +1052,8 @@ class _RenderLightweightGlass extends RenderProxyBox
 
     // 34: uBodyMode — 0.0 = adaptive, 1.0 = clear.
     shader.setFloat(
-        index++, _settings.bodyMode == GlassBodyMode.clear ? 1.0 : 0.0);
+      index++,
+      _settings.bodyMode == GlassBodyMode.clear ? 1.0 : 0.0,
+    );
   }
 }

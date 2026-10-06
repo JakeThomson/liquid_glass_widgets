@@ -112,11 +112,11 @@ class GlassAppBar extends StatelessWidget
     this.largeTitleController,
     this.bottom,
     this.groupBackdrop = true,
-  })  : pinnedActions = null,
-        pinnedLeading = const <GlassBarItem>[],
-        pinnedBackButton = true,
-        pinnedLeadingItemsSupplementBackButton = false,
-        onBack = null;
+  }) : pinnedActions = null,
+       pinnedLeading = const <GlassBarItem>[],
+       pinnedBackButton = true,
+       pinnedLeadingItemsSupplementBackButton = false,
+       onBack = null;
 
   /// Creates a glass app bar whose chrome pins above the [Navigator].
   ///
@@ -158,13 +158,13 @@ class GlassAppBar extends StatelessWidget
     this.largeTitleController,
     this.bottom,
     this.groupBackdrop = true,
-  })  : pinnedActions = actions,
-        pinnedLeading = leading,
-        pinnedBackButton = backButton,
-        pinnedLeadingItemsSupplementBackButton =
-            leadingItemsSupplementBackButton,
-        leading = null,
-        actions = null;
+  }) : pinnedActions = actions,
+       pinnedLeading = leading,
+       pinnedBackButton = backButton,
+       pinnedLeadingItemsSupplementBackButton =
+           leadingItemsSupplementBackButton,
+       leading = null,
+       actions = null;
 
   // ===========================================================================
   // Properties
@@ -247,9 +247,8 @@ class GlassAppBar extends StatelessWidget
 
   /// The total preferred size of the app bar (toolbar + bottom widget).
   @override
-  Size get preferredSize => Size.fromHeight(
-        toolbarHeight + (bottom?.preferredSize.height ?? 0.0),
-      );
+  Size get preferredSize =>
+      Size.fromHeight(toolbarHeight + (bottom?.preferredSize.height ?? 0.0));
 
   /// Whether this app bar fully obstructs the content behind it.
   ///
@@ -349,8 +348,9 @@ class GlassAppBar extends StatelessWidget
     // in a row at the top of the content, beside whatever items stay
     // horizontal. Only a pinned bar moves: UIKit moves the bars a container
     // owns, and the shell is this bar's container.
-    final verticalBar =
-        chrome == null ? null : GlassVerticalBar.maybeOf(context);
+    final verticalBar = chrome == null
+        ? null
+        : GlassVerticalBar.maybeOf(context);
 
     Widget toolbarRow = SafeArea(
       bottom: false,
@@ -358,16 +358,16 @@ class GlassAppBar extends StatelessWidget
         padding: verticalBar == null
             ? padding
             : verticalBar.edge == GlassVerticalBarEdge.trailing
-                ? EdgeInsetsDirectional.only(
-                    start: verticalBar.titleInset,
-                    end: GlassVerticalBarMetrics.rowInset,
-                    top: verticalBar.rowTop,
-                  )
-                : EdgeInsetsDirectional.only(
-                    start: GlassVerticalBarMetrics.rowInset,
-                    end: verticalBar.titleInset,
-                    top: verticalBar.rowTop,
-                  ),
+            ? EdgeInsetsDirectional.only(
+                start: verticalBar.titleInset,
+                end: GlassVerticalBarMetrics.rowInset,
+                top: verticalBar.rowTop,
+              )
+            : EdgeInsetsDirectional.only(
+                start: GlassVerticalBarMetrics.rowInset,
+                end: verticalBar.titleInset,
+                top: verticalBar.rowTop,
+              ),
         child: SizedBox(
           height: verticalBar == null
               ? toolbarHeight
@@ -379,10 +379,7 @@ class GlassAppBar extends StatelessWidget
             ),
             children: [
               if (effectiveLeading != null)
-                LayoutId(
-                  id: _ToolbarSlot.leading,
-                  child: effectiveLeading,
-                ),
+                LayoutId(id: _ToolbarSlot.leading, child: effectiveLeading),
               LayoutId(
                 id: _ToolbarSlot.title,
                 child: _buildTitle(context, inStrip: verticalBar != null),
@@ -495,10 +492,7 @@ class GlassAppBar extends StatelessWidget
         // appears once the large title is mostly gone.
         final barProgress = ((progress - 0.5) / 0.5).clamp(0.0, 1.0);
         final barOpacity = Curves.easeOut.transform(barProgress);
-        return Opacity(
-          opacity: barOpacity,
-          child: styledTitle,
-        );
+        return Opacity(opacity: barOpacity, child: styledTitle);
       },
     );
   }
@@ -564,10 +558,7 @@ enum _ToolbarSlot { leading, title, actions }
 /// RTL is handled explicitly via [textDirection]; no assumptions are made
 /// about screen vs. logical coordinates.
 class _ToolbarLayout extends MultiChildLayoutDelegate {
-  _ToolbarLayout({
-    required this.centerTitle,
-    required this.textDirection,
-  });
+  _ToolbarLayout({required this.centerTitle, required this.textDirection});
 
   final bool centerTitle;
   final TextDirection textDirection;
@@ -595,10 +586,7 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
       leadingWidth = ls.width;
       positionChild(
         _ToolbarSlot.leading,
-        Offset(
-          _isLTR ? 0.0 : size.width - ls.width,
-          _centreY(size, ls),
-        ),
+        Offset(_isLTR ? 0.0 : size.width - ls.width, _centreY(size, ls)),
       );
     }
 
@@ -611,10 +599,7 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
       actionsWidth = as.width;
       positionChild(
         _ToolbarSlot.actions,
-        Offset(
-          _isLTR ? size.width - as.width : 0.0,
-          _centreY(size, as),
-        ),
+        Offset(_isLTR ? size.width - as.width : 0.0, _centreY(size, as)),
       );
     }
 
@@ -636,10 +621,7 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
       // Centre on the full bar width (not just the constrained zone).
       positionChild(
         _ToolbarSlot.title,
-        Offset(
-          (size.width - ts.width) / 2.0,
-          _centreY(size, ts),
-        ),
+        Offset((size.width - ts.width) / 2.0, _centreY(size, ts)),
       );
     } else {
       // Leading-aligned: title occupies the space between the two side widgets
@@ -667,10 +649,7 @@ class _ToolbarLayout extends MultiChildLayoutDelegate {
           ? startOccupied + startGap
           : size.width - startOccupied - startGap - ts.width;
 
-      positionChild(
-        _ToolbarSlot.title,
-        Offset(titleX, _centreY(size, ts)),
-      );
+      positionChild(_ToolbarSlot.title, Offset(titleX, _centreY(size, ts)));
     }
   }
 

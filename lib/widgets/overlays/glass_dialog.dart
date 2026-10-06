@@ -146,19 +146,22 @@ class GlassDialog extends StatelessWidget {
     this.quality,
     this.maxWidth = 280,
   }) : assert(
-          actions.length > 0 && actions.length <= 3,
-          'GlassDialog must have 1-3 actions',
-        );
+         actions.length > 0 && actions.length <= 3,
+         'GlassDialog must have 1-3 actions',
+       );
 
   static const _actionButtonShape = LiquidRoundedSuperellipse(borderRadius: 12);
 
   // Cache default colors to avoid allocations
-  static const _defaultGlowColor =
-      Color(0x4DFFFFFF); // white.withValues(alpha: 0.3)
-  static const _destructiveGlowColor =
-      Color(0x4DFF0000); // red.withValues(alpha: 0.3)
-  static const _primaryGlowColor =
-      Color(0x4D0000FF); // blue.withValues(alpha: 0.3)
+  static const _defaultGlowColor = Color(
+    0x4DFFFFFF,
+  ); // white.withValues(alpha: 0.3)
+  static const _destructiveGlowColor = Color(
+    0x4DFF0000,
+  ); // red.withValues(alpha: 0.3)
+  static const _primaryGlowColor = Color(
+    0x4D0000FF,
+  ); // blue.withValues(alpha: 0.3)
 
   // ===========================================================================
   // Content Properties
@@ -325,8 +328,9 @@ class GlassDialog extends StatelessWidget {
                     message!,
                     style: TextStyle(
                       fontSize: 14,
-                      color:
-                          CupertinoColors.secondaryLabel.resolveFrom(context),
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
                       height: 1.4,
                     ),
                     textAlign: TextAlign.center,
@@ -335,10 +339,7 @@ class GlassDialog extends StatelessWidget {
                 ],
 
                 // Custom content
-                if (content != null) ...[
-                  content!,
-                  const SizedBox(height: 8),
-                ],
+                if (content != null) ...[content!, const SizedBox(height: 8)],
 
                 const SizedBox(height: 12),
 
@@ -361,9 +362,7 @@ class GlassDialog extends StatelessWidget {
           final action = entry.value;
           return Expanded(
             child: Padding(
-              padding: EdgeInsetsDirectional.only(
-                start: index > 0 ? 8 : 0,
-              ),
+              padding: EdgeInsetsDirectional.only(start: index > 0 ? 8 : 0),
               child: _buildActionButton(action, context),
             ),
           );
@@ -378,9 +377,7 @@ class GlassDialog extends StatelessWidget {
         final index = entry.key;
         final action = entry.value;
         return Padding(
-          padding: EdgeInsets.only(
-            top: index > 0 ? 8 : 0,
-          ),
+          padding: EdgeInsets.only(top: index > 0 ? 8 : 0),
           child: _buildActionButton(action, context),
         );
       }).toList(),

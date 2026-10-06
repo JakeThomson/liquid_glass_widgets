@@ -115,7 +115,7 @@ class GlassPullDownButton extends StatelessWidget {
 
     final effectiveTextColor =
         CupertinoTheme.of(context).textTheme.textStyle.color ??
-            CupertinoColors.label;
+        CupertinoColors.label;
 
     return GlassMenu(
       menuWidth: menuWidth,

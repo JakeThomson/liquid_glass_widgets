@@ -15,7 +15,6 @@ import '../../theme/glass_theme_data.dart';
 // in debug mode to emit a helpful error if setup was skipped.
 // Marked as visible for testing — do not use in production code.
 @visibleForTesting
-
 /// Whether the initialization guard is enabled.
 bool glassPageInitializeGuardEnabled = true;
 
@@ -381,8 +380,9 @@ class _GlassPageState extends State<GlassPage> {
       GlassStatusBarStyle.none => false,
     };
 
-    final SystemUiOverlayStyle newStyle =
-        useLightIcons ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
+    final SystemUiOverlayStyle newStyle = useLightIcons
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark;
 
     // Save the current style once so we can restore it on dispose.
     _previousOverlayStyle ??= SystemUiOverlayStyle.light;
@@ -411,7 +411,8 @@ class _GlassPageState extends State<GlassPage> {
     // Read the adaptive quality ceiling. Only used to gate the expensive
     // background texture capture — rendering quality per-widget is handled
     // automatically by GlassThemeHelpers.resolveQuality() inside each widget.
-    final quality = GlassAdaptiveScopeData.maybeOf(context)?.effectiveQuality ??
+    final quality =
+        GlassAdaptiveScopeData.maybeOf(context)?.effectiveQuality ??
         GlassQuality.premium;
 
     final bool doSample = _effectiveSampling && quality != GlassQuality.minimal;
@@ -458,10 +459,7 @@ class _GlassPageState extends State<GlassPage> {
     // This is the "special page" escape hatch — one level below app theme,
     // one level above individual widget settings.
     if (widget.themeOverride != null) {
-      content = GlassTheme(
-        data: widget.themeOverride!,
-        child: content,
-      );
+      content = GlassTheme(data: widget.themeOverride!, child: content);
     }
 
     // Wrap in AnnotatedRegion so the status bar style sticks even on
