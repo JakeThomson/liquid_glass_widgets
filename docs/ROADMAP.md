@@ -157,9 +157,8 @@ Ideas under consideration. None committed.
 - [ ] **`GlassNavigationTransition` pinning as default** — the `.pinned` constructor
   is the transition vehicle; once `GlassBarItem` reaches parity with the widget API,
   a major release can make the data-driven API the plain `GlassAppBar`. Remaining
-  parity work: text/prominent item styles, `GlassBarItem.spacer()` rendering with
-  multi-capsule grouping. The pinned `leading` API and per-item backgrounds
-  landed in 1.2.
+  parity work: text/prominent item styles. The pinned `leading` API and
+  per-item backgrounds landed in 1.2, and `GlassBarItem.spacer()` has since.
 - [ ] **Unify lone bar-item sizing** (2.0) — a group holding a single item renders
   at the 46pt icon-slot height when its items are
   `GlassBarItemBackground.shared`, and at the 44pt back-button diameter when they

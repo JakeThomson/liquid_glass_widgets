@@ -595,9 +595,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   /// The leading slot: the back button where the route shows one, followed by
   /// the declared leading groups.
   Widget? _buildLeading(BuildContext context) {
-    final groups = groupGlassNavBarItems(
-      widget.leading.whereType<GlassBarActionItem>().toList(),
-    );
+    final groups = groupGlassNavBarItems(widget.leading);
     final slot = <Widget>[
       if (_showsBack) _buildBackButton(context),
       for (final group in groups) _buildGroup(group),
@@ -613,9 +611,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
 
   /// The trailing slot: one widget per shell the actions resolve to.
   List<Widget> _buildActions() {
-    final groups = groupGlassNavBarItems(
-      widget.actions.whereType<GlassBarActionItem>().toList(),
-    );
+    final groups = groupGlassNavBarItems(widget.actions);
     return [for (final group in groups) _buildGroup(group)];
   }
 
@@ -627,8 +623,10 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   }) {
     return groupGlassNavBarItems(
       items
-          .whereType<GlassBarActionItem>()
-          .where((item) => item.goesVertical == vertical)
+          // A spacer stays on both sides, to split whichever items it is
+          // between.
+          .where((item) =>
+              item is! GlassBarActionItem || item.goesVertical == vertical)
           .toList(),
       axis: vertical ? Axis.vertical : Axis.horizontal,
     );
@@ -724,16 +722,6 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
 
   @override
   Widget build(BuildContext context) {
-    // Checked here rather than in the pinned host so the in-route fallback
-    // path reports it too instead of silently dropping it.
-    assert(
-      !widget.actions.any((i) => i is GlassBarSpacer) &&
-          !widget.leading.any((i) => i is GlassBarSpacer),
-      'GlassBarItem.spacer() is not rendered yet: a run of items renders as a '
-      'single glass capsule. Splitting a run with a spacer is a follow-up; '
-      'GlassBarItemBackground.separate already gives one item its own shell.',
-    );
-
     final verticalBar = GlassVerticalBar.maybeOf(context);
     Widget bar = widget.builder(
       context,

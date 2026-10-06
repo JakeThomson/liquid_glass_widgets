@@ -204,11 +204,10 @@ sealed class GlassBarItem {
   /// Splits the shared glass background, mirroring SwiftUI's
   /// `ToolbarSpacer(.fixed)` and UIKit's `UIBarButtonItem.fixedSpace`.
   ///
-  /// Items on either side of a spacer render in separate glass capsules.
-  ///
-  /// Currently parsed and validated but not yet rendered — a cluster
-  /// containing a spacer asserts in debug mode. Multi-capsule grouping is a
-  /// follow-up.
+  /// Items on either side of a spacer render in separate glass capsules, the
+  /// standard gap apart. Across a route transition each capsule follows its
+  /// items, matched by `id` where they have one, and a capsule that only one
+  /// route has buds out of the one beside it, or merges back into it.
   const factory GlassBarItem.spacer() = GlassBarSpacer;
 }
 

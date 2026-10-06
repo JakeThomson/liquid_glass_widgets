@@ -141,6 +141,14 @@ bar.
   visibility instead of fading it under a layer, which a glass surface cannot
   survive. Two `own` items matched across a route change take turns rather
   than cross-fading, since each would sample the other.
+- **`GlassBarItem.spacer()` splits a capsule.** It mirrors SwiftUI's
+  `ToolbarSpacer(.fixed)` and UIKit's `fixedSpace`: the shared items on either
+  side of it form separate capsules, the standard gap apart. Across a route
+  change a capsule follows its items, and a capsule the destination adds
+  beside it buds out of it, joined by a liquid bridge until they part, as iOS
+  27 grows one shell out of another; one it drops merges back in. Under reduce
+  motion, the plain cross-fade, or a tinted item, the new capsule materializes
+  on its own instead.
 - **`id` mirrors `UIBarButtonItem.identifier`.** Items sharing an `id` across
   two routes are treated as the same item and hold their position while
   everything around them morphs. Without an `id`, items are matched
@@ -360,10 +368,9 @@ is a transition state, not the end state. On iOS 26 the pinned behaviour *is*
 the navigation bar, so the intended trajectory is:
 
 1. Land the data API additively (this release) — nothing shipped changes.
-2. Bring `GlassBarItem` to parity with the widget API. Menus, `leading` and
-   per-item backgrounds have landed; what remains is text styles (small) and
-   `GlassBarItem.spacer()` rendering (structural — splitting a run of shared
-   items into *n* capsules whose count can differ between the two routes).
+2. Bring `GlassBarItem` to parity with the widget API. Menus, `leading`,
+   per-item backgrounds and `GlassBarItem.spacer()` have landed; what remains
+   is text styles.
 3. At the next major, make pinning the default `GlassAppBar` and demote the
    widget-based `leading`/`actions` constructor to a legacy mode.
 
@@ -372,10 +379,6 @@ that future.
 
 ## Current limitations
 
-- `GlassBarItem.spacer()` (mirroring `ToolbarSpacer`/`fixedSpace`) is parsed
-  but not rendered yet; a cluster containing one asserts in debug mode.
-  `GlassBarItemBackground.separate` already gives one item its own shell,
-  which covers the common case.
 - A lone `shared` item still renders at the capsule's height rather than the
   circular button's, so a single action is 2pt larger than a single `separate`
   one. Unifying them would resize every shipped one-action bar, so it is

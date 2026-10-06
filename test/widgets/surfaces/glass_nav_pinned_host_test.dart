@@ -186,6 +186,99 @@ void main() {
     });
   });
 
+  group('spacers', () {
+    test('a spacer ends a run of shared items', () {
+      final a = _icon(CupertinoIcons.add);
+      final b = _icon(CupertinoIcons.search);
+      final c = _icon(CupertinoIcons.ellipsis);
+
+      final groups = groupGlassNavBarItems([a, b, const GlassBarSpacer(), c]);
+
+      expect(groups.map((g) => g.items), [
+        [a, b],
+        [c],
+      ]);
+    });
+
+    test('a spacer with nothing to split draws nothing', () {
+      final a = _icon(CupertinoIcons.add);
+      final b = _icon(CupertinoIcons.search);
+
+      final groups = groupGlassNavBarItems([
+        const GlassBarSpacer(),
+        a,
+        const GlassBarSpacer(),
+        const GlassBarSpacer(),
+        b,
+        const GlassBarSpacer(),
+      ]);
+
+      expect(groups.map((g) => g.items), [
+        [a],
+        [b],
+      ]);
+    });
+  });
+
+  group('group matching', () {
+    List<GlassNavBarGroup> groups(List<GlassBarItem> items) =>
+        groupGlassNavBarItems(items);
+
+    test('a group follows its items before it pairs by position', () {
+      final from = groups([
+        _icon(CupertinoIcons.add, id: 'add'),
+        _icon(CupertinoIcons.search, id: 'search'),
+      ]);
+      final to = groups([
+        _icon(CupertinoIcons.add, id: 'add'),
+        _icon(CupertinoIcons.search, id: 'search'),
+        const GlassBarSpacer(),
+        _icon(CupertinoIcons.ellipsis, id: 'more'),
+      ]);
+
+      final pairs = matchGlassNavGroups(from, to);
+
+      // Positionally the capsule would pair with the menu at the trailing
+      // edge; its items say it is the capsule a place further in.
+      expect(
+          pairs.singleWhere((p) => p.to == to.first).from, same(from.single));
+      expect(pairs.singleWhere((p) => p.to == to.last).from, isNull);
+    });
+
+    test('unidentified groups pair positionally from the anchored edge', () {
+      final from = groups([_icon(CupertinoIcons.add)]);
+      final to = groups([
+        _icon(CupertinoIcons.search),
+        const GlassBarSpacer(),
+        _icon(CupertinoIcons.bell),
+      ]);
+
+      final trailing = matchGlassNavGroups(from, to);
+      expect(trailing.singleWhere((p) => p.to == to.last).from, same(from[0]));
+      expect(trailing.singleWhere((p) => p.to == to.first).from, isNull);
+
+      final leading = matchGlassNavGroups(from, to, anchoredAtStart: true);
+      expect(leading.singleWhere((p) => p.to == to.first).from, same(from[0]));
+      expect(leading.singleWhere((p) => p.to == to.last).from, isNull);
+    });
+
+    test('a group no partner claims exits', () {
+      final from = groups([
+        _icon(CupertinoIcons.add, id: 'add'),
+        const GlassBarSpacer(),
+        _icon(CupertinoIcons.ellipsis, id: 'more'),
+      ]);
+      final to = groups([_icon(CupertinoIcons.add, id: 'add')]);
+
+      final pairs = matchGlassNavGroups(from, to);
+
+      expect(pairs, hasLength(2));
+      expect(pairs.first.from, same(from.first));
+      expect(pairs.last.from, same(from.last));
+      expect(pairs.last.to, isNull);
+    });
+  });
+
   group('item tap handlers', () {
     test('an icon item requires a handler, a custom item does not', () {
       var taps = 0;

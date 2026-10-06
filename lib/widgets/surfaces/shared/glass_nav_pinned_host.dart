@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 
 import '../../../src/renderer/liquid_glass_renderer.dart';
 import '../../../src/widgets/surfaces/vertical_bar_title_row.dart';
+import '../../../theme/glass_theme_helpers.dart';
 import '../../../types/glass_quality.dart';
 import '../../../utils/glass_spring.dart';
 import '../../effects/glass_materialize.dart';
@@ -15,6 +16,7 @@ import '../../interactive/glass_button.dart';
 import '../../overlays/glass_menu.dart';
 import '../../overlays/glass_menu_item.dart';
 import '../../overlays/glass_modal_sheet.dart';
+import '../../shared/adaptive_liquid_glass_layer.dart';
 import '../../shared/glass_accessibility_scope.dart';
 import '../../shared/glass_isolation_scope.dart';
 import '../glass_app_bar.dart';
@@ -485,7 +487,7 @@ class GlassNavPinnedHost extends StatelessWidget {
             for (final side in _BarSide.values)
               ...groupGlassNavBarItems(
                 _itemsFor(context, state, registration, side)
-                    .where((item) => item.goesVertical)
+                    .where((item) => _goesInStrip(item, vertical: true))
                     .toList(),
                 axis: Axis.vertical,
               ),
@@ -501,7 +503,7 @@ class GlassNavPinnedHost extends StatelessWidget {
           for (final side in _BarSide.values)
             ...groupGlassNavBarItems(
               _itemsFor(context, state, registration, side)
-                  .where((item) => !item.goesVertical)
+                  .where((item) => _goesInStrip(item, vertical: false))
                   .toList(),
             ),
         ];
@@ -662,11 +664,13 @@ class GlassNavBarGroup {
 ///
 /// Runs of [GlassBarItemBackground.shared] items collapse into one group;
 /// every other item stands alone, so it can be given its own shell or none.
+/// A [GlassBarItem.spacer] ends a run, so the items either side of it draw
+/// separate shells.
 ///
 /// Shared with [GlassAppBar]'s in-route fallback; this library is not exported
 /// from the package barrel.
 List<GlassNavBarGroup> groupGlassNavBarItems(
-  List<GlassBarActionItem> items, {
+  List<GlassBarItem> items, {
   Axis axis = Axis.horizontal,
 }) {
   final groups = <GlassNavBarGroup>[];
@@ -683,6 +687,11 @@ List<GlassNavBarGroup> groupGlassNavBarItems(
   }
 
   for (final item in items) {
+    // A spacer: the only item that is not an action.
+    if (item is! GlassBarActionItem) {
+      flushRun();
+      continue;
+    }
     assert(
       item.tintColor == null ||
           item.background != GlassBarItemBackground.shared,
@@ -828,27 +837,27 @@ List<GlassNavBarGroup> fitGlassNavStripGroups(
   ];
 }
 
-/// Whether a group draws anything at [state]'s progress.
+/// How much of a group is drawn at [state]'s progress: its materialize phase,
+/// or 1.0 for a group both routes have.
 ///
-/// The cluster asks before laying out, so a group that is switched off takes
-/// no gap in the row either. Asked of the materialize phase rather than of a
-/// hard switch: a group part-way through its window is still drawing, and
-/// dropping it there would pop the very transition the window exists to play.
-bool _groupShowsAt(
+/// The run asks before laying out, and a group at zero is not built at all.
+/// Asked of the materialize phase rather than of a hard switch: a group
+/// part-way through its window is still drawing, and dropping it there would
+/// pop the very transition the window exists to play.
+double _groupPhaseAt(
   BuildContext context,
   GlassNavPinnedState state,
   GlassNavBarGroup? from,
   GlassNavBarGroup? to,
 ) {
   final sides = _resolveGroupSides(from, to, state.flowProgress);
-  if (sides.from == null && sides.to == null) return false;
+  if (sides.from == null && sides.to == null) return 0.0;
   return GlassNavPinnedHost.phaseFor(
-        context,
-        state,
-        inFrom: sides.from != null,
-        inTo: sides.to != null,
-      ) >
-      0.0;
+    context,
+    state,
+    inFrom: sides.from != null,
+    inTo: sides.to != null,
+  );
 }
 
 /// Identity carried by the automatic back button.
@@ -891,25 +900,32 @@ GlassBarIconItem _backItem(
 }
 
 /// Everything one edge of the bar renders for [registration], back button
-/// included.
-List<GlassBarActionItem> _itemsFor(
+/// included, with its spacers still in place to split it into groups.
+List<GlassBarItem> _itemsFor(
   BuildContext context,
   GlassNavPinnedState state,
   GlassNavBarRegistration registration,
   _BarSide side,
 ) {
-  if (side == _BarSide.trailing) return registration.actionItems;
-  final leading = registration.leadingItems;
+  if (side == _BarSide.trailing) return registration.actions;
+  final leading = registration.leading;
   if (!registration.showsBackButton) return leading;
   return [_backItem(context, state, registration), ...leading];
 }
 
+/// Whether [item] belongs in iPhone Duo's strip, or in the row beside the
+/// title when [vertical] is false.
+///
+/// A spacer belongs in both, so it still splits whichever items it sits
+/// between.
+bool _goesInStrip(GlassBarItem item, {required bool vertical}) =>
+    item is! GlassBarActionItem || item.goesVertical == vertical;
+
 /// One run of pinned chrome: an edge of the bar, or iPhone Duo's strip.
 ///
 /// Resolves each route's groups through [groupsFor] and renders one
-/// [_PinnedGroup] per group. Groups are matched across routes by position,
-/// which is enough while a cluster is one shell in every case the package
-/// renders today.
+/// [_PinnedGroup] per pair [matchGlassNavGroups] makes of them, so a shell
+/// follows its items when a spacer changes how many groups a route has.
 class _PinnedSide extends StatelessWidget {
   const _PinnedSide({
     required this.state,
@@ -950,65 +966,574 @@ class _PinnedSide extends StatelessWidget {
     // the same forward morph plays toward the destination's clusters.
     final fromGroups = groupsFor(context, state.flowFrom);
     final toGroups = groupsFor(context, state.flowTo);
-    final count = math.max(fromGroups.length, toGroups.length);
-    if (count == 0) return const SizedBox.shrink();
+    if (fromGroups.isEmpty && toGroups.isEmpty) return const SizedBox.shrink();
+
+    // The groups are laid out in reading order, so which end of the list sits
+    // against the edge the run is pinned to depends on the text direction.
+    final fromStart = axis == Axis.vertical ||
+        anchoredAtStart == (Directionality.of(context) == TextDirection.ltr);
+
+    // A group's place, counted from the pinned edge.
+    int? placeIn(List<GlassNavBarGroup> list, GlassNavBarGroup? group) {
+      if (group == null) return null;
+      final index = list.indexOf(group);
+      return fromStart ? index : list.length - 1 - index;
+    }
+
+    final shells = <_Shell>[
+      for (final pair in matchGlassNavGroups(
+        fromGroups,
+        toGroups,
+        anchoredAtStart: fromStart,
+      ))
+        (
+          from: pair.from,
+          to: pair.to,
+          fromPlace: placeIn(fromGroups, pair.from),
+          toPlace: placeIn(toGroups, pair.to),
+        ),
+    ];
+
+    // Keyed by the place a shell holds on the route it leaves, which is where
+    // it was drawn the frame before, at rest or mid-morph alike: a glass
+    // surface that remounts pops its backdrop. A group only the incoming route
+    // has takes its own place, which is where the next transition will find
+    // it — unless a shell that followed its items still holds that place.
+    final leaving = {
+      for (final shell in shells)
+        if (shell.fromPlace != null) shell.fromPlace,
+    };
+    Key keyOf(_Shell shell) {
+      final place = shell.fromPlace ?? shell.toPlace!;
+      if (shell.fromPlace != null || !leaving.contains(place)) {
+        return ValueKey<int>(place);
+      }
+      return ValueKey<({int entering})>((entering: place));
+    }
 
     // Under a presentation only the group the sheet came out of is still the
     // shell's; the route has the rest. See [GlassNavPinnedState.presenting].
     final presenting = state.presenting;
 
-    GlassNavBarGroup? groupAt(List<GlassNavBarGroup> list, int index) {
-      if (anchoredAtStart) {
-        return index < list.length ? list[index] : null;
-      }
-      final offset = count - list.length;
-      return (index >= offset && index - offset < list.length)
-          ? list[index - offset]
-          : null;
-    }
-
     bool holdsPresenting(GlassNavBarGroup? group) =>
         presenting == null || (group != null && group.contains(presenting));
+
+    // Shells move between their places on the clock their contents morph on.
+    final positionT = GlassNavMorphCurve.instance
+        .transform(GlassNavPinnedMetrics.morphProgressAt(state.flowProgress))
+        .clamp(0.0, 1.0);
+
+    // A group only one route has buds out of a neighbour both routes have,
+    // as iOS 27 grows it out of the shell beside it, and merges back into it
+    // on the way out. Both shells draw into the run's layer for the length of
+    // the transition, so their glass joins while they overlap and parts as
+    // they separate. Not under the plain cross-fade or reduce motion, where
+    // the group materializes on its own, and only between shells drawing the
+    // run's own material: grouped glass takes the layer's settings.
+    final budding = !state.settled &&
+        !state.crossFade &&
+        presenting == null &&
+        state.transition != GlassEffectTransition.identity &&
+        !GlassAccessibilityData.of(context).reduceMotion;
+    bool buds(GlassNavBarGroup group) =>
+        group.glass && group.items.every((item) => item.tintColor == null);
+
+    // The neighbour a group buds from: the one beyond it, which it pushes
+    // away, or else the one nearer the edge.
+    _Shell? partnerOf(_Shell shell) {
+      if (!budding || (shell.from != null) == (shell.to != null)) return null;
+      final entering = shell.from == null;
+      if (!buds(entering ? shell.to! : shell.from!)) return null;
+      final place = entering ? shell.toPlace! : shell.fromPlace!;
+      for (final offset in const [1, -1]) {
+        for (final other in shells) {
+          final from = other.from;
+          final to = other.to;
+          if (from == null || to == null || !buds(from) || !buds(to)) continue;
+          if ((entering ? other.toPlace : other.fromPlace) == place + offset) {
+            return other;
+          }
+        }
+      }
+      return null;
+    }
+
+    final partners = {for (final shell in shells) shell: partnerOf(shell)};
+
+    // A shell's thickness across a horizontal run at rest, interpolated as
+    // its group's is. See [_RunParentData.restCross].
+    double? restCrossOf(_Shell shell) => axis == Axis.vertical
+        ? null
+        : lerpDouble(
+            (shell.from ?? shell.to)!.crossExtent,
+            (shell.to ?? shell.from)!.crossExtent,
+            positionT,
+          );
+    final reshaping = partners.values.whereType<_Shell>().toSet();
+
+    final children = <Widget>[];
+    for (final shell in shells) {
+      if (!holdsPresenting(shell.to)) continue;
+      final partner = partners[shell];
+      final Widget group;
+      if (partner == null) {
+        final phase = _groupPhaseAt(context, state, shell.from, shell.to);
+        if (phase <= 0.0) continue;
+        // The room leads the glass: a shell has made most of its room while
+        // it is still faint, so it is never drawn over a neighbour at any
+        // strength that shows.
+        final room = Curves.easeOutQuint.transform(phase);
+        group = _RunChild(
+          key: keyOf(shell),
+          fromPlace: shell.fromPlace,
+          toPlace: shell.toPlace,
+          fromRoom: room,
+          toRoom: room,
+          restCross: restCrossOf(shell),
+          child: _PinnedGroup(
+            state: state,
+            from: shell.from,
+            to: shell.to,
+            anchoredAtStart: anchoredAtStart,
+            reshapes: reshaping.contains(shell),
+            grouped: reshaping.contains(shell),
+          ),
+        );
+      } else {
+        // A bud starts inside its partner, flush with the end it leaves
+        // from, and takes its full room on the route that has it, so the
+        // partner moves aside from the first frame; a merge runs the other
+        // way.
+        final entering = shell.from == null;
+        group = _RunChild(
+          key: keyOf(shell),
+          fromPlace: entering ? partner.fromPlace : shell.fromPlace,
+          toPlace: entering ? shell.toPlace : partner.toPlace,
+          fromRoom: entering ? 0.0 : 1.0,
+          toRoom: entering ? 1.0 : 0.0,
+          flushFar: entering
+              ? shell.toPlace! > partner.toPlace!
+              : shell.fromPlace! > partner.fromPlace!,
+          restCross: restCrossOf(shell),
+          child: _PinnedGroup(
+            state: state,
+            from: shell.from,
+            to: shell.to,
+            anchoredAtStart: anchoredAtStart,
+            buds: true,
+            grouped: true,
+          ),
+        );
+      }
+      children.add(group);
+    }
+
+    Widget run = _PinnedRun(
+      axis: axis,
+      anchoredAtStart: anchoredAtStart,
+      spacing: axis == Axis.vertical
+          ? GlassVerticalBarMetrics.spacing
+          : GlassNavPinnedMetrics.groupGap,
+      positionT: positionT,
+      children: children,
+    );
+
+    // Unconditional, so no shell remounts when a bud starts: with no grouped
+    // shell in it the layer has nothing to draw and paints straight through.
+    // The blend rises and falls with the parting: none while the bud is still
+    // inside its partner, where it would swell the partner's end, the most as
+    // a bridge between them, and none again by the time they reach their
+    // places.
+    run = AdaptiveLiquidGlassLayer(
+      settings: GlassThemeHelpers.resolveSettings(
+        context,
+        explicit: DefaultButtonSettings.of(context),
+      ),
+      quality: GlassThemeHelpers.resolveQuality(context),
+      blendAmount: _budBlend * math.sin(math.pi * positionT),
+      platformViewBackdrop: state.flowTo.platformViewBackdrop,
+      child: run,
+    );
 
     return Transform.scale(
       scale: coverageScale,
       alignment: scaleAlignment,
-      child: IgnorePointer(
-        ignoring: !state.settled,
-        child: Flex(
-          direction: axis,
-          mainAxisSize: MainAxisSize.min,
-          spacing: axis == Axis.vertical
-              ? GlassVerticalBarMetrics.spacing
-              : GlassNavPinnedMetrics.groupGap,
-          children: [
-            for (var i = 0; i < count; i++)
-              if (holdsPresenting(groupAt(toGroups, i)) &&
-                  _groupShowsAt(
-                    context,
-                    state,
-                    groupAt(fromGroups, i),
-                    groupAt(toGroups, i),
-                  ))
-                _PinnedGroup(
-                  // Keyed by position so a surviving shell keeps its element:
-                  // a glass surface that remounts mid-morph pops its backdrop.
-                  key: ValueKey<int>(i),
-                  state: state,
-                  from: groupAt(fromGroups, i),
-                  to: groupAt(toGroups, i),
-                  anchoredAtStart: anchoredAtStart,
-                ),
-          ],
-        ),
-      ),
+      child: IgnorePointer(ignoring: !state.settled, child: run),
     );
   }
+}
+
+/// How far apart, in logical pixels, a bud and its partner blend at the height
+/// of their parting.
+const double _budBlend = 20.0;
+
+/// One shell [_PinnedSide] draws: a group on either route or both, and where
+/// each sits counted from the pinned edge.
+typedef _Shell = ({
+  GlassNavBarGroup? from,
+  GlassNavBarGroup? to,
+  int? fromPlace,
+  int? toPlace,
+});
+
+/// Where a shell sits in each route's run, and how much of it is drawn.
+class _RunParentData extends ContainerBoxParentData<RenderBox> {
+  /// Place on the outgoing route, counted from the pinned edge.
+  int? fromPlace;
+
+  /// Place on the incoming route, counted from the pinned edge.
+  int? toPlace;
+
+  /// How much of its room the shell takes in the outgoing run, from 0 to 1.
+  double fromRoom = 1.0;
+
+  /// How much of its room the shell takes in the incoming run, from 0 to 1.
+  double toRoom = 1.0;
+
+  /// Whether, sharing a place with the shell it buds from or merges into, the
+  /// shell sits flush with that shell's far end rather than its near one.
+  bool flushFar = false;
+
+  /// The shell's thickness across the run at rest, without its gel swell.
+  ///
+  /// A shell in a horizontal bar walks back half of its swell itself, so it
+  /// is placed across the run by this rather than by its swollen size;
+  /// placed by that, the shells beside a swelling one would sink. Null in the
+  /// strip, where groups centre across their column as they are.
+  double? restCross;
+}
+
+/// Lays a run's shells out at the places [_RunChild] gives them, interpolated
+/// from the outgoing route's run to the incoming one's.
+///
+/// A [Flex] would drop a shell from its layout the frame it stops drawing, and
+/// jump everything beyond it by its width. Here a shell's room grows and
+/// shrinks with its materialize phase instead, so its neighbours open or close
+/// the gap as it materializes or dissolves; and a shell whose items moved to
+/// another place travels there rather than swapping with its neighbours at the
+/// configuration swap.
+class _PinnedRun extends MultiChildRenderObjectWidget {
+  const _PinnedRun({
+    required this.axis,
+    required this.anchoredAtStart,
+    required this.spacing,
+    required this.positionT,
+    required super.children,
+  });
+
+  /// The direction shells run in.
+  final Axis axis;
+
+  /// Whether places count from the box's left edge — its top edge in the
+  /// strip — rather than its right.
+  final bool anchoredAtStart;
+
+  /// Gap between two shells.
+  final double spacing;
+
+  /// Interpolation from the outgoing run to the incoming one.
+  final double positionT;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderPinnedRun(
+        axis: axis,
+        anchoredAtStart: anchoredAtStart,
+        spacing: spacing,
+        positionT: positionT,
+      );
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderPinnedRun renderObject) {
+    renderObject
+      ..axis = axis
+      ..anchoredAtStart = anchoredAtStart
+      ..spacing = spacing
+      ..positionT = positionT;
+  }
+}
+
+class _RenderPinnedRun extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _RunParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _RunParentData> {
+  _RenderPinnedRun({
+    required Axis axis,
+    required bool anchoredAtStart,
+    required double spacing,
+    required double positionT,
+  })  : _axis = axis,
+        _anchoredAtStart = anchoredAtStart,
+        _spacing = spacing,
+        _positionT = positionT;
+
+  Axis _axis;
+  set axis(Axis value) {
+    if (_axis == value) return;
+    _axis = value;
+    markNeedsLayout();
+  }
+
+  bool _anchoredAtStart;
+  set anchoredAtStart(bool value) {
+    if (_anchoredAtStart == value) return;
+    _anchoredAtStart = value;
+    markNeedsLayout();
+  }
+
+  double _spacing;
+  set spacing(double value) {
+    if (_spacing == value) return;
+    _spacing = value;
+    markNeedsLayout();
+  }
+
+  double _positionT;
+  set positionT(double value) {
+    if (_positionT == value) return;
+    _positionT = value;
+    markNeedsLayout();
+  }
+
+  bool get _vertical => _axis == Axis.vertical;
+
+  double _mainOf(Size size) => _vertical ? size.height : size.width;
+
+  double _crossOf(Size size) => _vertical ? size.width : size.height;
+
+  /// Only the cross axis is bounded, as a [Flex] bounds its children.
+  BoxConstraints _childConstraints(BoxConstraints constraints) => _vertical
+      ? BoxConstraints(maxWidth: constraints.maxWidth)
+      : BoxConstraints(maxHeight: constraints.maxHeight);
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _RunParentData) {
+      child.parentData = _RunParentData();
+    }
+  }
+
+  /// The run's size, and each child's distance from the anchored edge and
+  /// offset across the run, in child order, given each child's size.
+  (Size, List<double>, List<double>) _arrange(
+    BoxConstraints constraints,
+    Size Function(RenderBox child) sizeOf,
+  ) {
+    final datas = <_RunParentData>[];
+    final sizes = <Size>[];
+    var child = firstChild;
+    while (child != null) {
+      final data = child.parentData! as _RunParentData;
+      datas.add(data);
+      sizes.add(sizeOf(child));
+      child = data.nextSibling;
+    }
+
+    // How far a shell sits from the anchored edge on one route: the room
+    // taken by every shell nearer the edge there, each scaled by how much of
+    // it that shell takes. A shell that takes none there is budding from, or
+    // merging into, the shell whose place it shares, and sits inside it.
+    double? distanceOn(int index, {required bool from}) {
+      int? placeOf(_RunParentData data) => from ? data.fromPlace : data.toPlace;
+      double roomOf(_RunParentData data) => from ? data.fromRoom : data.toRoom;
+      final place = placeOf(datas[index]);
+      if (place == null) return null;
+      var distance = 0.0;
+      for (var j = 0; j < datas.length; j++) {
+        final other = placeOf(datas[j]);
+        if (other == null || other >= place) continue;
+        distance += (_mainOf(sizes[j]) + _spacing) * roomOf(datas[j]);
+      }
+      if (roomOf(datas[index]) == 0.0 && datas[index].flushFar) {
+        for (var j = 0; j < datas.length; j++) {
+          if (j == index || placeOf(datas[j]) != place) continue;
+          if (roomOf(datas[j]) == 0.0) continue;
+          distance += _mainOf(sizes[j]) - _mainOf(sizes[index]);
+          break;
+        }
+      }
+      return distance;
+    }
+
+    // Across the run every shell centres on the thickest one at rest, so a
+    // swelling shell and its neighbours share a centre line.
+    var rest = 0.0;
+    for (var i = 0; i < datas.length; i++) {
+      rest = math.max(rest, datas[i].restCross ?? _crossOf(sizes[i]));
+    }
+
+    final distances = <double>[];
+    final offsets = <double>[];
+    var main = 0.0;
+    var cross = 0.0;
+    for (var i = 0; i < datas.length; i++) {
+      final from = distanceOn(i, from: true);
+      final to = distanceOn(i, from: false);
+      final distance = lerpDouble(from ?? to, to ?? from, _positionT)!;
+      distances.add(distance);
+      main = math.max(main, distance + _mainOf(sizes[i]));
+      final offset = (rest - (datas[i].restCross ?? _crossOf(sizes[i]))) / 2.0;
+      offsets.add(offset);
+      cross = math.max(cross, offset + _crossOf(sizes[i]));
+    }
+    return (
+      constraints.constrain(_vertical ? Size(cross, main) : Size(main, cross)),
+      distances,
+      offsets,
+    );
+  }
+
+  @override
+  void performLayout() {
+    final childConstraints = _childConstraints(constraints);
+    var child = firstChild;
+    while (child != null) {
+      child.layout(childConstraints, parentUsesSize: true);
+      child = childAfter(child);
+    }
+
+    final (runSize, distances, offsets) =
+        _arrange(constraints, (child) => child.size);
+    size = runSize;
+
+    var i = 0;
+    child = firstChild;
+    while (child != null) {
+      final data = child.parentData! as _RunParentData;
+      final distance = distances[i];
+      final main = _anchoredAtStart
+          ? distance
+          : _mainOf(size) - distance - _mainOf(child.size);
+      final cross = data.restCross == null
+          ? (_crossOf(size) - _crossOf(child.size)) / 2.0
+          : offsets[i];
+      i++;
+      data.offset = _vertical ? Offset(cross, main) : Offset(main, cross);
+      child = data.nextSibling;
+    }
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final childConstraints = _childConstraints(constraints);
+    return _arrange(
+      constraints,
+      (child) => child.getDryLayout(childConstraints),
+    ).$1;
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
+}
+
+/// Gives one shell its places in a [_PinnedRun].
+class _RunChild extends ParentDataWidget<_RunParentData> {
+  const _RunChild({
+    super.key,
+    required this.fromPlace,
+    required this.toPlace,
+    required this.fromRoom,
+    required this.toRoom,
+    this.flushFar = false,
+    this.restCross,
+    required super.child,
+  });
+
+  final int? fromPlace;
+  final int? toPlace;
+  final double fromRoom;
+  final double toRoom;
+  final bool flushFar;
+  final double? restCross;
+
+  @override
+  void applyParentData(RenderObject renderObject) {
+    final data = renderObject.parentData! as _RunParentData;
+    if (data.fromPlace == fromPlace &&
+        data.toPlace == toPlace &&
+        data.fromRoom == fromRoom &&
+        data.toRoom == toRoom &&
+        data.flushFar == flushFar &&
+        data.restCross == restCross) {
+      return;
+    }
+    data
+      ..fromPlace = fromPlace
+      ..toPlace = toPlace
+      ..fromRoom = fromRoom
+      ..toRoom = toRoom
+      ..flushFar = flushFar
+      ..restCross = restCross;
+    final parent = renderObject.parent;
+    if (parent is RenderObject) parent.markNeedsLayout();
+  }
+
+  @override
+  Type get debugTypicalAncestorWidgetClass => _PinnedRun;
 }
 
 // =============================================================================
 // Item matching
 // =============================================================================
+
+/// Pairs two routes' groups so a shell that survives the transition morphs in
+/// place.
+///
+/// [matchGlassNavActions] one level up. A group pairs first with the group
+/// holding any of its items — by identity, or by `id` where the item has one —
+/// so a shell follows its items when a spacer adds or removes a group beside
+/// it. Groups left over pair by position, counted from the anchored edge as
+/// [anchoredAtStart] describes, and anything still unpaired enters or exits
+/// on its own.
+///
+/// Returned with the incoming groups first, in order, and the groups only the
+/// outgoing route has after them.
+///
+/// Public for testing; held back from the barrel's `show` clause.
+@visibleForTesting
+List<({GlassNavBarGroup? from, GlassNavBarGroup? to})> matchGlassNavGroups(
+  List<GlassNavBarGroup> from,
+  List<GlassNavBarGroup> to, {
+  bool anchoredAtStart = false,
+}) {
+  int slotOf(int index, int length) =>
+      anchoredAtStart ? index : length - 1 - index;
+
+  final matches = List<int?>.filled(to.length, null);
+  final usedFrom = <int>{};
+
+  // Shared items first, for every group, so no group's positional fallback
+  // can take a partner another group's items have already claimed.
+  for (var t = 0; t < to.length; t++) {
+    for (var f = 0; f < from.length; f++) {
+      if (usedFrom.contains(f) || !to[t].items.any(from[f].contains)) continue;
+      matches[t] = f;
+      usedFrom.add(f);
+      break;
+    }
+  }
+  for (var t = 0; t < to.length; t++) {
+    if (matches[t] != null) continue;
+    final wanted = slotOf(t, to.length);
+    for (var f = 0; f < from.length; f++) {
+      if (usedFrom.contains(f) || slotOf(f, from.length) != wanted) continue;
+      matches[t] = f;
+      usedFrom.add(f);
+      break;
+    }
+  }
+
+  return [
+    for (var t = 0; t < to.length; t++)
+      (from: matches[t] == null ? null : from[matches[t]!], to: to[t]),
+    for (var f = 0; f < from.length; f++)
+      if (!usedFrom.contains(f)) (from: from[f], to: null),
+  ];
+}
 
 /// One item's place in the morph between two routes' action clusters.
 ///
@@ -1630,11 +2155,13 @@ class _ClusterChild extends ParentDataWidget<_ClusterParentData> {
 /// which are not glass — cross-fade freely either way.
 class _PinnedGroup extends StatefulWidget {
   const _PinnedGroup({
-    super.key,
     required this.state,
     required this.from,
     required this.to,
     required this.anchoredAtStart,
+    this.buds = false,
+    this.reshapes = false,
+    this.grouped = false,
   });
 
   final GlassNavPinnedState state;
@@ -1647,6 +2174,23 @@ class _PinnedGroup extends StatefulWidget {
 
   /// Whether items are placed relative to the box's left edge.
   final bool anchoredAtStart;
+
+  /// Whether this group, which only one route has, buds out of a neighbour or
+  /// merges back into it rather than materializing on its own.
+  ///
+  /// Its glass stays solid throughout, hidden inside the neighbour's until
+  /// they part, and only its items fade.
+  final bool buds;
+
+  /// Whether a group is budding out of this one or merging into it.
+  ///
+  /// The shell reshapes around the bud, so its items blur through the morph
+  /// as they would if they had changed.
+  final bool reshapes;
+
+  /// Whether the shell draws into the run's shared layer rather than one of
+  /// its own, so its glass can join a neighbour's.
+  final bool grouped;
 
   @override
   State<_PinnedGroup> createState() => _PinnedGroupState();
@@ -1734,7 +2278,8 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // frozen while its neighbours morph.
     final overshoot = (springT - 1.0).clamp(0.0, 1.0);
     final morphing = fromItems.isNotEmpty && toItems.isNotEmpty;
-    final changes = fromItems.length != toItems.length ||
+    final changes = widget.reshapes ||
+        fromItems.length != toItems.length ||
         slots.any((s) => s.isEnter || s.isExit || s.crossFades);
     final morphScale = !morphing || !changes || state.settled || state.crossFade
         ? 1.0
@@ -1753,12 +2298,14 @@ class _PinnedGroupState extends State<_PinnedGroup> {
     // Drives the materialize window for a group that only one route has. The
     // side has already dropped groups whose phase is zero, so this is only
     // ever a partial phase or a full one.
-    final phase = GlassNavPinnedHost.phaseFor(
-      context,
-      state,
-      inFrom: fromItems.isNotEmpty,
-      inTo: toItems.isNotEmpty,
-    );
+    final phase = widget.buds
+        ? 1.0
+        : GlassNavPinnedHost.phaseFor(
+            context,
+            state,
+            inFrom: fromItems.isNotEmpty,
+            inTo: toItems.isNotEmpty,
+          );
 
     // Geometry for a side that does not exist comes from the side that does,
     // so an entering or exiting group holds its shape rather than resizing.
@@ -1804,7 +2351,9 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                     GlassNavPinnedMetrics.crossFadeStart))
             .clamp(0.0, 1.0);
 
-    final noDestination = toItems.isEmpty && !morphing;
+    // A bud's items fade on the item windows, as an item entering or leaving
+    // a shell does, since its glass never dissolves.
+    final noDestination = toItems.isEmpty && !morphing && !widget.buds;
 
     // Glyph blur, the other half of the native read. An outgoing glyph blurs
     // away as it fades; an incoming one arrives soft and sharpens last. Item
@@ -1889,9 +2438,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
         if (toItem == null) {
           // Exiting item: smoothly fade out with (1 - q) across the transition window.
           // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
+          // A bud is the same: its partner makes room for it from the start.
           final visible = state.settled
               ? !showsIncoming
-              : (morphing || (fadesWithGroup ? phase > 0.0 : q < 1.0));
+              : (morphing ||
+                  widget.buds ||
+                  (fadesWithGroup ? phase > 0.0 : q < 1.0));
           if (visible) {
             children.add(clusterChild(
               slot: i,
@@ -1939,9 +2491,12 @@ class _PinnedGroupState extends State<_PinnedGroup> {
         if (fromItem == null) {
           // Entering item: smoothly fade in with q across the transition window.
           // While transition is in-flight, keep mounted in morphing groups so natural width is preserved.
+          // A bud is the same: its partner makes room for it from the start.
           final visible = state.settled
               ? showsIncoming
-              : (morphing || (fadesWithGroup ? phase > 0.0 : q > 0.0));
+              : (morphing ||
+                  widget.buds ||
+                  (fadesWithGroup ? phase > 0.0 : q > 0.0));
           if (visible) {
             children.add(clusterChild(
               slot: i,
@@ -1974,7 +2529,13 @@ class _PinnedGroupState extends State<_PinnedGroup> {
                 : crossFades
                     ? (state.settled ? 1.0 : q)
                     : 1.0,
-            blurSigma: crossFades ? inSigma : 0.0,
+            // Reshaping, the item blurs on the way into the morph and
+            // sharpens on the way out, as the shell's do natively.
+            blurSigma: crossFades
+                ? inSigma
+                : widget.reshapes
+                    ? math.min(outSigma, inSigma)
+                    : 0.0,
             item: toItem,
             child: _ClusterItem(
               item: toItem,
@@ -2119,7 +2680,7 @@ class _PinnedGroupState extends State<_PinnedGroup> {
       width: null,
       height: null,
       stretch: stretch,
-      useOwnLayer: true,
+      useOwnLayer: !widget.grouped,
       canRequestFocus: false,
       excludeFromSemantics: true,
       settings: settings,

@@ -318,7 +318,7 @@ class _ListScreenState extends State<_ListScreen> {
 
 /// The detail screen's trailing items, in the order the native strip reads
 /// them: the pinned compose button first, then share and favourite sharing a
-/// capsule, then the overflow menu on its own.
+/// capsule, then a spacer, then the overflow menu on its own.
 List<GlassBarItem> _detailActions() => [
       GlassBarItem.icon(
         icon: const Icon(CupertinoIcons.square_pencil),
@@ -336,10 +336,10 @@ List<GlassBarItem> _detailActions() => [
         label: 'Favourite',
         onTap: () {},
       ),
+      const GlassBarItem.spacer(),
       GlassBarItem.menu(
         icon: const Icon(CupertinoIcons.ellipsis),
         label: 'More',
-        background: GlassBarItemBackground.separate,
         menuItems: [
           GlassMenuItem(
             title: 'Copy',

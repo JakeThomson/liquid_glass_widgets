@@ -630,13 +630,31 @@ void main() {
     });
   });
 
-  testWidgets('spacers are rejected until multi-capsule rendering lands',
+  testWidgets('a spacer splits the in-route actions into two capsules',
       (tester) async {
-    await tester.pumpWidget(shellApp(GlassPinnedBarChrome(
-      actions: const [GlassBarItem.spacer()],
-      builder: (context, hoisted) => const SizedBox(),
-    )));
-    expect(tester.takeException(), isAssertionError);
+    late GlassPinnedBarChromeData data;
+    await tester.pumpWidget(shellApp(
+      GlassPinnedBarChrome(
+        actions: [
+          GlassBarItem.icon(icon: const Icon(CupertinoIcons.add), onTap: () {}),
+          GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.search), onTap: () {}),
+          const GlassBarItem.spacer(),
+          GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.ellipsis), onTap: () {}),
+        ],
+        builder: (context, chrome) {
+          data = chrome;
+          return Row(children: chrome.actions);
+        },
+      ),
+      shell: false,
+    ));
+    await settle(tester);
+
+    // One widget per shell, which the shell's own cluster matches.
+    expect(data.actions, hasLength(2));
+    expect(find.byType(GlassButtonGroup), findsNWidgets(2));
   });
 }
 
