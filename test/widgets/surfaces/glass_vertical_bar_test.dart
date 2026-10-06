@@ -592,6 +592,22 @@ void main() {
       expect(find.byType(GlassTextField), findsNothing);
       expect(find.text('Library body'), findsOneWidget);
     });
+
+    testDuo('leaves search out without its pill', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(
+        shellApp(const _SearchableTabsScreen(showPill: false)),
+      );
+      await settle(tester);
+
+      // The capsule holds the four tabs alone and ends where search would.
+      expect(find.byType(TabBarVerticalLayout), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.search), findsNothing);
+      final profile = tester.getCenter(
+        find.byIcon(CupertinoIcons.person_crop_circle),
+      );
+      expect(profile.dy, 678 - 24 - 6 - 25);
+    });
   });
 
   group('large titles in the strip', () {
@@ -1160,7 +1176,9 @@ class _TabsScreenState extends State<_TabsScreen> {
 }
 
 class _SearchableTabsScreen extends StatefulWidget {
-  const _SearchableTabsScreen();
+  const _SearchableTabsScreen({this.showPill = true});
+
+  final bool showPill;
 
   @override
   State<_SearchableTabsScreen> createState() => _SearchableTabsScreenState();
@@ -1179,6 +1197,7 @@ class _SearchableTabsScreenState extends State<_SearchableTabsScreen> {
           isSearchActive: _searching,
           searchConfig: GlassSearchBarConfig(
             onSearchToggle: (active) => setState(() => _searching = active),
+            showPill: widget.showPill,
           ),
           tabs: const [
             GlassTab(icon: Icon(CupertinoIcons.house), label: 'Home'),

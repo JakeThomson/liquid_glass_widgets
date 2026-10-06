@@ -6,6 +6,8 @@
 
 - **Vertical `GlassTabBar` asserted outside a `GlassScaffold` (fixes #ISSUE):** In iPhone Duo's vertical bar strip, the tab bar's capsule, search field and ✕ relied on the `GlassScaffold` around them for a glass layer, so at `GlassQuality.premium` a bar placed any other way failed the `renderLink != null` assertion. Each now brings its own layer, as the horizontal bar does; under a `GlassScaffold` nothing changes.
 
+- **`GlassTabBar.searchable` in iPhone Duo's vertical bar strip (fixes #ISSUE):** With `GlassSearchBarConfig.showPill` false the strip still ended the capsule with a search slot; it now leaves search out, as a native `TabView` without its search tab does. `GlassTabBar.searchable` and `GlassTabBar.minimizable` also take `passthroughOverPlatformView`, which only the internal layout accepted, so a bar over a map no longer has to drive that layout directly, which kept it horizontal in the strip.
+
 # 1.10.0
 
 ## Features

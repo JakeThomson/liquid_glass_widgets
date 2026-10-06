@@ -744,6 +744,30 @@ void main() {
       );
       expect(layout.backgroundQuality, equals(GlassQuality.minimal));
     });
+
+    testWidgets(
+        'forwards passthroughOverPlatformView to TabBarSearchableLayout',
+        (tester) async {
+      await tester.pumpWidget(_wrap(
+        SizedBox(
+          height: 150,
+          child: GlassTabBar.searchable(
+            tabs: [_tab('A'), _tab('B')],
+            selectedIndex: 0,
+            onTabSelected: (_) {},
+            searchConfig: searchConfig,
+            platformViewBackdrop: true,
+            passthroughOverPlatformView: true,
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final layout = tester.widget<TabBarSearchableLayout>(
+        find.byType(TabBarSearchableLayout),
+      );
+      expect(layout.passthroughOverPlatformView, isTrue);
+    });
   });
 
   // -------------------------------------------------------------------------
