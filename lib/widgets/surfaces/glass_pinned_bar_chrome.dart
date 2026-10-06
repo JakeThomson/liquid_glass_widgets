@@ -493,10 +493,15 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
           // using GlassBodyMode.clear — direct alpha-composite tinting that
           // preserves the exact design-token hex while retaining the specular
           // and Fresnel rim, matching iOS 26's coloured bar button behaviour.
+          // The tint replaces the body colour only: it starts from the bar's
+          // button settings, so the capsule keeps the outline and rim its
+          // neighbours get.
           final tintColor =
               group.items.length == 1 ? group.items.first.tintColor : null;
           final groupSettings = tintColor != null
-              ? LiquidGlassSettings(
+              ? (DefaultButtonSettings.of(context) ??
+                      const LiquidGlassSettings())
+                  .copyWith(
                   glassColor: tintColor,
                   bodyMode: GlassBodyMode.clear,
                 )
