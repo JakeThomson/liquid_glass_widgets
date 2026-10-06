@@ -188,12 +188,15 @@ class _TabBarVerticalLayoutState extends State<TabBarVerticalLayout> {
           onTap: onTap,
         );
 
+    // Each control brings its own layer, as the horizontal bar does, so the
+    // bar renders without a GlassScaffold above it to isolate it.
     final Widget capsule = collapsed
         ? GlassButton.custom(
             onTap: () => setState(() => _expanded = true),
             shape: const LiquidRoundedRectangle(borderRadius: width / 2),
             settings: widget.settings,
             quality: widget.quality,
+            useOwnLayer: true,
             platformViewBackdrop: widget.platformViewBackdrop,
             label: searching
                 ? search.hintText
@@ -218,6 +221,7 @@ class _TabBarVerticalLayoutState extends State<TabBarVerticalLayout> {
             shape: const LiquidRoundedRectangle(borderRadius: width / 2),
             settings: widget.settings,
             quality: widget.quality,
+            useOwnLayer: true,
             platformViewBackdrop: widget.platformViewBackdrop,
             canRequestFocus: false,
             excludeFromSemantics: true,
@@ -392,6 +396,7 @@ class _VerticalSearchField extends StatelessWidget {
             shape: LiquidRoundedRectangle(borderRadius: height / 2),
             settings: settings,
             quality: quality,
+            useOwnLayer: true,
           ),
         ),
         if (config.showsCancelButton) ...[
@@ -404,6 +409,7 @@ class _VerticalSearchField extends StatelessWidget {
             shape: const LiquidOval(),
             settings: settings,
             quality: quality,
+            useOwnLayer: true,
             icon: config.cancelIcon ??
                 Icon(
                   CupertinoIcons.xmark,
