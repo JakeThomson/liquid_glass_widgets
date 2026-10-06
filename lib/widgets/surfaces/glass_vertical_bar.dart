@@ -166,8 +166,9 @@ class GlassVerticalBarData {
 
   /// Distance from the top to the horizontal row that keeps the title.
   ///
-  /// [GlassVerticalBarMetrics.edgeMargin] on a screen. A modal sheet's own
-  /// strip measures it from the sheet's top edge, 16pt down.
+  /// [GlassVerticalBarMetrics.edgeMargin] on a screen, below the status bar
+  /// where it keeps a top inset. A modal sheet's own strip measures it from
+  /// the sheet's top edge, 16pt down.
   final double rowTop;
 
   /// Distance from the edge away from the strip to the horizontal row.
@@ -241,12 +242,17 @@ class GlassVerticalBar extends InheritedWidget {
 
   /// The strip the system has reserved, read from the view's insets.
   ///
-  /// iPhone Duo reports its strip only as a lateral inset: the status bar
-  /// moves into the strip, so the top inset is zero, and the strip's side
-  /// carries its full width. That is the only case with a zero top inset and
-  /// exactly one lateral inset — a regular iPhone in landscape also has no top
-  /// inset, but insets both sides equally (`(62, 0, 62, 20)` on iPhone 17), so
-  /// a single lateral inset is required rather than a particular width.
+  /// iPhone Duo reports its strip only as a lateral inset, which carries the
+  /// strip's full width on its side. Nothing else insets exactly one side: a
+  /// regular iPhone in landscape insets both equally (`(62, 0, 62, 20)` on
+  /// iPhone 17), and an iPad neither, so a single lateral inset is required
+  /// rather than a particular width.
+  ///
+  /// The side is the system's to choose, so it is never assumed. A full-screen
+  /// app has the strip on the right, and the status bar moves into it, leaving
+  /// a zero top inset. In Split View each app has it on its outer edge, the
+  /// left for the app on the left, and the status bar stays along the top of
+  /// the window.
   ///
   /// [viewPadding] rather than `padding`, so the strip stays put while the
   /// keyboard is up, and it has to be read above any [SafeArea], which removes
@@ -271,6 +277,9 @@ class GlassVerticalBar extends InheritedWidget {
   /// the status bar, 82pt clear of the camera — at the top when the strip is
   /// on the left, at the bottom when it is on the right.
   ///
+  /// Where the status bar keeps a top inset, as in Split View, the strip and
+  /// the title row start [GlassVerticalBarMetrics.edgeMargin] below it.
+  ///
   /// [compression] resolves [GlassVerticalBarData.collapsesTabBar]; under
   /// [GlassVerticalBarCompression.automatic] the tab bar collapses in outer
   /// landscape, the one posture too short for it and the chrome together.
@@ -283,7 +292,7 @@ class GlassVerticalBar extends InheritedWidget {
     GlassVerticalBarCompression compression =
         GlassVerticalBarCompression.automatic,
   }) {
-    if (platform != TargetPlatform.iOS || viewPadding.top != 0) return null;
+    if (platform != TargetPlatform.iOS) return null;
     final left = viewPadding.left > 0;
     final right = viewPadding.right > 0;
     if (left == right) return null;
@@ -296,14 +305,17 @@ class GlassVerticalBar extends InheritedWidget {
 
     final width = size.width.round();
     final height = size.height.round();
+    // A window that keeps its status bar along the top, as in Split View.
+    final statusBarOnTop = viewPadding.top > 0;
     // Inner display, landscape: the status cluster sits in the strip above
     // the controls, shorter than on the outer display.
     final innerLandscape = width == 951 && height == 669;
     // Landscape on the outer display hides the status bar entirely.
-    final outerLandscape = !innerLandscape && width > height;
+    final outerLandscape = !statusBarOnTop && !innerLandscape && width > height;
 
     // The camera's end of the strip in outer landscape.
     const cameraClearance = 82.0;
+    final belowStatusBar = viewPadding.top + GlassVerticalBarMetrics.edgeMargin;
 
     double? top;
     double? bottom;
@@ -321,7 +333,9 @@ class GlassVerticalBar extends InheritedWidget {
             size.height - bounds.top);
       }
     }
-    if (top == null && bottom == null) {
+    if (statusBarOnTop) {
+      top = math.max(top ?? 0, belowStatusBar);
+    } else if (top == null && bottom == null) {
       top = innerLandscape
           ? 120.0
           : outerLandscape
@@ -337,6 +351,7 @@ class GlassVerticalBar extends InheritedWidget {
       width: stripWidth,
       top: top ?? GlassVerticalBarMetrics.edgeMargin,
       bottom: bottom ?? GlassVerticalBarMetrics.edgeMargin,
+      rowTop: belowStatusBar,
       collapsesTabBar: switch (compression) {
         GlassVerticalBarCompression.automatic => outerLandscape,
         GlassVerticalBarCompression.prefersBarItems => true,

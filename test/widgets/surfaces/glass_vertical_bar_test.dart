@@ -187,6 +187,20 @@ void main() {
       expect(bar.bottom, 24);
     });
 
+    test('follows the system to the left in Split View, below the status bar',
+        () {
+      final bar = resolve(
+        viewPadding: const EdgeInsets.fromLTRB(84, 24, 0, 20),
+        size: const Size(472, 669),
+      )!;
+      expect(bar.edge, GlassVerticalBarEdge.leading);
+      expect(bar.width, 84);
+      expect(bar.top, 24 + 24);
+      expect(bar.rowTop, 24 + 24);
+      expect(bar.bottom, 24);
+      expect(bar.collapsesTabBar, isFalse);
+    });
+
     test('collapses the tab bar as the compression asks', () {
       const landscape = Size(678, 466);
       expect(resolve(size: landscape)!.collapsesTabBar, isTrue);
