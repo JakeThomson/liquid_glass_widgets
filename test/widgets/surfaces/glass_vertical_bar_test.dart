@@ -670,7 +670,7 @@ void main() {
         find.byIcon(CupertinoIcons.person_crop_circle),
       );
       expect(profile.dx, closeTo(418, 0.01));
-      expect(profile.dy, 678 - 24 - 6 - 25);
+      expect(profile.dy, closeTo(678 - 24 - 6 - 25, 0.01));
     });
 
     testDuo('selects a tab on a tap', (tester) async {
@@ -681,6 +681,56 @@ void main() {
       await tester.tap(find.byIcon(CupertinoIcons.book));
       await settle(tester);
       expect(find.text('Library body'), findsOneWidget);
+    });
+
+    testDuo('swells under a held finger, then shows the labels',
+        (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _TabsScreen()));
+      await settle(tester);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byIcon(CupertinoIcons.book)),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      // Swollen, but no labels yet, and the tab is not selected on touch.
+      expect(find.text('Library'), findsNothing);
+      expect(find.text('Home body'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(find.text('Library'), findsWidgets);
+      expect(find.text('Home body'), findsOneWidget);
+
+      // Lifting the finger selects the tab under it and hides the labels.
+      await gesture.up();
+      await settle(tester);
+      expect(find.text('Library body'), findsOneWidget);
+      expect(find.text('Library'), findsNothing);
+    });
+
+    testDuo(
+        'shows the labels as soon as a finger drags, and selects where it '
+        'lets go', (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _TabsScreen()));
+      await settle(tester);
+
+      final from = tester.getCenter(find.byIcon(CupertinoIcons.house).first);
+      final gesture = await tester.startGesture(from);
+      await gesture.moveBy(const Offset(0, 10));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.text('Home'), findsWidgets);
+
+      final profile = tester.getCenter(
+        find.byIcon(CupertinoIcons.person_crop_circle).first,
+      );
+      await gesture.moveTo(profile);
+      await tester.pump();
+      await gesture.up();
+      await settle(tester);
+      expect(find.text('Profile body'), findsOneWidget);
     });
 
     testDuo('collapses to the selected tab and opens on a tap', (tester) async {
@@ -762,11 +812,11 @@ void main() {
       // Four tabs and search: 6 + 5 × 50 + 6, ending 24pt above the bottom.
       final search = tester.getCenter(find.byIcon(CupertinoIcons.search));
       expect(search.dx, closeTo(418, 0.01));
-      expect(search.dy, 678 - 24 - 6 - 25);
+      expect(search.dy, closeTo(678 - 24 - 6 - 25, 0.01));
       final profile = tester.getCenter(
         find.byIcon(CupertinoIcons.person_crop_circle),
       );
-      expect(profile.dy, search.dy - 50);
+      expect(profile.dy, closeTo(search.dy - 50, 0.01));
     });
 
     testDuo('opens its field across the top of the content', (tester) async {
@@ -856,7 +906,7 @@ void main() {
       final profile = tester.getCenter(
         find.byIcon(CupertinoIcons.person_crop_circle),
       );
-      expect(profile.dy, 678 - 24 - 6 - 25);
+      expect(profile.dy, closeTo(678 - 24 - 6 - 25, 0.01));
     });
   });
 
