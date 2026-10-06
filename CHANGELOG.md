@@ -1,3 +1,9 @@
+# Unreleased
+
+## Features
+
+- **`stripRowTop` on `GlassPinnedBarChrome` and `GlassNavBarRegistration` (fixes #398):** In iPhone Duo's vertical bar strip, the items that stay horizontal were always pinned in the row `GlassAppBar` draws its title in, so beside a bespoke header lower down they sat a row above it. `stripRowTop` puts that row where the bar's own header is.
+
 # 1.10.0
 
 ## Features

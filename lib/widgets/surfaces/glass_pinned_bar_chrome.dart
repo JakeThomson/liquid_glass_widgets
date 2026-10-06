@@ -161,6 +161,7 @@ class GlassPinnedBarChrome extends StatefulWidget {
     this.horizontalInset,
     this.platformViewBackdrop = false,
     this.largeTitleController,
+    this.stripRowTop,
     this.enabled = true,
   });
 
@@ -233,6 +234,16 @@ class GlassPinnedBarChrome extends StatefulWidget {
   /// strip hides with the rest of the bar while the title's search is open.
   /// Elsewhere it is not read.
   final GlassLargeTitleController? largeTitleController;
+
+  /// Distance from the top of the screen to the row that keeps the items
+  /// staying horizontal, in iPhone Duo's vertical bar strip.
+  ///
+  /// Defaults to [GlassVerticalBarMetrics.edgeMargin], the row [GlassAppBar]
+  /// draws its title in. Pass the top of the row **your** bar draws its header in,
+  /// so the shell's copy of those items lands in that row rather than above
+  /// it, and the hand-over between the two is invisible. Elsewhere it is not
+  /// read.
+  final double? stripRowTop;
 
   /// Whether this bar participates in pinning at all.
   ///
@@ -343,6 +354,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         horizontalInset: widget.horizontalInset,
         platformViewBackdrop: widget.platformViewBackdrop,
         largeTitleController: widget.largeTitleController,
+        stripRowTop: widget.stripRowTop,
       ),
     );
   }

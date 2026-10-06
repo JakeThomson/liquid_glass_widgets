@@ -32,6 +32,7 @@ class GlassNavBarRegistration {
     this.horizontalInset,
     this.platformViewBackdrop = false,
     this.largeTitleController,
+    this.stripRowTop,
   });
 
   /// The trailing cluster items for this route.
@@ -74,6 +75,15 @@ class GlassNavBarRegistration {
   /// while the two renderings land on the same guide. A bar aligned to its
   /// app's page gutter rather than to this default passes that gutter here.
   final double? horizontalInset;
+
+  /// Distance from the top of the screen to the row that keeps the items
+  /// staying horizontal, in iPhone Duo's vertical bar strip.
+  ///
+  /// Defaults to [GlassVerticalBarMetrics.edgeMargin], the row [GlassAppBar]
+  /// draws its title in. A bar the app draws with a header of its own passes the top
+  /// of that header's row, so the items land in it rather than above it.
+  /// Elsewhere it is not read.
+  final double? stripRowTop;
 
   /// Whether the pinned chrome floats over a native platform view.
   ///

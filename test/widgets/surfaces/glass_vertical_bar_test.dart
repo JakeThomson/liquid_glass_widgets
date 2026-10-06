@@ -377,6 +377,25 @@ void main() {
       // The bar's own row, at the top of the screen, as before.
       expect(pinned(tester, CupertinoIcons.bell).dy, lessThan(44));
     });
+
+    testDuo('puts the horizontal row where the bar says its header is',
+        (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(GlassPinnedBarChrome(
+        stripRowTop: 100,
+        actions: [
+          GlassBarItem.custom(child: const Text('Pro')),
+        ],
+        builder: (context, chrome) => const SizedBox.expand(),
+      )));
+      await settle(tester);
+
+      final pro = tester.getCenter(find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.text('Pro'),
+      ));
+      expect(pro.dy, closeTo(100 + 24, 0.5));
+    });
   });
 
   group('GlassTabBar in the strip', () {
