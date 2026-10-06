@@ -1,3 +1,9 @@
+# Unreleased
+
+## Features
+
+- **The vertical `GlassTabBar` shows its labels under a finger (fixes #406):** In iPhone Duo's vertical bar strip the tab bar is icons only, as natively, so its tabs had no visible names. Touching it now behaves as UIKit's does: the capsule swells, then after a short hold grows into a labelled form with each label beneath its icon, and the indicator lifts into a lens that follows the finger and selects the tab under it on release. A drag shows the labels at once. `GlassTabBar.indicatorSettings` now reaches the vertical bar's lens.
+
 # 1.10.0
 
 ## Features
