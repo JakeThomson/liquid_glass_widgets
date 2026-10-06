@@ -633,6 +633,7 @@ void main() {
       final bell = tester.getCenter(find.byIcon(CupertinoIcons.bell));
       expect(bell.dx, lessThan(382));
       expect(bell.dy, lessThan(100));
+    });
 
     testDuo('puts the horizontal row where the bar says its header is',
         (tester) async {
