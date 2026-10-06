@@ -30,8 +30,10 @@
 // Scenarios: nav, navbottom, tabs, tabsnav, root, search, axis, alert (a
 // dialog over the detail screen, 1.5s in), popover (a popover from the
 // strip's compose button, 1.5s in), sheet (a sheet over a root screen, 1s in)
-// and push (the detail screen pushed 1s in and popped 2.5s later, to record
-// the morph). A `DIRECTION=rtl` line
+// push (the detail screen pushed 1s in and popped 2.5s later, to record
+// the morph) and nested (the detail screen in a nested navigator, kept out of
+// the shell, with a bar that draws its own capsules; the native `nav` is its
+// reference). A `DIRECTION=rtl` line
 // lays the app out right to left, `BARS=disabled` sets
 // GlassVerticalBarBehavior.disabled on the shell, `COMPRESSION=` one of
 // GlassVerticalBarCompression's names sets that, and
@@ -160,6 +162,7 @@ class _App extends StatelessWidget {
             _route(const _DetailScreen(alert: true)),
           ],
         'push' => [_route(const _ListScreen(title: 'Inbox', pushes: true))],
+        'nested' => [_route(const _NestedScreen())],
         _ => [
             _route(const _ListScreen(title: 'Inbox')),
             _route(const _DetailScreen()),
@@ -859,6 +862,87 @@ class _AxisScreen extends StatelessWidget {
           ],
         ),
         body: const _Rows(title: 'Detail'),
+      );
+}
+
+/// The detail screen in a nested navigator, its bar drawn by the app from
+/// [GlassPinnedBarChrome.builder] rather than by the package.
+///
+/// The nested stack is kept out of the shell, as
+/// [GlassPinnedBarChrome.enabled] advises, so the chrome is never hoisted and
+/// the strip is drawn in-route. The bar draws its own back button and
+/// capsules while the package does not; the strip is the package's either
+/// way.
+class _NestedScreen extends StatelessWidget {
+  const _NestedScreen();
+
+  @override
+  Widget build(BuildContext context) => Navigator(
+        onGenerateInitialRoutes: (_, __) => [
+          _route(const ColoredBox(color: CupertinoColors.white)),
+          _route(const _OwnBarDetail()),
+        ],
+      );
+}
+
+class _OwnBarDetail extends StatelessWidget {
+  const _OwnBarDetail();
+
+  @override
+  Widget build(BuildContext context) => GlassPinnedBarChrome(
+        enabled: false,
+        buttonSettings: _glass,
+        actions: _detailActions(),
+        builder: (context, chrome) {
+          final ownChrome = !chrome.hoisted && !chrome.inStrip;
+          return ColoredBox(
+            color: CupertinoColors.white,
+            child: Stack(children: [
+              const _Rows(title: 'Detail'),
+              Positioned(
+                top: MediaQuery.paddingOf(context).top + 24,
+                left: 20,
+                right: 20,
+                height: GlassVerticalBarMetrics.rowHeight,
+                child: Row(spacing: 12, children: [
+                  if (ownChrome)
+                    GlassButton(
+                      settings: _glass,
+                      icon: const Icon(CupertinoIcons.back),
+                      width: 44,
+                      height: 44,
+                      onTap: () => Navigator.of(context).maybePop(),
+                    ),
+                  const Text(
+                    'Detail',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.label,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (ownChrome)
+                    GlassButtonGroup.icons(
+                      settings: _glass,
+                      items: [
+                        for (final icon in [
+                          CupertinoIcons.square_pencil,
+                          CupertinoIcons.share,
+                          CupertinoIcons.heart,
+                          CupertinoIcons.ellipsis,
+                        ])
+                          GlassButtonGroupItem(
+                            icon: Icon(icon),
+                            onTap: () {},
+                          ),
+                      ],
+                    ),
+                ]),
+              ),
+            ]),
+          );
+        },
       );
 }
 
