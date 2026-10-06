@@ -553,7 +553,7 @@ class GlassNavPinnedHost extends StatelessWidget {
         ),
         Positioned.directional(
           textDirection: textDirection,
-          top: bar.rowTop,
+          top: state.to.stripRowTop ?? bar.rowTop,
           height: GlassVerticalBarMetrics.rowHeight,
           // The row's end: against the strip where the strip is trailing, and
           // across the content from it where it is leading.
