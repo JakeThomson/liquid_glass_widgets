@@ -6,6 +6,8 @@
 
 - **`stripRowTop` on `GlassPinnedBarChrome` and `GlassNavBarRegistration` (fixes #ISSUE):** In iPhone Duo's vertical bar strip, the items that stay horizontal were always pinned in the row `GlassAppBar` draws its title in, so beside a bespoke header lower down they sat a row above it. `stripRowTop` puts that row where the bar's own header is.
 
+- **`GlassModalSheet.restingWidthOf` (fixes #ISSUE):** The width a sheet rests at, for content measured before the sheet is presented. In iPhone Duo's vertical bar strip layout a window 800pt wide or more lays every detent out as a card the display's shorter side wide, so content measured at the screen's width less the margins gained a wrapped row the sheet's height did not allow for.
+
 ## Bug Fixes
 
 - **`GlassPinnedBarChrome` builder can now tell the package draws the strip (fixes #ISSUE):** On iPhone Duo, a `GlassPinnedBarChrome` the shell has not hoisted, such as one in a nested navigator, draws the vertical bar strip itself, but `builder` still got `hoisted: false`, so a bar drawing its own capsules from it showed the back button and actions twice. The new `GlassPinnedBarChromeData.inStrip` is true whenever the chrome is laid out for the strip, which the package draws whatever `hoisted` says.

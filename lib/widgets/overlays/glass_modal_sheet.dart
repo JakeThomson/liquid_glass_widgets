@@ -318,6 +318,41 @@ class GlassModalSheet extends StatefulWidget {
          '(small alone is a floor, not a resting height).',
        );
 
+  /// The width a sheet presented from [context] rests at, at [state].
+  ///
+  /// For a sheet that sizes itself to content measured before it is presented:
+  /// measure at this width, or wrapping content gains a row the sheet's height
+  /// does not allow for. Pass the [placement] and [horizontalMargin] the sheet
+  /// is presented with; at [GlassSheetState.peek], pass its
+  /// `peekHorizontalMargin` as [horizontalMargin] where it has one; one with
+  /// a `peekWidth` rests at that instead.
+  ///
+  /// The screen's width less [horizontalMargin] on each side, and at
+  /// [GlassSheetState.full] the whole width. In iPhone Duo's vertical bar strip
+  /// layout the sheet keeps its margins at every detent, and in a window
+  /// 800pt wide or more it is a card no wider than the display's shorter side.
+  static double restingWidthOf(
+    BuildContext context, {
+    GlassSheetState state = GlassSheetState.half,
+    GlassSheetPlacement placement = GlassSheetPlacement.automatic,
+    double horizontalMargin = 8.0,
+  }) {
+    final size = MediaQuery.sizeOf(context);
+    if (GlassVerticalBar.maybeOf(context) == null) {
+      return state == GlassSheetState.full
+          ? size.width
+          : size.width - 2 * horizontalMargin;
+    }
+    return size.width -
+        _stripSheetInsets(
+          screenSize: size,
+          regularWidth: VerticalBarTitleRow.regularWidth(context),
+          margin: horizontalMargin,
+          placement: placement,
+          textDirection: Directionality.of(context),
+        ).horizontal;
+  }
+
   /// Shows a high-fidelity glass modal sheet.
   ///
   /// ## Morphing from a trigger
