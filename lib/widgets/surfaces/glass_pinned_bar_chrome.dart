@@ -23,8 +23,8 @@ import 'shared/glass_nav_pinned_host.dart'
 /// Drop [leading] and [actions] straight into your bar's slots. They already
 /// hold the right thing for the current state: the real glass buttons while
 /// the bar still owns its chrome, and same-sized unpainted placeholders once
-/// the shell has taken it. Reading [hoisted] and [presenting] is only
-/// necessary to draw something other than the package's own chrome.
+/// the shell has taken it. Reading [hoisted], [presenting] and [inStrip] is
+/// only necessary to draw something other than the package's own chrome.
 @immutable
 class GlassPinnedBarChromeData {
   /// Creates the chrome for one frame.
@@ -33,6 +33,7 @@ class GlassPinnedBarChromeData {
     required this.actions,
     required this.hoisted,
     this.presenting,
+    this.inStrip = false,
   });
 
   /// The leading slot: the automatic back button, the declared leading items,
@@ -84,6 +85,19 @@ class GlassPinnedBarChromeData {
   /// capsule unpainted likewise. The instance is the one that was tapped;
   /// compare by `id` if the bar rebuilds its items.
   final GlassBarSheetItem? presenting;
+
+  /// Whether the chrome is laid out for iPhone Duo's vertical bar strip
+  /// ([GlassVerticalBar.maybeOf]).
+  ///
+  /// The package draws the strip whatever [hoisted] says: the shell while it
+  /// has the chrome, and the [GlassPinnedBarChrome] itself, in-route, while
+  /// it does not — under a presentation, in a modal sheet, or in a nested
+  /// navigator kept out of the shell with [GlassPinnedBarChrome.enabled]. So
+  /// while this is set the back button and every item that goes vertical are
+  /// never the bar's to draw, and [leading] is null. Only the items that stay
+  /// horizontal, which [actions] holds, follow [hoisted] and [presenting]. A
+  /// bar drawing its own chrome leaves the rest out, or shows them twice.
+  final bool inStrip;
 }
 
 /// Builds a bar from the chrome resolved for the current frame.
@@ -140,7 +154,9 @@ typedef GlassPinnedBarChromeBuilder = Widget Function(
 /// and everything else — the back button first — stacks in the strip. The
 /// shell draws the strip while it has the chrome; while it has handed the
 /// chrome back, this widget draws it, above its own route and below whatever
-/// is presented over it.
+/// is presented over it. Either way the strip is never the bar's to draw,
+/// which [GlassPinnedBarChromeData.inStrip] tells a builder drawing its own
+/// chrome.
 ///
 /// A bar inside a presented route — a [GlassModalSheet]'s — never registers:
 /// the presentation comes up over the stack the shell pins across, so it is
@@ -730,6 +746,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         actions: verticalBar == null ? _buildActions() : _buildRowActions(),
         hoisted: _handedOver,
         presenting: _presenting,
+        inStrip: verticalBar != null,
       ),
     );
 
