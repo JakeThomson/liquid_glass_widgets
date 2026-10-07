@@ -4,6 +4,9 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../../widgets/surfaces/glass_vertical_bar.dart'
+    show GlassVerticalBarEdge;
+
 /// The parts of the view UIKit reserves for system elements — on iPhone Duo,
 /// the status cluster and the camera at the ends of the vertical bar strip —
 /// as [DisplayFeatureType.cutout]s in logical pixels.
@@ -27,6 +30,15 @@ class VerticalBarRegions extends ValueNotifier<List<DisplayFeature>> {
 
   bool _observing = false;
 
+  /// The side UIKit wants the strip on (`UITraitCollection.verticalBarEdge`),
+  /// or null where it places none.
+  ///
+  /// Where the system insets the view for the strip, the insets already say
+  /// where it is. Where it leaves the strip's space to the app, as for the
+  /// left-hand app in Split View, this is all the app is told.
+  final ValueNotifier<GlassVerticalBarEdge?> edge =
+      ValueNotifier<GlassVerticalBarEdge?>(null);
+
   /// Starts following the regions, if it has not already.
   ///
   /// Leaves them empty where the plugin is not registered: in a widget test,
@@ -35,7 +47,12 @@ class VerticalBarRegions extends ValueNotifier<List<DisplayFeature>> {
     if (_observing) return;
     _observing = true;
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'didChange') value = _decode(call.arguments);
+      switch (call.method) {
+        case 'didChange':
+          value = _decode(call.arguments);
+        case 'didChangeVerticalBarEdge':
+          edge.value = _decodeEdge(call.arguments);
+      }
     });
     unawaited(_observe());
   }
@@ -43,6 +60,8 @@ class VerticalBarRegions extends ValueNotifier<List<DisplayFeature>> {
   Future<void> _observe() async {
     try {
       value = _decode(await _channel.invokeListMethod<Object?>('observe'));
+      edge.value =
+          _decodeEdge(await _channel.invokeMethod<Object?>('verticalBarEdge'));
     } on MissingPluginException {
       // Not registered; the strip keeps to its measured geometry.
     }
@@ -54,7 +73,14 @@ class VerticalBarRegions extends ValueNotifier<List<DisplayFeature>> {
     _channel.setMethodCallHandler(null);
     _observing = false;
     value = const <DisplayFeature>[];
+    edge.value = null;
   }
+
+  static GlassVerticalBarEdge? _decodeEdge(Object? edge) => switch (edge) {
+        'leading' => GlassVerticalBarEdge.leading,
+        'trailing' => GlassVerticalBarEdge.trailing,
+        _ => null,
+      };
 
   static List<DisplayFeature> _decode(Object? regions) => [
         for (final region in (regions as List<Object?>? ?? const []))

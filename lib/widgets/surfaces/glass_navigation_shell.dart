@@ -362,6 +362,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
         if (status == AnimationStatus.completed) _scheduleNotify();
       });
     VerticalBarRegions.instance.addListener(_onVerticalBarRegions);
+    VerticalBarRegions.instance.edge.addListener(_onVerticalBarRegions);
   }
 
   @override
@@ -950,6 +951,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
   @override
   void dispose() {
     VerticalBarRegions.instance.removeListener(_onVerticalBarRegions);
+    VerticalBarRegions.instance.edge.removeListener(_onVerticalBarRegions);
     for (final animation in _listened) {
       animation.removeListener(_onAnimationTick);
       animation.removeStatusListener(_onAnimationStatus);
@@ -1021,10 +1023,40 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
         ...MediaQuery.displayFeaturesOf(context),
         ...VerticalBarRegions.instance.value,
       ],
+      systemEdge: VerticalBarRegions.instance.edge.value,
       compression: widget.verticalBarCompression,
     );
-    if (bar != null) VerticalBarRegions.instance.observe();
+    // Followed on iOS whether or not a strip is up yet: where UIKit leaves the
+    // strip to the app, its edge is the only sign of it.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      VerticalBarRegions.instance.observe();
+    }
     return bar;
+  }
+
+  /// [child] with the strip's width added to the insets on its side, for a
+  /// strip UIKit leaves to the app: the content keeps clear of it as it does
+  /// of a strip the system insets for.
+  Widget _insetForStrip(
+    BuildContext context,
+    GlassVerticalBarData bar,
+    Widget child,
+  ) {
+    final ltr = (Directionality.maybeOf(context) ?? TextDirection.ltr) ==
+        TextDirection.ltr;
+    final onLeft = (bar.edge == GlassVerticalBarEdge.leading) == ltr;
+    EdgeInsets add(EdgeInsets insets) => insets.copyWith(
+          left: onLeft ? insets.left + bar.width : insets.left,
+          right: onLeft ? insets.right : insets.right + bar.width,
+        );
+    final data = MediaQuery.of(context);
+    return MediaQuery(
+      data: data.copyWith(
+        padding: add(data.padding),
+        viewPadding: add(data.viewPadding),
+      ),
+      child: child,
+    );
   }
 
   @override
@@ -1034,7 +1066,12 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
       state: this,
       child: Stack(
         children: [
-          GlassVerticalBar(data: verticalBar, child: widget.child),
+          GlassVerticalBar(
+            data: verticalBar,
+            child: verticalBar == null || verticalBar.systemInset
+                ? widget.child
+                : _insetForStrip(context, verticalBar, widget.child),
+          ),
           // The chrome gets an Overlay of its own because it deliberately sits
           // above the app's Navigator, and therefore outside the Navigator's
           // Overlay — a GlassBarItem.menu portals to the root overlay, and up

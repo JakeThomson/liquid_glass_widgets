@@ -2,6 +2,8 @@
 
 ## Bug Fixes
 
+- **iPhone Duo's vertical bar strip in Split View (fixes #408):** The strip was only found where the top inset was zero and one side was inset, so in Split View the app fell back to horizontal bars. The left-hand app gets no inset for its strip at all, only `UITraitCollection.verticalBarEdge`, which the iOS plugin now reports; the shell keeps an 84pt strip on that edge and insets the content for it. Below a status bar along the top, the strip and the title row start beneath it.
+
 - **iPhone Duo's vertical bar strip now follows the status cluster (fixes #404):** The strip's first control sat at a height measured on the 27.1 simulator, so on a device, where the cluster grows with live activities and goes with the status bar, the controls no longer lined up with it. The strip's ends now come from the regions UIKit reserves for the cluster and the camera, `UIView.reservedRegions(kind: .occlusion)`, read by a small iOS plugin and updated as they change. `GlassVerticalBar.resolve` takes them as cutout `displayFeatures`, which is where Flutter will report them once it does on iOS (flutter/flutter#193025).
 
 # 1.10.0
