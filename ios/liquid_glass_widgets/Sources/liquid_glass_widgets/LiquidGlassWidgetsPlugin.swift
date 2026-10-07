@@ -58,6 +58,13 @@ private final class OcclusionObserver: UIView {
   init(onChange: @escaping ([[Double]]) -> Void) {
     self.onChange = onChange
     super.init(frame: .zero)
+    // UIKit says nothing when the regions change; they are re-read on layout,
+    // when the view joins a window, and whenever the app comes to the front,
+    // since a Dynamic Island that appeared while the app was away moves no
+    // layout of its own.
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(refresh),
+      name: UIApplication.didBecomeActiveNotification, object: nil)
     isHidden = true
     isUserInteractionEnabled = false
     autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -73,8 +80,17 @@ private final class OcclusionObserver: UIView {
     regions = read()
   }
 
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    refresh()
+  }
+
   override func layoutSubviews() {
     super.layoutSubviews()
+    refresh()
+  }
+
+  @objc private func refresh() {
     let regions = read()
     guard regions != self.regions else { return }
     self.regions = regions
