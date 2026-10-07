@@ -1,14 +1,33 @@
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:liquid_glass_widgets/src/widgets/surfaces/tab_bar_vertical_layout.dart';
 import 'package:liquid_glass_widgets/src/widgets/surfaces/vertical_bar_background.dart';
+import 'package:liquid_glass_widgets/src/widgets/surfaces/vertical_bar_regions.dart';
 import 'package:liquid_glass_widgets/widgets/surfaces/shared/glass_nav_pinned_host.dart';
 
 /// iPhone Duo's outer display in portrait, as the iOS 27.1 simulator reports
 /// it: a zero top inset, the status bar and the 84pt strip on the right.
 const _outerPortrait = Size(466, 678);
 const _outerPortraitPadding = EdgeInsets.fromLTRB(0, 0, 84, 34);
+
+/// An occlusion region UIKit reports, as Flutter would surface it.
+DisplayFeature _cutout(double left, double top, double right, double bottom) =>
+    DisplayFeature(
+      bounds: Rect.fromLTRB(left, top, right, bottom),
+      type: DisplayFeatureType.cutout,
+      state: DisplayFeatureState.unknown,
+    );
+
+/// The outer display's regions in portrait, from the 27.1 simulator: the
+/// status cluster at the top of the strip, and the camera inside it.
+final _outerPortraitRegions = [
+  _cutout(399, 29, 436, 66),
+  _cutout(382, 0, 466, 170),
+];
 
 void main() {
   setUp(() {
@@ -17,6 +36,7 @@ void main() {
 
   tearDown(() {
     GlassNavigationShellState.debugPinningSupported = null;
+    VerticalBarRegions.instance.debugReset();
   });
 
   /// A widget test on iOS, the only platform that reserves a strip.
@@ -91,6 +111,7 @@ void main() {
       Size size = _outerPortrait,
       TargetPlatform platform = TargetPlatform.iOS,
       TextDirection textDirection = TextDirection.ltr,
+      List<DisplayFeature> displayFeatures = const [],
       GlassVerticalBarCompression compression =
           GlassVerticalBarCompression.automatic,
     }) =>
@@ -99,6 +120,7 @@ void main() {
           size: size,
           platform: platform,
           textDirection: textDirection,
+          displayFeatures: displayFeatures,
           compression: compression,
         );
 
@@ -182,6 +204,50 @@ void main() {
         isTrue,
       );
     });
+
+    test('starts below the status cluster UIKit reports', () {
+      expect(resolve(displayFeatures: _outerPortraitRegions)!.top, 170);
+      // A live activity grows the cluster; the controls follow it down.
+      final grown = resolve(displayFeatures: [_cutout(382, 0, 466, 214)])!;
+      expect(grown.top, 214);
+      expect(grown.bottom, 24);
+    });
+
+    test('keeps clear of the camera region at either end', () {
+      const size = Size(678, 466);
+      final left = resolve(
+        viewPadding: const EdgeInsets.fromLTRB(84, 0, 0, 34),
+        size: size,
+        displayFeatures: [_cutout(0, 0, 84, 82)],
+      )!;
+      expect(left.top, 82);
+      expect(left.bottom, 24);
+      final right = resolve(
+        viewPadding: const EdgeInsets.fromLTRB(0, 0, 84, 34),
+        size: size,
+        displayFeatures: [_cutout(594, 384, 678, 466)],
+      )!;
+      expect(right.top, 24);
+      expect(right.bottom, 82);
+    });
+
+    test('ignores regions outside the strip, and folds and hinges', () {
+      final bar = resolve(
+        size: const Size(951, 669),
+        displayFeatures: [
+          // The inner display's hinge, and a region on the far side.
+          const DisplayFeature(
+            bounds: Rect.fromLTRB(455, 0, 495, 669),
+            type: DisplayFeatureType.hinge,
+            state: DisplayFeatureState.postureHalfOpened,
+          ),
+          _cutout(0, 0, 60, 300),
+          _cutout(867, 0, 951, 120),
+        ],
+      )!;
+      expect(bar.top, 120);
+      expect(bar.bottom, 24);
+    });
   });
 
   group('GlassNavigationShell', () {
@@ -193,6 +259,52 @@ void main() {
         return const SizedBox();
       })));
       expect(seen?.edge, GlassVerticalBarEdge.trailing);
+    });
+
+    testDuo('follows the regions Flutter reports', (tester) async {
+      setScreen(tester);
+      tester.view.displayFeatures = [_cutout(382, 0, 466, 214)];
+      GlassVerticalBarData? seen;
+      await tester.pumpWidget(shellApp(Builder(builder: (context) {
+        seen = GlassVerticalBar.maybeOf(context);
+        return const SizedBox();
+      })));
+      expect(seen?.top, 214);
+    });
+
+    testDuo('follows the regions UIKit reports while Flutter does not',
+        (tester) async {
+      setScreen(tester);
+      const channel = MethodChannel('liquid_glass_widgets/reserved_regions');
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'observe');
+        return [
+          [382.0, 0.0, 466.0, 190.0],
+        ];
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+      GlassVerticalBarData? seen;
+      await tester.pumpWidget(shellApp(Builder(builder: (context) {
+        seen = GlassVerticalBar.maybeOf(context);
+        return const SizedBox();
+      })));
+      // The table until UIKit answers.
+      expect(seen?.top, 170);
+      await tester.pump();
+      expect(seen?.top, 190);
+
+      // The cluster grows with a live activity.
+      await messenger.handlePlatformMessage(
+        channel.name,
+        channel.codec.encodeMethodCall(const MethodCall('didChange', [
+          [382.0, 0.0, 466.0, 214.0],
+        ])),
+        (_) {},
+      );
+      await tester.pump();
+      expect(seen?.top, 214);
     });
 
     testDuo('publishes nothing when disabled', (tester) async {

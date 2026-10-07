@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:ui' show DisplayFeature, DisplayFeatureType;
+
 import 'package:flutter/widgets.dart';
 
 import '../overlays/glass_modal_sheet.dart';
@@ -252,16 +255,21 @@ class GlassVerticalBar extends InheritedWidget {
   /// [GlassVerticalBarEdge.leading] edge.
   ///
   /// [GlassVerticalBarData.top] and [GlassVerticalBarData.bottom] are what
-  /// the insets do not carry: where the status cluster and the camera end,
-  /// which Flutter does not surface yet. Until `displayFeatures` is populated
-  /// on iOS (flutter/flutter#193025) they come from a table keyed on the
-  /// screen size, measured on the 27.1 simulator. The first control is at
-  /// 170pt on the outer display, below the status cluster, and at 120pt on the
-  /// inner display in landscape. Outer landscape hides the status bar but
-  /// leaves the camera at one end of the strip — the top when the strip is on
-  /// the left, the bottom when it is on the right — and the controls keep
-  /// 82pt clear of it, and [GlassVerticalBarMetrics.edgeMargin] clear of the
-  /// other end.
+  /// the insets do not carry: where the status cluster and the camera end.
+  /// UIKit reports both as occlusion regions, which move — the cluster grows
+  /// with live activities and goes with the status bar — and they are read
+  /// from [displayFeatures]: the controls start below the cutouts that
+  /// overlap the top half of the strip and end above those in the bottom
+  /// half, and keep [GlassVerticalBarMetrics.edgeMargin] clear of an end with
+  /// none. Flutter does not report them on iOS yet (flutter/flutter#193025),
+  /// so [GlassNavigationShell] adds the regions the package reads from UIKit
+  /// itself.
+  ///
+  /// Until a region is reported they come from a table keyed on the screen
+  /// size, measured on the 27.1 simulator: 170pt on the outer display, 120pt
+  /// on the inner display in landscape, and in outer landscape, which hides
+  /// the status bar, 82pt clear of the camera — at the top when the strip is
+  /// on the left, at the bottom when it is on the right.
   ///
   /// [compression] resolves [GlassVerticalBarData.collapsesTabBar]; under
   /// [GlassVerticalBarCompression.automatic] the tab bar collapses in outer
@@ -271,6 +279,7 @@ class GlassVerticalBar extends InheritedWidget {
     required Size size,
     required TargetPlatform platform,
     required TextDirection textDirection,
+    List<DisplayFeature> displayFeatures = const <DisplayFeature>[],
     GlassVerticalBarCompression compression =
         GlassVerticalBarCompression.automatic,
   }) {
@@ -279,6 +288,11 @@ class GlassVerticalBar extends InheritedWidget {
     final right = viewPadding.right > 0;
     if (left == right) return null;
     final onStart = left == (textDirection == TextDirection.ltr);
+
+    final stripWidth = left ? viewPadding.left : viewPadding.right;
+    final strip = left
+        ? Rect.fromLTWH(0, 0, stripWidth, size.height)
+        : Rect.fromLTWH(size.width - stripWidth, 0, stripWidth, size.height);
 
     final width = size.width.round();
     final height = size.height.round();
@@ -291,19 +305,38 @@ class GlassVerticalBar extends InheritedWidget {
     // The camera's end of the strip in outer landscape.
     const cameraClearance = 82.0;
 
+    double? top;
+    double? bottom;
+    for (final feature in displayFeatures) {
+      final bounds = feature.bounds;
+      if (feature.type != DisplayFeatureType.cutout ||
+          !bounds.overlaps(strip)) {
+        continue;
+      }
+      if (bounds.center.dy < size.height / 2) {
+        top =
+            math.max(top ?? GlassVerticalBarMetrics.edgeMargin, bounds.bottom);
+      } else {
+        bottom = math.max(bottom ?? GlassVerticalBarMetrics.edgeMargin,
+            size.height - bounds.top);
+      }
+    }
+    if (top == null && bottom == null) {
+      top = innerLandscape
+          ? 120.0
+          : outerLandscape
+              ? (left ? cameraClearance : null)
+              : 170.0;
+      bottom = outerLandscape && right ? cameraClearance : null;
+    }
+
     return GlassVerticalBarData(
       edge: onStart
           ? GlassVerticalBarEdge.leading
           : GlassVerticalBarEdge.trailing,
-      width: left ? viewPadding.left : viewPadding.right,
-      top: innerLandscape
-          ? 120.0
-          : outerLandscape
-              ? (left ? cameraClearance : GlassVerticalBarMetrics.edgeMargin)
-              : 170.0,
-      bottom: outerLandscape && right
-          ? cameraClearance
-          : GlassVerticalBarMetrics.edgeMargin,
+      width: stripWidth,
+      top: top ?? GlassVerticalBarMetrics.edgeMargin,
+      bottom: bottom ?? GlassVerticalBarMetrics.edgeMargin,
       collapsesTabBar: switch (compression) {
         GlassVerticalBarCompression.automatic => outerLandscape,
         GlassVerticalBarCompression.prefersBarItems => true,

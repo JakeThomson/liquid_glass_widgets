@@ -1,3 +1,9 @@
+# Unreleased
+
+## Bug Fixes
+
+- **iPhone Duo's vertical bar strip now follows the status cluster (fixes #404):** The strip's first control sat at a height measured on the 27.1 simulator, so on a device, where the cluster grows with live activities and goes with the status bar, the controls no longer lined up with it. The strip's ends now come from the regions UIKit reserves for the cluster and the camera, `UIView.reservedRegions(kind: .occlusion)`, read by a small iOS plugin and updated as they change. `GlassVerticalBar.resolve` takes them as cutout `displayFeatures`, which is where Flutter will report them once it does on iOS (flutter/flutter#193025).
+
 # 1.10.0
 
 ## Features
