@@ -8,6 +8,11 @@ import UIKit
 /// They are the view's `reservedRegions(kind: .occlusion)`, added in the
 /// iOS 27.1 SDK. Flutter does not pass them to Dart yet
 /// (flutter/flutter#193025), so the package reads them here.
+///
+/// It also reports the trait collection's `verticalBarEdge`, the side the
+/// system wants the strip on. Where UIKit leaves the strip's space to the
+/// app, as for the left-hand app in Split View, that edge is all the app is
+/// told: the view gets no inset for it.
 public final class LiquidGlassWidgetsPlugin: NSObject, FlutterPlugin {
   private let channel: FlutterMethodChannel
   private weak var registrar: FlutterPluginRegistrar?
@@ -30,6 +35,8 @@ public final class LiquidGlassWidgetsPlugin: NSObject, FlutterPlugin {
     switch call.method {
     case "observe":
       result(observe())
+    case "verticalBarEdge":
+      result(observer?.edge)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -40,9 +47,13 @@ public final class LiquidGlassWidgetsPlugin: NSObject, FlutterPlugin {
     guard let view = registrar?.viewController?.view else { return [] }
     if let observer, observer.superview === view { return observer.regions }
     observer?.removeFromSuperview()
-    let observer = OcclusionObserver { [weak self] regions in
-      self?.channel.invokeMethod("didChange", arguments: regions)
-    }
+    let observer = OcclusionObserver(
+      onChange: { [weak self] regions in
+        self?.channel.invokeMethod("didChange", arguments: regions)
+      },
+      onEdgeChange: { [weak self] edge in
+        self?.channel.invokeMethod("didChangeVerticalBarEdge", arguments: edge)
+      })
     view.addSubview(observer)
     self.observer = observer
     return observer.regions
@@ -50,13 +61,20 @@ public final class LiquidGlassWidgetsPlugin: NSObject, FlutterPlugin {
 }
 
 /// A hidden view that reports its superview's occlusion regions, as
-/// `[left, top, right, bottom]` in points, whenever they change.
+/// `[left, top, right, bottom]` in points, and the vertical bar edge, as
+/// `"leading"`, `"trailing"` or nil, whenever they change.
 private final class OcclusionObserver: UIView {
   private let onChange: ([[Double]]) -> Void
+  private let onEdgeChange: (String?) -> Void
   private(set) var regions: [[Double]] = []
+  private(set) var edge: String?
 
-  init(onChange: @escaping ([[Double]]) -> Void) {
+  init(
+    onChange: @escaping ([[Double]]) -> Void,
+    onEdgeChange: @escaping (String?) -> Void
+  ) {
     self.onChange = onChange
+    self.onEdgeChange = onEdgeChange
     super.init(frame: .zero)
     isHidden = true
     isUserInteractionEnabled = false
@@ -71,6 +89,18 @@ private final class OcclusionObserver: UIView {
     super.didMoveToSuperview()
     frame = superview?.bounds ?? .zero
     regions = read()
+    edge = readEdge()
+    #if canImport(UIKit, _version: 9127.0.85)
+    if #available(iOS 27.1, *) {
+      registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) {
+        (self: OcclusionObserver, _: UITraitCollection) in
+        let edge = self.readEdge()
+        guard edge != self.edge else { return }
+        self.edge = edge
+        self.onEdgeChange(edge)
+      }
+    }
+    #endif
   }
 
   override func layoutSubviews() {
@@ -79,6 +109,19 @@ private final class OcclusionObserver: UIView {
     guard regions != self.regions else { return }
     self.regions = regions
     onChange(regions)
+  }
+
+  private func readEdge() -> String? {
+    #if canImport(UIKit, _version: 9127.0.85)
+    if #available(iOS 27.1, *) {
+      switch traitCollection.verticalBarEdge {
+      case .leading: return "leading"
+      case .trailing: return "trailing"
+      default: return nil
+      }
+    }
+    #endif
+    return nil
   }
 
   private func read() -> [[Double]] {
