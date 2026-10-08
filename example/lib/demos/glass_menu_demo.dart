@@ -492,6 +492,28 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
         onTap: () => setState(() => _lastSelected = 'Notifications'),
       ),
       GlassMenuItem(
+        title: 'Share…',
+        icon: const Icon(CupertinoIcons.share),
+        onTap: () {},
+        submenu: [
+          GlassMenuItem(
+            title: 'AirDrop',
+            icon: const Icon(CupertinoIcons.wifi),
+            onTap: () => setState(() => _lastSelected = 'AirDrop'),
+          ),
+          GlassMenuItem(
+            title: 'Messages',
+            icon: const Icon(CupertinoIcons.chat_bubble_fill),
+            onTap: () => setState(() => _lastSelected = 'Messages'),
+          ),
+          GlassMenuItem(
+            title: 'Mail',
+            icon: const Icon(CupertinoIcons.mail_solid),
+            onTap: () => setState(() => _lastSelected = 'Mail'),
+          ),
+        ],
+      ),
+      GlassMenuItem(
         title: '📷  Camera',
         icon: const Icon(CupertinoIcons.camera_fill),
         onTap: () => setState(() => _lastSelected = 'Camera'),
