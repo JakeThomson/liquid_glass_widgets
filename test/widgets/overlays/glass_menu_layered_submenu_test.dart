@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SemanticsAction;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-import 'package:liquid_glass_widgets/src/engine/glass_glow.dart';
 import 'package:liquid_glass_widgets/src/renderer/glass_materialize_scope.dart';
 
 // Public widget geometry, normalized to a 200pt root menu. Native reference:
