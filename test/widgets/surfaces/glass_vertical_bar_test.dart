@@ -411,6 +411,26 @@ void main() {
       expect(find.byIcon(CupertinoIcons.back), findsOneWidget);
       expect(find.byIcon(CupertinoIcons.share), findsOneWidget);
     });
+
+    testDuo('puts the horizontal row where the bar says its header is',
+        (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(GlassPinnedBarChrome(
+        stripRowTop: 100,
+        actions: [
+          GlassBarItem.custom(child: const Text('Pro')),
+        ],
+        builder: (context, chrome) => const SizedBox.expand(),
+      )));
+      await settle(tester);
+
+      final pro = tester.getCenter(find.descendant(
+        of: find.byType(GlassNavPinnedHost),
+        matching: find.text('Pro'),
+      ));
+      expect(pro.dy, closeTo(100 + 24, 0.5));
+    });
+    });
   });
 
   group('GlassTabBar in the strip', () {
