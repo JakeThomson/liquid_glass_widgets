@@ -240,6 +240,33 @@ GlassDialog.show(
 );
 ```
 
+### GlassMenu Submenus
+Give a `GlassMenuItem` a `submenu` list to open a native iOS-style card over the parent (the parent recedes and dims; tapping the card's header or the exposed parent collapses one level). Submenus nest. Works in `GlassMenu` and `GlassPullDownButton`:
+
+```dart
+GlassPullDownButton(
+  icon: const Icon(CupertinoIcons.ellipsis_circle),
+  items: [
+    GlassMenuItem(
+      title: 'Share…',
+      icon: const Icon(CupertinoIcons.share),
+      // onTap is required but never called on a submenu row:
+      // activating it opens the card instead.
+      onTap: () {},
+      submenu: [
+        GlassMenuItem(title: 'Messages', icon: const Icon(CupertinoIcons.chat_bubble_fill), onTap: _sendMessage),
+        GlassMenuItem(title: 'Mail', icon: const Icon(CupertinoIcons.mail_solid), onTap: _sendMail),
+      ],
+    ),
+    const GlassMenuDivider(),
+    GlassMenuItem(title: 'Delete', icon: const Icon(CupertinoIcons.trash), isDestructive: true, onTap: _delete),
+  ],
+)
+```
+
+- A submenu row shows a chevron automatically unless you pass `trailing`.
+- Do **not** build nested menus by opening a second `GlassMenu` from an item's `onTap`; use `submenu`.
+
 ### GlassMaterialize
 For widgets appearing or disappearing dynamically, use `GlassMaterialize` to match iOS 26's progressive defogging transition:
 
@@ -315,4 +342,5 @@ GlassAppBar.pinned(
 - [ ] **`GlassAppBar` uses `actions: [...]` (a List), not `trailing:`.** There is no `trailing` parameter.
 - [ ] **`GlassChip.label` is a `String`, not a `Widget`.** Pass `label: 'text'`, not `label: Text('text')`.
 - [ ] **`GlassBarItem.icon` uses `onTap` (required), not `onPressed`.**
+- [ ] **Nested menus use `GlassMenuItem(submenu: [...])`.** The parent row still needs `onTap: () {}` (required, never called). Don't open a second `GlassMenu` from `onTap`.
 - [ ] **`tintColor` on `GlassBarItem` requires `background: GlassBarItemBackground.separate`.** A shared-background item cannot be tinted (asserts in debug mode). The foreground icon colour is flipped automatically — do not also set a manual `Icon(color:)` on the child.

@@ -242,6 +242,8 @@ Most apps should use `GlassCard` or `GlassGroupedSection` instead.
 ### Overlays
 `GlassDialog` · `GlassSheet` · `GlassModalSheet` · `showGlassActionSheet` · `GlassMenu` · `GlassMenuItem` · `GlassMenuDivider` · `GlassMenuLabel` · `GlassPopover`
 
+`GlassMenu` and `GlassPullDownButton` support native iOS-style layered submenus: give a `GlassMenuItem` a `submenu: [...]` list and it opens a card over the parent, which recedes and dims. Submenus can nest.
+
 ### Surfaces
 `GlassScaffold` · `GlassAppBar` · `GlassTabBar` (`.bottom` / `.inline` / `.searchable` / `.minimizable`) · `GlassTabBarTrailingButton` · `GlassToolbar` · `GlassNavigationShell` · `GlassPinnedBarChrome` · `GlassContentAwareScope` · `GlassContentAwareContent` · `GlassContentAwareBrightness`
 

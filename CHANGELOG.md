@@ -44,6 +44,10 @@
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#409).
 
+- **Submenu card touch glow was opaque white:** A layered submenu card defaulted its interaction glow to fully opaque white, so the highlight under a finger blew out the card's rows. It now uses the same theme-aware specular colour as the root menu (white at `GlassDefaults.specularLightAlpha` in dark mode, black at `GlassDefaults.specularDarkAlpha` in light mode). An explicit `GlassMenu.glowColor` still wins.
+
+- **`GlassPullDownButton` dropped item properties when `onSelected` was set:** Wrapping each `GlassMenuItem` to report the selection rebuilt it with only a few fields, so `submenu`, `height`, `titleStyle`, `subtitleStyle`, `iconColor`, `iconSize`, `maxLines`, `enablePressScale`, `closeDelay`, `isPressed` and `isSelected` were lost. A submenu row in a pull-down button showed no chevron and opened nothing. All properties are now forwarded.
+
 # 1.10.0
 
 ## Features
