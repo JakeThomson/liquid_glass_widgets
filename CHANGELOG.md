@@ -1,5 +1,6 @@
 # Unreleased
 
+<<<<<<< HEAD
 ## Features
 
 <<<<<<< HEAD
@@ -33,6 +34,10 @@
 - **`GlassPinnedBarChrome` builder can now tell the package draws the strip (fixes #396, PR #397):** On iPhone Duo, a `GlassPinnedBarChrome` the shell has not hoisted, such as one in a nested navigator, draws the vertical bar strip itself, but `builder` still got `hoisted: false`, so a bar drawing its own capsules from it showed the back button and actions twice. The new `GlassPinnedBarChromeData.inStrip` is true whenever the chrome is laid out for the strip, which the package draws whatever `hoisted` says.
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#397).
+
+- **iPhone Duo's vertical bar strip now follows the status cluster (fixes #404, PR #405):** The strip's first control sat at a height measured on the 27.1 simulator, so on a device, where the cluster grows with live activities and goes with the status bar, the controls no longer lined up with it. The strip's ends now come from the regions UIKit reserves for the cluster and the camera, `UIView.reservedRegions(kind: .occlusion)`, read by a small iOS plugin and updated as they change. `GlassVerticalBar.resolve` takes them as cutout `displayFeatures`, which is where Flutter will report them once it does on iOS (flutter/flutter#193025).
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#405).
 
 # 1.10.0
 

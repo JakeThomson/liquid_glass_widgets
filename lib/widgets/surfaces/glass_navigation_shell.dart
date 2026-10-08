@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../constants/glass_defaults.dart';
 import '../../src/engine/liquid_glass_settings.dart';
+import '../../src/widgets/surfaces/vertical_bar_regions.dart';
 import '../effects/glass_materialize.dart';
 import '../overlays/glass_modal_sheet.dart';
 import 'glass_bar_item.dart';
@@ -370,6 +371,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) _scheduleNotify();
       });
+    VerticalBarRegions.instance.addListener(_onVerticalBarRegions);
   }
 
   @override
@@ -957,6 +959,7 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
 
   @override
   void dispose() {
+    VerticalBarRegions.instance.removeListener(_onVerticalBarRegions);
     for (final animation in _listened) {
       animation.removeListener(_onAnimationTick);
       animation.removeStatusListener(_onAnimationStatus);
@@ -1016,23 +1019,33 @@ class GlassNavigationShellState extends State<GlassNavigationShell>
     if (_verticalBarBottom.remove(owner) != null) _scheduleNotify();
   }
 
+  void _onVerticalBarRegions() => setState(() {});
+
   /// The strip this shell's bars lay out in, or null where they are
   /// horizontal.
   ///
   /// Read from the insets the shell itself sees, which is above any [SafeArea]
-  /// a page puts around its content. See [GlassVerticalBar.resolve].
+  /// a page puts around its content, and from the regions UIKit reserves for
+  /// the status cluster and the camera, which Flutter does not report on iOS
+  /// yet. See [GlassVerticalBar.resolve].
   GlassVerticalBarData? _resolveVerticalBar(BuildContext context) {
     if (!isActive ||
         widget.verticalBarBehavior == GlassVerticalBarBehavior.disabled) {
       return null;
     }
-    return GlassVerticalBar.resolve(
+    final bar = GlassVerticalBar.resolve(
       viewPadding: MediaQuery.viewPaddingOf(context),
       size: MediaQuery.sizeOf(context),
       platform: defaultTargetPlatform,
       textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+      displayFeatures: [
+        ...MediaQuery.displayFeaturesOf(context),
+        ...VerticalBarRegions.instance.value,
+      ],
       compression: widget.verticalBarCompression,
     );
+    if (bar != null) VerticalBarRegions.instance.observe();
+    return bar;
   }
 
   @override
