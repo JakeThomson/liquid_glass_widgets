@@ -126,6 +126,45 @@ class _MenuDemoPageState extends State<MenuDemoPage> {
             );
           },
         ),
+        GlassMenuItem(
+          title: 'Share…',
+          icon: const Icon(CupertinoIcons.share),
+          onTap: () {},
+          submenu: [
+            GlassMenuItem(
+              title: 'AirDrop',
+              icon: const Icon(CupertinoIcons.wifi),
+              onTap: () => debugPrint('AirDrop tapped'),
+            ),
+            GlassMenuItem(
+              title: 'Messages',
+              icon: const Icon(CupertinoIcons.chat_bubble_fill),
+              onTap: () => debugPrint('Messages tapped'),
+            ),
+            GlassMenuItem(
+              title: 'Mail',
+              icon: const Icon(CupertinoIcons.mail_solid),
+              onTap: () => debugPrint('Mail tapped'),
+            ),
+            GlassMenuItem(
+              title: 'More…',
+              icon: const Icon(CupertinoIcons.ellipsis_circle),
+              onTap: () {},
+              submenu: [
+                GlassMenuItem(
+                  title: 'Copy Link',
+                  icon: const Icon(CupertinoIcons.link),
+                  onTap: () => debugPrint('Copy Link tapped'),
+                ),
+                GlassMenuItem(
+                  title: 'Save to Files',
+                  icon: const Icon(CupertinoIcons.folder_badge_plus),
+                  onTap: () => debugPrint('Save to Files tapped'),
+                ),
+              ],
+            ),
+          ],
+        ),
         ...List.generate(
           _itemCount,
           (i) => GlassMenuItem(
