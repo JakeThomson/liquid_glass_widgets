@@ -2,6 +2,8 @@
 
 ## Features
 
+- **Dialogs and sheets on a half-folded iPhone Duo (#368):** Half folded, native alerts and sheets present into one side of the fold; `GlassDialog` and `GlassModalSheet` stayed centred across it. The iOS plugin now also reports the fold, `UIView.reservedRegions(kind: .division)`, and `GlassNavigationShell` publishes it with the cutouts as a hinge in `MediaQuery.displayFeatures`, so dialogs present into a side through `DisplayFeatureSubScreen`. `GlassModalSheet` presents into the same side as a card with its margins and a horizontal bar, and `GlassModalSheet.restingWidthOf` measures that side.
+
 - **`GlassVerticalBar.disabled` keeps a subtree's bars horizontal (fixes #ISSUE):** In a list/detail split on iPhone Duo the strip belongs to the column against it, as with `UISplitViewController`, and the other column keeps horizontal bars. Wrap that column in `GlassVerticalBar.disabled`. A pinned bar inside it draws its chrome in-route rather than handing it to the shell, which would pin it against the window, in the strip.
 
 - **`stripRowTop` on `GlassPinnedBarChrome` and `GlassNavBarRegistration` (fixes #ISSUE):** In iPhone Duo's vertical bar strip, the items that stay horizontal were always pinned in the row `GlassAppBar` draws its title in, so beside a bespoke header lower down they sat a row above it. `stripRowTop` puts that row where the bar's own header is.
