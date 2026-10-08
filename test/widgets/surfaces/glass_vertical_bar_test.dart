@@ -430,6 +430,33 @@ void main() {
       ));
       expect(pro.dy, closeTo(100 + 24, 0.5));
     });
+
+    testDuo('stays horizontal and in-route under GlassVerticalBar.disabled',
+        (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(GlassVerticalBar.disabled(
+        child: _Screen(title: 'Root', actions: [
+          GlassBarItem.icon(
+            icon: const Icon(CupertinoIcons.bell),
+            onTap: () {},
+          ),
+        ]),
+      )));
+      await settle(tester);
+
+      // Not handed to the shell, which would pin it in the strip...
+      expect(
+        find.descendant(
+          of: find.byType(GlassNavPinnedHost),
+          matching: find.byIcon(CupertinoIcons.bell),
+        ),
+        findsNothing,
+      );
+      // ...but drawn by the bar, in its horizontal row clear of the strip.
+      final bell = tester.getCenter(find.byIcon(CupertinoIcons.bell));
+      expect(bell.dx, lessThan(382));
+      expect(bell.dy, lessThan(100));
+    });
     });
   });
 

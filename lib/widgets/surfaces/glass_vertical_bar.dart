@@ -221,13 +221,27 @@ class GlassVerticalBar extends InheritedWidget {
     required super.child,
   });
 
+  /// Keeps the bars in [child] horizontal under a strip.
+  ///
+  /// For a column the strip does not belong to. Natively a
+  /// `UISplitViewController` gives the strip to the column against it, and the
+  /// column beside it keeps a horizontal tab bar and navigation bar; wrap that
+  /// column in this.
+  ///
+  /// A [GlassPinnedBarChrome] or [GlassAppBar.pinned] inside it stays out of
+  /// the [GlassNavigationShell] while the shell has a strip, and draws its
+  /// chrome in-route: the shell pins chrome against the window, not against
+  /// the column.
+  const GlassVerticalBar.disabled({super.key, required super.child})
+      : data = null;
+
   /// The strip, or null where bars are horizontal.
   final GlassVerticalBarData? data;
 
   /// The strip bars below [context] should use, or null where they are
   /// horizontal — on every device but iPhone Duo, in inner portrait, with no
-  /// [GlassNavigationShell] above, or with
-  /// [GlassVerticalBarBehavior.disabled].
+  /// [GlassNavigationShell] above, with [GlassVerticalBarBehavior.disabled],
+  /// or under [GlassVerticalBar.disabled].
   static GlassVerticalBarData? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<GlassVerticalBar>()?.data;
 

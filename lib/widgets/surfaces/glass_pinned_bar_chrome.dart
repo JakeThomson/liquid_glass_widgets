@@ -343,11 +343,16 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
     // A bar in a presented route — a modal sheet's — is inside the
     // presentation, which comes up over the stack the shell pins across: the
     // presentation is its container, and the bar draws its own chrome.
+    // A bar kept horizontal under the shell's strip, with
+    // GlassVerticalBar.disabled, draws its own chrome too: the shell would pin
+    // it against the window, in the strip.
     if (!widget.enabled ||
         shell == null ||
         route == null ||
         route is PopupRoute ||
-        !shell.isActive) {
+        !shell.isActive ||
+        (shell.verticalBar != null &&
+            GlassVerticalBar.maybeOf(context) == null)) {
       // Drop any stale registration, then draw the chrome in-route again.
       _release();
       if (_handedOver || _presenting != null) {
