@@ -1360,6 +1360,7 @@ class _GlassTabBarState extends State<GlassTabBar> {
       settings: widget.settings,
       quality: widget.quality,
       indicatorColor: widget.indicatorColor,
+      indicatorSettings: widget.indicatorSettings,
       selectedIconColor: widget.selectedIconColor,
       unselectedIconColor: widget.unselectedIconColor,
       iconSize: widget.iconSize,

@@ -1,6 +1,7 @@
 # Unreleased
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ## Features
 
 <<<<<<< HEAD
@@ -20,6 +21,10 @@
 - **`GlassModalSheet.restingWidthOf` (fixes #402, PR #403):** The width a sheet rests at, for content measured before the sheet is presented. In iPhone Duo's vertical bar strip layout a window 800pt wide or more lays every detent out as a card the display's shorter side wide, so content measured at the screen's width less the margins gained a wrapped row the sheet's height did not allow for.
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#403).
+
+- **The vertical `GlassTabBar` shows its labels under a finger (fixes #406, PR #407):** In iPhone Duo's vertical bar strip the tab bar is icons only, as natively, so its tabs had no visible names. Touching it now behaves as UIKit's does: the capsule swells, then after a short hold grows into a labelled form with each label beneath its icon, and the indicator lifts into a lens that follows the finger and selects the tab under it on release. A drag shows the labels at once. `GlassTabBar.indicatorSettings` now reaches the vertical bar's lens.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#407).
 
 ## Bug Fixes
 
