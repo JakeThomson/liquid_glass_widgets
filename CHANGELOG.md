@@ -1,6 +1,7 @@
 # Unreleased
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ## Features
 
 - **Layered `GlassMenu` submenus (PR #386):** `GlassMenuItem.submenu` opens a native iOS-style card over its parent. The parent recedes to 0.971× and dims its rows to 50%; the full-width card's bold header repeats the source row's icon and title with a downward chevron and sits on that row. Selecting the header, or tapping or gliding onto the exposed parent, collapses one level. Submenus nest, only the top card is interactive or exposed to semantics, and Reduce Motion makes transitions instant. The card's rows arrive with its material while the parent rows it covers cross-fade away, and closing reverses this; the fade drives the glass visibility channel, so the card keeps blurring its backdrop. `GlassMenu.onLevelChanged` reports the depth and the whole stack's extent so an owner can make room for a card that overhangs the parent, and `GlassMenu.maxStackHeight` constrains the stack, scrolling a card that would not otherwise fit. `GlassMenuController.submenuDepth` reports the current depth.
@@ -16,6 +17,10 @@
 - **Vertical `GlassTabBar` asserted outside a `GlassScaffold` (fixes #394, PR #395):** In iPhone Duo's vertical bar strip, the tab bar's capsule, search field and ✕ relied on the `GlassScaffold` around them for a glass layer, so at `GlassQuality.premium` a bar placed any other way failed the `renderLink != null` assertion. Each now brings its own layer, as the horizontal bar does; under a `GlassScaffold` nothing changes.
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#395).
+
+- **`GlassPinnedBarChrome` builder can now tell the package draws the strip (fixes #396, PR #397):** On iPhone Duo, a `GlassPinnedBarChrome` the shell has not hoisted, such as one in a nested navigator, draws the vertical bar strip itself, but `builder` still got `hoisted: false`, so a bar drawing its own capsules from it showed the back button and actions twice. The new `GlassPinnedBarChromeData.inStrip` is true whenever the chrome is laid out for the strip, which the package draws whatever `hoisted` says.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#397).
 
 # 1.10.0
 

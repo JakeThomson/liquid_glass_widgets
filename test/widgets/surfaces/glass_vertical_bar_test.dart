@@ -377,6 +377,40 @@ void main() {
       // The bar's own row, at the top of the screen, as before.
       expect(pinned(tester, CupertinoIcons.bell).dy, lessThan(44));
     });
+
+    testDuo('tells a bar drawing its own chrome that the strip is drawn for it',
+        (tester) async {
+      setScreen(tester);
+      final chrome = <GlassPinnedBarChromeData>[];
+      await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
+      await settle(tester);
+      // Kept out of the shell, as a nested navigator's routes are, so the
+      // strip is drawn in-route and the chrome is never hoisted.
+      _push(
+        tester,
+        GlassPinnedBarChrome(
+          enabled: false,
+          actions: [
+            GlassBarItem.icon(
+              icon: const Icon(CupertinoIcons.share),
+              onTap: () {},
+            ),
+          ],
+          builder: (context, data) {
+            chrome.add(data);
+            return const SizedBox.expand();
+          },
+        ),
+      );
+      await settle(tester);
+
+      expect(chrome.last.hoisted, isFalse);
+      expect(chrome.last.inStrip, isTrue);
+      expect(chrome.last.leading, isNull);
+      expect(chrome.last.actions, isEmpty);
+      expect(find.byIcon(CupertinoIcons.back), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.share), findsOneWidget);
+    });
   });
 
   group('GlassTabBar in the strip', () {
