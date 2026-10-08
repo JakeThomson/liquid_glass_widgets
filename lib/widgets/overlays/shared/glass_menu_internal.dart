@@ -1035,6 +1035,14 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     // covers cross-fade away ([_coveredRowOpacity]); there is no blank,
     // frosted card stage. Lower cards stay at rest.
     final fade = isTop ? _cardFade() : (glass: 1.0, text: 1.0);
+    final isDark = GlassTheme.brightnessOf(context) == Brightness.dark;
+    final glowColor = widget.glowColor ??
+        (isDark
+            ? CupertinoColors.white
+                .withValues(alpha: GlassDefaults.specularLightAlpha)
+            : CupertinoColors.black
+                .withValues(alpha: GlassDefaults.specularDarkAlpha));
+
     return GlassMaterializeScope(
       glassProgress: fade.glass,
       contentOpacity: fade.text,
@@ -1059,7 +1067,7 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
           child: GlassGlow(
             enabled: widget.enableInteractionGlow && isTop,
             glowOnTapOnly: widget.glowOnTapOnly,
-            glowColor: widget.glowColor ?? CupertinoColors.white,
+            glowColor: glowColor,
             glowRadius: widget.glowRadius,
             glowBlurRadius: 40,
             clipper: ShapeBorderClipper(shape: shape),

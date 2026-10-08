@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SemanticsAction;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:liquid_glass_widgets/src/engine/glass_glow.dart';
 import 'package:liquid_glass_widgets/src/renderer/glass_materialize_scope.dart';
 
 // Public widget geometry, normalized to a 200pt root menu. Native reference:
@@ -427,5 +428,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.submenuDepth, 0);
     semantics.dispose();
+  });
+
+  testWidgets('submenu card GlassGlow uses specular alpha and not opaque white',
+      (tester) async {
+    final c = GlassMenuController();
+    await open(tester, c);
+    await tester.tap(find.text('Share'));
+    await tester.pumpAndSettle();
+
+    final glows = tester.widgetList<GlassGlow>(find.byType(GlassGlow));
+    expect(glows.length, greaterThanOrEqualTo(2));
+    final topCardGlow = glows.last;
+    expect(topCardGlow.glowColor.a, lessThanOrEqualTo(0.20));
   });
 }
