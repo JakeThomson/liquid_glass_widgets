@@ -112,10 +112,12 @@ void main() {
       TargetPlatform platform = TargetPlatform.iOS,
       TextDirection textDirection = TextDirection.ltr,
       List<DisplayFeature> displayFeatures = const [],
+      GlassVerticalBarEdge? systemEdge,
       GlassVerticalBarCompression compression =
           GlassVerticalBarCompression.automatic,
     }) =>
         GlassVerticalBar.resolve(
+          systemEdge: systemEdge,
           viewPadding: viewPadding,
           size: size,
           platform: platform,
@@ -187,6 +189,20 @@ void main() {
       expect(bar.bottom, 24);
     });
 
+    test('follows the system to the left in Split View, below the status bar',
+        () {
+      final bar = resolve(
+        viewPadding: const EdgeInsets.fromLTRB(84, 24, 0, 20),
+        size: const Size(472, 669),
+      )!;
+      expect(bar.edge, GlassVerticalBarEdge.leading);
+      expect(bar.width, 84);
+      expect(bar.top, 24 + 24);
+      expect(bar.rowTop, 24 + 24);
+      expect(bar.bottom, 24);
+      expect(bar.collapsesTabBar, isFalse);
+    });
+
     test('collapses the tab bar as the compression asks', () {
       const landscape = Size(678, 466);
       expect(resolve(size: landscape)!.collapsesTabBar, isTrue);
@@ -248,6 +264,31 @@ void main() {
       expect(bar.top, 120);
       expect(bar.bottom, 24);
     });
+
+    test('keeps a strip on the edge UIKit names where it gives no inset', () {
+      // The left-hand app in Split View: no lateral inset, no status bar.
+      const split = Size(469, 669);
+      const padding = EdgeInsets.only(bottom: 34);
+      expect(resolve(viewPadding: padding, size: split), isNull);
+
+      final bar = resolve(
+        viewPadding: padding,
+        size: split,
+        systemEdge: GlassVerticalBarEdge.leading,
+      )!;
+      expect(bar.edge, GlassVerticalBarEdge.leading);
+      expect(bar.width, 84);
+      expect(bar.systemInset, isFalse);
+      // No status cluster or camera in this window's strip.
+      expect(bar.top, 24);
+      expect(bar.bottom, 24);
+    });
+
+    test('follows the insets over the edge where UIKit gives both', () {
+      final bar = resolve(systemEdge: GlassVerticalBarEdge.trailing)!;
+      expect(bar.systemInset, isTrue);
+      expect(bar.top, 170);
+    });
   });
 
   group('GlassNavigationShell', () {
@@ -278,6 +319,7 @@ void main() {
       const channel = MethodChannel('liquid_glass_widgets/reserved_regions');
       final messenger = tester.binding.defaultBinaryMessenger;
       messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'verticalBarEdge') return null;
         expect(call.method, 'observe');
         return [
           [382.0, 0.0, 466.0, 190.0],
@@ -569,7 +611,6 @@ void main() {
       expect(bell.dx, lessThan(382));
       expect(bell.dy, lessThan(100));
     });
-    });
   });
 
   group('GlassTabBar in the strip', () {
@@ -815,7 +856,7 @@ void main() {
       final profile = tester.getCenter(
         find.byIcon(CupertinoIcons.person_crop_circle),
       );
-      expect(profile.dy, 678 - 24 - 6 - 25);
+      expect(profile.dy, closeTo(678 - 24 - 6 - 25, 0.01));
     });
   });
 

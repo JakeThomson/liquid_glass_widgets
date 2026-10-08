@@ -739,6 +739,7 @@ class _TabBarVerticalLayoutState extends State<TabBarVerticalLayout>
                     extent: width,
                     onTap: null,
                   ),
+          )
         : _buildCapsule(
             context,
             slots: [
@@ -791,7 +792,7 @@ class _TabBarVerticalLayoutState extends State<TabBarVerticalLayout>
       children: [
         strip,
         PositionedDirectional(
-          top: GlassVerticalBarMetrics.edgeMargin,
+          top: bar.rowTop,
           start: regular ? null : rowStart,
           end: rowEnd,
           width: regular

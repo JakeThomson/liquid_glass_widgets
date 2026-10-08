@@ -1,11 +1,7 @@
 # Unreleased
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 ## Features
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 - **Layered `GlassMenu` submenus (PR #386):** `GlassMenuItem.submenu` opens a native iOS-style card over its parent. The parent recedes to 0.971× and dims its rows to 50%; the full-width card's bold header repeats the source row's icon and title with a downward chevron and sits on that row. Selecting the header, or tapping or gliding onto the exposed parent, collapses one level. Submenus nest, only the top card is interactive or exposed to semantics, and Reduce Motion makes transitions instant. The card's rows arrive with its material while the parent rows it covers cross-fade away, and closing reverses this; the fade drives the glass visibility channel, so the card keeps blurring its backdrop. `GlassMenu.onLevelChanged` reports the depth and the whole stack's extent so an owner can make room for a card that overhangs the parent, and `GlassMenu.maxStackHeight` constrains the stack, scrolling a card that would not otherwise fit. `GlassMenuController.submenuDepth` reports the current depth.
 
   Thanks to [@F1orian](https://github.com/F1orian) for the contribution (#386).
@@ -43,6 +39,10 @@
 - **iPhone Duo's vertical bar strip now follows the status cluster (fixes #404, PR #405):** The strip's first control sat at a height measured on the 27.1 simulator, so on a device, where the cluster grows with live activities and goes with the status bar, the controls no longer lined up with it. The strip's ends now come from the regions UIKit reserves for the cluster and the camera, `UIView.reservedRegions(kind: .occlusion)`, read by a small iOS plugin and updated as they change. `GlassVerticalBar.resolve` takes them as cutout `displayFeatures`, which is where Flutter will report them once it does on iOS (flutter/flutter#193025).
 
   Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#405).
+
+- **iPhone Duo's vertical bar strip in Split View (fixes #408, PR #409):** The strip was only found where the top inset was zero and one side was inset, so in Split View the app fell back to horizontal bars. The left-hand app gets no inset for its strip at all, only `UITraitCollection.verticalBarEdge`, which the iOS plugin now reports; the shell keeps an 84pt strip on that edge and insets the content for it. Below a status bar along the top, the strip and the title row start beneath it.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#409).
 
 # 1.10.0
 
