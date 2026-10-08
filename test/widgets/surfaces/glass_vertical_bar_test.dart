@@ -389,6 +389,30 @@ void main() {
       );
     });
 
+    testDuo('insets the content for a strip UIKit leaves to the app',
+        (tester) async {
+      // The left-hand app in Split View: no lateral inset, only the edge.
+      setScreen(
+        tester,
+        size: const Size(469, 669),
+        padding: const EdgeInsets.only(bottom: 34),
+      );
+      const channel = MethodChannel('liquid_glass_widgets/reserved_regions');
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+        channel,
+        (call) async => call.method == 'verticalBarEdge' ? 'leading' : [],
+      );
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+      await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
+      await tester.pump();
+      final context = tester.element(find.text('Root body'));
+      expect(MediaQuery.paddingOf(context).left, 84);
+      expect(MediaQuery.viewPaddingOf(context).left, 84);
+      expect(MediaQuery.paddingOf(context).right, 0);
+    });
+
     testDuo('publishes nothing when disabled', (tester) async {
       setScreen(tester);
       GlassVerticalBarEdge? seen = GlassVerticalBarEdge.leading;
@@ -1178,8 +1202,12 @@ void main() {
       WidgetTester tester, {
       GlassSheetPlacement placement = GlassSheetPlacement.automatic,
       bool medium = false,
+      TextDirection textDirection = TextDirection.ltr,
     }) async {
-      await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
+      await tester.pumpWidget(shellApp(
+        const _Screen(title: 'Root'),
+        textDirection: textDirection,
+      ));
       await settle(tester);
       GlassModalSheet.show<void>(
         context: tester.element(find.text('Root body')),
@@ -1377,6 +1405,29 @@ void main() {
         GlassModalSheet.restingWidthOf(tester.element(find.text('Root body'))),
         closeTo(frame.width, 0.05),
       );
+
+      // It keeps to its side as the keyboard rises.
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 3.0);
+      await settle(tester);
+      expect(sheet(tester).left, closeTo(8, 0.05));
+      expect(sheet(tester).right, closeTo(475 - 8, 0.05));
+    });
+
+    testDuo('takes the side nearest the leading corner right to left',
+        (tester) async {
+      setScreen(tester, size: innerLandscape, padding: innerLandscapePadding);
+      tester.view.displayFeatures = [
+        const DisplayFeature(
+          bounds: Rect.fromLTRB(475, 0, 475, 669),
+          type: DisplayFeatureType.hinge,
+          state: DisplayFeatureState.postureHalfOpened,
+        ),
+      ];
+      await present(tester, textDirection: TextDirection.rtl);
+
+      final frame = sheet(tester);
+      expect(frame.left, closeTo(475 + 8, 0.05));
+      expect(frame.right, closeTo(951 - 8, 0.05));
     });
   });
 
