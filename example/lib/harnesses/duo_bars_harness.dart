@@ -42,6 +42,9 @@
 // the search 1s in; `SCROLL=<row>` scrolls a large-title screen 1s in, to
 // bring that row to the top; and `DETENT=medium` and
 // `PLACEMENT=leading|center|trailing` present the sheet that way.
+// `SHOWPILL=NO` takes the search pill off the searchable tab bar
+// (GlassSearchBarConfig.showPill), which natively is the TabView without its
+// search tab.
 // `REDUCETRANSPARENCY=YES` turns on the package's stand-in for Reduce
 // Transparency, which the native screens are shot with from DeviceHub.
 library;
@@ -73,6 +76,7 @@ final bool _rtl = _env['DIRECTION'] == 'rtl';
 final bool _barsDisabled = _env['BARS'] == 'disabled';
 final bool _searchTab = _env['SEARCHTAB'] == 'YES';
 final bool _searchActive = _env['SEARCH'] == 'active';
+final bool _showPill = _env['SHOWPILL'] != 'NO';
 final int _scrollTo = int.tryParse(_env['SCROLL'] ?? '') ?? 0;
 final bool _mediumDetent = _env['DETENT'] == 'medium';
 final bool _reduceTransparency = _env['REDUCETRANSPARENCY'] == 'YES';
@@ -915,6 +919,7 @@ class _TabsScreenState extends State<_TabsScreen> {
                 searchConfig: GlassSearchBarConfig(
                   onSearchToggle: (active) =>
                       setState(() => _searching = active),
+                  showPill: _showPill,
                 ),
                 tabs: _tabs,
               )

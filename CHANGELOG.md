@@ -6,6 +6,12 @@
 
   Thanks to [@F1orian](https://github.com/F1orian) for the contribution (#386).
 
+## Bug Fixes
+
+- **`GlassTabBar.searchable` in iPhone Duo's vertical bar strip (fixes #392, PR #393):** With `GlassSearchBarConfig.showPill` false the strip still ended the capsule with a search slot; it now leaves search out, as a native `TabView` without its search tab does. `GlassTabBar.searchable` and `GlassTabBar.minimizable` also take `passthroughOverPlatformView`, which only the internal layout accepted, so a bar over a map no longer has to drive that layout directly, which kept it horizontal in the strip.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#393).
+
 # 1.10.0
 
 ## Features
