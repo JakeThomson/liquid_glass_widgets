@@ -4,6 +4,36 @@
 
 - **Dialogs and sheets on a half-folded iPhone Duo (#368):** Half folded, native alerts and sheets present into one side of the fold; `GlassDialog` and `GlassModalSheet` stayed centred across it. The iOS plugin now also reports the fold, `UIView.reservedRegions(kind: .division)`, and `GlassNavigationShell` publishes it with the cutouts as a hinge in `MediaQuery.displayFeatures`, so dialogs present into a side through `DisplayFeatureSubScreen`. `GlassModalSheet` presents into the same side as a card with its margins and a horizontal bar, and `GlassModalSheet.restingWidthOf` measures that side.
 
+# 1.12.0
+
+## Features
+
+- **Opt-in scroll edge pointer absorption (PR #413):** `GlassScrollEdgeEffect` and `GlassScaffold` can absorb touches in their fade zones when `absorbPointer` (`edgeFadeAbsorbsPointers` on `GlassScaffold`) is enabled; defaults to `false`.
+
+  Thanks to [@yohom](https://github.com/yohom) for the contribution (#413).
+
+## Bug Fixes
+
+- **Anti-aliased premium pill and curved silhouettes (PR #415):** Fixed stair-stepping artifacts on curved glass silhouettes (notably `GlassTabBar`'s indicator pill during drags) by extending the geometry matte's coverage fade to full transparency and filtering transformed mattes bilinearly.
+
+  Thanks to [@gbahry](https://github.com/gbahry) for the fix (#415).
+
+## Performance
+
+- **Morph spring early settle & frame savings (PR #417):** `GlassMorphController` now uses an optimized settling tolerance so springs complete once motion is visually imperceptible. Eliminates trailing rebuild and repaint ticks across `GlassMenu`, `GlassPopover`, and modal sheets, reducing frame draw overhead by ~30%.
+
+  Thanks to [@Ahmadre](https://github.com/Ahmadre) for the contribution (#417).
+
+# 1.11.1
+
+## Bug Fixes
+
+- **`GlassBackdropGroup` dropped `backerColor` on members after the first (fixes #412):** Surfaces with a visible `backerColor` now take an isolated backdrop read so their dimming pad is preserved, while members without a backer continue sharing the group's backdrop read.
+
+- **Engine lifecycle hardening (PR #410):** Fragment shaders are no longer reloaded on every rebuild. Blend groups release their group link on dispose and follow `renderLink` changes when reparented. Removing a glass shape from a layer repaints its matte, so no ghost of it remains. Duplicate shape registrations on detached render objects are prevented, and the native picture recorded for an asynchronous geometry cache is released as soon as it is rendered.
+
+- **Fragment shaders are now disposed:** `MultiShaderBuilder` disposes the shaders it creates when it unmounts, and the ones it replaces when its keys change (after the frame that last used them), instead of leaving them to the garbage collector.
+
 # 1.11.0
 
 ## Features

@@ -52,6 +52,27 @@ void main() {
 
     // ── Edge fade: top fade height calculation ──────────────────────────────
 
+    testWidgets('forwards edgeFadeAbsorbsPointers to GlassScrollEdgeEffect',
+        (tester) async {
+      await tester.pumpWidget(
+        createTestApp(
+          child: AdaptiveLiquidGlassLayer(
+            settings: defaultTestGlassSettings,
+            child: const GlassScaffold(
+              bottomEdgeFade: true,
+              edgeFadeAbsorbsPointers: true,
+              body: SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+
+      final scrollEdge = tester.widget<GlassScrollEdgeEffect>(
+        find.byType(GlassScrollEdgeEffect),
+      );
+      expect(scrollEdge.absorbPointer, isTrue);
+    });
+
     testWidgets('top fade excludes appBarHeight when no appBar is provided',
         (tester) async {
       // When topEdgeFade is true but no appBar is set, the fade should
@@ -125,6 +146,7 @@ void main() {
         find.byType(GlassScrollEdgeEffect),
       );
       expect(scrollEdge.style, GlassScrollEdgeStyle.soft);
+      expect(scrollEdge.absorbPointer, isFalse);
       expect(find.byType(ProgressiveBlur), findsNothing);
     });
 

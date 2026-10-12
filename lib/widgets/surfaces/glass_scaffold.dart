@@ -135,6 +135,7 @@ class GlassScaffold extends StatelessWidget {
     this.edgeFade = true,
     this.topEdgeFade,
     this.bottomEdgeFade,
+    this.edgeFadeAbsorbsPointers = false,
     this.topEdgeFadeExtent = 20.0,
     this.bottomEdgeFadeExtent = 20.0,
     this.edgeStyle = GlassScrollEdgeStyle.soft,
@@ -248,6 +249,12 @@ class GlassScaffold extends StatelessWidget {
   /// Whether to fade content at the bottom edge. When `null`, follows
   /// [edgeFade]. Automatically set to `true` when [bottomBar] is provided.
   final bool? bottomEdgeFade;
+
+  /// Whether the edge fades absorb pointer events. Defaults to `false`.
+  ///
+  /// When enabled, taps and gestures are blocked across each visible fade
+  /// zone, including content that is still visible beneath the fade.
+  final bool edgeFadeAbsorbsPointers;
 
   /// Extra fade height beyond the auto-calculated app bar area.
   ///
@@ -486,6 +493,7 @@ class GlassScaffold extends StatelessWidget {
             bottomFadeHeight: bottomFadeHeight,
             fadeTop: doFadeTop,
             fadeBottom: doFadeBottom,
+            absorbPointer: edgeFadeAbsorbsPointers,
             style: edgeStyle,
             maxSigma: maxSigma,
             // Pass the explicit background colour so the async-capture
