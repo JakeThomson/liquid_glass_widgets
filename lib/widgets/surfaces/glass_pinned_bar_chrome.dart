@@ -688,6 +688,12 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   /// [layout]. A screen's bar spans the screen from its top, so the two agree;
   /// a modal sheet's spans the sheet, so its strip stays on the sheet as the
   /// sheet presents, drags and dismisses.
+  ///
+  /// Across the strip it is placed against the box the [GlassVerticalBar]
+  /// spans instead — the screen, or the sheet — which the strip is measured
+  /// from. The bar need not reach the strip: one laid out clear of it, by a
+  /// [SafeArea] say, would otherwise draw the strip a strip's width into the
+  /// content each time the chrome is handed back to it.
   Widget _buildStrip(
     BuildContext context,
     GlassVerticalBarData bar,
@@ -737,6 +743,7 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
         ),
       ),
     );
+    final span = _stripSpan(layout.childSize.width);
     return Stack(
       children: [
         Positioned(
@@ -746,11 +753,37 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
           height: layout.overlaySize.height,
           child: Transform(
             transform: layout.childPaintTransform,
-            child: Stack(clipBehavior: Clip.none, children: [strip]),
+            child: Stack(clipBehavior: Clip.none, children: [
+              Positioned(
+                left: span.left,
+                width: span.right - span.left,
+                top: 0,
+                bottom: 0,
+                child: Stack(clipBehavior: Clip.none, children: [strip]),
+              ),
+            ]),
           ),
         ),
       ],
     );
+  }
+
+  /// The left and right edges, in the bar's coordinates, of the box the
+  /// enclosing [GlassVerticalBar] spans, or the bar's own, [width] wide,
+  /// where that box cannot be measured.
+  ({double left, double right}) _stripSpan(double width) {
+    final bar = context.findRenderObject();
+    final frame = context
+        .getElementForInheritedWidgetOfExactType<GlassVerticalBar>()
+        ?.findRenderObject();
+    if (bar is! RenderBox || frame is! RenderBox || !frame.hasSize) {
+      return (left: 0.0, right: width);
+    }
+    final rect = MatrixUtils.transformRect(
+      frame.getTransformTo(bar),
+      Offset.zero & frame.size,
+    );
+    return (left: rect.left, right: rect.right);
   }
 
   @override

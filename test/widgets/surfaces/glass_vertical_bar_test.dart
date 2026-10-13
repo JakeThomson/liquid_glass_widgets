@@ -566,6 +566,40 @@ void main() {
       expect(find.byIcon(CupertinoIcons.share), findsOneWidget);
     });
 
+    testDuo('draws the strip in-route against the screen, not the bar',
+        (tester) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(const _Screen(title: 'Root')));
+      await settle(tester);
+      // A bar laid out clear of the strip, as one under a SafeArea is.
+      _push(
+        tester,
+        SafeArea(
+          child: GlassPinnedBarChrome(
+            enabled: false,
+            actions: [
+              GlassBarItem.icon(
+                icon: const Icon(CupertinoIcons.share),
+                onTap: () {},
+              ),
+            ],
+            builder: (context, chrome) => const SizedBox.expand(),
+          ),
+        ),
+      );
+      await settle(tester);
+
+      // Where the shell draws them, not 84pt into the content.
+      expect(
+        tester.getCenter(find.byIcon(CupertinoIcons.back)).dx,
+        closeTo(418, 0.01),
+      );
+      expect(
+        tester.getCenter(find.byIcon(CupertinoIcons.share)).dx,
+        closeTo(418, 0.01),
+      );
+    });
+
     testDuo('puts the horizontal row where the bar says its header is',
         (tester) async {
       setScreen(tester);

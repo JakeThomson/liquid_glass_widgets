@@ -1,3 +1,9 @@
+# Unreleased
+
+## Bug Fixes
+
+- **The vertical bar strip jumped into the content during a presentation (fixes #422):** On iPhone Duo, presenting anything over a screen hands its chrome back to the route, which draws the strip itself. It placed the strip against the bar's own box, so a bar laid out clear of the strip, under a `SafeArea` say, drew its back button and items a strip's width into the content until the presentation ended. The strip is now placed across against the screen, or the sheet, that its `GlassVerticalBar` spans.
+
 # 1.12.0
 
 ## Features
