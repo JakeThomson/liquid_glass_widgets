@@ -1358,6 +1358,61 @@ void main() {
 
       expect(popover(tester).top, closeTo(230, 0.5));
     });
+
+    Future<void> openMenu(
+      WidgetTester tester, {
+      required Offset trigger,
+      int items = 3,
+    }) async {
+      setScreen(tester);
+      await tester.pumpWidget(shellApp(Stack(children: [
+        Positioned(
+          left: trigger.dx,
+          top: trigger.dy,
+          child: GlassMenu(
+            autoAdjustToScreen: true,
+            trigger: const SizedBox.square(
+              dimension: 48,
+              child: ColoredBox(color: CupertinoColors.white),
+            ),
+            items: [
+              for (var i = 1; i <= items; i++)
+                GlassMenuItem(title: 'Item $i', onTap: () {}),
+            ],
+          ),
+        ),
+      ])));
+      await settle(tester);
+      await tester.tapAt(trigger + const Offset(24, 24));
+      await settle(tester);
+    }
+
+    Rect item(WidgetTester tester, int i) =>
+        tester.getRect(find.byType(GlassMenuItem).at(i - 1));
+
+    testDuo('opens a menu over its item, down from the upper half',
+        (tester) async {
+      await openMenu(tester, trigger: const Offset(394, 230));
+
+      // Its top and outer edges lie on the item's, inside the menu's 12pt
+      // padding, rather than centred on it as a popover is.
+      expect(item(tester, 1).top, closeTo(230 + 12, 0.5));
+      expect(item(tester, 1).right, closeTo(394 + 48 - 12, 0.5));
+    });
+
+    testDuo('opens a menu up from the lower half', (tester) async {
+      await openMenu(tester, trigger: const Offset(394, 450));
+
+      expect(item(tester, 3).bottom, closeTo(450 + 48 - 12, 0.5));
+    });
+
+    testDuo('keeps a menu clear of the status cluster', (tester) async {
+      await openMenu(tester, trigger: const Offset(394, 450), items: 12);
+
+      // Taller than the room above the item: it stops level with the strip's
+      // first control, at y 170, and scrolls.
+      expect(item(tester, 1).top, closeTo(170 + 12, 0.5));
+    });
   });
 
   group('Reduce Transparency in the strip', () {

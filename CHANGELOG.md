@@ -1,3 +1,9 @@
+# Unreleased
+
+## Bug Fixes
+
+- **Menus from the vertical bar strip covered its status cluster (fixes #423):** On iPhone Duo, a `GlassMenu` opened from the strip was centred on its item, as a popover is, so a tall one rose over the clock and the status icons at the top of the strip. Natively a menu covers its item with their edges aligned and grows away from the nearer of the top and bottom of the screen, and stops level with the strip's first control. `GlassMenu` now does the same.
+
 # 1.12.0
 
 ## Features

@@ -641,8 +641,12 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
     if ((widget.menuAlignment == null ||
             widget.menuAlignment == GlassMenuAlignment.none) &&
         stripAlignment != null) {
-      // From iPhone Duo's vertical bar strip: towards the content.
-      _morphAlignment = stripAlignment;
+      // From iPhone Duo's vertical bar strip: towards the content. Natively a
+      // menu, unlike a popover, is not centred on its item: it covers it
+      // edge to edge and grows away from the nearer of the top and bottom.
+      final upperHalf = !screenHeight.isFinite ||
+          position.dy + _triggerSize!.height / 2 <= screenHeight / 2;
+      _morphAlignment = Alignment(stripAlignment.x, upperHalf ? -1.0 : 1.0);
     } else if (widget.menuAlignment == null ||
         widget.menuAlignment == GlassMenuAlignment.none) {
       // Horizontal alignment: left vs right half
@@ -701,14 +705,17 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
       flutterView.devicePixelRatio,
     );
 
-    final double safeTop = widget.menuPadding.top + mqPadding.top;
-    final double safeBottom = widget.menuPadding.bottom + mqPadding.bottom;
     // The strip's inset is no bar to a menu opened out of the strip, which
-    // natively lies over the item it came from.
+    // natively lies over the item it came from; its status cluster is.
     final stripAlignment = verticalBarPresentationAlignment(
       context,
       position & _triggerSize!,
     );
+    final double safeTop = math.max(
+      widget.menuPadding.top + mqPadding.top,
+      verticalBarPresentationTop(context, position & _triggerSize!) ?? 0.0,
+    );
+    final double safeBottom = widget.menuPadding.bottom + mqPadding.bottom;
     final double safeLeft = widget.menuPadding.left +
         (stripAlignment == null ? mqPadding.left : 0.0);
     final double safeRight = widget.menuPadding.right +
@@ -1659,10 +1666,26 @@ class _GlassMenuState extends State<GlassMenu> with TickerProviderStateMixin {
             flutterView.padding, flutterView.devicePixelRatio);
 
         // Clamp to screen height minus safe areas and a 20px safety buffer
-        final maxHeight = mediaQuery.size.height -
+        var maxHeight = mediaQuery.size.height -
             mqPadding.vertical -
             widget.menuPadding.vertical -
             20.0;
+        // From the vertical bar strip, to the room below its status cluster.
+        final stripTop = _triggerSize == null
+            ? null
+            : verticalBarPresentationTop(
+                context,
+                _triggerGlobalPosition & _triggerSize!,
+              );
+        if (stripTop != null) {
+          maxHeight = math.min(
+            maxHeight,
+            mediaQuery.size.height -
+                stripTop -
+                mqPadding.bottom -
+                widget.menuPadding.bottom,
+          );
+        }
         return math.min(naturalHeight, math.max(0.0, maxHeight));
       }
     }
