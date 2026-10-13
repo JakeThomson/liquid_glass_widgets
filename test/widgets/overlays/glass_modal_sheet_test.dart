@@ -129,7 +129,73 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Modal Content'), findsOneWidget);
+      final route = ModalRoute.of(tester.element(find.text('Modal Content')))!;
+      expect(route.settings.name, isNull);
+      expect(route.settings.arguments, isNull);
     });
+
+    for (final useRootNavigator in [false, true]) {
+      testWidgets(
+          'show() exposes routeSettings with useRootNavigator: $useRootNavigator',
+          (tester) async {
+        final rootObserver = _SheetRouteObserver();
+        final nestedObserver = _SheetRouteObserver();
+        final routeSettings = RouteSettings(
+          name: '/sheet/details',
+          arguments: {'itemId': 42},
+        );
+        Future<int?>? result;
+        RouteSettings? contentSettings;
+
+        await tester.pumpWidget(MaterialApp(
+          navigatorObservers: [rootObserver],
+          home: Navigator(
+            observers: [nestedObserver],
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () {
+                    result = GlassModalSheet.show<int>(
+                      context: context,
+                      useRootNavigator: useRootNavigator,
+                      routeSettings: routeSettings,
+                      builder: (context) {
+                        contentSettings = ModalRoute.of(context)!.settings;
+                        return const Text('Named Sheet');
+                      },
+                    );
+                  },
+                  child: const Text('Show'),
+                ),
+              ),
+            ),
+          ),
+        ));
+        rootObserver.pushedRoutes.clear();
+        nestedObserver.pushedRoutes.clear();
+
+        await tester.tap(find.text('Show'));
+        await tester.pumpAndSettle();
+
+        final selectedObserver =
+            useRootNavigator ? rootObserver : nestedObserver;
+        final otherObserver = useRootNavigator ? nestedObserver : rootObserver;
+        expect(selectedObserver.pushedRoutes, hasLength(1));
+        expect(otherObserver.pushedRoutes, isEmpty);
+        final route = selectedObserver.pushedRoutes.single;
+        expect(route, isA<PopupRoute<int>>());
+        expect(route.settings, same(routeSettings));
+        expect(contentSettings, same(routeSettings));
+
+        Navigator.of(tester.element(find.text('Named Sheet'))).pop(42);
+        await tester.pumpAndSettle();
+
+        expect(await result, 42);
+        expect(selectedObserver.poppedRoutes, [route]);
+        expect(otherObserver.poppedRoutes, isEmpty);
+        expect(find.text('Named Sheet'), findsNothing);
+      });
+    }
 
     testWidgets('show() falls back when initialState is not an offered detent',
         (tester) async {
@@ -1404,6 +1470,21 @@ void main() {
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
+
+class _SheetRouteObserver extends NavigatorObserver {
+  final pushedRoutes = <Route<dynamic>>[];
+  final poppedRoutes = <Route<dynamic>>[];
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushedRoutes.add(route);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    poppedRoutes.add(route);
+  }
+}
 
 /// A minimal StatefulWidget that calls [onInitState] each time its
 /// [State.initState] runs. Used to detect spurious Element teardowns caused

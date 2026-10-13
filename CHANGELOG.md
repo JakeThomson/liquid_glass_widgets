@@ -1,3 +1,9 @@
+# Unreleased
+
+## Features
+
+- **Modal sheet route settings:** `GlassModalSheet.show` accepts optional `routeSettings`, allowing callers to provide a route name and arguments for navigation observers and sheet content.
+
 # 1.12.0
 
 ## Features
