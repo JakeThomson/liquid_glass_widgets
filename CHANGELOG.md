@@ -1,5 +1,10 @@
 # Unreleased
 
+
+## Bug Fixes
+
+- **The vertical bar strip jumped into the content during a presentation (fixes #422):** On iPhone Duo, presenting anything over a screen hands its chrome back to the route, which draws the strip itself. It placed the strip against the bar's own box, so a bar laid out clear of the strip, under a `SafeArea` say, drew its back button and items a strip's width into the content until the presentation ended. The strip is now placed across against the screen, or the sheet, that its `GlassVerticalBar` spans.
+
 ## Features
 
 - **Dialogs and sheets on a half-folded iPhone Duo (#368):** Half folded, native alerts and sheets present into one side of the fold; `GlassDialog` and `GlassModalSheet` stayed centred across it. The iOS plugin now also reports the fold, `UIView.reservedRegions(kind: .division)`, and `GlassNavigationShell` publishes it with the cutouts as a hinge in `MediaQuery.displayFeatures`, so dialogs present into a side through `DisplayFeatureSubScreen`. `GlassModalSheet` presents into the same side as a card with its margins and a horizontal bar, and `GlassModalSheet.restingWidthOf` measures that side.
