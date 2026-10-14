@@ -355,6 +355,10 @@ class GlassModalSheet extends StatefulWidget {
 
   /// Shows a high-fidelity glass modal sheet.
   ///
+  /// The optional [routeSettings] are passed to the underlying dialog route,
+  /// allowing [NavigatorObserver]s to identify the sheet by name and arguments.
+  /// They are also available through [ModalRoute.of] in [builder].
+  ///
   /// ## Morphing from a trigger
   ///
   /// Wrap the trigger in a [GlassMorphTrigger] and hand its [GlassMorphAnchor]
@@ -428,6 +432,7 @@ class GlassModalSheet extends StatefulWidget {
     Color barrierColor = GlassDefaults.barrierColor,
     bool isDismissible = true,
     bool useRootNavigator = false,
+    RouteSettings? routeSettings,
     double interactionScale = 1.01,
     bool enableInteractionGlow = true,
     bool enableSaturationGlow = true,
@@ -547,6 +552,7 @@ class GlassModalSheet extends StatefulWidget {
           ? const Color(0x00000000)
           : barrierColor,
       useRootNavigator: useRootNavigator,
+      routeSettings: routeSettings,
       transitionDuration: transitionDuration,
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         // Morphing: the droplet IS the transition. Mapping the engine onto this
