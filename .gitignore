@@ -167,3 +167,7 @@ MANUAL_TEST_CHECKLIST.md
 # Agent configuration and documentation
 .claude/
 .agents/
+
+# Local parity captures and tool builds (keep git repo lean)
+tool/parity/captures/
+tool/parity/ios_reference/build/

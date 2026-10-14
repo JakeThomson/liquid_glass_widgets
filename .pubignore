@@ -38,6 +38,7 @@ example/lib/
 example/integration_test/
 
 # Tools & internal scripts
+tool/
 tools/
 scripts/
 modal_sheet_showcase/

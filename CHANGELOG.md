@@ -1,15 +1,24 @@
-# Unreleased
-
-
-## Bug Fixes
-
-- **Menus from the vertical bar strip covered its status cluster (fixes #423):** On iPhone Duo, a `GlassMenu` opened from the strip was centred on its item, as a popover is, so a tall one rose over the clock and the status icons at the top of the strip. Natively a menu covers its item with their edges aligned and grows away from the nearer of the top and bottom of the screen, and stops level with the strip's first control. `GlassMenu` now does the same.
-- **The vertical bar strip jumped into the content during a presentation (fixes #422):** On iPhone Duo, presenting anything over a screen hands its chrome back to the route, which draws the strip itself. It placed the strip against the bar's own box, so a bar laid out clear of the strip, under a `SafeArea` say, drew its back button and items a strip's width into the content until the presentation ended. The strip is now placed across against the screen, or the sheet, that its `GlassVerticalBar` spans.
+# 1.13.0
 
 ## Features
 
-- **Dialogs and sheets on a half-folded iPhone Duo (#368):** Half folded, native alerts and sheets present into one side of the fold; `GlassDialog` and `GlassModalSheet` stayed centred across it. The iOS plugin now also reports the fold, `UIView.reservedRegions(kind: .division)`, and `GlassNavigationShell` publishes it with the cutouts as a hinge in `MediaQuery.displayFeatures`, so dialogs present into a side through `DisplayFeatureSubScreen`. `GlassModalSheet` presents into the same side as a card with its margins and a horizontal bar, and `GlassModalSheet.restingWidthOf` measures that side.
-- **Modal sheet route settings:** `GlassModalSheet.show` accepts optional `routeSettings`, allowing callers to provide a route name and arguments for navigation observers and sheet content.
+- **Dialogs and sheets on a half-folded iPhone Duo (PR #411):** Half folded, native alerts and sheets present into one side of the fold; `GlassDialog` and `GlassModalSheet` stayed centred across it. The iOS plugin now also reports the fold, `UIView.reservedRegions(kind: .division)`, and `GlassNavigationShell` publishes it with the cutouts as a hinge in `MediaQuery.displayFeatures`, so dialogs present into a side through `DisplayFeatureSubScreen`. `GlassModalSheet` presents into the same side as a card with its margins and a horizontal bar, and `GlassModalSheet.restingWidthOf` measures that side.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the contribution (#411, part of #368).
+
+- **Modal sheet route settings (PR #419):** `GlassModalSheet.show` accepts optional `routeSettings`, allowing callers to provide a route name and arguments for navigation observers and sheet content.
+
+  Thanks to [@leoluobuqi](https://github.com/leoluobuqi) for the contribution (#419).
+
+## Bug Fixes
+
+- **The vertical bar strip jumped into the content during a presentation (PR #420, fixes #422):** On iPhone Duo, presenting anything over a screen hands its chrome back to the route, which draws the strip itself. It placed the strip against the bar's own box, so a bar laid out clear of the strip, under a `SafeArea` say, drew its back button and items a strip's width into the content until the presentation ended. The strip is now placed across against the screen, or the sheet, that its `GlassVerticalBar` spans.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#420).
+
+- **Menus from the vertical bar strip covered its status cluster (PR #421, fixes #423):** On iPhone Duo, a `GlassMenu` opened from the strip was centred on its item, as a popover is, so a tall one rose over the clock and the status icons at the top of the strip. Natively a menu covers its item with their edges aligned and grows away from the nearer of the top and bottom of the screen, and stops level with the strip's first control. `GlassMenu` now does the same.
+
+  Thanks to [@JakeThomson](https://github.com/JakeThomson) for the fix (#421).
 
 # 1.12.0
 
