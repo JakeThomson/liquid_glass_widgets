@@ -29,9 +29,11 @@
 //
 // Scenarios: nav, navbottom, tabs, tabsnav, root, search, axis, alert (a
 // dialog over the detail screen, 1.5s in), popover (a popover from the
-// strip's compose button, 1.5s in), sheet (a sheet over a root screen, 1s in)
-// push (the detail screen pushed 1s in and popped 2.5s later, to record
-// the morph) and nested (the detail screen in a nested navigator, kept out of
+// strip's compose button, 1.5s in), menu (the ••• of [_routeMenuItem],
+// tapped open 1.5s in and closed 2s later), sheet (a sheet over a root
+// screen, 1s in) push (the detail screen pushed 1s in and popped 2.5s later,
+// to record the morph) and nested (the detail screen in a nested navigator,
+// kept out of
 // the shell, with a bar that draws its own capsules; the native `nav` is its
 // reference). A `DIRECTION=rtl` line
 // lays the app out right to left, `BARS=disabled` sets
@@ -56,6 +58,7 @@ library;
 import 'dart:io' show Directory, File;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -152,6 +155,10 @@ class _App extends StatelessWidget {
         'popover' => [
             _route(const _ListScreen(title: 'Inbox')),
             _route(const _DetailScreen(popover: true)),
+          ],
+        'menu' => [
+            _route(const _ListScreen(title: 'Inbox')),
+            _route(const _DetailScreen(menu: true)),
           ],
         'search' => [_route(const _RootScreen(searchable: true))],
         'tabs' => [_route(const _TabsScreen(pushed: false))],
@@ -367,7 +374,11 @@ List<GlassBarItem> _detailActions() => [
     ];
 
 class _DetailScreen extends StatefulWidget {
-  const _DetailScreen({this.alert = false, this.popover = false});
+  const _DetailScreen({
+    this.alert = false,
+    this.popover = false,
+    this.menu = false,
+  });
 
   /// Whether to present a dialog over the screen 1.5s in, as the native
   /// `alert` scenario does.
@@ -376,6 +387,10 @@ class _DetailScreen extends StatefulWidget {
   /// Whether the compose button opens a popover, 1.5s in, as in the native
   /// `popover` scenario.
   final bool popover;
+
+  /// Whether the screen keeps only its ••• menu, which is tapped open 1.5s
+  /// in and closed again 2s later, as in the `menu` scenario.
+  final bool menu;
 
   @override
   State<_DetailScreen> createState() => _DetailScreenState();
@@ -393,6 +408,16 @@ class _DetailScreenState extends State<_DetailScreen> {
         const Duration(milliseconds: 1500),
         () => _openPopover?.call(),
       );
+    }
+    if (widget.menu) {
+      Future<void>.delayed(const Duration(milliseconds: 1500), () async {
+        final trigger = _iconCentre(CupertinoIcons.ellipsis);
+        if (trigger == null) return;
+        _tap(trigger);
+        await Future<void>.delayed(const Duration(seconds: 2));
+        // Anywhere off the menu lands on its dismiss barrier.
+        _tap(const Offset(40, 400));
+      });
     }
     if (!widget.alert) return;
     Future<void>.delayed(const Duration(milliseconds: 1500), () {
@@ -415,28 +440,163 @@ class _DetailScreenState extends State<_DetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => GlassScaffold(
-        backgroundColor: CupertinoColors.white,
-        appBar: GlassAppBar.pinned(
-          title: const Text('Detail'),
-          buttonSettings: _glass,
-          actions: [
-            if (widget.popover)
-              GlassBarItem.custom(
-                child: _ComposePopover(
-                  onReady: (open) => _openPopover = open,
-                ),
-                label: 'Compose',
-                background: GlassBarItemBackground.separate,
-                axisBehavior: GlassBarItemAxisBehavior.verticalPreferred,
-              )
-            else
-              _detailActions().first,
-            ..._detailActions().skip(1),
-          ],
+  Widget build(BuildContext context) {
+    final screen = GlassScaffold(
+      backgroundColor: CupertinoColors.white,
+      appBar: GlassAppBar.pinned(
+        title: const Text('Detail'),
+        buttonSettings: _glass,
+        actions: [
+          if (widget.menu)
+            _routeMenuItem(context)
+          else if (widget.popover)
+            GlassBarItem.custom(
+              child: _ComposePopover(
+                onReady: (open) => _openPopover = open,
+              ),
+              label: 'Compose',
+              background: GlassBarItemBackground.separate,
+              axisBehavior: GlassBarItemAxisBehavior.verticalPreferred,
+            )
+          else
+            _detailActions().first,
+          if (!widget.menu) ..._detailActions().skip(1),
+        ],
+      ),
+      body: const _Rows(title: 'Detail'),
+    );
+    // Kept clear of the strip, as an app laying its whole screen out in the
+    // safe area does, so the bar stops short of the strip.
+    return widget.menu
+        ? ColoredBox(
+            color: CupertinoColors.white,
+            child: SafeArea(top: false, bottom: false, child: screen),
+          )
+        : screen;
+  }
+}
+
+/// An overflow menu as an app builds its own: a [GlassBarItem.sheet] whose
+/// tap pushes a transparent route holding a [GlassMenu] over the icon, so the
+/// menu can take content of any height.
+GlassBarItem _routeMenuItem(BuildContext screen) {
+  BuildContext? iconContext;
+  return GlassBarItem.sheet(
+    id: 'more',
+    label: 'More',
+    icon: Builder(builder: (context) {
+      iconContext = context;
+      return const Icon(CupertinoIcons.ellipsis);
+    }),
+    onPresent: (_) {
+      // The icon drawn in the strip lives above the navigator, so the route
+      // is pushed from the screen.
+      final context = iconContext;
+      if (context == null || !context.mounted) return;
+      final box = context.findRenderObject()! as RenderBox;
+      final icon = box.localToGlobal(Offset.zero) & box.size;
+      Navigator.of(screen, rootNavigator: true).push(RawDialogRoute<void>(
+        barrierDismissible: false,
+        barrierColor: const Color(0x00000000),
+        transitionDuration: Duration.zero,
+        pageBuilder: (_, __, ___) => _RouteMenu(
+          source: Rect.fromCenter(center: icon.center, width: 48, height: 48),
         ),
-        body: const _Rows(title: 'Detail'),
-      );
+      ));
+    },
+  );
+}
+
+class _RouteMenu extends StatefulWidget {
+  const _RouteMenu({required this.source});
+
+  /// Where the tapped control is on screen.
+  final Rect source;
+
+  @override
+  State<_RouteMenu> createState() => _RouteMenuState();
+}
+
+class _RouteMenuState extends State<_RouteMenu> {
+  final _controller = GlassMenuController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _controller.open());
+  }
+
+  @override
+  Widget build(BuildContext context) => Stack(children: [
+        Positioned.fromRect(
+          rect: widget.source,
+          child: GlassMenu(
+            controller: _controller,
+            settings: _glass,
+            trigger: const SizedBox.expand(),
+            menuWidth: 250,
+            autoAdjustToScreen: true,
+            // Pop once the droplet is home.
+            onClose: () {
+              final navigator = Navigator.of(context);
+              Future<void>.delayed(
+                const Duration(milliseconds: 700),
+                () {
+                  if (mounted) navigator.pop();
+                },
+              );
+            },
+            // As tall as the native `menu` scenario's: taller than the room
+            // between the item's centre and the status cluster.
+            items: [
+              for (final (title, icon) in [
+                ('Unpin', CupertinoIcons.pin_slash),
+                ('Share', CupertinoIcons.share),
+                ('Invite', CupertinoIcons.person_badge_plus),
+                ('Copy ID', CupertinoIcons.doc_on_doc),
+                ('Add to folder', CupertinoIcons.folder_badge_plus),
+                ('Edit', CupertinoIcons.pencil),
+              ])
+                GlassMenuItem(title: title, icon: Icon(icon), onTap: () {}),
+              GlassMenuItem(
+                title: 'Delete',
+                icon: const Icon(CupertinoIcons.delete),
+                isDestructive: true,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      ]);
+}
+
+/// The global centre of the painted [icon], or null where none is painted.
+///
+/// The bar keeps an unpainted copy of each item to measure, under a zero
+/// [Opacity], which is not the one to tap.
+Offset? _iconCentre(IconData icon) {
+  Offset? centre;
+  void visit(Element element) {
+    final widget = element.widget;
+    if (centre == null &&
+        widget is Icon &&
+        widget.icon == icon &&
+        element.findAncestorWidgetOfExactType<Opacity>()?.opacity != 0) {
+      final box = element.renderObject! as RenderBox;
+      centre = box.localToGlobal(box.size.center(Offset.zero));
+    }
+    element.visitChildren(visit);
+  }
+
+  WidgetsBinding.instance.rootElement?.visitChildren(visit);
+  return centre;
+}
+
+/// A finger's tap at [position], through the gesture binding.
+void _tap(Offset position) {
+  GestureBinding.instance
+    ..handlePointerEvent(PointerDownEvent(pointer: 1 << 20, position: position))
+    ..handlePointerEvent(PointerUpEvent(pointer: 1 << 20, position: position));
 }
 
 /// The compose button with a popover, as the native `popover` scenario
