@@ -2,7 +2,7 @@
 
 ## Bug Fixes
 
-- **The vertical bar strip asserted after the screen changed under another route:** On iPhone Duo, a bar's in-route strip is an `OverlayPortal.overlayChildLayoutBuilder` child, which Flutter lays out every frame even while its route is offstage, against the overlay's size from before the screen changed. Unfolding to the inner display under a full-screen route asserted `size == theater.size`. `GlassPinnedBarChrome` now takes the strip out of the overlay while its route is offstage.
+- **A pinned bar asserted when the screen resized under another route:** A pinned bar's in-route strip is an `OverlayPortal.overlayChildLayoutBuilder` child, which Flutter lays out every frame even while its route is offstage, against the overlay's size from before the resize (flutter/flutter#192030). Rotating or unfolding iPhone Duo under a full-screen route asserted `size == theater.size`. `GlassPinnedBarChrome` now takes the strip out of the overlay while its route is offstage.
 
 # 1.13.0
 
