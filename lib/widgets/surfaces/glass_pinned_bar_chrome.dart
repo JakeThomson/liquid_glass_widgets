@@ -311,6 +311,16 @@ class _GlassPinnedBarChromeState extends State<GlassPinnedBarChrome> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // The strip leaves the overlay while the route is offstage, under an
+    // opaque route say: an overlay child layout builder there still lays out
+    // every frame, against the overlay's size from before any resize since,
+    // and asserts. A portal can't be shown or hidden during build, so after
+    // the frame.
+    final onstage = TickerMode.valuesOf(context).enabled;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || onstage == _strip.isShowing) return;
+      onstage ? _strip.show() : _strip.hide();
+    });
     _sync();
   }
 
