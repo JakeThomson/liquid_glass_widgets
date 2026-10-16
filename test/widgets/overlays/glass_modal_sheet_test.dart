@@ -197,6 +197,33 @@ void main() {
       });
     }
 
+    testWidgets('show() with isDismissible: false ignores an outside tap',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => GlassModalSheet.show(
+                  context: context,
+                  isDismissible: false,
+                  builder: (context) => const Text('Modal Content'),
+                ),
+                child: const Text('Show'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(20, 40));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modal Content'), findsOneWidget);
+    });
+
     testWidgets('show() falls back when initialState is not an offered detent',
         (tester) async {
       // A caller can ask to open on a detent the sheet doesn't offer — most
