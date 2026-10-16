@@ -859,8 +859,9 @@ class GlassModalSheetScaffold extends StatelessWidget {
   /// rubber-bands at its lowest detent instead. Forwarded to the sheet.
   final bool dismissible;
 
-  /// Whether a tap on [body], outside the sheet, dismisses it. When false the
-  /// tap does nothing. Default: true.
+  /// Whether a tap on [body] outside the sheet dismisses it, as a modal
+  /// barrier's would. Applies only in [GlassSheetMode.dismissible]; the swipe
+  /// is [dismissible]'s. Default: true.
   final bool barrierDismissible;
 
   /// Horizontal padding specifically for the 'peek' state.
