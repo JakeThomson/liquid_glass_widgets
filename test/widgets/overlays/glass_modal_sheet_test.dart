@@ -198,6 +198,7 @@ void main() {
     }
 
     testWidgets('show() times the slide from sheetAnimationStyle',
+    testWidgets('show() with isDismissible: false ignores an outside tap',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -210,6 +211,7 @@ void main() {
                     duration: Duration(milliseconds: 300),
                     reverseDuration: Duration(milliseconds: 600),
                   ),
+                  isDismissible: false,
                   builder: (context) => const Text('Modal Content'),
                 ),
                 child: const Text('Show'),
@@ -227,6 +229,10 @@ void main() {
       expect(route.transitionDuration, const Duration(milliseconds: 300));
       expect(
           route.reverseTransitionDuration, const Duration(milliseconds: 600));
+      await tester.tapAt(const Offset(20, 40));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modal Content'), findsOneWidget);
     });
 
     testWidgets('show() falls back when initialState is not an offered detent',
