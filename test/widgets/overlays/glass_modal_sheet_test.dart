@@ -197,6 +197,38 @@ void main() {
       });
     }
 
+    testWidgets('show() times the slide from sheetAnimationStyle',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => GlassModalSheet.show(
+                  context: context,
+                  sheetAnimationStyle: const AnimationStyle(
+                    duration: Duration(milliseconds: 300),
+                    reverseDuration: Duration(milliseconds: 600),
+                  ),
+                  builder: (context) => const Text('Modal Content'),
+                ),
+                child: const Text('Show'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show'));
+      await tester.pumpAndSettle();
+
+      final route = ModalRoute.of(tester.element(find.text('Modal Content')))!
+          as TransitionRoute;
+      expect(route.transitionDuration, const Duration(milliseconds: 300));
+      expect(
+          route.reverseTransitionDuration, const Duration(milliseconds: 600));
+    });
+
     testWidgets('show() falls back when initialState is not an offered detent',
         (tester) async {
       // A caller can ask to open on a detent the sheet doesn't offer — most
