@@ -197,36 +197,60 @@ void main() {
       });
     }
 
-    testWidgets('show() times the slide from sheetAnimationStyle',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => ElevatedButton(
-                onPressed: () => GlassModalSheet.show(
-                  context: context,
-                  sheetAnimationStyle: const AnimationStyle(
-                    duration: Duration(milliseconds: 300),
-                    reverseDuration: Duration(milliseconds: 600),
-                  ),
-                  builder: (context) => const Text('Modal Content'),
-                ),
-                child: const Text('Show'),
-              ),
-            ),
-          ),
-        ),
+    /// Shows a sheet from a bare page and hands back its route once settled.
+    Future<TransitionRoute<void>> showSheet(
+      WidgetTester tester, {
+      AnimationStyle? sheetAnimationStyle,
+      Rect? morphFromRect,
+    }) async {
+      await tester.pumpWidget(createTestApp(child: const Placeholder()));
+      GlassModalSheet.show<void>(
+        context: tester.element(find.byType(Placeholder)),
+        sheetAnimationStyle: sheetAnimationStyle,
+        morphFromRect: morphFromRect,
+        builder: (context) => const Text('Modal Content'),
+      );
+      await tester.pumpAndSettle();
+      return ModalRoute.of(tester.element(find.text('Modal Content')))!
+          as TransitionRoute<void>;
+    }
+
+    const ms300 = Duration(milliseconds: 300);
+    const ms500 = Duration(milliseconds: 500);
+    const ms600 = Duration(milliseconds: 600);
+    const split = AnimationStyle(duration: ms300, reverseDuration: ms600);
+    for (final (label, style, forward, reverse) in [
+      ('defaults to 500 ms each way', null, ms500, ms500),
+      (
+        'takes duration both ways',
+        const AnimationStyle(duration: ms300),
+        ms300,
+        ms300
+      ),
+      ('takes reverseDuration on the way out', split, ms300, ms600),
+    ]) {
+      testWidgets('show() slide $label', (tester) async {
+        final route = await showSheet(tester, sheetAnimationStyle: style);
+
+        expect(route.transitionDuration, forward);
+        expect(route.reverseTransitionDuration, reverse);
+      });
+    }
+
+    testWidgets('show() morph ignores sheetAnimationStyle', (tester) async {
+      GlassModalSheet.debugMorphSupportsBlending = true;
+      addTearDown(() => GlassModalSheet.debugMorphSupportsBlending = null);
+
+      final route = await showSheet(
+        tester,
+        sheetAnimationStyle: split,
+        morphFromRect: const Rect.fromLTWH(372, 500, 56, 56),
       );
 
-      await tester.tap(find.text('Show'));
-      await tester.pumpAndSettle();
-
-      final route = ModalRoute.of(tester.element(find.text('Modal Content')))!
-          as TransitionRoute;
-      expect(route.transitionDuration, const Duration(milliseconds: 300));
-      expect(
-          route.reverseTransitionDuration, const Duration(milliseconds: 600));
+      // MorphSpeed.normal's route duration, both ways.
+      const morphDuration = Duration(milliseconds: 380);
+      expect(route.transitionDuration, morphDuration);
+      expect(route.reverseTransitionDuration, morphDuration);
     });
 
     testWidgets('show() falls back when initialState is not an offered detent',

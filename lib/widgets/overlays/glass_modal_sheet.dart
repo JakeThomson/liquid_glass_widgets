@@ -395,9 +395,10 @@ class GlassModalSheet extends StatefulWidget {
   /// slide transition is untouched. [morphSpeed] tunes the spring profile; the
   /// default [MorphSpeed.normal] is the 375 ms native-parity profile.
   ///
-  /// [sheetAnimationStyle] overrides the slide's durations and curves, as it
-  /// does for [showModalBottomSheet]; the slide otherwise takes 500 ms each way
-  /// on [Curves.easeOutQuart]. The morph runs on its own spring and ignores it.
+  /// [sheetAnimationStyle] sets the slide's durations and curves; the slide
+  /// otherwise takes 500 ms each way on [Curves.easeOutQuart]. A null
+  /// `reverseDuration` takes `duration`, and a null `reverseCurve` takes
+  /// `curve`. The morph runs on its own spring and ignores it.
   ///
   /// The morph needs the metaball blend that draws the teardrop neck, so it
   /// falls back to the slide transition when that is unavailable: on Skia/web
