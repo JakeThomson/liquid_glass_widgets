@@ -1,8 +1,13 @@
 # Unreleased
 
-## Bug Fixes
 
+## Bug Fixes
 - **A pinned bar asserted when the screen resized under another route:** A pinned bar's in-route strip is an `OverlayPortal.overlayChildLayoutBuilder` child, which Flutter lays out every frame even while its route is offstage, against the overlay's size from before the resize (flutter/flutter#192030). Rotating or unfolding iPhone Duo under a full-screen route asserted `size == theater.size`. `GlassPinnedBarChrome` now takes the strip out of the overlay while its route is offstage.
+
+## Features
+
+- **Modal sheet animation style:** `GlassModalSheet.show` accepts optional `sheetAnimationStyle`, as `showModalBottomSheet` does, to set the slide's duration and curve in each direction. The morph keeps its own spring.
+- **Bars share the status bar's row on iPhone Duo's inner display held upright (fixes #368):** There the status cluster is a corner rather than a strip across the top, and natively the navigation bar moves up beside it while the content still starts under the status bar. Flutter reports only the 82pt top inset, so `GlassAppBar.pinned` laid its row out a whole row lower. A pinned bar and its chrome in `GlassNavigationShell` now sit in the status bar's row, from 20pt in to just short of the cluster with the title leading, and `GlassScaffold` starts the content under the status bar.
 
 # 1.13.0
 
